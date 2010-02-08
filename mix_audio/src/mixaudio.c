@@ -89,7 +89,7 @@
  * 
  * LPE Device location.
  */
-static const char* LPE_DEVICE="/dev/lpe";
+static const char* LPE_DEVICE="/dev/sst";
 /* #define LPE_DEVICE "/dev/lpe" */
 
 #define _LOCK(obj) g_static_rec_mutex_lock(obj);
@@ -858,7 +858,11 @@ MIX_RESULT mix_audio_configure_default(MixAudio *mix, MixAudioConfigParams *audi
   }
   // now configure stream.
 
+#ifdef AUDIO_MANAGER
   ret = mix_audio_am_unregister(mix, audioconfigparams);
+#else
+  ret = MIX_RESULT_SUCCESS;
+#endif
 
   if (MIX_SUCCEEDED(ret))
   {
@@ -867,7 +871,11 @@ MIX_RESULT mix_audio_configure_default(MixAudio *mix, MixAudioConfigParams *audi
 
   if (MIX_SUCCEEDED(ret))
   {
+#ifdef AUDIO_MANAGER
     ret = mix_audio_am_register(mix, audioconfigparams);
+#else
+  ret = MIX_RESULT_SUCCESS;
+#endif
   }
 
   if (MIX_SUCCEEDED(ret))
@@ -953,9 +961,10 @@ MIX_RESULT mix_audio_get_timestamp_default(MixAudio *mix, guint64 *msecs)
   return ret;
 }
 
+#ifdef AUDIO_MANAGER
 gboolean mix_audio_AM_Change(MixAudioConfigParams *oldparams, MixAudioConfigParams *newparams) 
 {
-  if (g_strcmp0(oldparams->stream_name, newparams->stream_name) == 0) {
+  if (strcmp(oldparams->stream_name, newparams->stream_name) == 0) {
     return FALSE;
   }
 
@@ -1025,6 +1034,7 @@ MIX_RESULT mix_audio_am_register(MixAudio *mix, MixAudioConfigParams *audioconfi
 
   return ret;
 }
+#endif /* AUDIO_MANAGER */
 
 MIX_RESULT mix_audio_capture_encode_default(MixAudio *mix, MixIOVec *iovout, gint iovoutcnt)
 {

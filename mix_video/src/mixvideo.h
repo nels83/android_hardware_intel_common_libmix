@@ -65,6 +65,11 @@ typedef MIX_RESULT (*MixVideoReleaseFrameFunc)(MixVideo * mix,
 typedef MIX_RESULT (*MixVideoRenderFunc)(MixVideo * mix,
 		MixVideoRenderParams * render_params, MixVideoFrame *frame);
 
+typedef MIX_RESULT (*MixVideoGetDecodedDataFunc)(MixVideo * mix,
+                MixIOVec * iovout, MixVideoRenderParams * render_params,
+                MixVideoFrame *frame);
+
+
 typedef MIX_RESULT (*MixVideoEncodeFunc)(MixVideo * mix, MixBuffer * bufin[],
 		gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
 		MixVideoEncodeParams * encode_params);
@@ -123,6 +128,7 @@ struct _MixVideoClass {
 	MixVideoGetFrameFunc get_frame_func;
 	MixVideoReleaseFrameFunc release_frame_func;
 	MixVideoRenderFunc render_func;
+	MixVideoGetDecodedDataFunc get_decoded_data_func;
 	MixVideoEncodeFunc encode_func;
 	MixVideoFlushFunc flush_func;
 	MixVideoEOSFunc eos_func;
@@ -189,6 +195,9 @@ MIX_RESULT mix_video_get_frame(MixVideo * mix, MixVideoFrame ** frame);
 MIX_RESULT mix_video_release_frame(MixVideo * mix, MixVideoFrame * frame);
 
 MIX_RESULT mix_video_render(MixVideo * mix,
+		MixVideoRenderParams * render_params, MixVideoFrame *frame);
+
+MIX_RESULT mix_video_get_decoded_data(MixVideo * mix, MixIOVec * iovout,
 		MixVideoRenderParams * render_params, MixVideoFrame *frame);
 
 MIX_RESULT mix_video_encode(MixVideo * mix, MixBuffer * bufin[], gint bufincnt,

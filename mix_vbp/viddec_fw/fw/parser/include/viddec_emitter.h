@@ -1,7 +1,7 @@
 #ifndef VIDDEC_EMITTER_H
 #define VIDDEC_EMITTER_H
 
-#include <stdint.h>
+#include "../../include/stdint.h"
 #ifndef HOST_ONLY
 #define DDR_MEM_MASK 0x80000000
 #else

@@ -197,8 +197,7 @@ gboolean mix_acp_equal(MixParams* first, MixParams *second)
             (acp1->sample_freq == acp2->sample_freq) &&
             (acp1->bits_per_sample == acp2->bits_per_sample) &&
             (acp1->op_align == acp2->op_align) && 
-            (!g_strcmp0(acp1->stream_name, acp2->stream_name));
-            //g_strcmp0 handles NULL gracefully
+            (!strcmp(acp1->stream_name, acp2->stream_name));
   }
 
   return ret;

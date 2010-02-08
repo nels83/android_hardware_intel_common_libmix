@@ -179,8 +179,8 @@ mix_videocaps_equal (MixParams * first, MixParams * second)
       this_second = MIX_VIDEOCAPS (second);
 
       /* TODO: add comparison for other properties */
-      if (g_strcmp0 (this_first->mix_caps, this_second->mix_caps) == 0
-	  && g_strcmp0 (this_first->video_hw_caps,
+      if (strcmp (this_first->mix_caps, this_second->mix_caps) == 0
+	  && strcmp (this_first->video_hw_caps,
 			this_second->video_hw_caps) == 0)
 	{
 	  // members within this scope equal. chaining up.

@@ -22,6 +22,12 @@ static MixDisplayClass *parent_class = NULL;
 
 #define _do_init { _mix_displayx11_type = g_define_type_id; }
 
+#ifdef ANDROID
+int XSync(Display* display, Bool bvalue) {
+    return 0;
+}
+#endif
+
 gboolean mix_displayx11_copy(MixDisplay * target, const MixDisplay * src);
 MixDisplay *mix_displayx11_dup(const MixDisplay * obj);
 gboolean mix_displayx11_equal(MixDisplay * first, MixDisplay * second);

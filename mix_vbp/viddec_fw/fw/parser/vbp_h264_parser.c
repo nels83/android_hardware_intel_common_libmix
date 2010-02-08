@@ -1436,10 +1436,16 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
 
   	size_left = cubby->size;
 
+#ifndef ANDROID
   	while (size_left >= NAL_length_size)
   	{
     	NAL_length = vbp_get_NAL_length_h264(cubby->buf + size_parsed);    	
     	  
+#else
+	while (size_left > 0)
+	{
+		NAL_length = size_left;
+#endif
     	size_parsed += NAL_length_size;
     	cxt->list.data[cxt->list.num_items].stpos = size_parsed;
     	size_parsed += NAL_length; /* skip NAL bytes */

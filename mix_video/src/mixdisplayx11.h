@@ -11,7 +11,16 @@ No license under any patent, copyright, trade secret or other intellectual prope
 
 #include "mixdisplay.h"
 #include "mixvideodef.h"
+#ifndef ANDROID
 #include <X11/Xlib.h>
+#else
+#define Display unsigned int
+#define Drawable unsigned int
+#define Bool int
+#define True 1
+#define False 0
+int XSync(Display* display, Bool bvalue);
+#endif
 
 /**
 * MIX_TYPE_DISPLAYX11:

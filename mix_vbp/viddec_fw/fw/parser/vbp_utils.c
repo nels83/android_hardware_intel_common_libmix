@@ -66,7 +66,11 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 	switch (pcontext->parser_type)
 	{
 		case VBP_VC1:
+#ifndef ANDROID
 		parser_name = "libmixvbp_vc1.so.0";
+#else
+		parser_name = "libmixvbp_vc1.so";
+#endif
 		break;
 
 		/* MPEG-2 parser is not supported. */
@@ -76,11 +80,19 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 		break;*/
 
 		case VBP_MPEG4:
+#ifndef ANDROID
 		parser_name = "libmixvbp_mpeg4.so.0";
+#else
+		parser_name = "libmixvbp_mpeg4.so";
+#endif
 		break;
 
 		case VBP_H264:
+#ifndef ANDROID
 		parser_name = "libmixvbp_h264.so.0";
+#else
+		parser_name = "libmixvbp_h264.so";
+#endif
 		break;
 
 		default:
