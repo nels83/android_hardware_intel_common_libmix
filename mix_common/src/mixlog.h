@@ -31,12 +31,33 @@ void mix_log_func(const gchar* comp, gint level, const gchar *file,
 #define MIX_LOG_LEVEL_INFO	3
 #define MIX_LOG_LEVEL_VERBOSE	4
 
-
 /* MACROS for mixlog */
 #ifdef MIX_LOG_ENABLE
 
+#ifdef ANDROID
+
+#include <utils/Log.h>
+
+#undef MIX_LOG_LEVEL_ERROR
+#undef MIX_LOG_LEVEL_WARNING
+#undef MIX_LOG_LEVEL_INFO
+#undef MIX_LOG_LEVEL_VERBOSE
+
+#define MIX_LOG_LEVEL_ERROR     ANDROID_LOG_ERROR
+#define MIX_LOG_LEVEL_WARNING   ANDROID_LOG_WARN
+#define MIX_LOG_LEVEL_INFO	ANDROID_LOG_INFO
+#define MIX_LOG_LEVEL_VERBOSE   ANDROID_LOG_VERBOSE
+
+#define mix_log(comp, level, format, ...) \
+    __android_log_print(level, comp, "%s():%d: "format, \
+                        __FUNCTION__, __LINE__, ##__VA_ARGS__)
+
+#else
+
 #define mix_log(comp, level, format, ...) \
 	mix_log_func(comp, level, __FILE__, __FUNCTION__, __LINE__, format, ##__VA_ARGS__)
+
+#endif /* ANDROID */
 
 #else
 

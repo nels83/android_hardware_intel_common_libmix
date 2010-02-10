@@ -18,6 +18,8 @@
 
 #define MIX_LOG_LEVEL "MIX_LOG_LEVEL"
 
+#ifndef ANDROID
+
 static GStaticMutex g_mutex = G_STATIC_MUTEX_INIT;
 
 #ifdef MIX_LOG_USE_HT
@@ -254,4 +256,4 @@ exit:
 
 #endif /* MIX_LOG_USE_HT */
 
-
+#endif /* !ANDROID */

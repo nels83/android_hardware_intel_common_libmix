@@ -1,6 +1,8 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
+#MIXVIDEO_LOG_ENABLE := true
+
 LOCAL_SRC_FILES := 			\
 	mixbuffer.c			\
 	mixbufferpool.c			\
@@ -60,6 +62,11 @@ LOCAL_SHARED_LIBRARIES :=	\
 	libmixcommon		\
 	libmixvbp		\
 	libva
+
+ifeq ($(strip $(MIXVIDEO_LOG_ENABLE)),true)
+LOCAL_CFLAGS += -DMIX_LOG_ENABLE
+LOCAL_SHARED_LIBRARIES += liblog
+endif
 
 LOCAL_COPY_HEADERS_TO := libmixvideo
 

@@ -1,6 +1,8 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
+#MIXAUDIO_LOG_ENABLE := true
+
 LOCAL_SRC_FILES :=	\
 	mixaip.c	\
 	mixacp.c	\
@@ -24,6 +26,11 @@ LOCAL_SHARED_LIBRARIES :=	\
 	libgthread-2.0		\
 	libgmodule-2.0		\
 	libmixcommon
+
+ifeq ($(strip $(MIXAUDIO_LOG_ENABLE)),true)
+LOCAL_CFLAGS += -DMIX_LOG_ENABLE
+LOCAL_SHARED_LIBRARIES += liblog
+endif
 
 LOCAL_COPY_HEADERS_TO := libmixaudio
 

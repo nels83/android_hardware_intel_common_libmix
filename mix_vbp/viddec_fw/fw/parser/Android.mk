@@ -2,6 +2,8 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
+#MIXVBP_LOG_ENABLE := true
+
 LOCAL_SRC_FILES :=			\
 	vbp_h264_parser.c		\
 	vbp_vc1_parser.c		\
@@ -50,5 +52,10 @@ LOCAL_SHARED_LIBRARIES :=		\
 	libgobject-2.0			\
 	libgthread-2.0			\
 	libgmodule-2.0
+
+ifeq ($(strip $(MIXVBP_LOG_ENABLE)),true)
+LOCAL_CFLAGS += -DVBP_TRACE
+LOCAL_SHARED_LIBRARIES += liblog
+endif
 
 include $(BUILD_SHARED_LIBRARY)
