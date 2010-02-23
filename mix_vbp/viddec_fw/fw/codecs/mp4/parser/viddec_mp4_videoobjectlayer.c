@@ -1,4 +1,5 @@
 #include "viddec_mp4_videoobjectlayer.h"
+#include "viddec_types.h"
 
 const unsigned char mp4_DefaultIntraQuantMatrix[64] = {
     8, 17, 18, 19, 21, 23, 25, 27, 

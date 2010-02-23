@@ -6,6 +6,7 @@
 #include "viddec_mp4_videoobjectlayer.h"
 #include "viddec_mp4_videoobjectplane.h"
 #include "viddec_mp4_visualobject.h"
+#include "viddec_types.h"
 
 extern uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state);
 

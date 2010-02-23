@@ -1,4 +1,5 @@
 #include "viddec_mp4_videoobjectplane.h"
+#include "viddec_types.h"
 
 mp4_Status_t mp4_Parse_GroupOfVideoObjectPlane(void *parent, viddec_mp4_parser_t *parser)
 {

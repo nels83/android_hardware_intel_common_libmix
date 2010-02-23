@@ -1,4 +1,5 @@
 #include "viddec_mp4_shortheader.h"
+#include "viddec_types.h"
 
 typedef struct
 {

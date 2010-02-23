@@ -2,6 +2,7 @@
 #include "viddec_parser_ops.h"
 #include "viddec_fw_mp4.h"
 #include "viddec_mp4_parse.h"
+#include "viddec_types.h"
 
 uint32_t viddec_fw_mp4_populate_attr(viddec_workload_t *wl, viddec_mp4_parser_t *parser)
 {

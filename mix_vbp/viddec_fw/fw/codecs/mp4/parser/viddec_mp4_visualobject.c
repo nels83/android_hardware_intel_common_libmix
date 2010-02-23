@@ -1,4 +1,5 @@
 #include "viddec_mp4_visualobject.h"
+#include "viddec_types.h"
 
 static inline uint8_t mp4_pvt_isValid_verID(uint8_t id)
 {
