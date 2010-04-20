@@ -42,7 +42,7 @@ endif
 #libmixaudio_stub_la_LIBTOOLFLAGS = $(libmixaudio_la_LIBTOOLFLAGS)
 
 # headers we need but don't want installed
-noinst_HEADERS = intel_sst_ioctl.h sst_proxy.h pvt.h amhelper.h
+noinst_HEADERS = intel_sst_ioctl.h sst_proxy.h amhelper.h
 
 # TODO: decide whehter a /usr/include/mix is needed for mix headers
 include_HEADERS = mixaudio.h \

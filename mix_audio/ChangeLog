@@ -1,3 +1,30 @@
+2010-01-31  Echo Choi  <echo@firefly>
+
+	* Reverted to use num_chan as output number of channel for AAC.
+
+2010-01-29  Echo Choi  <echo@firefly>
+
+	* Fixed Audio Manager setting.
+	* Updated version to 0.4.1 since API changes since 0.3.5.
+
+2010-01-25  Echo Choi  <echo@firefly>
+
+	* Updated MixCommon dependency to 0.1.8.
+	* Updated version to 0.3.6.
+
+2010-01-24  Echo Choi  <echo@firefly>
+
+	* Sync MixIOVec between capture and decode.
+
+2010-01-22  Echo Choi  <echo@firefly>
+
+	* Updated MixIOVec definition.
+	* Updated API sync with 0.79 doc.
+
+2010-01-20  Echo Choi  <echo@firefly>
+
+	* Updated API doc 0.79 sync up.
+
 2010-01-18  Echo Choi  <echo@firefly>
  
 	* Updated version to 0.3.5 and submit for build.

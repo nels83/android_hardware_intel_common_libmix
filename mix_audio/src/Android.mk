@@ -44,8 +44,8 @@ LOCAL_COPY_HEADERS :=		\
 	mixaip.h		\
 	mixaudio.h		\
 	mixaudiotypes.h		\
-	pvt.h			\
 	sst_proxy.h
+#	pvt.h			\
 
 LOCAL_MODULE := libmixaudio
 

@@ -159,13 +159,16 @@ gboolean mix_acp_wma_equal(MixParams* first, MixParams *second)
     return FALSE;
   }
 
+  if (!MIX_IS_AUDIOCONFIGPARAMSWMA(first) || !MIX_IS_AUDIOCONFIGPARAMSWMA(second))
+    return FALSE;
+
   MixParamsClass *klass = MIX_PARAMS_CLASS(parent_class);
   if (klass->equal)
     ret = klass->equal(first, second);
   else
     ret = TRUE;
 
-  if (ret && MIX_IS_AUDIOCONFIGPARAMSWMA(first) && MIX_IS_AUDIOCONFIGPARAMSWMA(second))
+  if (ret)
   {
     MixAudioConfigParamsWMA *acp1 = MIX_AUDIOCONFIGPARAMSWMA(first);
     MixAudioConfigParamsWMA *acp2 = MIX_AUDIOCONFIGPARAMSWMA(second);

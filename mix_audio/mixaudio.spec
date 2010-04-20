@@ -6,7 +6,7 @@
 
 Summary: MIX Audio
 Name: mixaudio
-Version: 0.3.5
+Version: 0.4.1
 Release: 1
 Source0: %{name}-%{version}.tar.gz
 NoSource: 0

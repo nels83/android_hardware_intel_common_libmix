@@ -178,6 +178,10 @@ gboolean mix_acp_aac_equal(MixParams* first, MixParams *second)
     return FALSE;
   }
 
+  // If either one of the input is not the same class then forget it.
+  if (!MIX_IS_AUDIOCONFIGPARAMSAAC(first) || !MIX_IS_AUDIOCONFIGPARAMSAAC(second))
+    return FALSE;
+
   // members within this scope equal. chaining up.
   MixParamsClass *klass = MIX_PARAMS_CLASS(parent_class);
   if (klass->equal)
@@ -185,7 +189,7 @@ gboolean mix_acp_aac_equal(MixParams* first, MixParams *second)
   else
     ret = TRUE;
 
-  if (ret && MIX_IS_AUDIOCONFIGPARAMSAAC(first) && MIX_IS_AUDIOCONFIGPARAMSAAC(second))
+  if (ret)
   {
 
     MixAudioConfigParamsAAC *acp1 = MIX_AUDIOCONFIGPARAMSAAC(first);

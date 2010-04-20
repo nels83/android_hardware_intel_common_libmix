@@ -147,8 +147,10 @@ gboolean mix_sst_params_convert_aac(MixAudioConfigParamsAAC *acp, struct snd_sst
         s->codec = p->codec = SST_CODEC_TYPE_AAC;
     }
 
-    p->num_chan = MIX_ACP_AAC_CHANNELS(acp); // core/internal channels
-    p->ext_chl = MIX_ACP_NUM_CHANNELS(acp);  // external channels
+    p->num_chan = MIX_ACP_NUM_CHANNELS(acp);  // external channels
+    p->ext_chl = MIX_ACP_AAC_CHANNELS(acp); // extension channel configuration.
+    //p->ext_chl = MIX_ACP_AAC_CHANNELS(acp); // core/internal channels
+    if (p->num_chan <= 0) p->num_chan = p->ext_chl;
     p->aac_srate = MIX_ACP_AAC_SAMPLE_RATE(acp);  // aac decoder internal frequency
     p->sfreq = MIX_ACP_SAMPLE_FREQ(acp);  // output/external frequency
     

@@ -12,14 +12,14 @@
 #include <dbus/dbus.h>
 #include <dbus/dbus-glib.h>
 
-gint dbus_init();
+gint32 dbus_init();
 
 gint32 lpe_stream_register(guint32 lpe_stream_id, char* media_role, char* lpe_stream_name, guint32 stream_type);
 
 gint32 lpe_stream_unregister(guint32 am_stream_id);
 
-gint32 lpe_stream_notify_pause(guint32 stream_id);
+gint32 lpe_stream_notify_pause(guint32 am_stream_id);
 
-gint32 lpe_stream_notify_resume(guint32 stream_id);
+gint32 lpe_stream_notify_resume(guint32 am_stream_id);
 
 #endif

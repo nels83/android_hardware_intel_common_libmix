@@ -152,6 +152,9 @@ gboolean mix_acp_mp3_equal(MixParams* first, MixParams *second)
     return FALSE;
   }
 
+  if (!MIX_IS_AUDIOCONFIGPARAMSMP3(first) || !MIX_IS_AUDIOCONFIGPARAMSMP3(second))
+    return FALSE;
+
   // members within this scope equal. chaining up.
   MixParamsClass *klass = MIX_PARAMS_CLASS(parent_class);
   if (klass->equal)
@@ -159,7 +162,7 @@ gboolean mix_acp_mp3_equal(MixParams* first, MixParams *second)
   else
     ret = TRUE;
 
-  if (ret && MIX_IS_AUDIOCONFIGPARAMSMP3(first) && MIX_IS_AUDIOCONFIGPARAMSMP3(second))
+  if (ret)
   {
     MixAudioConfigParamsMP3 *acp1 = MIX_AUDIOCONFIGPARAMSMP3(first);
     MixAudioConfigParamsMP3 *acp2 = MIX_AUDIOCONFIGPARAMSMP3(second);

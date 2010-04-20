@@ -120,7 +120,8 @@ typedef enum
  */
 typedef struct {
   guchar *data;
-  gint size;
+  gint32 buffer_size;
+  gint32 data_size;
 } MixIOVec;
 
 /**
@@ -151,7 +152,7 @@ struct _MixAudioClass
   /*< virtual public >*/
   MIX_RESULT (*initialize) (MixAudio *mix, MixCodecMode mode, MixAudioInitParams *aip, MixDrmParams *drminitparams);
   MIX_RESULT (*configure) (MixAudio *mix, MixAudioConfigParams *audioconfigparams, MixDrmParams *drmparams);
-  MIX_RESULT (*decode) (MixAudio *mix, const MixIOVec *iovin, gint iovincnt, guint64 *insize, MixIOVec *iovout, gint iovoutcnt, guint64 *outsize);
+  MIX_RESULT (*decode) (MixAudio *mix, const MixIOVec *iovin, gint iovincnt, guint64 *insize, MixIOVec *iovout, gint iovoutcnt);
   MIX_RESULT (*capture_encode) (MixAudio *mix, MixIOVec *iovout, gint iovoutcnt);
   MIX_RESULT (*start) (MixAudio *mix);
   MIX_RESULT (*stop_drop) (MixAudio *mix);
@@ -168,8 +169,8 @@ struct _MixAudioClass
   MIX_RESULT (*deinitialize) (MixAudio *mix);
   MIX_RESULT (*get_stream_state) (MixAudio *mix, MixStreamState *streamState);
   MIX_RESULT (*get_state) (MixAudio *mix, MixState *state);
-  MIX_RESULT (*is_am_available) (MixAudio *mix, MixAudioManager am, gboolean *avail);
-  MIX_RESULT (*get_output_configuration) (MixAudio *mix, MixAudioConfigParams **audioconfigparams);
+  MIX_RESULT (*get_config) (MixAudio *mix, MixAudioConfigParams **audioconfigparams);
+  MIX_RESULT (*get_bytes_decoded) (MixAudio *mix, guint64 *byte);
 };
 
 /**
@@ -197,7 +198,6 @@ struct _MixAudio
   gchar *encoding;
   MixState state;
   MixCodecMode codecMode;
-  gboolean useIAM;
   int fileDescriptor;
   gint streamID;
   guint32 amStreamID;
@@ -206,6 +206,7 @@ struct _MixAudio
   MixAudioConfigParams *audioconfigparams;
   gboolean am_registered;
   MixDeviceState deviceState;
+  gboolean stream_muted;
 
   guint64 ts_last;
   guint64 ts_elapsed;
@@ -330,7 +331,7 @@ MIX_RESULT mix_audio_configure(MixAudio *mix, MixAudioConfigParams *audioconfigp
  * Note: If the stream is configured as #MIX_DECODE_DIRECTRENDER, and whenever the stream in #MIX_STREAM_STOPPED state, the call to mix_audio_decode() will not start the playback until mix_audio_start() is called. This behavior would allow application to queue up data but delay the playback until appropriate time.
  * 
  */
-MIX_RESULT mix_audio_decode(MixAudio *mix, const MixIOVec *iovin, gint iovincnt, guint64 *insize, MixIOVec *iovout, gint iovoutcnt, guint64 *outsize);
+MIX_RESULT mix_audio_decode(MixAudio *mix, const MixIOVec *iovin, gint iovincnt, guint64 *insize, MixIOVec *iovout, gint iovoutcnt);
 
 /**
  * mix_audio_capture_encode:
@@ -547,20 +548,20 @@ gboolean mix_audio_am_is_enabled(MixAudio *mix);
  * 
  * Check if AM is available.
  */
-MIX_RESULT mix_audio_is_am_available(MixAudio *mix, MixAudioManager am, gboolean *avail);
+MIX_RESULT mix_audio_is_am_available(MixAudioManager am, gboolean *avail);
 
 /**
- * mix_audio_get_output_configuration:
+ * mix_audio_get_config:
  * @mix: #MixAudio object.
  * @audioconfigparams: double pointer to hold output configuration.
  * @returns: #MIX_RESULT_SUCCESS on success or other fail code.
  * 
  * This method retrieve the current configuration. This can be called after initialization. If a stream has been configured, it returns the corresponding derive object of MixAudioConfigParams.
  */
-MIX_RESULT mix_audio_get_output_configuration(MixAudio *mix, MixAudioConfigParams **audioconfigparams);
+MIX_RESULT mix_audio_get_config(MixAudio *mix, MixAudioConfigParams **audioconfigparams);
 
 /**
- * mix_audio_get_stream_byte_decoded:
+ * mix_audio_get_bytes_decoded:
  * @mix: #MixAudio object.
  * @msecs: stream byte decoded..
  * @returns: #MIX_RESULT_SUCCESS if the value is available. #MIX_RESULT_WRONG_MODE if operation is not allowed with the current mode.
@@ -569,6 +570,6 @@ MIX_RESULT mix_audio_get_output_configuration(MixAudio *mix, MixAudioConfigParam
  * 
  * <remark>Not Implemented.</remark>
  */
-MIX_RESULT mix_audio_get_stream_byte_decoded(MixAudio *mix, guint64 *byte);
+MIX_RESULT mix_audio_get_bytes_decoded(MixAudio *mix, guint64 *byte);
 
 #endif /* __MIX_AUDIO_H__ */

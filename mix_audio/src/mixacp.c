@@ -319,3 +319,37 @@ void mix_acp_print_params(MixAudioConfigParams *obj)
     } 
 }
 
+
+MIX_RESULT mix_acp_set_audio_manager(MixAudioConfigParams *obj, MixAudioManager am)
+{
+    if (obj == NULL) return MIX_RESULT_NULL_PTR;
+
+    if (!G_UNLIKELY(MIX_IS_AUDIOCONFIGPARAMS(obj)))
+    {
+        return MIX_RESULT_INVALID_PARAM;
+    }
+
+    if ((am >= MIX_AUDIOMANAGER_LAST) || (am <MIX_AUDIOMANAGER_NONE))
+    {
+        return MIX_RESULT_INVALID_PARAM;
+    }
+    else
+    {
+        obj->audio_manager = am;
+    }
+
+    return MIX_RESULT_SUCCESS;
+
+}
+
+MixAudioManager mix_acp_get_audio_manager(MixAudioConfigParams *obj)
+{
+    if (G_LIKELY(MIX_IS_AUDIOCONFIGPARAMS(obj)))
+    {
+        return obj->audio_manager;
+    }
+    else
+        return MIX_AUDIOMANAGER_NONE;
+}
+
+

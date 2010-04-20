@@ -31,6 +31,7 @@ void mix_log_func(const gchar* comp, gint level, const gchar *file,
 #define MIX_LOG_LEVEL_INFO	3
 #define MIX_LOG_LEVEL_VERBOSE	4
 
+
 /* MACROS for mixlog */
 #ifdef MIX_LOG_ENABLE
 

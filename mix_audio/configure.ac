@@ -2,7 +2,7 @@ AC_INIT("","",[echo.choi@intel.com])
 
 AC_CONFIG_MACRO_DIR(m4)
 
-AS_MIX_VERSION(mixaudio, MIXAUDIO, 0, 3, 5)
+AS_MIX_VERSION(mixaudio, MIXAUDIO, 0, 4, 1)
 
 dnl AM_MAINTAINER_MODE provides the option to enable maintainer mode
 AM_MAINTAINER_MODE
@@ -88,7 +88,7 @@ if test "x$HAVE_GTRHEAD" = "xno"; then
   AC_MSG_ERROR(You need glib development packages installed !)
 fi
 
-MIXCOMMON_REQUIRED=0.1.6
+MIXCOMMON_REQUIRED=0.1.8
 PKG_CHECK_MODULES(MIXCOMMON, mixcommon >= $MIXCOMMON_REQUIRED , HAVE_MIXCOMMON=yes, HAVE_MIXCOMMON=no)
 if test "x$HAVE_MIXCOMMON" = "xno"; then
   AC_MSG_ERROR(You need mixcommon development package $MIXCOMMON_REQUIRED installed !)

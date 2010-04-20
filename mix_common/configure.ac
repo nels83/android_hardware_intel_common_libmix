@@ -2,7 +2,7 @@ AC_INIT("", "", [khanh.v.nguyen@intel.com])
 
 AC_CONFIG_MACRO_DIR(m4)
 
-AS_MIX_VERSION(mixcommon, MIXCOMMON, 0, 1, 7)
+AS_MIX_VERSION(mixcommon, MIXCOMMON, 0, 1, 8)
 
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
 #AM_INIT_AUTOMAKE([-Wall -Werror foreign])

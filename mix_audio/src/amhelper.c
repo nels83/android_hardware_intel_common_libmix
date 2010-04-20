@@ -11,7 +11,7 @@ static gboolean am_enable=FALSE;
  * return -1 means failed
  * return 0 means succeeded
  * */
-gint dbus_init() {
+gint32 dbus_init() {
     GError *error;
     const char *name = "org.moblin.audiomanager";
 
@@ -25,7 +25,7 @@ gint dbus_init() {
     else
 	am_enable = FALSE;
 
-    if (am_enable) {
+    if (am_enable && (proxy_lpe == NULL)) {
 	    error = NULL;
 	    connection = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
 
@@ -94,25 +94,25 @@ gint32 lpe_stream_unregister(guint32 am_stream_id)
   return s_output;
 }
 
-gint32 lpe_stream_notify_pause(guint32 stream_id)
+gint32 lpe_stream_notify_pause(guint32 am_stream_id)
 {
   GError *error;
   gint32 s_output=0;
 
   if (am_enable) {
-    dbus_g_proxy_call (proxy_lpe, "LPEStreamNotifyPause", &error, G_TYPE_UINT, stream_id, G_TYPE_INVALID, G_TYPE_INT, &s_output, G_TYPE_INVALID);
+    dbus_g_proxy_call (proxy_lpe, "LPEStreamNotifyPause", &error, G_TYPE_UINT, am_stream_id, G_TYPE_INVALID, G_TYPE_INT, &s_output, G_TYPE_INVALID);
   }
 
   return s_output;
 }
 
-gint32 lpe_stream_notify_resume(guint32 stream_id)
+gint32 lpe_stream_notify_resume(guint32 am_stream_id)
 {
   GError *error;
   gint32 s_output=0;
 
   if (am_enable) {
-    dbus_g_proxy_call (proxy_lpe, "LPEStreamNotifyResume", &error, G_TYPE_UINT, stream_id, G_TYPE_INVALID, G_TYPE_INT, &s_output, G_TYPE_INVALID);
+    dbus_g_proxy_call (proxy_lpe, "LPEStreamNotifyResume", &error, G_TYPE_UINT, am_stream_id, G_TYPE_INVALID, G_TYPE_INT, &s_output, G_TYPE_INVALID);
   }
 
   return s_output;
