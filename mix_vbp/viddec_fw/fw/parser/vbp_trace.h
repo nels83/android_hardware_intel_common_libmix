@@ -17,25 +17,6 @@
 
 #ifdef VBP_TRACE /* if VBP_TRACE is defined*/
 
-#ifdef ANDROID
-
-#include <utils/Log.h>
-
-#define ETRACE(format, ...) \
-    __android_log_print(ANDROID_LOG_ERROR, "mixvbp", "%s():%d: "format, \
-                        __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define WTRACE(format, ...) \
-    __android_log_print(ANDROID_LOG_WARN, "mixvbp", "%s():%d: "format, \
-                        __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define ITRACE(format, ...) \
-    __android_log_print(ANDROID_LOG_INFO, "mixvbp", "%s():%d: "format, \
-                        __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define VTRACE(format, ...) \
-    __android_log_print(ANDROID_LOG_VERBOSE, "mixvbp", "%s():%d: "format, \
-                        __FUNCTION__, __LINE__, ##__VA_ARGS__)
-
-#else
-
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -50,14 +31,13 @@ vbp_trace_util(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 #define ITRACE(format, ...) VBP_TRACE_UTIL("INFO:    ",  format, ##__VA_ARGS__)
 #define VTRACE(format, ...) VBP_TRACE_UTIL("VERBOSE: ",  format, ##__VA_ARGS__)
 
-#endif /* ANDROID */
-
 #else /* if VBP_TRACE is not defined */
 
 #define ETRACE(format, ...)
 #define WTRACE(format, ...)
 #define ITRACE(format, ...)
 #define VTRACE(format, ...)
+
 
 #endif /* VBP_TRACE*/
 

@@ -546,7 +546,7 @@ MIX_RESULT mix_videofmt_vc1_initialize(MixVideoFormat *mix,
 	
 
         ret = mix_surfacepool_initialize(parent->surfacepool,
-                surfaces, numSurfaces);
+                surfaces, numSurfaces, vadisplay);
 
         switch (ret)
         {
@@ -995,7 +995,7 @@ MIX_RESULT mix_videofmt_vc1_decode_a_picture(
 				ret = mix_videoframe_set_frame_type(frame, frame_type);
 				break;
 			case VC1_PTYPE_BI: // BI frame type
-				ret = mix_videoframe_set_frame_type(frame, TYPE_I);
+				ret = mix_videoframe_set_frame_type(frame, TYPE_B);
 				break;
 	//Not indicated here	case VC1_PTYPE_SKIPPED:  
 			default:
@@ -1035,7 +1035,7 @@ MIX_RESULT mix_videofmt_vc1_decode_a_picture(
 				could have been overwritten and hence not avaiable for reference.
 				*/
 				LOG_E( "reference distance is not 0!");
-				ret = MIX_RESULT_FAIL;
+				ret = MIX_RESULT_DROPFRAME;
 				goto cleanup;				
 			}
 			if (1 == pic_index)
@@ -1070,14 +1070,19 @@ MIX_RESULT mix_videofmt_vc1_decode_a_picture(
 				}
 				else
 				{
-					ret = MIX_RESULT_FAIL;
+					ret = MIX_RESULT_DROPFRAME;
 					LOG_E( "Error could not find reference frames for P frame\n");
 					goto cleanup;
 				}
 			}
 			pic_params->backward_reference_picture = VA_INVALID_SURFACE;
 
-			LOG_V( "P frame, surface ID %u, forw ref frame is %u\n", (guint)frame->frame_id, (guint)self->reference_frames[0]->frame_id);
+#ifdef MIX_LOG_ENABLE	/* this is to fix a crash when MIX_LOG_ENABLE is set */
+			if(self->reference_frames[0] && frame) {
+				LOG_V( "P frame, surface ID %u, forw ref frame is %u\n",
+						(guint)frame->frame_id, (guint)self->reference_frames[0]->frame_id);
+			}
+#endif
 			LOG_V( "mix_video vinfo:  Frame type is P\n");
 			break;
 
@@ -1087,7 +1092,7 @@ MIX_RESULT mix_videofmt_vc1_decode_a_picture(
 			if (!self->haveBframes)	//We don't expect B frames and have not allocated a surface 
 						// for the extra ref frame so this is an error
 			{
-				ret = MIX_RESULT_FAIL;
+				ret = MIX_RESULT_DROPFRAME;
 				LOG_E( "Unexpected B frame, cannot process\n");
 				goto cleanup;
 			}
@@ -1099,7 +1104,7 @@ MIX_RESULT mix_videofmt_vc1_decode_a_picture(
 			LOG_V( "mix_video vinfo:  Frame type is B\n");
 			break;
 
-		case VC1_PTYPE_BI: 
+		case VC1_PTYPE_BI:
 			pic_params->forward_reference_picture = VA_INVALID_SURFACE;
 			pic_params->backward_reference_picture = VA_INVALID_SURFACE;
 			LOG_V( "BI frame\n");
@@ -1274,6 +1279,7 @@ MIX_RESULT mix_videofmt_vc1_decode_a_picture(
 		goto cleanup;
 	}
 
+#if 0   /* we don't call vaSyncSurface here, the call is moved to mix_video_render() */
 	LOG_V( "Calling vaSyncSurface\n");
 
 	//Decode the picture
@@ -1285,6 +1291,7 @@ MIX_RESULT mix_videofmt_vc1_decode_a_picture(
 		LOG_E( "Video driver returned error from vaSyncSurface\n");
 		goto cleanup;
 	}
+#endif
 
 cleanup:
 	if (NULL != buffer_ids)

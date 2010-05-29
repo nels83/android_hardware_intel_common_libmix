@@ -44,9 +44,9 @@ static void mix_videoformatenc_preview_init(MixVideoFormatEnc_Preview * self) {
     self->encoded_frames = 0;
     self->pic_skipped = FALSE;
     self->is_intra = TRUE;
-    self->cur_fame = NULL;
-    self->ref_fame = NULL;
-    self->rec_fame = NULL;	
+    self->cur_frame = NULL;
+    self->ref_frame = NULL;
+    self->rec_frame = NULL;	
 
     self->ci_shared_surfaces = NULL;
     self->surfaces= NULL;
@@ -523,7 +523,7 @@ MIX_RESULT mix_videofmtenc_preview_initialize(MixVideoFormatEnc *mix,
                 "mix_surfacepool_initialize\n");			
         
         ret = mix_surfacepool_initialize(parent->surfacepool,
-                self->surfaces, parent->ci_frame_num + numSurfaces);
+                self->surfaces, parent->ci_frame_num + numSurfaces, va_display);
         
         switch (ret)
         {
@@ -720,25 +720,25 @@ MIX_RESULT mix_videofmtenc_preview_flush(MixVideoFormatEnc *mix) {
 
 #if 0    
     /*unref the current source surface*/ 
-    if (self->cur_fame != NULL)
+    if (self->cur_frame != NULL)
     {
-        mix_videoframe_unref (self->cur_fame);
-        self->cur_fame = NULL;
+        mix_videoframe_unref (self->cur_frame);
+        self->cur_frame = NULL;
     }
 #endif		
     
     /*unref the reconstructed surface*/ 
-    if (self->rec_fame != NULL)
+    if (self->rec_frame != NULL)
     {
-        mix_videoframe_unref (self->rec_fame);
-        self->rec_fame = NULL;
+        mix_videoframe_unref (self->rec_frame);
+        self->rec_frame = NULL;
     }
 
     /*unref the reference surface*/ 
-    if (self->ref_fame != NULL)
+    if (self->ref_frame != NULL)
     {
-        mix_videoframe_unref (self->ref_fame);
-        self->ref_fame = NULL;       
+        mix_videoframe_unref (self->ref_frame);
+        self->ref_frame = NULL;       
     }
     
     /*reset the properities*/    
@@ -795,25 +795,25 @@ MIX_RESULT mix_videofmtenc_preview_deinitialize(MixVideoFormatEnc *mix) {
 
 #if 0
     /*unref the current source surface*/ 
-    if (self->cur_fame != NULL)
+    if (self->cur_frame != NULL)
     {
-        mix_videoframe_unref (self->cur_fame);
-        self->cur_fame = NULL;
+        mix_videoframe_unref (self->cur_frame);
+        self->cur_frame = NULL;
     }
 #endif	
     
     /*unref the reconstructed surface*/ 
-    if (self->rec_fame != NULL)
+    if (self->rec_frame != NULL)
     {
-        mix_videoframe_unref (self->rec_fame);
-        self->rec_fame = NULL;
+        mix_videoframe_unref (self->rec_frame);
+        self->rec_frame = NULL;
     }
 
     /*unref the reference surface*/ 
-    if (self->ref_fame != NULL)
+    if (self->ref_frame != NULL)
     {
-        mix_videoframe_unref (self->ref_fame);
-        self->ref_fame = NULL;       
+        mix_videoframe_unref (self->ref_frame);
+        self->ref_frame = NULL;       
     }	
 
     LOG_V( "Release surfaces\n");			
@@ -881,7 +881,7 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
     gulong surface = 0;
     guint16 width, height;
     
-    //MixVideoFrame *  tmp_fame;
+    //MixVideoFrame *  tmp_frame;
     //guint8 *buf;
     
     if ((mix == NULL) || (bufin == NULL) || (iovout == NULL)) {
@@ -921,9 +921,9 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
             LOG_V( 
                     "We are NOT in share buffer mode\n");		
             
-            if (mix->ref_fame == NULL)
+            if (mix->ref_frame == NULL)
             {
-                ret = mix_surfacepool_get(parent->surfacepool, &mix->ref_fame);
+                ret = mix_surfacepool_get(parent->surfacepool, &mix->ref_frame);
                 if (ret != MIX_RESULT_SUCCESS)  //#ifdef SLEEP_SURFACE not used
                 {
                     LOG_E( 
@@ -932,9 +932,9 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
                 }
             }
             
-            if (mix->rec_fame == NULL)	
+            if (mix->rec_frame == NULL)	
             {
-                ret = mix_surfacepool_get(parent->surfacepool, &mix->rec_fame);
+                ret = mix_surfacepool_get(parent->surfacepool, &mix->rec_frame);
                 if (ret != MIX_RESULT_SUCCESS)
                 {
                     LOG_E( 
@@ -944,12 +944,12 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
             }
 
             if (parent->need_display) {
-                mix->cur_fame = NULL;				
+                mix->cur_frame = NULL;				
             }
             
-            if (mix->cur_fame == NULL)
+            if (mix->cur_frame == NULL)
             {
-                ret = mix_surfacepool_get(parent->surfacepool, &mix->cur_fame);
+                ret = mix_surfacepool_get(parent->surfacepool, &mix->cur_frame);
                 if (ret != MIX_RESULT_SUCCESS)
                 {
                     LOG_E( 
@@ -970,7 +970,7 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
             LOG_V( 
                     "map source data to surface\n");	
             
-            ret = mix_videoframe_get_frame_id(mix->cur_fame, &surface);
+            ret = mix_videoframe_get_frame_id(mix->cur_frame, &surface);
             if (ret != MIX_RESULT_SUCCESS)
             {
                 LOG_E( 
@@ -1070,12 +1070,12 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
                    
             MixVideoFrame * frame = mix_videoframe_new();
             
-            if (mix->ref_fame == NULL)
+            if (mix->ref_frame == NULL)
             {
                 ret = mix_videoframe_set_ci_frame_idx (frame, mix->surface_num - 1);
                 
                 ret = mix_surfacepool_get_frame_with_ci_frameidx 
-                    (parent->surfacepool, &mix->ref_fame, frame);
+                    (parent->surfacepool, &mix->ref_frame, frame);
                 if (ret != MIX_RESULT_SUCCESS)  //#ifdef SLEEP_SURFACE not used
                 {
                     LOG_E( 
@@ -1084,12 +1084,12 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
                 }
             }
             
-            if (mix->rec_fame == NULL)	
+            if (mix->rec_frame == NULL)	
             {
                 ret = mix_videoframe_set_ci_frame_idx (frame, mix->surface_num - 2);        
                 
                 ret = mix_surfacepool_get_frame_with_ci_frameidx
-                    (parent->surfacepool, &mix->rec_fame, frame);
+                    (parent->surfacepool, &mix->rec_frame, frame);
 
                 if (ret != MIX_RESULT_SUCCESS)
                 {
@@ -1099,13 +1099,13 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
                 }
             }
 
-            //mix_videoframe_unref (mix->cur_fame);
+            //mix_videoframe_unref (mix->cur_frame);
 
             if (parent->need_display) {
-                mix->cur_fame = NULL;		
+                mix->cur_frame = NULL;		
             }
             
-            if (mix->cur_fame == NULL)
+            if (mix->cur_frame == NULL)
             {
                 guint ci_idx;
                 memcpy (&ci_idx, bufin->data, bufin->size);
@@ -1125,7 +1125,7 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
                 ret = mix_videoframe_set_ci_frame_idx (frame, ci_idx);        
                 
                 ret = mix_surfacepool_get_frame_with_ci_frameidx
-                    (parent->surfacepool, &mix->cur_fame, frame);
+                    (parent->surfacepool, &mix->cur_frame, frame);
 
                 if (ret != MIX_RESULT_SUCCESS)
                 {
@@ -1135,7 +1135,7 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
                 }			
             }
             
-            ret = mix_videoframe_get_frame_id(mix->cur_fame, &surface);
+            ret = mix_videoframe_get_frame_id(mix->cur_frame, &surface);
             
         }
         
@@ -1156,7 +1156,14 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
         	
 
         if (parent->need_display) {
-            ret = mix_framemanager_enqueue(parent->framemgr, mix->cur_fame);	
+
+    		ret = mix_videoframe_set_sync_flag(mix->cur_frame, TRUE);
+    		if (ret != MIX_RESULT_SUCCESS) {
+    			LOG_E("Failed to set sync_flag\n");
+                return ret;
+    		}
+
+            ret = mix_framemanager_enqueue(parent->framemgr, mix->cur_frame);	
             if (ret != MIX_RESULT_SUCCESS)
             {            
                 LOG_E( 
@@ -1167,8 +1174,8 @@ MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mi
 
 
         if (!(parent->need_display)) {
-            mix_videoframe_unref (mix->cur_fame);
-            mix->cur_fame = NULL;
+            mix_videoframe_unref (mix->cur_frame);
+            mix->cur_frame = NULL;
         }
         
         mix->encoded_frames ++;

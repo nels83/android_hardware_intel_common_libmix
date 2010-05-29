@@ -221,7 +221,7 @@ gboolean mix_surfacepool_equal(MixParams * first, MixParams * second) {
  * frame objects that represents a pool of surfaces.
  */
 MIX_RESULT mix_surfacepool_initialize(MixSurfacePool * obj,
-		VASurfaceID *surfaces, guint num_surfaces) {
+		VASurfaceID *surfaces, guint num_surfaces, VADisplay va_display) {
 
 	LOG_V( "Begin\n");
 
@@ -286,6 +286,8 @@ MIX_RESULT mix_surfacepool_initialize(MixSurfacePool * obj,
 		// Leave timestamp for each frame object as zero
 		// Set the pool reference in the private data of the frame object
 		mix_videoframe_set_pool(frame, obj);
+
+		mix_videoframe_set_vadisplay(frame, va_display);
 
 		//Add each frame object to the pool list
 		obj->free_list = g_slist_append(obj->free_list, frame);

@@ -6,7 +6,7 @@
 
 Summary: MIX Video
 Name: mixvideo
-Version: 0.1.14
+Version: 0.1.15
 Release: 1
 Source0: %{name}-%{version}.tar.gz
 NoSource: 0

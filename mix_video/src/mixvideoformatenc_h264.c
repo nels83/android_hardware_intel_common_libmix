@@ -44,14 +44,15 @@ static void mix_videoformatenc_h264_init(MixVideoFormatEnc_H264 * self) {
     self->encoded_frames = 0;
     self->pic_skipped = FALSE;
     self->is_intra = TRUE;
-    self->cur_fame = NULL;
-    self->ref_fame = NULL;
-    self->rec_fame = NULL;	
+    self->cur_frame = NULL;
+    self->ref_frame = NULL;
+    self->rec_frame = NULL;	
 
     self->ci_shared_surfaces = NULL;
     self->surfaces= NULL;
     self->surface_num = 0;
 
+    self->coded_buf_index = 0;
     parent->initialized = FALSE;
 }
 
@@ -585,7 +586,7 @@ MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
                 "mix_surfacepool_initialize\n");			
         
         ret = mix_surfacepool_initialize(parent->surfacepool,
-                self->surfaces, parent->ci_frame_num + numSurfaces);
+                self->surfaces, parent->ci_frame_num + numSurfaces, va_display);
         
         switch (ret)
         {
@@ -641,7 +642,23 @@ MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
                 VAEncCodedBufferType,
                 self->coded_buf_size,  //
                 1, NULL,
-                &self->coded_buf);
+                &(self->coded_buf[0]));
+        
+        if (va_status != VA_STATUS_SUCCESS)	 
+        {
+            LOG_E( 
+                    "Failed to vaCreateBuffer: VAEncCodedBufferType\n");	
+            g_free (surfaces);			
+            g_mutex_unlock(parent->objectlock);
+            return MIX_RESULT_FAIL;
+        }
+
+        /*Create coded buffer for output*/
+        va_status = vaCreateBuffer (va_display, parent->va_context,
+                VAEncCodedBufferType,
+                self->coded_buf_size,  //
+                1, NULL,
+                &(self->coded_buf[1]));
         
         if (va_status != VA_STATUS_SUCCESS)	 
         {
@@ -793,25 +810,25 @@ MIX_RESULT mix_videofmtenc_h264_flush(MixVideoFormatEnc *mix) {
 
 #if 0    
     /*unref the current source surface*/ 
-    if (self->cur_fame != NULL)
+    if (self->cur_frame != NULL)
     {
-        mix_videoframe_unref (self->cur_fame);
-        self->cur_fame = NULL;
+        mix_videoframe_unref (self->cur_frame);
+        self->cur_frame = NULL;
     }
 #endif		
     
     /*unref the reconstructed surface*/ 
-    if (self->rec_fame != NULL)
+    if (self->rec_frame != NULL)
     {
-        mix_videoframe_unref (self->rec_fame);
-        self->rec_fame = NULL;
+        mix_videoframe_unref (self->rec_frame);
+        self->rec_frame = NULL;
     }
 
     /*unref the reference surface*/ 
-    if (self->ref_fame != NULL)
+    if (self->ref_frame != NULL)
     {
-        mix_videoframe_unref (self->ref_fame);
-        self->ref_fame = NULL;       
+        mix_videoframe_unref (self->ref_frame);
+        self->ref_frame = NULL;       
     }
     
     /*reset the properities*/    
@@ -868,25 +885,25 @@ MIX_RESULT mix_videofmtenc_h264_deinitialize(MixVideoFormatEnc *mix) {
 
 #if 0
     /*unref the current source surface*/ 
-    if (self->cur_fame != NULL)
+    if (self->cur_frame != NULL)
     {
-        mix_videoframe_unref (self->cur_fame);
-        self->cur_fame = NULL;
+        mix_videoframe_unref (self->cur_frame);
+        self->cur_frame = NULL;
     }
 #endif	
     
     /*unref the reconstructed surface*/ 
-    if (self->rec_fame != NULL)
+    if (self->rec_frame != NULL)
     {
-        mix_videoframe_unref (self->rec_fame);
-        self->rec_fame = NULL;
+        mix_videoframe_unref (self->rec_frame);
+        self->rec_frame = NULL;
     }
 
     /*unref the reference surface*/ 
-    if (self->ref_fame != NULL)
+    if (self->ref_frame != NULL)
     {
-        mix_videoframe_unref (self->ref_fame);
-        self->ref_fame = NULL;       
+        mix_videoframe_unref (self->ref_frame);
+        self->ref_frame = NULL;       
     }	
 
     LOG_V( "Release surfaces\n");			
@@ -1045,20 +1062,15 @@ MIX_RESULT mix_videofmtenc_h264_send_picture_parameter (MixVideoFormatEnc_H264 *
         return MIX_RESULT_NULL_PTR;
     
     LOG_V( "Begin\n\n");		
-    
-#if 0 //not needed currently
-    MixVideoConfigParamsEncH264 * params_h264
-        = MIX_VIDEOCONFIGPARAMSENC_H264 (config_params_enc);
-#endif	
-    
+
     if (MIX_IS_VIDEOFORMATENC_H264(mix)) {
         
         parent = MIX_VIDEOFORMATENC(&(mix->parent));
         
         /*set picture params for HW*/
-        h264_pic_param.reference_picture = mix->ref_fame->frame_id;  
-        h264_pic_param.reconstructed_picture = mix->rec_fame->frame_id;
-        h264_pic_param.coded_buf = mix->coded_buf;
+        h264_pic_param.reference_picture = mix->ref_frame->frame_id;  
+        h264_pic_param.reconstructed_picture = mix->rec_frame->frame_id;
+        h264_pic_param.coded_buf = mix->coded_buf[mix->coded_buf_index];
         h264_pic_param.picture_width = parent->picture_width;
         h264_pic_param.picture_height = parent->picture_height;
         h264_pic_param.last_picture = 0;	
@@ -1070,8 +1082,10 @@ MIX_RESULT mix_videofmtenc_h264_send_picture_parameter (MixVideoFormatEnc_H264 *
                 h264_pic_param.reference_picture);	
         LOG_I( "reconstructed_picture = 0x%08x\n", 
                 h264_pic_param.reconstructed_picture);	
+        LOG_I( "coded_buf_index = %d\n", 
+                mix->coded_buf_index);	
         LOG_I( "coded_buf = 0x%08x\n", 
-                h264_pic_param.coded_buf);	
+                h264_pic_param.coded_buf);
         LOG_I( "picture_width = %d\n", 
                 h264_pic_param.picture_width);	
         LOG_I( "picture_height = %d\n\n", 
@@ -1107,7 +1121,7 @@ MIX_RESULT mix_videofmtenc_h264_send_picture_parameter (MixVideoFormatEnc_H264 *
                 "not H264 video encode Object\n");						
         return MIX_RESULT_FAIL;		
     }		
-    
+	
     LOG_V( "end\n");		
     return MIX_RESULT_SUCCESS;  
     
@@ -1270,7 +1284,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
     gulong surface = 0;
     guint16 width, height;
     
-    MixVideoFrame *  tmp_fame;
+    MixVideoFrame *  tmp_frame;
     guint8 *buf;
     
     if ((mix == NULL) || (bufin == NULL) || (iovout == NULL)) {
@@ -1320,9 +1334,9 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             LOG_V( 
                     "We are NOT in share buffer mode\n");		
             
-            if (mix->ref_fame == NULL)
+            if (mix->ref_frame == NULL)
             {
-                ret = mix_surfacepool_get(parent->surfacepool, &mix->ref_fame);
+                ret = mix_surfacepool_get(parent->surfacepool, &mix->ref_frame);
                 if (ret != MIX_RESULT_SUCCESS)  //#ifdef SLEEP_SURFACE not used
                 {
                     LOG_E( 
@@ -1331,9 +1345,9 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                 }
             }
             
-            if (mix->rec_fame == NULL)	
+            if (mix->rec_frame == NULL)	
             {
-                ret = mix_surfacepool_get(parent->surfacepool, &mix->rec_fame);
+                ret = mix_surfacepool_get(parent->surfacepool, &mix->rec_frame);
                 if (ret != MIX_RESULT_SUCCESS)
                 {
                     LOG_E( 
@@ -1343,12 +1357,12 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             }
 
             if (parent->need_display) {
-                mix->cur_fame = NULL;				
+                mix->cur_frame = NULL;				
             }
             
-            if (mix->cur_fame == NULL)
+            if (mix->cur_frame == NULL)
             {
-                ret = mix_surfacepool_get(parent->surfacepool, &mix->cur_fame);
+                ret = mix_surfacepool_get(parent->surfacepool, &mix->cur_frame);
                 if (ret != MIX_RESULT_SUCCESS)
                 {
                     LOG_E( 
@@ -1369,7 +1383,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             LOG_V( 
                     "map source data to surface\n");	
             
-            ret = mix_videoframe_get_frame_id(mix->cur_fame, &surface);
+            ret = mix_videoframe_get_frame_id(mix->cur_frame, &surface);
             if (ret != MIX_RESULT_SUCCESS)
             {
                 LOG_E( 
@@ -1425,6 +1439,12 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             
             guint8 *inbuf = bufin->data;      
             
+/* mutually exclusive */
+//#define USE_SRC_FMT_YUV420
+//#define USE_SRC_FMT_NV12
+#define USE_SRC_FMT_NV21
+
+#ifdef USE_SRC_FMT_YUV420
             /*need to convert YUV420 to NV12*/
             dst_y = pvbuf +image->offsets[0];
             
@@ -1443,6 +1463,36 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                 }
                 dst_uv += image->pitches[1];
             }
+#else //USE_SRC_FMT_NV12 or USE_SRC_FMT_NV21
+            int offset_uv = width * height;
+            guint8 *inbuf_uv = inbuf + offset_uv;
+            int height_uv = height / 2;
+            int width_uv = width;
+
+            dst_y = pvbuf + image->offsets[0];
+            for (i = 0; i < height; i++) {
+                memcpy (dst_y, inbuf + i * width, width);
+                dst_y += image->pitches[0];
+            }
+
+#ifdef USE_SRC_FMT_NV12
+            dst_uv = pvbuf + image->offsets[1];
+            for (i = 0; i < height_uv; i++) {
+                memcpy(dst_uv, inbuf_uv + i * width_uv, width_uv);
+                dst_uv += image->pitches[1];
+            }
+#else //USE_SRC_FMT_NV21
+            dst_uv = pvbuf + image->offsets[1];
+            for (i = 0; i < height_uv; i ++) {
+                for (j = 0; j < width_uv; j += 2) {
+                    dst_uv[j] = inbuf_uv[j+1];  //u
+                    dst_uv[j+1] = inbuf_uv[j];  //v
+                }
+                dst_uv += image->pitches[1];
+                inbuf_uv += width_uv;
+            }
+#endif
+#endif //USE_SRC_FMT_YUV420
             
             vaUnmapBuffer(va_display, image->buf);	
             if (va_status != VA_STATUS_SUCCESS)	 
@@ -1469,12 +1519,12 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                    
             MixVideoFrame * frame = mix_videoframe_new();
             
-            if (mix->ref_fame == NULL)
+            if (mix->ref_frame == NULL)
             {
                 ret = mix_videoframe_set_ci_frame_idx (frame, mix->surface_num - 1);
                 
                 ret = mix_surfacepool_get_frame_with_ci_frameidx 
-                    (parent->surfacepool, &mix->ref_fame, frame);
+                    (parent->surfacepool, &mix->ref_frame, frame);
                 if (ret != MIX_RESULT_SUCCESS)  //#ifdef SLEEP_SURFACE not used
                 {
                     LOG_E( 
@@ -1483,12 +1533,12 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                 }
             }
             
-            if (mix->rec_fame == NULL)	
+            if (mix->rec_frame == NULL)	
             {
                 ret = mix_videoframe_set_ci_frame_idx (frame, mix->surface_num - 2);        
                 
                 ret = mix_surfacepool_get_frame_with_ci_frameidx
-                    (parent->surfacepool, &mix->rec_fame, frame);
+                    (parent->surfacepool, &mix->rec_frame, frame);
 
                 if (ret != MIX_RESULT_SUCCESS)
                 {
@@ -1498,13 +1548,13 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                 }
             }
 
-            //mix_videoframe_unref (mix->cur_fame);
+            //mix_videoframe_unref (mix->cur_frame);
 
             if (parent->need_display) {
-                mix->cur_fame = NULL;		
+                mix->cur_frame = NULL;		
             }
             
-            if (mix->cur_fame == NULL)
+            if (mix->cur_frame == NULL)
             {
                 guint ci_idx;
                 memcpy (&ci_idx, bufin->data, bufin->size);
@@ -1524,7 +1574,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                 ret = mix_videoframe_set_ci_frame_idx (frame, ci_idx);        
                 
                 ret = mix_surfacepool_get_frame_with_ci_frameidx
-                    (parent->surfacepool, &mix->cur_fame, frame);
+                    (parent->surfacepool, &mix->cur_frame, frame);
 
                 if (ret != MIX_RESULT_SUCCESS)
                 {
@@ -1534,7 +1584,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                 }			
             }
             
-            ret = mix_videoframe_get_frame_id(mix->cur_fame, &surface);
+            ret = mix_videoframe_get_frame_id(mix->cur_frame, &surface);
             
         }
         
@@ -1542,6 +1592,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         LOG_I( "va_context = 0x%08x\n",(guint)va_context);
         LOG_I( "surface = 0x%08x\n",(guint)surface);	        
         LOG_I( "va_display = 0x%08x\n",(guint)va_display);
+	
  
         va_status = vaBeginPicture(va_display, va_context, surface);
         if (va_status != VA_STATUS_SUCCESS)	 
@@ -1549,67 +1600,71 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             LOG_E( "Failed vaBeginPicture\n");
             return MIX_RESULT_FAIL;
         }	
-
-        LOG_V( "mix_videofmtenc_h264_send_seq_params\n");	
-		
-        if (mix->encoded_frames == 0) {
-            mix_videofmtenc_h264_send_seq_params (mix);
-            if (ret != MIX_RESULT_SUCCESS)
+        
+        ret = mix_videofmtenc_h264_send_encode_command (mix);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_E ( 
+                    "Failed mix_videofmtenc_h264_send_encode_command\n");	
+            return MIX_RESULT_FAIL;
+        }			
+        
+        
+        if ((parent->va_rcmode == VA_RC_NONE) || mix->encoded_frames == 0) {
+            
+            va_status = vaEndPicture (va_display, va_context);
+            if (va_status != VA_STATUS_SUCCESS)	 
             {
-                LOG_E( 
-                        "Failed mix_videofmtenc_h264_send_seq_params\n");
+                LOG_E( "Failed vaEndPicture\n");		
                 return MIX_RESULT_FAIL;
             }
         }
         
-        ret = mix_videofmtenc_h264_send_picture_parameter (mix);	
-        
-        if (ret != MIX_RESULT_SUCCESS)
-        {
-           LOG_E( 
-                   "Failed mix_videofmtenc_h264_send_picture_parameter\n");	
-           return MIX_RESULT_FAIL;
+        if (mix->encoded_frames == 0) {
+            mix->encoded_frames ++;
+            mix->last_coded_buf = mix->coded_buf[mix->coded_buf_index];
+            mix->coded_buf_index ++; 
+            mix->coded_buf_index %=2;
+            
+            mix->last_frame = mix->cur_frame;
+            
+            
+            /* determine the picture type*/
+            if ((mix->encoded_frames % parent->intra_period) == 0) {
+                mix->is_intra = TRUE;
+            } else {
+                mix->is_intra = FALSE;
+            }						
+            
+            tmp_frame = mix->rec_frame;
+            mix->rec_frame= mix->ref_frame;
+            mix->ref_frame = tmp_frame;			
+            
+            
         }
         
-        ret = mix_videofmtenc_h264_send_slice_parameter (mix);
-        if (ret != MIX_RESULT_SUCCESS)
-        {            
-            LOG_E( 
-                    "Failed mix_videofmtenc_h264_send_slice_parameter\n");	
-            return MIX_RESULT_FAIL;
-        }		
-        
-        LOG_V( "before vaEndPicture\n");	
-
-        va_status = vaEndPicture (va_display, va_context);
-        if (va_status != VA_STATUS_SUCCESS)	 
-        {
-            LOG_E( "Failed vaEndPicture\n");		
-            return MIX_RESULT_FAIL;
-        }				
-    
         
         LOG_V( "vaSyncSurface\n");	
         
-        va_status = vaSyncSurface(va_display, surface);
+        va_status = vaSyncSurface(va_display, mix->last_frame->frame_id);
         if (va_status != VA_STATUS_SUCCESS)	 
         {
             LOG_E( "Failed vaSyncSurface\n");		
-            return MIX_RESULT_FAIL;
-        }				
-        
+			
+            //return MIX_RESULT_FAIL;
+        }				      
 
         LOG_V( 
                 "Start to get encoded data\n");		
-        
+		
         /*get encoded data from the VA buffer*/
-        va_status = vaMapBuffer (va_display, mix->coded_buf, (void **)&buf);
+        va_status = vaMapBuffer (va_display, mix->last_coded_buf, (void **)&buf);
         if (va_status != VA_STATUS_SUCCESS)	 
         {
             LOG_E( "Failed vaMapBuffer\n");	
             return MIX_RESULT_FAIL;
-        }			
-
+        }				
+	
         // first 4 bytes is the size of the buffer
         memcpy (&(iovout->data_size), (void*)buf, 4); 
         //size = (guint*) buf;
@@ -1620,6 +1675,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
 
         //We will support two buffer mode, one is application allocates the buffer and passes to encode, 
         //the other is encode allocate memory
+
         
         if (iovout->data == NULL) { //means  app doesn't allocate the buffer, so _encode will allocate it.
             iovout->data = g_malloc (size);  // In case we have lots of 0x000001 start code, and we replace them with 4 bytes length prefixed
@@ -1637,15 +1693,15 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             guint zero_byte_count = 0;	
             guint prefix_length = 0;				
             guint8 nal_unit_type = 0; 
-	     guint8 * payload = buf + 16;
+            guint8 * payload = buf + 16;
 
             while ((payload[pos++] == 0x00)) {                
                 zero_byte_count ++;
                 if (pos >= iovout->data_size)  //to make sure the buffer to be accessed is valid
                     break;
             }			 
-			
-	     nal_unit_type = (guint8)(payload[pos] & 0x1f);
+            
+            nal_unit_type = (guint8)(payload[pos] & 0x1f);
             prefix_length = zero_byte_count + 1;		 
 
             LOG_I ("nal_unit_type = %d\n", nal_unit_type);		 
@@ -1675,34 +1731,51 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         iovout->data_size = size;
         LOG_I( 
                 "out size is = %d\n", iovout->data_size);	
-        
-        va_status = vaUnmapBuffer (va_display, mix->coded_buf);
+       
+        va_status = vaUnmapBuffer (va_display, mix->last_coded_buf);
         if (va_status != VA_STATUS_SUCCESS)	 
         {
             LOG_E( "Failed vaUnmapBuffer\n");				
             return MIX_RESULT_FAIL;
         }		
 	
-        LOG_V( "get encoded data done\n");		
-#if 0
-        if (parent->drawable) {
-            va_status = vaPutSurface(va_display, surface, (Drawable)parent->drawable,
-                    0,0, width, height,
-                    0,0, width, height,
-                    NULL,0,0);
-        } 
-		
-#ifdef SHOW_SRC
-        else {
+        LOG_V( "get encoded data done\n");	
 
-            va_status = vaPutSurface(va_display, surface, win,
-                    0,0, width, height,
-                    0,0, width, height,
-                    NULL,0,0);		
-        }
-#endif //SHOW_SRC
-#endif
-
+        if (!((parent->va_rcmode == VA_RC_NONE) || mix->encoded_frames == 1)) {
+            
+            va_status = vaEndPicture (va_display, va_context);
+            if (va_status != VA_STATUS_SUCCESS)	 
+            {
+                LOG_E( "Failed vaEndPicture\n");		
+                return MIX_RESULT_FAIL;
+            }
+        }		
+                
+        if (mix->encoded_frames == 1) {
+            va_status = vaBeginPicture(va_display, va_context, surface);
+            if (va_status != VA_STATUS_SUCCESS)	 
+            {
+                LOG_E( "Failed vaBeginPicture\n");
+                return MIX_RESULT_FAIL;
+            }				
+            
+            ret = mix_videofmtenc_h264_send_encode_command (mix);
+            if (ret != MIX_RESULT_SUCCESS)
+            {
+                LOG_E ( 
+                        "Failed mix_videofmtenc_h264_send_encode_command\n");	
+                return MIX_RESULT_FAIL;
+            }				
+            
+            va_status = vaEndPicture (va_display, va_context);
+            if (va_status != VA_STATUS_SUCCESS)	 
+            {
+                LOG_E( "Failed vaEndPicture\n");		
+                return MIX_RESULT_FAIL;
+            }					
+            
+        }	
+       
         VASurfaceStatus status;
         
         /*query the status of current surface*/
@@ -1716,7 +1789,13 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         mix->pic_skipped = status & VASurfaceSkipped;		
 
         if (parent->need_display) {
-            ret = mix_framemanager_enqueue(parent->framemgr, mix->cur_fame);	
+    		ret = mix_videoframe_set_sync_flag(mix->cur_frame, TRUE);
+    		if (ret != MIX_RESULT_SUCCESS) {
+    			LOG_E("Failed to set sync_flag\n");
+                return ret;
+    		}
+
+            ret = mix_framemanager_enqueue(parent->framemgr, mix->cur_frame);	
             if (ret != MIX_RESULT_SUCCESS)
             {            
                 LOG_E( 
@@ -1728,25 +1807,30 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         
         /*update the reference surface and reconstructed surface */
         if (!mix->pic_skipped) {
-            tmp_fame = mix->rec_fame;
-            mix->rec_fame= mix->ref_fame;
-            mix->ref_fame = tmp_fame;
+            tmp_frame = mix->rec_frame;
+            mix->rec_frame= mix->ref_frame;
+            mix->ref_frame = tmp_frame;
         } 			
                 
 #if 0
-        if (mix->ref_fame != NULL)
-            mix_videoframe_unref (mix->ref_fame);
-        mix->ref_fame = mix->rec_fame;
+        if (mix->ref_frame != NULL)
+            mix_videoframe_unref (mix->ref_frame);
+        mix->ref_frame = mix->rec_frame;
         
-        mix_videoframe_unref (mix->cur_fame);
+        mix_videoframe_unref (mix->cur_frame);
 #endif		
-
-        if (!(parent->need_display)) {
-            mix_videoframe_unref (mix->cur_fame);
-            mix->cur_fame = NULL;
-        }
         
         mix->encoded_frames ++;
+        mix->last_coded_buf = mix->coded_buf[mix->coded_buf_index];
+        mix->coded_buf_index ++; 
+        mix->coded_buf_index %=2;
+        mix->last_frame = mix->cur_frame;
+
+
+        if (!(parent->need_display)) {
+            mix_videoframe_unref (mix->cur_frame);
+            mix->cur_frame = NULL;
+        }
     }
     else
     {
@@ -1754,8 +1838,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                 "not H264 video encode Object\n");	
         return MIX_RESULT_FAIL;		
     }
-    
-    
+        
     LOG_V( "end\n");		
  
     return MIX_RESULT_SUCCESS;
@@ -1950,5 +2033,48 @@ MIX_RESULT mix_videofmtenc_h264_AnnexB_to_length_prefixed (
     
     return MIX_RESULT_SUCCESS;            			
     
+}
+
+MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix)
+{
+    MIX_RESULT ret = MIX_RESULT_SUCCESS;
+
+    LOG_V( "Begin\n");		
+
+    if (MIX_IS_VIDEOFORMATENC_H264(mix))
+    {
+        if (mix->encoded_frames == 0) {
+            mix_videofmtenc_h264_send_seq_params (mix);
+            if (ret != MIX_RESULT_SUCCESS)
+            {
+                LOG_E( 
+                        "Failed mix_videofmtenc_h264_send_seq_params\n");
+                return MIX_RESULT_FAIL;
+            }
+        }
+        
+        ret = mix_videofmtenc_h264_send_picture_parameter (mix);	
+        
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_E( 
+                    "Failed mix_videofmtenc_h264_send_picture_parameter\n");	
+            return MIX_RESULT_FAIL;
+        }
+        
+        ret = mix_videofmtenc_h264_send_slice_parameter (mix);
+        if (ret != MIX_RESULT_SUCCESS)
+        {            
+            LOG_E( 
+                    "Failed mix_videofmtenc_h264_send_slice_parameter\n");	
+            return MIX_RESULT_FAIL;
+        }		
+        
+    }
+
+    LOG_V( "End\n");		
+	
+
+	return MIX_RESULT_SUCCESS;
 }
 

@@ -17,24 +17,19 @@ LOCAL_SRC_FILES :=			\
 
 LOCAL_CFLAGS := -DVBP -DHOST_ONLY
 
-LOCAL_C_INCLUDES :=			\
-	$(GLIB_TOP)			\
-	$(GLIB_TOP)/android		\
-	$(GLIB_TOP)/glib		\
-	$(GLIB_TOP)/gobject		\
+LOCAL_C_INCLUDES :=							   \
+	$(GLIB_TOP)							   \
+	$(GLIB_TOP)/android						   \
+	$(GLIB_TOP)/glib						   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/include		   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/include		   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/parser/include	   \
-	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/h264/include \
-	$(TARGET_OUT_HEADERS)/libmixcommon
+	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/h264/include
 
 LOCAL_MODULE := libmixvbp_h264
 
 LOCAL_SHARED_LIBRARIES :=		\
 	libglib-2.0			\
-	libgobject-2.0			\
-	libgthread-2.0			\
-	libgmodule-2.0			\
 	libmixvbp
 
 include $(BUILD_SHARED_LIBRARY)

@@ -35,7 +35,8 @@ struct _MixVideoFormatEnc_MPEG4 {
 	MixVideoFormatEnc parent;
 
 
-    	VABufferID      coded_buf;
+    	VABufferID      coded_buf[2];
+    	VABufferID      last_coded_buf;		
     	VABufferID      seq_param_buf;
     	VABufferID      pic_param_buf;
     	VABufferID      slice_param_buf;	
@@ -43,9 +44,11 @@ struct _MixVideoFormatEnc_MPEG4 {
 	VASurfaceID * surfaces;
 	guint surface_num;	
 
-	MixVideoFrame  *cur_fame;	//current input frame to be encoded;	
-	MixVideoFrame  *ref_fame;  //reference frame
-	MixVideoFrame  *rec_fame;	//reconstructed frame;	
+	MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
+	MixVideoFrame  *ref_frame;  //reference frame
+	MixVideoFrame  *rec_frame;	//reconstructed frame;	
+	MixVideoFrame  *last_frame;	//last frame;	
+	
 
 	guchar  profile_and_level_indication;
  	guint fixed_vop_time_increment;
@@ -59,6 +62,8 @@ struct _MixVideoFormatEnc_MPEG4 {
 	gboolean is_intra;
 
 	guint coded_buf_size;
+	guint coded_buf_index;
+		
 
 	/*< public > */
 };
@@ -132,6 +137,7 @@ MIX_RESULT mix_videofmtenc_mpeg4_get_max_encoded_buf_size (MixVideoFormatEnc *mi
 
 MIX_RESULT mix_videofmtenc_mpeg4_process_encode (MixVideoFormatEnc_MPEG4 *mix, MixBuffer * bufin, 
 	MixIOVec * iovout);
+MIX_RESULT mix_videofmtenc_mpeg4_send_encode_command (MixVideoFormatEnc_MPEG4 *mix);
 
 #endif /* __MIX_VIDEOFORMATENC_MPEG4_H__ */
 

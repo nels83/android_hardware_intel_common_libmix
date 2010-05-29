@@ -69,7 +69,6 @@ typedef MIX_RESULT (*MixVideoGetDecodedDataFunc)(MixVideo * mix,
                 MixIOVec * iovout, MixVideoRenderParams * render_params,
                 MixVideoFrame *frame);
 
-
 typedef MIX_RESULT (*MixVideoEncodeFunc)(MixVideo * mix, MixBuffer * bufin[],
 		gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
 		MixVideoEncodeParams * encode_params);

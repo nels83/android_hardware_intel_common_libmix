@@ -34,7 +34,8 @@ struct _MixVideoFormatEnc_H264 {
 	/*< public > */
     MixVideoFormatEnc parent;
 
-    VABufferID      coded_buf;
+    VABufferID      coded_buf[2];
+    VABufferID      last_coded_buf;
     VABufferID      seq_param_buf;
     VABufferID      pic_param_buf;
     VABufferID      slice_param_buf;	
@@ -42,9 +43,10 @@ struct _MixVideoFormatEnc_H264 {
     VASurfaceID *   surfaces;
     guint           surface_num;	
 
-    MixVideoFrame  *cur_fame;	//current input frame to be encoded;	
-    MixVideoFrame  *ref_fame;  //reference frame
-    MixVideoFrame  *rec_fame;	//reconstructed frame;	
+    MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
+    MixVideoFrame  *ref_frame;  //reference frame
+    MixVideoFrame  *rec_frame;	//reconstructed frame;	
+    MixVideoFrame  *last_frame;	//last frame;	
 
     guint basic_unit_size;  //for rate control
     guint disable_deblocking_filter_idc;
@@ -58,6 +60,7 @@ struct _MixVideoFormatEnc_H264 {
     gboolean    is_intra;
 
     guint       coded_buf_size;
+    guint coded_buf_index;
 
 	/*< public > */
 };
@@ -125,13 +128,15 @@ MIX_RESULT mix_videofmtenc_h264_encode(MixVideoFormatEnc *mix, MixBuffer * bufin
 MIX_RESULT mix_videofmtenc_h264_flush(MixVideoFormatEnc *mix);
 MIX_RESULT mix_videofmtenc_h264_eos(MixVideoFormatEnc *mix);
 MIX_RESULT mix_videofmtenc_h264_deinitialize(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_h264_get_max_encoded_buf_size (MixVideoFormatEnc *mix, guint * max_size);
 
 /* Local Methods */
 
+MIX_RESULT mix_videofmtenc_h264_get_max_encoded_buf_size (MixVideoFormatEnc *mix, guint *max_size);
 MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix, MixBuffer * bufin, 
         MixIOVec * iovout);
 MIX_RESULT mix_videofmtenc_h264_AnnexB_to_length_prefixed (
         guint8 * bufin, guint bufin_len, guint8* bufout, guint *bufout_len);
+
+MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix);
 
 #endif /* __MIX_VIDEOFORMATENC_H264_H__ */

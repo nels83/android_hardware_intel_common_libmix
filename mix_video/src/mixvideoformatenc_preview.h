@@ -42,9 +42,9 @@ struct _MixVideoFormatEnc_Preview {
 	VASurfaceID *   surfaces;
 	guint           surface_num;	
 
-	MixVideoFrame  *cur_fame;	//current input frame to be encoded;	
-	MixVideoFrame  *ref_fame;  //reference frame
-	MixVideoFrame  *rec_fame;	//reconstructed frame;	
+	MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
+	MixVideoFrame  *ref_frame;  //reference frame
+	MixVideoFrame  *rec_frame;	//reconstructed frame;	
 
 	guint basic_unit_size;  //for rate control
 	guint disable_deblocking_filter_idc;

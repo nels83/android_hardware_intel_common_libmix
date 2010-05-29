@@ -347,7 +347,7 @@ MIX_RESULT mix_videofmt_mp42_initialize(MixVideoFormat *mix,
 	*surface_pool = parent->surfacepool;
 
 	ret = mix_surfacepool_initialize(parent->surfacepool, surfaces,
-			numSurfaces);
+			numSurfaces, va_display);
 
 	/* Initialize and save the VA context ID
 	 * Note: VA_PROGRESSIVE libva flag is only relevant to MPEG2
@@ -665,7 +665,7 @@ MIX_RESULT mix_videofmt_mp42_process_decode(MixVideoFormat *mix,
 		 */
 
 		if (!g_queue_is_empty(self->packed_stream_queue)) {
-			ret = MIX_RESULT_FAIL;
+			ret = MIX_RESULT_DROPFRAME;
 			LOG_E("The previous packed frame is not fully processed yet!\n");
 			goto cleanup;
 		}
@@ -679,19 +679,19 @@ MIX_RESULT mix_videofmt_mp42_process_decode(MixVideoFormat *mix,
 			/* Is the first frame in the packed frames a reference frame? */
 			if (idx == 0 && frame_type != MP4_VOP_TYPE_I && frame_type
 					!= MP4_VOP_TYPE_P) {
-				ret = MIX_RESULT_FAIL;
+				ret = MIX_RESULT_DROPFRAME;;
 				LOG_E("The first frame in packed frame is not I or B\n");
 				goto cleanup;
 			}
 
 			if (idx != 0 && frame_type != MP4_VOP_TYPE_B) {
-				ret = MIX_RESULT_FAIL;
+				ret = MIX_RESULT_DROPFRAME;;
 				LOG_E("The frame other than the first one in packed frame is not B\n");
 				goto cleanup;
 			}
 
 			if (picture_data->vop_coded == 0) {
-				ret = MIX_RESULT_FAIL;
+				ret = MIX_RESULT_DROPFRAME;
 				LOG_E("In packed frame, there's unexpected skipped frame\n");
 				goto cleanup;
 			}
@@ -769,7 +769,7 @@ MIX_RESULT mix_videofmt_mp42_process_decode(MixVideoFormat *mix,
 				frame_type = picture_param->vop_fields.bits.vop_coding_type;
 
 				if (frame_type == MP4_VOP_TYPE_B) {
-					ret = MIX_RESULT_FAIL;
+					ret = MIX_RESULT_DROPFRAME;
 					LOG_E("The frame right after packed frame is B frame!\n");
 					goto cleanup;
 				}
@@ -1055,6 +1055,7 @@ MIX_RESULT mix_videofmt_mp42_process_decode(MixVideoFormat *mix,
 		goto cleanup;
 	}
 
+#if 0   /* we don't call vaSyncSurface here, the call is moved to mix_video_render() */
 	LOG_V("Calling vaSyncSurface\n");
 
 	/* Decode the picture */
@@ -1064,6 +1065,7 @@ MIX_RESULT mix_videofmt_mp42_process_decode(MixVideoFormat *mix,
 		LOG_E("Failed to vaSyncSurface(): va_ret = 0x%x\n", va_ret);
 		goto cleanup;
 	}
+#endif 
 
 	/* Set the discontinuity flag */
 	mix_videoframe_set_discontinuity(frame, discontinuity);

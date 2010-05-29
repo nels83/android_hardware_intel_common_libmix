@@ -20,13 +20,13 @@
 static GType _mix_displayx11_type = 0;
 static MixDisplayClass *parent_class = NULL;
 
-#define _do_init { _mix_displayx11_type = g_define_type_id; }
-
 #ifdef ANDROID
 int XSync(Display* display, Bool bvalue) {
     return 0;
 }
 #endif
+
+#define _do_init { _mix_displayx11_type = g_define_type_id; }
 
 gboolean mix_displayx11_copy(MixDisplay * target, const MixDisplay * src);
 MixDisplay *mix_displayx11_dup(const MixDisplay * obj);

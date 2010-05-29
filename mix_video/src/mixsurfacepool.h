@@ -139,7 +139,7 @@ MixSurfacePool *mix_surfacepool_ref (MixSurfacePool * mix);
 /* Class Methods */
 
 MIX_RESULT mix_surfacepool_initialize (MixSurfacePool * obj, 
-				VASurfaceID *surfaces, guint num_surfaces);
+				VASurfaceID *surfaces, guint num_surfaces, VADisplay va_display);
 MIX_RESULT mix_surfacepool_put (MixSurfacePool * obj,
 				MixVideoFrame * frame);
 

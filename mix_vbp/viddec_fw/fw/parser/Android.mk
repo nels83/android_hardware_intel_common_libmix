@@ -26,7 +26,6 @@ LOCAL_C_INCLUDES +=			\
 	$(GLIB_TOP)			\
 	$(GLIB_TOP)/glib		\
 	$(GLIB_TOP)/android		\
-	$(GLIB_TOP)/gobject		\
 	$(LOCAL_PATH)/include		\
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/include		   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/include		   \
@@ -35,7 +34,6 @@ LOCAL_C_INCLUDES +=			\
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/mp4/include  \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/vc1/include  \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/vc1/parser   \
-	$(TARGET_OUT_HEADERS)/libmixcommon				   \
 	$(TARGET_OUT_HEADERS)/libva
 
 LOCAL_COPY_HEADERS_TO := libmixvbp
@@ -48,10 +46,7 @@ LOCAL_MODULE := libmixvbp
 LOCAL_SHARED_LIBRARIES :=		\
 	libdl				\
 	libcutils			\
-	libglib-2.0			\
-	libgobject-2.0			\
-	libgthread-2.0			\
-	libgmodule-2.0
+	libglib-2.0
 
 ifeq ($(strip $(MIXVBP_LOG_ENABLE)),true)
 LOCAL_CFLAGS += -DVBP_TRACE

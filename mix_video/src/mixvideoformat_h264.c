@@ -493,7 +493,7 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
 	
 
 	ret = mix_surfacepool_initialize(parent->surfacepool,
-		surfaces, numSurfaces);
+		surfaces, numSurfaces, vadisplay);
 
 	switch (ret)
 	{
@@ -932,7 +932,7 @@ MIX_RESULT mix_videofmt_h264_deinitialize(MixVideoFormat *mix) {
 }
 #define HACK_DPB
 #ifdef HACK_DPB
-static inline void mix_videofmt_h264_hack_dpb(MixVideoFormat *mix, 
+static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix, 
 					vbp_picture_data_h264* pic_data
 					) 
 {
@@ -942,6 +942,7 @@ static inline void mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 	VAPictureParameterBufferH264 *pic_params = pic_data->pic_parms;
 	VAPictureH264 *pRefList = NULL;
 	int i = 0, j = 0, k = 0, list = 0;
+	MIX_RESULT ret = MIX_RESULT_FAIL;
 
 	MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);
 
@@ -989,6 +990,9 @@ static inline void mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 				{
 					guint poc = mix_videofmt_h264_get_poc(&(pRefList[j]));
 					gpointer video_frame = g_hash_table_lookup(self->dpb_surface_table, (gpointer)poc);
+
+					if (!video_frame) return MIX_RESULT_DROPFRAME; //return non-fatal error
+
 					pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id = 
 						((MixVideoFrame *)video_frame)->frame_id;
 
@@ -1009,6 +1013,7 @@ static inline void mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 		}
 
 	}
+	return MIX_RESULT_SUCCESS;
 }
 #endif
 
@@ -1127,7 +1132,12 @@ MIX_RESULT mix_videofmt_h264_process_decode_picture(MixVideoFormat *mix,
 
 #ifdef HACK_DPB
 	//We have to provide a hacked DPB rather than complete DPB for libva as workaround
-	mix_videofmt_h264_hack_dpb(mix, pic_data);
+	ret = mix_videofmt_h264_hack_dpb(mix, pic_data);
+	if (ret != MIX_RESULT_SUCCESS)
+	{
+		LOG_E( "Error reference frame not found\n");
+		goto cleanup;
+	}
 #endif
 
 	//Libva buffer set up
@@ -1196,7 +1206,7 @@ MIX_RESULT mix_videofmt_h264_process_decode_picture(MixVideoFormat *mix,
 				if (video_frame == NULL)
 				{
 					LOG_E(  "unable to find surface of picture %d (current picture %d).", poc, mix_videofmt_h264_get_poc(&pic_params->CurrPic));
-					ret = MIX_RESULT_FAIL;
+					ret = MIX_RESULT_DROPFRAME;  //return non-fatal error
 					goto cleanup;
 				}
 				else
@@ -1219,7 +1229,7 @@ MIX_RESULT mix_videofmt_h264_process_decode_picture(MixVideoFormat *mix,
 					if (video_frame == NULL)
 					{
 						LOG_E(  "unable to find surface of picture %d (current picture %d).", poc, mix_videofmt_h264_get_poc(&pic_params->CurrPic));
-						ret = MIX_RESULT_FAIL;
+						ret = MIX_RESULT_DROPFRAME;  //return non-fatal error
 						goto cleanup;
 					}
 					else
@@ -1330,6 +1340,8 @@ MIX_RESULT mix_videofmt_h264_process_decode_picture(MixVideoFormat *mix,
 		goto cleanup;
 	}
 
+#if 0	/* we don't call vaSyncSurface here, the call is moved to mix_video_render() */
+
 	LOG_V( "Calling vaSyncSurface\n");
 
 	//Decode the picture
@@ -1341,7 +1353,7 @@ MIX_RESULT mix_videofmt_h264_process_decode_picture(MixVideoFormat *mix,
 		LOG_E( "Video driver returned error from vaSyncSurface\n");
 		goto cleanup;
 	}
-
+#endif
 
 	if (pic_index == 0)
 	{

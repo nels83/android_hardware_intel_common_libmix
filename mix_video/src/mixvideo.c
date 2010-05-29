@@ -12,6 +12,8 @@
 #endif
 #include <va/va_x11.h>
 
+#include <string.h>
+
 #include "mixvideolog.h"
 
 #include "mixdisplayx11.h"
@@ -104,7 +106,6 @@ MIX_RESULT mix_video_render_default(MixVideo * mix,
 MIX_RESULT mix_video_get_decoded_data_default(MixVideo * mix, MixIOVec * iovout,
 		MixVideoRenderParams * render_params, MixVideoFrame *frame);
 
-
 MIX_RESULT mix_video_encode_default(MixVideo * mix, MixBuffer * bufin[],
 		gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
 		MixVideoEncodeParams * encode_params);
@@ -165,7 +166,7 @@ static void mix_video_class_init(MixVideoClass * klass) {
 	klass->get_frame_func = mix_video_get_frame_default;
 	klass->release_frame_func = mix_video_release_frame_default;
 	klass->render_func = mix_video_render_default;
-        klass->get_decoded_data_func = mix_video_get_decoded_data_default;
+	klass->get_decoded_data_func = mix_video_get_decoded_data_default;
 	klass->encode_func = mix_video_encode_default;
 	klass->flush_func = mix_video_flush_default;
 	klass->eos_func = mix_video_eos_default;
@@ -377,12 +378,10 @@ MIX_RESULT mix_video_initialize_default(MixVideo * mix, MixCodecMode mode,
 
 		if (MIX_IS_DISPLAYX11(mix_display)) {
 			MixDisplayX11 *mix_displayx11 = MIX_DISPLAYX11(mix_display);
-#if 1
-			mix_displayx11->display = g_malloc(sizeof(Display));
-			*(mix_displayx11->display) = 0x18c34078;
-#else
-			//mix_displayx11->display = 1;
-#endif
+
+                        /* XXX NOTE: This must be fixed in all clients */
+                        mix_displayx11->display = 0x18c34078;
+
 			ret = mix_displayx11_get_display(mix_displayx11, &display);
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed to get display 2\n");
@@ -1123,6 +1122,8 @@ MIX_RESULT mix_video_render_default(MixVideo * mix,
 	gulong va_surface_id;
 	VAStatus va_status;
 
+	gboolean sync_flag = FALSE;
+
 	CHECK_INIT_CONFIG(mix, priv);
 
 	if (!render_params || !frame) {
@@ -1213,6 +1214,29 @@ MIX_RESULT mix_video_render_default(MixVideo * mix,
 
 	guint32 frame_structure = 0;
 	mix_videoframe_get_frame_structure(frame, &frame_structure);
+
+	ret = mix_videoframe_get_sync_flag(frame, &sync_flag);
+	if (ret != MIX_RESULT_SUCCESS) {
+		LOG_E("Failed to get sync_flag\n");
+		goto cleanup;
+	}
+
+	if (!sync_flag) {
+		ret = mix_videoframe_set_sync_flag(frame, TRUE);
+		if (ret != MIX_RESULT_SUCCESS) {
+			LOG_E("Failed to set sync_flag\n");
+			goto cleanup;
+		}
+
+		va_status = vaSyncSurface(priv->va_display, va_surface_id);
+		if (va_status != VA_STATUS_SUCCESS) {
+			ret = MIX_RESULT_FAIL;
+			LOG_E("Failed vaSyncSurface() : va_status = 0x%x\n", va_status);
+			goto cleanup;
+		}
+	}
+
+
 	/* TODO: the last param of vaPutSurface is de-interlacing flags,
 	 what is value shall be*/
 	va_status = vaPutSurface(priv->va_display, (VASurfaceID) va_surface_id,
@@ -1222,12 +1246,9 @@ MIX_RESULT mix_video_render_default(MixVideo * mix,
 
 	if (va_status != VA_STATUS_SUCCESS) {
 		ret = MIX_RESULT_FAIL;
-		LOG_E("Failed vaPutSurface() : va_status = %d\n", va_status);
+		LOG_E("Failed vaPutSurface() : va_status = 0x%x\n", va_status);
 		goto cleanup;
 	}
-
-	/* TODO: Is this only for X11? */
-	XSync(display, FALSE);
 
 	ret = MIX_RESULT_SUCCESS;
 
@@ -1410,7 +1431,6 @@ MIX_RESULT mix_video_get_decoded_data(MixVideo * mix, MixIOVec * iovout,
 	}
 	return MIX_RESULT_NOTIMPL;
 }
-
 
 MIX_RESULT mix_video_encode_default(MixVideo * mix, MixBuffer * bufin[],
 		gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,

@@ -117,19 +117,19 @@ void mix_videoformat_finalize(GObject * obj) {
 	if (mix->va_display) {
 		if (mix->va_context != VA_INVALID_ID)
 		{
-			va_status = vaDestroyConfig(mix->va_display, mix->va_config);
-			if (va_status != VA_STATUS_SUCCESS) {
-			LOG_W( "Failed vaDestroyConfig\n");
-			} 
-			mix->va_config = VA_INVALID_ID;
-		}
-		if (mix->va_context != VA_INVALID_ID)
-		{
 			va_status = vaDestroyContext(mix->va_display, mix->va_context);
 			if (va_status != VA_STATUS_SUCCESS) {
 				LOG_W( "Failed vaDestroyContext\n");
 			}
 			mix->va_context = VA_INVALID_ID;
+		}
+		if (mix->va_config != VA_INVALID_ID)
+		{
+			va_status = vaDestroyConfig(mix->va_display, mix->va_config);
+			if (va_status != VA_STATUS_SUCCESS) {
+			LOG_W( "Failed vaDestroyConfig\n");
+			} 
+			mix->va_config = VA_INVALID_ID;
 		}
 		if (mix->va_surfaces)
 		{

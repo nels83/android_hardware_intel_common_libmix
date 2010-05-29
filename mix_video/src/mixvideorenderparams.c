@@ -260,7 +260,7 @@ MIX_RESULT mix_videorenderparams_set_display(MixVideoRenderParams * obj,
 
 	/* dup */
 	if (display) {
-		obj->display = mix_display_dup(display);
+		obj->display = mix_display_ref(display);
 	}
 
 	return MIX_RESULT_SUCCESS;
@@ -273,7 +273,7 @@ MIX_RESULT mix_videorenderparams_get_display(MixVideoRenderParams * obj,
 
 	/* dup? */
 	if (obj->display) {
-		*display = mix_display_dup(obj->display);
+		*display = mix_display_ref(obj->display);
 	}
 
 	return MIX_RESULT_SUCCESS;

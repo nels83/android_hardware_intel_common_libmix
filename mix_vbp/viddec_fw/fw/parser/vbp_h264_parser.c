@@ -1440,13 +1440,14 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
   	while (size_left >= NAL_length_size)
   	{
     	NAL_length = vbp_get_NAL_length_h264(cubby->buf + size_parsed);    	
-    	  
-        size_parsed += NAL_length_size;
+
+    	size_parsed += NAL_length_size;
 #else
 	while (size_left > 0)
 	{
-		NAL_length = size_left;
+	NAL_length = size_left;
 #endif
+    	  
     	cxt->list.data[cxt->list.num_items].stpos = size_parsed;
     	size_parsed += NAL_length; /* skip NAL bytes */
     	/* end position is exclusive */

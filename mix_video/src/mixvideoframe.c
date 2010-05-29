@@ -8,9 +8,24 @@
 
 /**
  * SECTION:mixvideoframe
- * @short_description: VideoConfig parameters
- *
- * A data object which stores videoconfig specific parameters.
+ * @short_description: MI-X Video Frame Object 
+ * 
+ * <para>
+ * The MixVideoFrame object will be created by 
+ * MixVideo and provided to the MMF/App in the 
+ * MixVideo mix_video_get_frame() function.
+ * </para>
+ * <para> 
+ * mix_video_release_frame() must be used 
+ * to release frame object returned from 
+ * mix_video_get_frame(). Caller must not 
+ * use mix_videoframe_ref() or mix_videoframe_unref() 
+ * or adjust the reference count directly in any way. 
+ * This object can be supplied in the mix_video_render() 
+ * function to render the associated video frame. 
+ * The MMF/App can release this object when it no longer 
+ * needs to display/re-display this frame.
+ * </para> 
  */
 
 
@@ -41,7 +56,6 @@ static void mix_videoframe_init(MixVideoFrame * self) {
 	self->frame_id = VA_INVALID_SURFACE;
 	self->timestamp = 0;
 	self->discontinuity = FALSE;
-	self->frame_structure = VA_FRAME_PICTURE;
 
 	MixVideoFramePrivate *priv = MIX_VIDEOFRAME_GET_PRIVATE(self);
 	self->reserved1 = priv;
@@ -55,9 +69,12 @@ static void mix_videoframe_init(MixVideoFrame * self) {
 	/* set stuff for skipped frames */
 	priv -> is_skipped = FALSE;
 	priv -> real_frame = NULL;
+	priv -> sync_flag  = FALSE;
+	priv -> frame_structure = VA_FRAME_PICTURE;
+
+	priv -> va_display = NULL;
 
 	g_static_rec_mutex_init (&priv -> lock);
-
 }
 
 static void mix_videoframe_class_init(MixVideoFrameClass * klass) {
@@ -137,6 +154,8 @@ void mix_videoframe_unref(MixVideoFrame * obj) {
 			g_static_rec_mutex_unlock (&priv->lock);
 			return;
 		}
+
+		mix_videoframe_reset(obj);
 		mix_surfacepool_put(pool, obj);
 	}
 
@@ -198,7 +217,6 @@ gboolean mix_videoframe_copy(MixParams * target, const MixParams * src) {
 		this_target->frame_id = this_src->frame_id;
 		this_target->timestamp = this_src->timestamp;
 		this_target->discontinuity = this_src->discontinuity;
-		this_target->frame_structure = this_src->frame_structure;
 
 		// Now chainup base class
 		if (parent_class->copy) {
@@ -233,8 +251,7 @@ gboolean mix_videoframe_equal(MixParams * first, MixParams * second) {
 		/* TODO: add comparison for other properties */
 		if (this_first->frame_id == this_second->frame_id
 				&& this_first->timestamp == this_second->timestamp
-				&& this_first->discontinuity == this_second->discontinuity 
-				&& this_first->frame_structure == this_second->frame_structure) {
+				&& this_first->discontinuity == this_second->discontinuity) {
 			// members within this scope equal. chaining up.
 			MixParamsClass *klass = MIX_PARAMS_CLASS(parent_class);
 			if (klass->equal)
@@ -315,14 +332,16 @@ MIX_RESULT mix_videoframe_get_discontinuity(MixVideoFrame * obj,
 MIX_RESULT mix_videoframe_set_frame_structure(MixVideoFrame * obj,
 		guint32 frame_structure) {
 	MIX_VIDEOFRAME_SETTER_CHECK_INPUT (obj);
-	obj->frame_structure = frame_structure;
+	MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+	priv->frame_structure = frame_structure;
 	return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videoframe_get_frame_structure(MixVideoFrame * obj,
 		guint32* frame_structure) {
 	MIX_VIDEOFRAME_GETTER_CHECK_INPUT (obj, frame_structure);
-	*frame_structure = obj->frame_structure;
+	MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+	*frame_structure = priv->frame_structure;
 	return MIX_RESULT_SUCCESS;
 }
 
@@ -356,6 +375,7 @@ MIX_RESULT mix_videoframe_get_frame_type(MixVideoFrame *obj,
 MIX_RESULT mix_videoframe_set_is_skipped(MixVideoFrame *obj,
 		gboolean is_skipped) {
 
+	MIX_VIDEOFRAME_SETTER_CHECK_INPUT (obj);
 	VIDEOFRAME_PRIVATE(obj) -> is_skipped = is_skipped;
 
 	return MIX_RESULT_SUCCESS;
@@ -374,6 +394,7 @@ MIX_RESULT mix_videoframe_get_is_skipped(MixVideoFrame *obj,
 MIX_RESULT mix_videoframe_set_real_frame(MixVideoFrame *obj,
 		MixVideoFrame *real) {
 
+	MIX_VIDEOFRAME_SETTER_CHECK_INPUT (obj);
 	VIDEOFRAME_PRIVATE(obj) -> real_frame = real;
 
 	return MIX_RESULT_SUCCESS;
@@ -385,6 +406,73 @@ MIX_RESULT mix_videoframe_get_real_frame(MixVideoFrame *obj,
 	MIX_VIDEOFRAME_GETTER_CHECK_INPUT(obj, real);
 
 	*real = VIDEOFRAME_PRIVATE(obj) -> real_frame;
+
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoframe_reset(MixVideoFrame *obj) {
+
+	MIX_VIDEOFRAME_SETTER_CHECK_INPUT (obj);
+	MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+
+	obj->timestamp = 0;
+	obj->discontinuity = FALSE;
+
+	priv -> is_skipped = FALSE;
+	priv -> real_frame = NULL;
+	priv -> sync_flag  = FALSE;
+	priv -> frame_structure = VA_FRAME_PICTURE;
+
+	return MIX_RESULT_SUCCESS;
+}
+
+
+MIX_RESULT mix_videoframe_set_sync_flag(MixVideoFrame *obj, gboolean sync_flag) {
+	MIX_VIDEOFRAME_SETTER_CHECK_INPUT (obj);
+	MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+
+	priv -> sync_flag = sync_flag;
+	if (priv->real_frame && priv->real_frame != obj) {
+		mix_videoframe_set_sync_flag(priv->real_frame, sync_flag);
+	}
+
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoframe_get_sync_flag(MixVideoFrame *obj, gboolean *sync_flag) {
+	MIX_VIDEOFRAME_GETTER_CHECK_INPUT(obj, sync_flag);
+	MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+	if (priv->real_frame && priv->real_frame != obj) {
+		return mix_videoframe_get_sync_flag(priv->real_frame, sync_flag);
+	} else {
+		*sync_flag = priv -> sync_flag;
+	}
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoframe_set_vadisplay(MixVideoFrame * obj, void *va_display) {
+
+	MIX_VIDEOFRAME_SETTER_CHECK_INPUT (obj);
+	MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+
+	priv -> va_display = va_display;
+        if (priv->real_frame && priv->real_frame != obj) {
+                mix_videoframe_set_vadisplay(priv->real_frame, va_display);
+        }
+
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoframe_get_vadisplay(MixVideoFrame * obj, void **va_display) {
+
+        MIX_VIDEOFRAME_GETTER_CHECK_INPUT(obj, va_display);
+        MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+
+        if (priv->real_frame && priv->real_frame != obj) {
+                return mix_videoframe_get_vadisplay(priv->real_frame, va_display);
+        } else {
+                *va_display = priv -> va_display;
+        }
 
 	return MIX_RESULT_SUCCESS;
 }
