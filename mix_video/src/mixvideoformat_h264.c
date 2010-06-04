@@ -1115,6 +1115,13 @@ MIX_RESULT mix_videofmt_h264_process_decode_picture(MixVideoFormat *mix,
 	LOG_V( "frame type is %d\n", frame_type);
 
 
+        // Set displayorder
+	ret = mix_videoframe_set_displayorder(frame, pic_params->CurrPic.TopFieldOrderCnt / 2);
+	if(ret != MIX_RESULT_SUCCESS) 
+	{
+                LOG_E("Error setting displayorder\n");
+		goto cleanup;
+	}
 
 	//Set the frame type for the frame object (used in reordering by frame manager)
 	ret = mix_videoframe_set_frame_type(frame, frame_type);

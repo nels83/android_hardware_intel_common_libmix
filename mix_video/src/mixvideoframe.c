@@ -477,3 +477,22 @@ MIX_RESULT mix_videoframe_get_vadisplay(MixVideoFrame * obj, void **va_display) 
 	return MIX_RESULT_SUCCESS;
 }
 
+MIX_RESULT mix_videoframe_set_displayorder(MixVideoFrame *obj, guint32 displayorder) {
+
+	MIX_VIDEOFRAME_SETTER_CHECK_INPUT (obj);
+	MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+
+	priv -> displayorder = displayorder;
+	return MIX_RESULT_SUCCESS;
+}
+
+
+MIX_RESULT mix_videoframe_get_displayorder(MixVideoFrame *obj, guint32 *displayorder) {
+
+	MIX_VIDEOFRAME_GETTER_CHECK_INPUT(obj, displayorder);
+        MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+
+        *displayorder = priv -> displayorder;
+	return MIX_RESULT_SUCCESS;
+}
+

@@ -32,7 +32,8 @@ struct _MixVideoFramePrivate
   GStaticRecMutex lock;
   gboolean sync_flag;
   guint32 frame_structure; // 0: frame, 1: top field, 2: bottom field
-  void *va_display;	
+  void *va_display;
+  guint32 displayorder;  
 };
 
 /**
@@ -76,11 +77,18 @@ mix_videoframe_set_sync_flag(MixVideoFrame *obj, gboolean sync_flag);
 MIX_RESULT
 mix_videoframe_get_sync_flag(MixVideoFrame *obj, gboolean *sync_flag);
 
+MIX_RESULT
+mix_videoframe_set_displayorder(MixVideoFrame *obj, guint32 displayorder);
+
+MIX_RESULT
+mix_videoframe_get_displayorder(MixVideoFrame *obj, guint32 *displayorder);
+
+/*
 MIX_RESULT 
 mix_videoframe_set_frame_structure(MixVideoFrame * obj, guint32 frame_structure);
 
 MIX_RESULT 
 mix_videoframe_get_frame_structure(MixVideoFrame * obj, guint32* frame_structure);
-
+*/
 
 #endif /* __MIX_VIDEOFRAME_PRIVATE_H__ */

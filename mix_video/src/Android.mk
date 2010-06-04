@@ -63,10 +63,10 @@ LOCAL_SHARED_LIBRARIES :=	\
 	libmixvbp		\
 	libva
 
-ifeq ($(strip $(MIXVIDEO_LOG_ENABLE)),true)
-LOCAL_CFLAGS += -DMIX_LOG_ENABLE
-LOCAL_SHARED_LIBRARIES += liblog
-endif
+#ifeq ($(strip $(MIXVIDEO_LOG_ENABLE)),true)
+#LOCAL_CFLAGS += -DMIX_LOG_ENABLE
+#LOCAL_SHARED_LIBRARIES += liblog
+#endif
 
 LOCAL_COPY_HEADERS_TO := libmixvideo
 
