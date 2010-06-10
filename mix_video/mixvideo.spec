@@ -6,7 +6,7 @@
 
 Summary: MIX Video
 Name: mixvideo
-Version: 0.1.15
+Version: 0.1.17
 Release: 1
 Source0: %{name}-%{version}.tar.gz
 NoSource: 0
@@ -24,7 +24,7 @@ MIX Video is an user library interface for various video codecs available on the
 %package devel
 Summary: Libraries include files
 Group: Development/Libraries
-Requires: %{name} = %{version}, mixcommon-devel , glib2-devel, mixvbp-devel
+Requires: %{name} = %{version}, mixcommon-devel , glib2-devel
 
 %description devel
 The %{name}-devel package contains the header files and static libraries for building applications which use %{name}.

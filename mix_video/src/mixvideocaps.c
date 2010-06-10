@@ -15,6 +15,13 @@ No license under any patent, copyright, trade secret or other intellectual prope
 
 #include "mixvideocaps.h"
 
+#ifdef ANDROID
+#define mix_strcmp strcmp
+#else
+#define mix_strcmp g_strcmp0
+#endif
+
+
 #define SAFE_FREE(p) if(p) { g_free(p); p = NULL; }
 
 static GType _mix_videocaps_type = 0;
@@ -179,8 +186,8 @@ mix_videocaps_equal (MixParams * first, MixParams * second)
       this_second = MIX_VIDEOCAPS (second);
 
       /* TODO: add comparison for other properties */
-      if (strcmp (this_first->mix_caps, this_second->mix_caps) == 0
-	  && strcmp (this_first->video_hw_caps,
+      if (mix_strcmp (this_first->mix_caps, this_second->mix_caps) == 0
+	  && mix_strcmp (this_first->video_hw_caps,
 			this_second->video_hw_caps) == 0)
 	{
 	  // members within this scope equal. chaining up.
@@ -236,7 +243,6 @@ MIX_RESULT
 mix_videocaps_set_video_hw_caps (MixVideoCaps * obj, gchar * video_hw_caps)
 {
   MIX_VIDEOCAPS_SETTER_CHECK_INPUT (obj);
-
   SAFE_FREE (obj->video_hw_caps);
   obj->video_hw_caps = g_strdup (video_hw_caps);
   if (video_hw_caps != NULL && obj->video_hw_caps == NULL)

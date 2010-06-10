@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>MI-X Video Data Definitons And Common Error Code</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
+<link rel="home" href="index.html" title="Mi-X Video Reference Manual">
+<link rel="up" href="ch01.html" title="MI-X Video API">
+<link rel="prev" href="MixVideoRenderParams.html" title="MixVideoRenderParams">
+<link rel="next" href="object-tree.html" title="Object Hierarchy">
+<meta name="generator" content="GTK-Doc V1.11 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="chapter" href="ch01.html" title="MI-X Video API">
+<link rel="chapter" href="object-tree.html" title="Object Hierarchy">
+<link rel="index" href="api-index-full.html" title="API Index">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="2">
+<tr valign="middle">
+<td><a accesskey="p" href="MixVideoRenderParams.html"><img src="left.png" width="24" height="24" border="0" alt="Prev"></a></td>
+<td><a accesskey="u" href="ch01.html"><img src="up.png" width="24" height="24" border="0" alt="Up"></a></td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="24" height="24" border="0" alt="Home"></a></td>
+<th width="100%" align="center">Mi-X Video Reference Manual</th>
+<td><a accesskey="n" href="object-tree.html"><img src="right.png" width="24" height="24" border="0" alt="Next"></a></td>
+</tr>
+<tr><td colspan="5" class="shortcuts">
+<a href="#MixVideo-mixvideodef.synopsis" class="shortcut">Top</a>
+                 | 
+                <a href="#MixVideo-mixvideodef.description" class="shortcut">Description</a>
+</td></tr>
+</table>
+<div class="refentry" title="MI-X Video Data Definitons And Common Error Code">
+<a name="MixVideo-mixvideodef"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="MixVideo-mixvideodef.top_of_page"></a>MI-X Video Data Definitons And Common Error Code</span></h2>
+<p>MI-X Video Data Definitons And Common Error Code — MI-X Video data definitons and common error code</p>
+</td>
+<td valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsynopsisdiv" title="Synopsis">
+<a name="MixVideo-mixvideodef.synopsis"></a><h2>Synopsis</h2>
+<pre class="synopsis">
+
+#include &lt;mixvideodef.h&gt;
+
+enum                <a class="link" href="MixVideo-mixvideodef.html#MIX-VIDEO-ERROR-CODE--CAPS" title="enum MIX_VIDEO_ERROR_CODE">MIX_VIDEO_ERROR_CODE</a>;
+enum                <a class="link" href="MixVideo-mixvideodef.html#MixCodecMode" title="enum MixCodecMode">MixCodecMode</a>;
+enum                <a class="link" href="MixVideo-mixvideodef.html#MixFrameOrderMode" title="enum MixFrameOrderMode">MixFrameOrderMode</a>;
+                    <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec">MixIOVec</a>;
+                    <a class="link" href="MixVideo-mixvideodef.html#MixRect" title="MixRect">MixRect</a>;
+enum                <a class="link" href="MixVideo-mixvideodef.html#MixState" title="enum MixState">MixState</a>;
+enum                <a class="link" href="MixVideo-mixvideodef.html#MixRawTargetFormat" title="enum MixRawTargetFormat">MixRawTargetFormat</a>;
+enum                <a class="link" href="MixVideo-mixvideodef.html#MixEncodeTargetFormat" title="enum MixEncodeTargetFormat">MixEncodeTargetFormat</a>;
+enum                <a class="link" href="MixVideo-mixvideodef.html#MixRateControl" title="enum MixRateControl">MixRateControl</a>;
+enum                <a class="link" href="MixVideo-mixvideodef.html#MixProfile" title="enum MixProfile">MixProfile</a>;
+enum                <a class="link" href="MixVideo-mixvideodef.html#MixDelimiterType" title="enum MixDelimiterType">MixDelimiterType</a>;
+</pre>
+</div>
+<div class="refsect1" title="Description">
+<a name="MixVideo-mixvideodef.description"></a><h2>Description</h2>
+<p>
+The section includes the definition of enum and struct as well as 
+</p>
+<div class="note" title="Common Video Error Return Codes of MI-X video functions" style="margin-left: 0.5in; margin-right: 0.5in;">
+<h3 class="title">Common Video Error Return Codes of MI-X video functions</h3>
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">
+<span class="type">MIX_RESULT_SUCCESS</span>, Successfully resumed</li>
+<li class="listitem">MIX_RESULT_NULL_PTR, The pointer passed to the function was null.</li>
+<li class="listitem">MIX_RESULT_NO_MEMORY, Memory needed for the operation could not be allocated.</li>
+<li class="listitem">MIX_RESULT_INVALID_PARAM, An argument passed to the function was invalid.</li>
+<li class="listitem">MIX_RESULT_NOT_INIT, MixVideo object has not been initialized yet.</li>
+<li class="listitem">MIX_RESULT_NOT_CONFIGURED, MixVideo object has not been configured yet.</li>
+<li class="listitem">MIX_RESULT_FAIL, For any failure.</li>
+</ul></div>
+</div>
+</div>
+<div class="refsect1" title="Details">
+<a name="MixVideo-mixvideodef.details"></a><h2>Details</h2>
+<div class="refsect2" title="enum MIX_VIDEO_ERROR_CODE">
+<a name="MIX-VIDEO-ERROR-CODE--CAPS"></a><h3>enum MIX_VIDEO_ERROR_CODE</h3>
+<pre class="programlisting">typedef enum {
+	MIX_RESULT_FRAME_NOTAVAIL = MIX_RESULT_ERROR_VIDEO_START + 1,
+	MIX_RESULT_EOS,
+	MIX_RESULT_POOLEMPTY,
+	MIX_RESULT_OUTOFSURFACES,
+	MIX_RESULT_DROPFRAME,
+	MIX_RESULT_NOTIMPL,
+	MIX_RESULT_VIDEO_LAST
+} MIX_VIDEO_ERROR_CODE;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="enum MixCodecMode">
+<a name="MixCodecMode"></a><h3>enum MixCodecMode</h3>
+<pre class="programlisting">typedef enum {
+	MIX_CODEC_MODE_ENCODE = 0,
+	MIX_CODEC_MODE_DECODE,
+	MIX_CODEC_MODE_LAST
+} MixCodecMode;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="enum MixFrameOrderMode">
+<a name="MixFrameOrderMode"></a><h3>enum MixFrameOrderMode</h3>
+<pre class="programlisting">typedef enum {
+	MIX_FRAMEORDER_MODE_DISPLAYORDER = 0,
+	MIX_FRAMEORDER_MODE_DECODEORDER,
+	MIX_FRAMEORDER_MODE_LAST
+} MixFrameOrderMode;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="MixIOVec">
+<a name="MixIOVec"></a><h3>MixIOVec</h3>
+<pre class="programlisting">typedef struct {
+	guchar *data;
+	gint buffer_size;
+    gint data_size;
+} MixIOVec;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="MixRect">
+<a name="MixRect"></a><h3>MixRect</h3>
+<pre class="programlisting">typedef struct {
+	gshort x;
+	gshort y;
+	gushort width;
+	gushort height;
+} MixRect;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="enum MixState">
+<a name="MixState"></a><h3>enum MixState</h3>
+<pre class="programlisting">typedef enum {
+	MIX_STATE_UNINITIALIZED = 0,
+	MIX_STATE_INITIALIZED,
+	MIX_STATE_CONFIGURED,
+	MIX_STATE_LAST
+} MixState;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="enum MixRawTargetFormat">
+<a name="MixRawTargetFormat"></a><h3>enum MixRawTargetFormat</h3>
+<pre class="programlisting">typedef enum
+{
+    MIX_RAW_TARGET_FORMAT_NONE = 0,
+    MIX_RAW_TARGET_FORMAT_YUV420 = 1,
+    MIX_RAW_TARGET_FORMAT_YUV422 = 2,
+    MIX_RAW_TARGET_FORMAT_YUV444 = 4,
+    MIX_RAW_TARGET_FORMAT_PROTECTED = 0x80000000,    
+    MIX_RAW_TARGET_FORMAT_LAST
+} MixRawTargetFormat;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="enum MixEncodeTargetFormat">
+<a name="MixEncodeTargetFormat"></a><h3>enum MixEncodeTargetFormat</h3>
+<pre class="programlisting">typedef enum
+{
+    MIX_ENCODE_TARGET_FORMAT_MPEG4 = 0,
+    MIX_ENCODE_TARGET_FORMAT_H263 = 2,
+    MIX_ENCODE_TARGET_FORMAT_H264 = 4,
+    MIX_ENCODE_TARGET_FORMAT_PREVIEW = 8,
+    MIX_ENCODE_TARGET_FORMAT_LAST
+} MixEncodeTargetFormat;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="enum MixRateControl">
+<a name="MixRateControl"></a><h3>enum MixRateControl</h3>
+<pre class="programlisting">typedef enum
+{
+    MIX_RATE_CONTROL_NONE = 1,
+    MIX_RATE_CONTROL_CBR = 2,
+    MIX_RATE_CONTROL_VBR = 4,
+    MIX_RATE_CONTROL_LAST
+} MixRateControl;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="enum MixProfile">
+<a name="MixProfile"></a><h3>enum MixProfile</h3>
+<pre class="programlisting">typedef enum
+{
+    MIX_PROFILE_MPEG2SIMPLE = 0,
+    MIX_PROFILE_MPEG2MAIN,
+    MIX_PROFILE_MPEG4SIMPLE,
+    MIX_PROFILE_MPEG4ADVANCEDSIMPLE,
+    MIX_PROFILE_MPEG4MAIN,
+    MIX_PROFILE_H264BASELINE,
+    MIX_PROFILE_H264MAIN,
+    MIX_PROFILE_H264HIGH,
+    MIX_PROFILE_VC1SIMPLE,
+    MIX_PROFILE_VC1MAIN,
+    MIX_PROFILE_VC1ADVANCED,
+    MIX_PROFILE_H263BASELINE
+} MixProfile;
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="enum MixDelimiterType">
+<a name="MixDelimiterType"></a><h3>enum MixDelimiterType</h3>
+<pre class="programlisting">typedef enum
+{
+    MIX_DELIMITER_LENGTHPREFIX = 0,
+    MIX_DELIMITER_ANNEXB
+} MixDelimiterType;
+</pre>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>
+          Generated by GTK-Doc V1.11</div>
+</body>
+</html>

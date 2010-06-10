@@ -1,0 +1,958 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>MixVideo</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
+<link rel="home" href="index.html" title="Mi-X Video Reference Manual">
+<link rel="up" href="ch01.html" title="MI-X Video API">
+<link rel="prev" href="ch01.html" title="MI-X Video API">
+<link rel="next" href="MixVideoInitParams.html" title="MixVideoInitParams">
+<meta name="generator" content="GTK-Doc V1.11 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="chapter" href="ch01.html" title="MI-X Video API">
+<link rel="chapter" href="object-tree.html" title="Object Hierarchy">
+<link rel="index" href="api-index-full.html" title="API Index">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="2">
+<tr valign="middle">
+<td><a accesskey="p" href="ch01.html"><img src="left.png" width="24" height="24" border="0" alt="Prev"></a></td>
+<td><a accesskey="u" href="ch01.html"><img src="up.png" width="24" height="24" border="0" alt="Up"></a></td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="24" height="24" border="0" alt="Home"></a></td>
+<th width="100%" align="center">Mi-X Video Reference Manual</th>
+<td><a accesskey="n" href="MixVideoInitParams.html"><img src="right.png" width="24" height="24" border="0" alt="Next"></a></td>
+</tr>
+<tr><td colspan="5" class="shortcuts">
+<a href="#MixVideo.synopsis" class="shortcut">Top</a>
+                 | 
+                <a href="#MixVideo.description" class="shortcut">Description</a>
+                 | 
+                <a href="#MixVideo.object-hierarchy" class="shortcut">Object Hierarchy</a>
+</td></tr>
+</table>
+<div class="refentry" title="MixVideo">
+<a name="MixVideo"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="MixVideo.top_of_page"></a>MixVideo</span></h2>
+<p>MixVideo — Object to support a single stream decoding or encoding using hardware accelerated decoder/encoder.</p>
+</td>
+<td valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsynopsisdiv" title="Synopsis">
+<a name="MixVideo.synopsis"></a><h2>Synopsis</h2>
+<pre class="synopsis">
+
+#include &lt;mixvideo.h&gt;
+
+                    <a class="link" href="MixVideo.html#MixVideo-struct" title="MixVideo">MixVideo</a>;
+<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *          <a class="link" href="MixVideo.html#mix-video-new" title="mix_video_new ()">mix_video_new</a>                       (void);
+<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *          <a class="link" href="MixVideo.html#mix-video-ref" title="mix_video_ref ()">mix_video_ref</a>                       (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);
+#define             <a class="link" href="MixVideo.html#mix-video-unref" title="mix_video_unref()">mix_video_unref</a>                     (obj)
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-version" title="mix_video_get_version ()">mix_video_get_version</a>               (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         guint *major,
+                                                         guint *minor);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()">mix_video_initialize</a>                (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideo-mixvideodef.html#MixCodecMode" title="enum MixCodecMode">MixCodecMode</a> mode,
+                                                         <a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *init_params,
+                                                         <a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *drm_init_params);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-deinitialize" title="mix_video_deinitialize ()">mix_video_deinitialize</a>              (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()">mix_video_configure</a>                 (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams">MixVideoConfigParams</a> *config_params,
+                                                         <a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *drm_config_params);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-config" title="mix_video_get_config ()">mix_video_get_config</a>                (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams">MixVideoConfigParams</a> **config_params);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-decode" title="mix_video_decode ()">mix_video_decode</a>                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *bufin[],
+                                                         gint bufincnt,
+                                                         <a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *decode_params);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()">mix_video_get_frame</a>                 (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> **frame);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-release-frame" title="mix_video_release_frame ()">mix_video_release_frame</a>             (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *frame);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-render" title="mix_video_render ()">mix_video_render</a>                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoRenderParams.html" title="MixVideoRenderParams">MixVideoRenderParams</a> *render_params,
+                                                         <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *frame);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-encode" title="mix_video_encode ()">mix_video_encode</a>                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *bufin[],
+                                                         gint bufincnt,
+                                                         <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec">MixIOVec</a> *iovout[],
+                                                         gint iovoutcnt,
+                                                         <a class="link" href="MixVideoEncodeParams.html" title="MixVideoEncodeParams">MixVideoEncodeParams</a> *encode_params);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-flush" title="mix_video_flush ()">mix_video_flush</a>                     (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-eos" title="mix_video_eos ()">mix_video_eos</a>                       (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-state" title="mix_video_get_state ()">mix_video_get_state</a>                 (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideo-mixvideodef.html#MixState" title="enum MixState">MixState</a> *state);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-mixbuffer" title="mix_video_get_mixbuffer ()">mix_video_get_mixbuffer</a>             (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> **buf);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-release-mixbuffer" title="mix_video_release_mixbuffer ()">mix_video_release_mixbuffer</a>         (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *buf);
+MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-max-coded-buffer-size" title="mix_video_get_max_coded_buffer_size ()">mix_video_get_max_coded_buffer_size</a> (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         guint *bufsize);
+</pre>
+</div>
+<div class="refsect1" title="Object Hierarchy">
+<a name="MixVideo.object-hierarchy"></a><h2>Object Hierarchy</h2>
+<pre class="synopsis">
+  GObject
+   +----MixVideo
+</pre>
+</div>
+<div class="refsect1" title="Description">
+<a name="MixVideo.description"></a><h2>Description</h2>
+<p>
+<a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> objects are created by the MMF/App and utilized for main MI-X API functionality for video.
+</p>
+<p>
+The MixVideo object handles any of the video formats internally.
+The App/MMF will pass a MixVideoConfigParamsDecH264/MixVideoConfigParamsDecVC1/
+MixVideoConfigParamsEncH264/etc object to MixVideo in the <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a>
+call. MixVideoInitParams, MixVideoDecodeParams, MixVideoEncodeParams, and
+MixVideoRenderParams objects will be passed in the <a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()"><code class="function">mix_video_initialize()</code></a>,
+<a class="link" href="MixVideo.html#mix-video-decode" title="mix_video_decode ()"><code class="function">mix_video_decode()</code></a>, <a class="link" href="MixVideo.html#mix-video-encode" title="mix_video_encode ()"><code class="function">mix_video_encode()</code></a> and <a class="link" href="MixVideo.html#mix-video-render" title="mix_video_render ()"><code class="function">mix_video_render()</code></a> calls respectively.
+</p>
+<p>
+The application can take the following steps to decode video:
+</p>
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">Create a mix_video object using <a class="link" href="MixVideo.html#mix-video-new" title="mix_video_new ()"><code class="function">mix_video_new()</code></a>
+</li>
+<li class="listitem">Initialize the object using <a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()"><code class="function">mix_video_initialize()</code></a>
+</li>
+<li class="listitem">Configure the stream using <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a>
+</li>
+<li class="listitem">Decode frames using <a class="link" href="MixVideo.html#mix-video-decode" title="mix_video_decode ()"><code class="function">mix_video_decode()</code></a>
+</li>
+<li class="listitem">Retrieve the decoded frames using <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a>. The decoded frames can be retrieved in decode order or display order.</li>
+<li class="listitem">At the presentation time, using the timestamp provided with the decoded frame, render the frame to an X11 Window using <a class="link" href="MixVideo.html#mix-video-render" title="mix_video_render ()"><code class="function">mix_video_render()</code></a>. The frame can be retained for redrawing until the next frame is retrieved.</li>
+<li class="listitem">When the frame is no longer needed for redrawing, release the frame using <a class="link" href="MixVideo.html#mix-video-release-frame" title="mix_video_release_frame ()"><code class="function">mix_video_release_frame()</code></a>.</li>
+</ul></div>
+<p>
+</p>
+<p>
+For encoding, the application can take the following steps to encode video:
+</p>
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">Create a mix_video object using <a class="link" href="MixVideo.html#mix-video-new" title="mix_video_new ()"><code class="function">mix_video_new()</code></a>
+</li>
+<li class="listitem">Initialize the object using <a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()"><code class="function">mix_video_initialize()</code></a>
+</li>
+<li class="listitem">Configure the stream using <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a>
+</li>
+<li class="listitem">Encode frames using <a class="link" href="MixVideo.html#mix-video-encode" title="mix_video_encode ()"><code class="function">mix_video_encode()</code></a>
+</li>
+<li class="listitem">Use the encoded data buffers as desired; for example, forward to a muxing component for saving to a file.</li>
+<li class="listitem">Retrieve the uncompressed frames for display using <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a>.</li>
+<li class="listitem">At the presentation time, using the timestamp provided with the decoded frame, render the frame to an X11 Window using <a class="link" href="MixVideo.html#mix-video-render" title="mix_video_render ()"><code class="function">mix_video_render()</code></a>. For encode, the frame should not be retained for redrawing after the initial rendering, due to resource limitations.</li>
+<li class="listitem">Release the frame using <a class="link" href="MixVideo.html#mix-video-release-frame" title="mix_video_release_frame ()"><code class="function">mix_video_release_frame()</code></a>.</li>
+</ul></div>
+</div>
+<div class="refsect1" title="Details">
+<a name="MixVideo.details"></a><h2>Details</h2>
+<div class="refsect2" title="MixVideo">
+<a name="MixVideo-struct"></a><h3>MixVideo</h3>
+<pre class="programlisting">typedef struct {
+	GObject parent;
+} MixVideo;
+</pre>
+<p>
+MI-X Video object</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term">GObject <em class="structfield"><code>parent</code></em>;</span></p></td>
+<td> Parent object.
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_new ()">
+<a name="mix-video-new"></a><h3>mix_video_new ()</h3>
+<pre class="programlisting"><a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *          mix_video_new                       (void);</pre>
+<p>
+Use this method to create new instance of <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a></p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> A newly allocated instance of <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a>
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_ref ()">
+<a name="mix-video-ref"></a><h3>mix_video_ref ()</h3>
+<pre class="programlisting"><a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *          mix_video_ref                       (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);</pre>
+<p>
+Add reference count.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> object to add reference
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> the MixVideo instance where reference count has been increased.
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_unref()">
+<a name="mix-video-unref"></a><h3>mix_video_unref()</h3>
+<pre class="programlisting">#define mix_video_unref(obj) g_object_unref (G_OBJECT(obj))
+</pre>
+<p>
+Decrement reference count of the object.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> object to unref.
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_get_version ()">
+<a name="mix-video-get-version"></a><h3>mix_video_get_version ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_get_version               (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         guint *major,
+                                                         guint *minor);</pre>
+<p>
+This function will return the major and minor version numbers of the library.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>major</code></em> :</span></p></td>
+<td> Pointer to an unsigned integer indicating the major version number of this MI-X Video library 
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>minor</code></em> :</span></p></td>
+<td> Pointer to an unsigned integer indicating the minor version number of this MI-X Video library
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_initialize ()">
+<a name="mix-video-initialize"></a><h3>mix_video_initialize ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_initialize                (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideo-mixvideodef.html#MixCodecMode" title="enum MixCodecMode">MixCodecMode</a> mode,
+                                                         <a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *init_params,
+                                                         <a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *drm_init_params);</pre>
+<p>
+This function will return the major and minor version numbers of the library.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mode</code></em> :</span></p></td>
+<td> Enum value to indicate encode or decode mode 
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>init_params</code></em> :</span></p></td>
+<td> MixVideoInitParams object which includes display type and pointer to display, encode or decode mode
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>drm_init_params</code></em> :</span></p></td>
+<td> MixDrmParams defined in <span class="emphasis"><em>Moorestown MI-X DRM API</em></span>. 
+                  This can be null if content is not protected.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> In addition to the <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>, 
+          the following error codes may be returned.
+<div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">MIX_RESULT_ALREADY_INIT, <a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()"><code class="function">mix_video_initialize()</code></a> has already been called.</li></ul></div>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_deinitialize ()">
+<a name="mix-video-deinitialize"></a><h3>mix_video_deinitialize ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_deinitialize              (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);</pre>
+<p>
+This function will un-initialize a session with this MI-X instance. During this call, the
+LibVA session is closed and all resources including surface buffers, <span class="type">MixBuffers</span> and
+<a class="link" href="MixVideoFrame.html" title="MixVideoFrame"><span class="type">MixVideoFrame</span></a> objects are freed. This function is called by the application once
+<a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()"><code class="function">mix_video_initialize()</code></a> is called, before exiting.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_configure ()">
+<a name="mix-video-configure"></a><h3>mix_video_configure ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_configure                 (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams">MixVideoConfigParams</a> *config_params,
+                                                         <a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *drm_config_params);</pre>
+<p>
+This function can be used to configure a stream for the current session. 
+        The caller can use this function to do the following:
+</p>
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">Choose frame ordering mode (display order or decode order)</li>
+<li class="listitem">Choose encode or decode mode</li>
+<li class="listitem">Choose whether display frames are enqueued for encode mode</li>
+<li class="listitem">Provide stream parameters</li>
+</ul></div>
+<p>
+</p>
+<p>
+This function can only be called after <a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()"><code class="function">mix_video_initialize()</code></a> has been called</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>config_params</code></em> :</span></p></td>
+<td> Pointer to <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams"><span class="type">MixVideoConfigParams</span></a> object (either <a class="link" href="MixVideoConfigParamsDec.html" title="MixVideoConfigParamsDec"><span class="type">MixVideoConfigParamsDec</span></a> or 
+                <a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc"><span class="type">MixVideoConfigParamsEnc</span></a> for specific media type)
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>drm_config_params</code></em> :</span></p></td>
+<td> Pointer to <a class="link" href="MixDrmParams.html" title="MixDrmParams"><span class="type">MixDrmParams</span></a> defined in <span class="emphasis"><em>Moorestown MI-X DRM API</em></span>. 
+                    This can be null if content is not protected. 
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> In addition to the <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>, 
+          the following error codes may be returned.
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">MIX_RESULT_RESOURCES_NOTAVAIL, HW accelerated decoding is not available.</li>
+<li class="listitem">MIX_RESULT_NOTSUPPORTED, A requested parameter is not supported or not available.</li>
+</ul></div>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_get_config ()">
+<a name="mix-video-get-config"></a><h3>mix_video_get_config ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_get_config                (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams">MixVideoConfigParams</a> **config_params);</pre>
+<p>
+This function can be used to get the current configuration of a stream for the current session.
+A <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams"><span class="type">MixVideoConfigParams</span></a> object will be returned, which can be used to get each of the
+parameter current values. The caller will need to release this object when it is no
+longer needed. 
+</p>
+<p>
+This function can only be called once <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a> has been called.
+</p>
+<p>
+</p>
+<div class="note" title="Note" style="margin-left: 0.5in; margin-right: 0.5in;">
+<h3 class="title">Note</h3> See description of <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a> for <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams"><span class="type">MixVideoConfigParams</span></a> object details. 
+For <a class="link" href="MixVideo.html#mix-video-get-config" title="mix_video_get_config ()"><code class="function">mix_video_get_config()</code></a>, all input parameter fields become OUT parameters.
+</div>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>config_params</code></em> :</span></p></td>
+<td> Pointer to pointer to <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams"><span class="type">MixVideoConfigParams</span></a> object defined in 
+                description of <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a>
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_decode ()">
+<a name="mix-video-decode"></a><h3>mix_video_decode ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_decode                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *bufin[],
+                                                         gint bufincnt,
+                                                         <a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *decode_params);</pre>
+<p>
+</p>
+<p>
+This function is used to initiate HW accelerated decoding of encoded data buffers. This
+function is used to decode to a surface buffer, which can then be rendered using
+<a class="link" href="MixVideo.html#mix-video-render" title="mix_video_render ()"><code class="function">mix_video_render()</code></a>.
+Video data input buffers are provided in a scatter/gather list of reference counted
+<span class="type">MixBuffers</span>. The input <span class="type">MixBuffers</span> are retained until a full frame of coded data is
+accumulated, at which point it will be decoded and the input buffers released. The
+decoded data will be stored in a surface buffer until it is rendered. The caller must
+provide the presentation timestamp and any stream discontinuity for the video frame
+for the encoded data, in the <a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams"><span class="type">MixVideoDecodeParams</span></a> object. These will be preserved
+and provided for the <a class="link" href="MixVideoFrame.html" title="MixVideoFrame"><span class="type">MixVideoFrame</span></a> object that contains the decoded data for this
+frame data.
+</p>
+<p>
+</p>
+<p>
+</p>
+<p>
+As only one timestamp is passed in for the buffer, there should be no more than one
+video frame included in the encoded data buffer provided in a single call to
+<a class="link" href="MixVideo.html#mix-video-decode" title="mix_video_decode ()"><code class="function">mix_video_decode()</code></a>. If partial frame data is passed in over multiple calls to
+<a class="link" href="MixVideo.html#mix-video-decode" title="mix_video_decode ()"><code class="function">mix_video_decode()</code></a>, the same timestamp should be provided with each call having
+data associated with the same frame.
+</p>
+<p>
+</p>
+<p>
+</p>
+<p> 
+The application should request a <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> object using <a class="link" href="MixVideo.html#mix-video-get-mixbuffer" title="mix_video_get_mixbuffer ()"><code class="function">mix_video_get_mixbuffer()</code></a>,
+initialize the <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> with the data pointer to the coded input data, along with the
+size of the input data buffer, and optionally can provide a token value and a callback
+function pointer. When the MixBuffer is released by both the application and <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a>,
+the callback will be called and passed the token value and the input data buffer
+pointer for any buffer management processing that the application needs or wants to
+perform (such as releasing the actual coded data buffer that was assigned to that
+<a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a>). MixBuffers are allocated in a pool, and the application determines the size
+of this pool, which is passed to <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a> in <span class="type">the</span> MixVideoConfigParams object.
+</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>bufin</code></em> :</span></p></td>
+<td> Array of pointers to <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> objects, described in <a class="link" href="MixVideo.html#mix-video-get-mixbuffer" title="mix_video_get_mixbuffer ()"><code class="function">mix_video_get_mixbuffer()</code></a> * 
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>bufincnt</code></em> :</span></p></td>
+<td> Number of <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> objects
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>decode_params</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams"><span class="type">MixVideoDecodeParams</span></a> object
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> In addition to the <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>, 
+          the following error codes may be returned.
+<div class="itemizedlist"><ul class="itemizedlist" type="disc"><li class="listitem">
+          MIX_RESULT_OUTOFSURFACES, No surfaces available for decoding. Nothing will be done. 
+          Caller can try again with the same MixBuffers later when surfaces may have been freed.
+    </li></ul></div>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_get_frame ()">
+<a name="mix-video-get-frame"></a><h3>mix_video_get_frame ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_get_frame                 (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> **frame);</pre>
+<p>
+</p>
+<p>
+This function returns a frame object that represents the next frame ID and includes
+timestamp and discontinuity information. If display frame ordering has been
+configured, it is the next frame displayed. If decode order frame ordering has been
+configured, it is the next frame decoded. In both cases the timestamp reflects the
+presentation timestamp. For encode mode the frame order is always display order.
+</p>
+<p>
+</p>
+<p>
+</p>
+<p>
+The frame object is a reference counted object that represents the frame. The
+application can retain this frame object as long as needed to display the frame and
+redisplay as needed. At presentation time, the application can call <a class="link" href="MixVideo.html#mix-video-render" title="mix_video_render ()"><code class="function">mix_video_render()</code></a>
+with this frame object to display the frame immediately. When the application no
+longer needs to display this frame, it should release the object by calling
+<a class="link" href="MixVideo.html#mix-video-release-frame" title="mix_video_release_frame ()"><code class="function">mix_video_release_frame()</code></a>. The application should not modify the reference count or
+delete this object directly.
+</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>frame</code></em> :</span></p></td>
+<td> A pointer to a pointer to a <a class="link" href="MixVideoFrame.html" title="MixVideoFrame"><span class="type">MixVideoFrame</span></a> object
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> In addition to the <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>, 
+          the following error codes may be returned.
+<div class="itemizedlist"><ul class="itemizedlist" type="disc">
+<li class="listitem">
+       MIX_RESULT_FRAME_NOTAVAIL, No decoded frames are available.
+   </li>
+<li class="listitem">
+       MIX_RESULT_EOS, No more decoded frames are available, 
+       since end of stream has been encountered.
+    </li>
+</ul></div>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_release_frame ()">
+<a name="mix-video-release-frame"></a><h3>mix_video_release_frame ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_release_frame             (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *frame);</pre>
+<p>
+This function releases a frame object that was acquired from <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a>.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>frame</code></em> :</span></p></td>
+<td> A pointer to a <a class="link" href="MixVideoFrame.html" title="MixVideoFrame"><span class="type">MixVideoFrame</span></a> object, described in <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a>
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_render ()">
+<a name="mix-video-render"></a><h3>mix_video_render ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_render                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideoRenderParams.html" title="MixVideoRenderParams">MixVideoRenderParams</a> *render_params,
+                                                         <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *frame);</pre>
+<p>
+This function renders a video frame associated with a MixVideoFrame object to the display. 
+The display is either an X11 Pixmap or an X11 Window using the overlay.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>render_params</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideoRenderParams.html" title="MixVideoRenderParams"><span class="type">MixVideoRenderParams</span></a> object defined below, 
+                which includes the display window and type, 
+                src and dest image sizes, deinterlace info, clipping rectangles, 
+                some post processing parameters, and so forth.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>frame</code></em> :</span></p></td>
+<td> Pointer to a <a class="link" href="MixVideoFrame.html" title="MixVideoFrame"><span class="type">MixVideoFrame</span></a> object returned from <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a>.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_encode ()">
+<a name="mix-video-encode"></a><h3>mix_video_encode ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_encode                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *bufin[],
+                                                         gint bufincnt,
+                                                         <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec">MixIOVec</a> *iovout[],
+                                                         gint iovoutcnt,
+                                                         <a class="link" href="MixVideoEncodeParams.html" title="MixVideoEncodeParams">MixVideoEncodeParams</a> *encode_params);</pre>
+<p>
+</p>
+<p>
+This function is used to initiate HW accelerated encoding of uncompressed video input
+buffers. The input buffers may either be uncompressed video in user space buffers, or
+CI frame indexes from libCI captured frames. In order to use CI frame indexes, the
+shared buffer mode should be indicated in the <a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc"><span class="type">MixVideoConfigParamsEnc</span></a> object
+provided to <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a>.
+</p>
+<p>
+</p>
+<p>
+</p>
+<p>
+Video uncompressed data input buffers are provided in a scatter/gather list of
+reference counted MixBuffers. The input <span class="type">MixBuffers</span> are considered a complete frame
+of data, and are used for encoding before the input buffers are released. LibCI frame
+indices may also be provided in MixBuffers.
+</p>
+<p>
+</p>
+<p>
+</p>
+<p>
+The encoded data will be copied to the output buffers provided in the array of
+<a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec"><span class="type">MixIOVec</span></a> structures, also in a scatter/gather list. These output buffers are allocated
+by the application. The application can query for the proper size of buffer to allocate
+for this, using <a class="link" href="MixVideo.html#mix-video-get-max-coded-buffer-size" title="mix_video_get_max_coded_buffer_size ()"><code class="function">mix_video_get_max_coded_buffer_size()</code></a>. It is suggested that the
+application create a pool of these buffers to pass in, for efficiency. The application will
+also set the buffer_size field in the <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec"><span class="type">MixIOVec</span></a> structures to the allocated buffer size.
+When the buffers are filled with encoded data by <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a>, the data_size will be set to
+the encoded data size placed in the buffer. For any buffer not used for encoded data,
+the data_size will be set to zero.
+</p>
+<p>
+</p>
+<p>
+</p>
+<p>
+Alternatively, if the application does not allocate the output buffers, the data pointers
+in the <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec"><span class="type">MixIOVec</span></a> structures (still provided by the application) can be set to NULL,
+whereupon <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> will allocate a data buffer for each frame and set the data,
+buffer_size and data_size pointers in the <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec"><span class="type">MixIOVec</span></a> structures accordingly. 
+</p>
+<p>
+</p>
+<p>
+</p>
+<div class="note" title="Note" style="margin-left: 0.5in; margin-right: 0.5in;">
+<h3 class="title">Note</h3> 
+This is not an efficient method to handle these buffers and it is preferred that
+the application provide pre-allocated buffers.
+</div>
+<p>
+</p>
+<p>
+</p>
+<p>
+The application should request a <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> object using <a class="link" href="MixVideo.html#mix-video-get-mixbuffer" title="mix_video_get_mixbuffer ()"><code class="function">mix_video_get_mixbuffer()</code></a>,
+initialize the <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> with the data pointer to the uncompressed input data or a LibCI
+frame index, along with the size of the input data buffer, and optionally can provide a
+token value and a callback function pointer. When the <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> is released by both
+the application and <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a>, the callback will be called and passed the token value
+and the input data buffer pointer for any buffer management processing that the
+application needs or wants to perform (such as releasing the actual data buffer that
+was assigned to that <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a>). <span class="type">MixBuffers</span> are allocated in a pool, and the application
+determines the size of this pool, which is passed to <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a> in the
+<a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams"><span class="type">MixVideoConfigParams</span></a> object.
+</p>
+<p>
+</p>
+<p>
+</p>
+<p>
+The application can choose to enable or disable display of the uncompressed video
+frames using the need_display of the <a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc"><span class="type">MixVideoConfigParamsEnc</span></a> object in
+<a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a>. If display is enabled, <span class="type">MixVideoFrames</span> are enqueued by
+<a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a>, to be requested by the application with <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a> and used to
+provide to <a class="link" href="MixVideo.html#mix-video-render" title="mix_video_render ()"><code class="function">mix_video_render()</code></a> for rendering before releasing with
+<a class="link" href="MixVideo.html#mix-video-release-frame" title="mix_video_release_frame ()"><code class="function">mix_video_release_frame()</code></a>. If display is disabled, no <span class="type">MixVideoFrames</span> will be
+enqueued.
+</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>bufin</code></em> :</span></p></td>
+<td> Array of pointers to <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> objects, structure defined in <a class="link" href="MixVideo.html#mix-video-decode" title="mix_video_decode ()"><code class="function">mix_video_decode()</code></a>
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>bufincnt</code></em> :</span></p></td>
+<td> Number of <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> objects 
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>iovout</code></em> :</span></p></td>
+<td> Array of <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec"><span class="type">MixIOVec</span></a> structures, pointing to buffers allocated by the application
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>iovoutcnt</code></em> :</span></p></td>
+<td> Number of items in iovout array
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>encode_params</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideoEncodeParams.html" title="MixVideoEncodeParams"><span class="type">MixVideoEncodeParams</span></a> object 
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_flush ()">
+<a name="mix-video-flush"></a><h3>mix_video_flush ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_flush                     (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);</pre>
+<p>
+This function will flush all encoded and decoded buffers that are currently enqueued or
+in the process of decoding. After this call, decoding can commence again, but would
+need to start at the beginning of a sequence (for example, with no dependencies on
+previously decoded reference frames).</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_eos ()">
+<a name="mix-video-eos"></a><h3>mix_video_eos ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_eos                       (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);</pre>
+<p>
+This function will signal end of stream to <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a>. This can be used to finalize
+decoding of the last frame and other end of stream processing. <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> will complete
+the decoding of all buffers received, and will continue to provide the decoded frame
+objects by means of the <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a> until all frames have been provided,
+at which point <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a> will return MIX_RESULT_EOS.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_get_state ()">
+<a name="mix-video-get-state"></a><h3>mix_video_get_state ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_get_state                 (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixVideo-mixvideodef.html#MixState" title="enum MixState">MixState</a> *state);</pre>
+<p>
+This function returns the current state of the MI-X session.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>state</code></em> :</span></p></td>
+<td> Current state of MI-X session.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_get_mixbuffer ()">
+<a name="mix-video-get-mixbuffer"></a><h3>mix_video_get_mixbuffer ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_get_mixbuffer             (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> **buf);</pre>
+<p>
+</p>
+<p>
+This function returns a frame object that represents the next frame ID and includes
+timestamp and discontinuity information. If display frame ordering has been
+configured, it is the next frame displayed. If decode order frame ordering has been
+configured, it is the next frame decoded. In both cases the timestamp reflects the
+presentation timestamp.
+</p>
+<p>
+</p>
+<p>
+</p>
+<p>
+The frame object is a reference counted object that represents the frame. The
+application can retain this frame object as long as needed to display the frame and
+redisplay as needed. At presentation time, the application can call <a class="link" href="MixVideo.html#mix-video-render" title="mix_video_render ()"><code class="function">mix_video_render()</code></a>
+with this frame object to display the frame immediately. When the application no
+longer needs to display this frame, it should release the object by calling
+<a class="link" href="MixVideo.html#mix-video-release-frame" title="mix_video_release_frame ()"><code class="function">mix_video_release_frame()</code></a>. The application should not modify the reference count or
+delete this object directly.
+</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>buf</code></em> :</span></p></td>
+<td> A pointer to a pointer to a <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> object
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_release_mixbuffer ()">
+<a name="mix-video-release-mixbuffer"></a><h3>mix_video_release_mixbuffer ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_release_mixbuffer         (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *buf);</pre>
+<p>
+This function releases a frame object that was acquired from <a class="link" href="MixVideo.html#mix-video-get-mixbuffer" title="mix_video_get_mixbuffer ()"><code class="function">mix_video_get_mixbuffer()</code></a>.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>buf</code></em> :</span></p></td>
+<td> A pointer to a <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> object, described in <a class="link" href="MixVideo.html#mix-video-get-mixbuffer" title="mix_video_get_mixbuffer ()"><code class="function">mix_video_get_mixbuffer()</code></a>.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_video_get_max_coded_buffer_size ()">
+<a name="mix-video-get-max-coded-buffer-size"></a><h3>mix_video_get_max_coded_buffer_size ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_video_get_max_coded_buffer_size (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
+                                                         guint *bufsize);</pre>
+<p>
+</p>
+<p>
+This function can be used to get the maximum size of encoded data buffer needed for
+the <a class="link" href="MixVideo.html#mix-video-encode" title="mix_video_encode ()"><code class="function">mix_video_encode()</code></a> call.
+</p>
+<p>
+</p>
+<p>
+This function can only be called once <a class="link" href="MixVideo.html#mix-video-configure" title="mix_video_configure ()"><code class="function">mix_video_configure()</code></a> has been called.
+</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo.html" title="MixVideo"><span class="type">MixVideo</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>bufsize</code></em> :</span></p></td>
+<td> Pointer to guint.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>
+          Generated by GTK-Doc V1.11</div>
+</body>
+</html>

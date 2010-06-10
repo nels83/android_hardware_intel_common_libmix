@@ -12,7 +12,7 @@
 #include <va/va.h>
 #include <glib-object.h>
 #include "mixvideodef.h"
-#include "mixdrmparams.h"
+#include <mixdrmparams.h>
 #include "mixvideoconfigparamsenc.h"
 #include "mixvideoframe.h"
 #include "mixframemanager.h"

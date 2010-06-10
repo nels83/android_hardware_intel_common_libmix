@@ -6,7 +6,9 @@
  No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
  */
 #include <glib.h>
+#ifndef ANDROID
 #include <va/va_x11.h>
+#endif
 
 #include "mixvideolog.h"
 #include "mixvideoformat_h264.h"
@@ -92,12 +94,14 @@ void mix_videoformat_h264_finalize(GObject * obj) {
 	//inputbufqueue is deallocated by parent
 	//parent calls vaDestroyConfig, vaDestroyContext and vaDestroySurfaces
 
-	//Free the DPB surface table
-	//First remove all the entries (frames will be unrefed)
-	g_hash_table_remove_all(self->dpb_surface_table);
-	//Then unref the table
-	g_hash_table_unref(self->dpb_surface_table);
-	self->dpb_surface_table = NULL;
+	if (self->dpb_surface_table) {
+		//Free the DPB surface table
+		//First remove all the entries (frames will be unrefed)
+		g_hash_table_remove_all(self->dpb_surface_table);
+		//Then unref the table
+		g_hash_table_unref(self->dpb_surface_table);
+		self->dpb_surface_table = NULL;
+	}
 
 	g_mutex_lock(parent->objectlock);
 	parent->initialized = TRUE;
@@ -1113,7 +1117,6 @@ MIX_RESULT mix_videofmt_h264_process_decode_picture(MixVideoFormat *mix,
 
 	LOG_V( "Getting a new surface for frame_num %d\n", pic_params->frame_num);
 	LOG_V( "frame type is %d\n", frame_type);
-
 
         // Set displayorder
 	ret = mix_videoframe_set_displayorder(frame, pic_params->CurrPic.TopFieldOrderCnt / 2);

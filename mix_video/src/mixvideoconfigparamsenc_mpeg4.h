@@ -71,13 +71,32 @@ struct _MixVideoConfigParamsEncMPEG4
   /*< public > */
 
   /* TODO: Add MPEG-4 configuration paramters */
+  
+  /* Indicate profile and level. 
+   * Default value is 3. 
+   * Can be ignored (refer to encoding 
+   * specification for more info). */
   guchar  profile_and_level_indication;
+  
+  /* Number of ticks between two successive VOPs 
+   * in display order. Default value is 3. 
+   * Can be ignored (refer to encoding specification 
+   * for more info) */
   guint fixed_vop_time_increment;
+  
+  /* enable/disable deblocking */
   guint disable_deblocking_filter_idc;
   
+  /* Reserved for future use */
   void *reserved1;
+  
+  /* Reserved for future use */  
   void *reserved2;
+  
+  /* Reserved for future use */  
   void *reserved3;
+  
+  /* Reserved for future use */  
   void *reserved4;
 };
 
@@ -112,7 +131,7 @@ MixVideoConfigParamsEncMPEG4 *mix_videoconfigparamsenc_mpeg4_new (void);
 /**
 * mix_videoconfigparamsenc_mpeg4_ref:
 * @mix: object to add reference
-* @returns: the MixVideoConfigParamsEncMPEG4 instance where reference count has been increased.
+* @returns: the #MixVideoConfigParamsEncMPEG4 instance where reference count has been increased.
 * 
 * Add reference count.
 */
@@ -131,21 +150,73 @@ MixVideoConfigParamsEncMPEG4
 
 /* TODO: Add getters and setters for other properties */
 
+/**
+ * mix_videoconfigparamsenc_mpeg4_set_dlk:
+ * @obj: #MixVideoConfigParamsEncMPEG4 object
+ * @disable_deblocking_filter_idc: The flag to enable/disable deblocking
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set the The flag to enable/disable deblocking
+ */
 MIX_RESULT mix_videoconfigparamsenc_mpeg4_set_dlk (MixVideoConfigParamsEncMPEG4 * obj,
 		guint disable_deblocking_filter_idc);
 
+/**
+ * mix_videoconfigparamsenc_mpeg4_get_dlk:
+ * @obj: #MixVideoConfigParamsEncMPEG4 object
+ * @disable_deblocking_filter_idc: deblocking flag to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get the The flag to enable/disable deblocking
+ */
 MIX_RESULT mix_videoconfigparamsenc_mpeg4_get_dlk (MixVideoConfigParamsEncMPEG4 * obj,
 		guint * disable_deblocking_filter_idc);
 
+/**
+ * mix_videoconfigparamsenc_mpeg4_set_profile_level:
+ * @obj: #MixVideoConfigParamsEncMPEG4 object
+ * @profile_and_level_indication: Indicate profile and level. Default value is 3. 
+ *                                Can be ignored (refer to encoding specification 
+ *                                for more info).
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set profile_and_level_indication
+ */
 MIX_RESULT mix_videoconfigparamsenc_mpeg4_set_profile_level (MixVideoConfigParamsEncMPEG4 * obj,
 		guchar profile_and_level_indication);
 
+/**
+ * mix_videoconfigparamsenc_mpeg4_get_profile_level:
+ * @obj: #MixVideoConfigParamsEncMPEG4 object
+ * @profile_and_level_indication: profile_and_level_indication to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get profile_and_level_indication
+ */
 MIX_RESULT mix_videoconfigparamsenc_mpeg4_get_profile_level (MixVideoConfigParamsEncMPEG4 * obj,
 		guchar * profile_and_level_indication);
 
+/**
+ * mix_videoconfigparamsenc_mpeg4_get_profile_level:
+ * @obj: #MixVideoConfigParamsEncMPEG4 object
+ * @fixed_vop_time_increment: Number of ticks between two successive VOPs in display order. 
+ *                            Default value is 3. Can be ignored (refer to encoding specification 
+ *                            for more info)
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set fixed_vop_time_increment
+ */
 MIX_RESULT mix_videoconfigparamsenc_mpeg4_set_fixed_vti (MixVideoConfigParamsEncMPEG4 * obj,
 		guint fixed_vop_time_increment);
 
+/**
+ * mix_videoconfigparamsenc_mpeg4_get_fixed_vti:
+ * @obj: #MixVideoConfigParamsEncMPEG4 object
+ * @fixed_vop_time_increment: fixed_vop_time_increment to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get fixed_vop_time_increment
+ */
 MIX_RESULT mix_videoconfigparamsenc_mpeg4_get_fixed_vti (MixVideoConfigParamsEncMPEG4 * obj,
 		guint * fixed_vop_time_increment);
 

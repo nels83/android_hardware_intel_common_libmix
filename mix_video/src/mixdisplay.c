@@ -8,7 +8,7 @@ No license under any patent, copyright, trade secret or other intellectual prope
 
 /**
 * SECTION:mixdisplay
-* @short_description: Lightweight base class for the MIX media display
+* @short_description: Lightweight Base Object for MI-X Video Display
 *
 */
 #ifdef HAVE_CONFIG_H
@@ -129,8 +129,8 @@ mix_display_copy (MixDisplay * target, const MixDisplay * src)
 
 /**
 * mix_display_copy_default:
-* @target:
-* @src:
+* @target: target 
+* @src: source
 * 
 * The default copy method of this object. Perhap copy at this level.
 * Assign this to the copy vmethod.

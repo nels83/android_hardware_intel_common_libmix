@@ -8,9 +8,12 @@
 
 /**
  * SECTION:mixvideoinitparams
- * @short_description: VideoInit parameters
+ * @short_description: MI-X Video Initialization Parameters
  *
- * A data object which stores videoinit specific parameters.
+ * The MixVideoInitParams object will be created by the MMF/App 
+ * and provided in the mix_video_initialize() function. 
+ * The get and set methods for the properties will be available for 
+ * the caller to set and get information used at initialization time.
  */
 
 #include "mixvideoinitparams.h"

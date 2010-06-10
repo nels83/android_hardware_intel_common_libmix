@@ -233,10 +233,6 @@ MIX_RESULT mix_videoframe_get_discontinuity(MixVideoFrame * obj, gboolean * disc
  */
 MIX_RESULT mix_videoframe_set_vadisplay(MixVideoFrame * obj, void *va_display);
 MIX_RESULT mix_videoframe_get_vadisplay(MixVideoFrame * obj, void **va_display);
-
-MIX_RESULT mix_videoframe_set_frame_structure(MixVideoFrame * obj, guint32 frame_structure);
 MIX_RESULT mix_videoframe_get_frame_structure(MixVideoFrame * obj, guint32* frame_structure);
-
-
 
 #endif /* __MIX_VIDEOFRAME_H__ */

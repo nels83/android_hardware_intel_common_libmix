@@ -7,10 +7,10 @@
  */
 
 /**
- * SECTION:mixvideoconfigparams
- * @short_description: VideoConfig parameters
+ * SECTION:mixvideoconfigparamsdec
+ * @short_description: MI-X Video Decode Configuration Parameter Base Object
  *
- * A data object which stores videoconfig specific parameters.
+ * A base object of MI-X video decode configuration parameter objects.
  */
 
 #include <string.h>

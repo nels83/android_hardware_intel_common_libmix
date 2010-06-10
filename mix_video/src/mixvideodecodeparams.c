@@ -8,9 +8,10 @@
 
 /**
  * SECTION:mixvideodecodeparams
- * @short_description: VideoDecode parameters
+ * @short_description: MI-X Video Decode Paramters
  *
- * A data object which stores videodecode specific parameters.
+ * The #MixVideoDecodeParams object will be created by the MMF/App 
+ * and provided to MixVideo in the MixVideo mix_video_decode() function.
  */
 
 #include "mixvideodecodeparams.h"

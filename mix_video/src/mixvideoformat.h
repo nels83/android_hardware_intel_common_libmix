@@ -13,7 +13,7 @@
 #include <glib-object.h>
 #include "vbp_loader.h"
 #include "mixvideodef.h"
-#include "mixdrmparams.h"
+#include <mixdrmparams.h>
 #include "mixvideoconfigparamsdec.h"
 #include "mixvideodecodeparams.h"
 #include "mixvideoframe.h"

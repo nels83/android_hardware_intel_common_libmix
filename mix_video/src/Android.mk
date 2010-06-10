@@ -7,8 +7,7 @@ LOCAL_SRC_FILES := 			\
 	mixbuffer.c			\
 	mixbufferpool.c			\
 	mixdisplay.c			\
-	mixdisplayx11.c			\
-	mixdrmparams.c			\
+	mixdisplayandroid.c		\
 	mixframemanager.c		\
 	mixsurfacepool.c		\
 	mixvideo.c			\
@@ -20,6 +19,7 @@ LOCAL_SRC_FILES := 			\
 	mixvideoconfigparamsdec_vc1.c	\
 	mixvideoconfigparamsenc.c	\
 	mixvideoconfigparamsenc_h264.c	\
+	mixvideoconfigparamsenc_h263.c	\
 	mixvideoconfigparamsenc_mpeg4.c	\
 	mixvideoconfigparamsenc_preview.c \
 	mixvideodecodeparams.c		\
@@ -30,6 +30,7 @@ LOCAL_SRC_FILES := 			\
 	mixvideoformat_vc1.c		\
 	mixvideoformatenc.c		\
 	mixvideoformatenc_h264.c	\
+	mixvideoformatenc_h263.c	\
 	mixvideoformatenc_mpeg4.c	\
 	mixvideoformatenc_preview.c	\
 	mixvideoframe.c			\
@@ -61,12 +62,15 @@ LOCAL_SHARED_LIBRARIES :=	\
 	libgmodule-2.0		\
 	libmixcommon		\
 	libmixvbp		\
-	libva
+        libva                   \
+        libva-android	        \
+	libva-tpi
 
-#ifeq ($(strip $(MIXVIDEO_LOG_ENABLE)),true)
-#LOCAL_CFLAGS += -DMIX_LOG_ENABLE
-#LOCAL_SHARED_LIBRARIES += liblog
-#endif
+LOCAL_CFLAGS += -DANDROID
+ifeq ($(strip $(MIXVIDEO_LOG_ENABLE)),true)
+LOCAL_CFLAGS += -DMIX_LOG_ENABLE
+LOCAL_SHARED_LIBRARIES += liblog
+endif
 
 LOCAL_COPY_HEADERS_TO := libmixvideo
 
@@ -75,8 +79,7 @@ LOCAL_COPY_HEADERS :=			\
 	mixbuffer_private.h		\
 	mixbufferpool.h			\
 	mixdisplay.h			\
-	mixdisplayx11.h			\
-	mixdrmparams.h			\
+	mixdisplayandroid.h		\
 	mixframemanager.h		\
 	mixsurfacepool.h		\
 	mixvideo.h			\

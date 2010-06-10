@@ -7,11 +7,12 @@ No license under any patent, copyright, trade secret or other intellectual prope
 */
 
 /**
-* SECTION:mixvideoconfigparamsenc_h264
-* @short_description: VideoConfig parameters
-*
-* A data object which stores videoconfig specific parameters.
-*/
+ * SECTION:mixvideoconfigparamsenc_h264
+ * @short_description: MI-X Video H.264 Eecode Configuration Parameter
+ *
+ * MI-X video H.264 eecode configuration parameter objects.
+ */
+
 
 #include "mixvideolog.h"
 #include "mixvideoconfigparamsenc_h264.h"

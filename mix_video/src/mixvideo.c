@@ -6,17 +6,68 @@
  No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
  */
 
+/**
+ * SECTION:mixvideo
+ * @short_description: Object to support a single stream decoding or encoding using hardware accelerated decoder/encoder.
+ * @include: mixvideo.h
+ * 
+ * #MixVideo objects are created by the MMF/App and utilized for main MI-X API functionality for video.
+ * 
+ * The MixVideo object handles any of the video formats internally.
+ * The App/MMF will pass a MixVideoConfigParamsDecH264/MixVideoConfigParamsDecVC1/
+ * MixVideoConfigParamsEncH264/etc object to MixVideo in the mix_video_configure()
+ * call. MixVideoInitParams, MixVideoDecodeParams, MixVideoEncodeParams, and
+ * MixVideoRenderParams objects will be passed in the mix_video_initialize(),
+ * mix_video_decode(), mix_video_encode() and mix_video_render() calls respectively.
+ * 
+ * The application can take the following steps to decode video:
+ * <itemizedlist>
+ * <listitem>Create a mix_video object using mix_video_new()</listitem>
+ * <listitem>Initialize the object using mix_video_initialize()</listitem>
+ * <listitem>Configure the stream using mix_video_configure()</listitem>
+ * <listitem>Decode frames using mix_video_decode()</listitem>
+ * <listitem>Retrieve the decoded frames using mix_video_get_frame(). The decoded frames can be retrieved in decode order or display order.</listitem>
+ * <listitem>At the presentation time, using the timestamp provided with the decoded frame, render the frame to an X11 Window using mix_video_render(). The frame can be retained for redrawing until the next frame is retrieved.</listitem>
+ * <listitem>When the frame is no longer needed for redrawing, release the frame using mix_video_release_frame().</listitem>
+ * </itemizedlist>
+ * 
+ * For encoding, the application can take the following steps to encode video:
+ * <itemizedlist>
+ * <listitem>Create a mix_video object using mix_video_new()</listitem>
+ * <listitem>Initialize the object using mix_video_initialize()</listitem>
+ * <listitem>Configure the stream using mix_video_configure()</listitem>
+ * <listitem>Encode frames using mix_video_encode()</listitem>
+ * <listitem>Use the encoded data buffers as desired; for example, forward to a muxing component for saving to a file.</listitem> 
+ * <listitem>Retrieve the uncompressed frames for display using mix_video_get_frame().</listitem>
+ * <listitem>At the presentation time, using the timestamp provided with the decoded frame, render the frame to an X11 Window using mix_video_render(). For encode, the frame should not be retained for redrawing after the initial rendering, due to resource limitations.</listitem>
+ * <listitem>Release the frame using mix_video_release_frame().</listitem>
+ * </itemizedlist>
+ * 
+ */
+
 #include <va/va.h>             /* libVA */
+
 #ifndef ANDROID
 #include <X11/Xlib.h>
-#endif
 #include <va/va_x11.h>
+#else
+#define Display unsigned int
+//#include "mix_vagetdisplay.h"
 
-#include <string.h>
+VADisplay vaGetDisplay (
+    void *android_dpy
+);
+
+
+#endif
 
 #include "mixvideolog.h"
 
+#ifndef ANDROID
 #include "mixdisplayx11.h"
+#else
+#include "mixdisplayandroid.h"
+#endif
 #include "mixvideoframe.h"
 
 #include "mixframemanager.h"
@@ -36,14 +87,21 @@
 #include "mixvideoformatenc_h264.h"
 #include "mixvideoformatenc_mpeg4.h"
 #include "mixvideoformatenc_preview.h"
+#include "mixvideoformatenc_h263.h"
 
 #include "mixvideoconfigparamsenc_h264.h"
 #include "mixvideoconfigparamsenc_mpeg4.h"
 #include "mixvideoconfigparamsenc_preview.h"
-
+#include "mixvideoconfigparamsenc_h263.h"
 
 #include "mixvideo.h"
 #include "mixvideo_private.h"
+
+#ifdef ANDROID
+#define mix_strcmp strcmp
+#else
+#define mix_strcmp g_strcmp0
+#endif
 
 #define USE_OPAQUE_POINTER 
 
@@ -101,9 +159,6 @@ MIX_RESULT mix_video_release_frame_default(MixVideo * mix,
 		MixVideoFrame * frame);
 
 MIX_RESULT mix_video_render_default(MixVideo * mix,
-		MixVideoRenderParams * render_params, MixVideoFrame *frame);
-
-MIX_RESULT mix_video_get_decoded_data_default(MixVideo * mix, MixIOVec * iovout,
 		MixVideoRenderParams * render_params, MixVideoFrame *frame);
 
 MIX_RESULT mix_video_encode_default(MixVideo * mix, MixBuffer * bufin[],
@@ -166,7 +221,6 @@ static void mix_video_class_init(MixVideoClass * klass) {
 	klass->get_frame_func = mix_video_get_frame_default;
 	klass->release_frame_func = mix_video_release_frame_default;
 	klass->render_func = mix_video_render_default;
-	klass->get_decoded_data_func = mix_video_get_decoded_data_default;
 	klass->encode_func = mix_video_encode_default;
 	klass->flush_func = mix_video_flush_default;
 	klass->eos_func = mix_video_eos_default;
@@ -178,7 +232,7 @@ static void mix_video_class_init(MixVideoClass * klass) {
 
 MixVideo *mix_video_new(void) {
 
-	MixVideo *ret = g_object_new(MIX_TYPE_VIDEO, NULL);
+	MixVideo *ret = (MixVideo *)g_object_new(MIX_TYPE_VIDEO, NULL);
 
 	return ret;
 }
@@ -375,27 +429,40 @@ MIX_RESULT mix_video_initialize_default(MixVideo * mix, MixCodecMode mode,
 			LOG_E("Failed to get display 1\n");
 			goto cleanup;
 		}
-
+#ifndef ANDROID
 		if (MIX_IS_DISPLAYX11(mix_display)) {
 			MixDisplayX11 *mix_displayx11 = MIX_DISPLAYX11(mix_display);
-
-                        /* XXX NOTE: This must be fixed in all clients */
-                        mix_displayx11->display = 0x18c34078;
-
 			ret = mix_displayx11_get_display(mix_displayx11, &display);
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed to get display 2\n");
 				goto cleanup;
+
 			}
 		} else {
-
 			/* TODO: add support to other MixDisplay type. For now, just return error!*/
 			LOG_E("It is not display x11\n");
 			ret = MIX_RESULT_FAIL;
 			goto cleanup;
 		}
+#else
+               if (MIX_IS_DISPLAYANDROID(mix_display)) {
+                        MixDisplayAndroid *mix_displayandroid = MIX_DISPLAYANDROID(mix_display);
+                        ret = mix_displayandroid_get_display(mix_displayandroid, &display);
+                        if (ret != MIX_RESULT_SUCCESS) {
+                                LOG_E("Failed to get display 2\n");
+                                goto cleanup;
 
+                        }
+                } else {
+                        /* TODO: add support to other MixDisplay type. For now, just return error!*/
+                        LOG_E("It is not display android\n");
+                        ret = MIX_RESULT_FAIL;
+                        goto cleanup;
+                }
+#endif
 		/* Now, we can initialize libVA */
+
+		LOG_V("Try to get vaDisplay : display = %x\n", display);
 		priv->va_display = vaGetDisplay(display);
 
 		/* Oops! Fail to get VADisplay */
@@ -434,6 +501,7 @@ MIX_RESULT mix_video_initialize_default(MixVideo * mix, MixCodecMode mode,
 
 	return ret;
 }
+
 
 MIX_RESULT mix_video_deinitialize_default(MixVideo * mix) {
 
@@ -512,7 +580,7 @@ MIX_RESULT mix_video_configure_decode(MixVideo * mix,
 	LOG_I( "mime : %s\n", mime_type);
 
 #ifdef MIX_LOG_ENABLE
-	if (strcmp(mime_type, "video/x-wmv") == 0) {
+	if (mix_strcmp(mime_type, "video/x-wmv") == 0) {
 
 		LOG_I( "mime : video/x-wmv\n");
 		if (MIX_IS_VIDEOCONFIGPARAMSDEC_VC1(priv_config_params_dec)) {
@@ -560,8 +628,9 @@ MIX_RESULT mix_video_configure_decode(MixVideo * mix,
 
 	/* initialize frame manager */
 
-	if (strcmp(mime_type, "video/x-wmv") == 0 || strcmp(mime_type,
-			"video/mpeg") == 0 || strcmp(mime_type, "video/x-divx") == 0) {
+	if (mix_strcmp(mime_type, "video/x-wmv") == 0 || mix_strcmp(mime_type,
+			"video/mpeg") == 0 || mix_strcmp(mime_type, "video/x-divx") == 0
+                        || mix_strcmp(mime_type, "video/x-h263") == 0) {
 		ret = mix_framemanager_initialize(priv->frame_manager,
 				frame_order_mode, fps_n, fps_d, FALSE);
 	} else {
@@ -591,7 +660,7 @@ MIX_RESULT mix_video_configure_decode(MixVideo * mix,
 	/* Finally, we can create MixVideoFormat */
 	/* What type of MixVideoFormat we need create? */
 
-	if (strcmp(mime_type, "video/x-wmv") == 0
+	if (mix_strcmp(mime_type, "video/x-wmv") == 0
 			&& MIX_IS_VIDEOCONFIGPARAMSDEC_VC1(priv_config_params_dec)) {
 
 		MixVideoFormat_VC1 *video_format = mix_videoformat_vc1_new();
@@ -605,7 +674,7 @@ MIX_RESULT mix_video_configure_decode(MixVideo * mix,
 
 		priv->video_format = MIX_VIDEOFORMAT(video_format);
 
-	} else if (strcmp(mime_type, "video/x-h264") == 0
+	} else if (mix_strcmp(mime_type, "video/x-h264") == 0
 			&& MIX_IS_VIDEOCONFIGPARAMSDEC_H264(priv_config_params_dec)) {
 
 		MixVideoFormat_H264 *video_format = mix_videoformat_h264_new();
@@ -619,13 +688,13 @@ MIX_RESULT mix_video_configure_decode(MixVideo * mix,
 
 		priv->video_format = MIX_VIDEOFORMAT(video_format);
 
-	} else if (strcmp(mime_type, "video/mpeg") == 0 || strcmp(mime_type,
-			"video/x-divx") == 0) {
+	} else if (mix_strcmp(mime_type, "video/mpeg") == 0 || mix_strcmp(mime_type,
+			"video/x-divx") == 0 || mix_strcmp(mime_type, "video/x-h263") == 0 ) {
 
 		guint version = 0;
 
 		/* Is this mpeg4:2 ? */
-		if (strcmp(mime_type, "video/mpeg") == 0) {
+		if (mix_strcmp(mime_type, "video/mpeg") == 0 || mix_strcmp(mime_type, "video/x-h263") == 0 ) {
 
 			/*
 			 *  we don't support mpeg other than mpeg verion 4
@@ -857,7 +926,7 @@ MIX_RESULT mix_video_configure_encode(MixVideo * mix,
 			goto cleanup;
 		}
 
-		/* TODO: work specific to h264 encode */
+		/* work specific to h264 encode */
 
 		priv->video_format_enc = MIX_VIDEOFORMATENC(video_format_enc);
 
@@ -872,12 +941,29 @@ MIX_RESULT mix_video_configure_encode(MixVideo * mix,
             goto cleanup;
         }
 
-		/* TODO: work specific to mpeg4 */
+		/* work specific to mpeg4 */
 
 		priv->video_format_enc = MIX_VIDEOFORMATENC(video_format_enc);
 
 	}
-    else if (encode_format == MIX_ENCODE_TARGET_FORMAT_PREVIEW
+        
+        else if (encode_format == MIX_ENCODE_TARGET_FORMAT_H263
+            && MIX_IS_VIDEOCONFIGPARAMSENC_H263(priv_config_params_enc)) {
+
+        MixVideoFormatEnc_H263 *video_format_enc = mix_videoformatenc_h263_new();
+        if (!video_format_enc) {
+            ret = MIX_RESULT_NO_MEMORY;
+            LOG_E("mix_video_configure_encode: Failed to create h.263 video format\n");
+            goto cleanup;
+        }
+
+		/* work specific to h.263 */
+
+		priv->video_format_enc = MIX_VIDEOFORMATENC(video_format_enc);
+
+	}
+  
+        else if (encode_format == MIX_ENCODE_TARGET_FORMAT_PREVIEW
             && MIX_IS_VIDEOCONFIGPARAMSENC_PREVIEW(priv_config_params_enc)) {
 
         MixVideoFormatEnc_Preview *video_format_enc = mix_videoformatenc_preview_new();
@@ -1099,6 +1185,15 @@ MIX_RESULT mix_video_release_frame_default(MixVideo * mix,
 
 }
 
+#ifdef ANDROID
+
+MIX_RESULT mix_video_render_default(MixVideo * mix,
+                MixVideoRenderParams * render_params, MixVideoFrame *frame) {
+	
+	return MIX_RESULT_NOTIMPL;
+}
+
+#else
 MIX_RESULT mix_video_render_default(MixVideo * mix,
 		MixVideoRenderParams * render_params, MixVideoFrame *frame) {
 
@@ -1111,8 +1206,8 @@ MIX_RESULT mix_video_render_default(MixVideo * mix,
 	MixDisplayX11 *mix_display_x11 = NULL;
 
 	Display *display = NULL;
-	Drawable drawable = 0;
 
+	Drawable drawable = 0;
 	MixRect src_rect, dst_rect;
 
 	VARectangle *va_cliprects = NULL;
@@ -1267,170 +1362,7 @@ MIX_RESULT mix_video_render_default(MixVideo * mix,
 	return ret;
 
 }
-
-#ifdef ANDROID
-MIX_RESULT mix_video_get_decoded_data_default(MixVideo * mix, MixIOVec * iovout,
-		MixVideoRenderParams * render_params, MixVideoFrame *frame) {
-
-	mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_VERBOSE, "Begin\n");
-
-	MIX_RESULT ret = MIX_RESULT_FAIL;
-	MixVideoPrivate *priv = NULL;
-
-	MixDisplay *mix_display = NULL;
-	MixDisplayX11 *mix_display_x11 = NULL;
-
-	Display *display = NULL;
-	Drawable drawable = 0;
-
-	MixRect src_rect, dst_rect;
-
-	VARectangle *va_cliprects = NULL;
-	guint number_of_cliprects = 0;
-
-	/* VASurfaceID va_surface_id; */
-	gulong va_surface_id;
-	VAStatus va_status;
-
-	if (!mix || !render_params) {
-		return MIX_RESULT_NULL_PTR;
-	}
-
-	if (!MIX_IS_VIDEO(mix)) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR, "Not MixVideo\n");
-		return MIX_RESULT_INVALID_PARAM;
-	}
-
-	/* Is this render param valid? */
-	if (!MIX_IS_VIDEORENDERPARAMS(render_params)) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR,
-				"Not MixVideoRenderParams\n");
-		return MIX_RESULT_INVALID_PARAM;
-	}
-
-	priv = MIX_VIDEO_PRIVATE(mix);
-
-	if (!priv->initialized) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR, "Not initialized\n");
-		return MIX_RESULT_NOT_INIT;
-	}
-
-	if (!priv->configured) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR, "Not configured\n");
-		return MIX_RESULT_NOT_CONFIGURED;
-	}
-
-	/* ---------------------- begin lock --------------------- */
-	g_mutex_lock(priv->objlock);
-
-	/* get MixDisplay prop from render param */
-	ret = mix_videorenderparams_get_display(render_params, &mix_display);
-	if (ret != MIX_RESULT_SUCCESS) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR,
-				"Failed to get mix_display\n");
-		goto cleanup;
-	}
-
-	/* Is this MixDisplayX11 ? */
-	/* TODO: we shall also support MixDisplay other than MixDisplayX11 */
-	if (!MIX_IS_DISPLAYX11(mix_display)) {
-		ret = MIX_RESULT_INVALID_PARAM;
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR, "Not MixDisplayX11\n");
-	goto cleanup;
-	}
-
-	/* cast MixDisplay to MixDisplayX11 */
-	mix_display_x11 = MIX_DISPLAYX11(mix_display);
-
-	/* Get Drawable */
-	ret = mix_displayx11_get_drawable(mix_display_x11, &drawable);
-	if (ret != MIX_RESULT_SUCCESS) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR, "Failed to get drawable\n");
-		goto cleanup;
-	}
-
-	/* Get Display */
-	ret = mix_displayx11_get_display(mix_display_x11, &display);
-	if (ret != MIX_RESULT_SUCCESS) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR, "Failed to get display\n");
-		goto cleanup;
-	}
-
-	/* get src_rect */
-	ret = mix_videorenderparams_get_src_rect(render_params, &src_rect);
-	if (ret != MIX_RESULT_SUCCESS) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR,
-				"Failed to get SOURCE src_rect\n");
-		goto cleanup;
-	}
-
-	/* get dst_rect */
-	ret = mix_videorenderparams_get_dest_rect(render_params, &dst_rect);
-	if (ret != MIX_RESULT_SUCCESS) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR, "Failed to get dst_rect\n");
-		goto cleanup;
-	}
-	/* get va_cliprects */
-	ret = mix_videorenderparams_get_cliprects_internal(render_params,
-			&va_cliprects, &number_of_cliprects);
-	if (ret != MIX_RESULT_SUCCESS) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR,
-				"Failed to get va_cliprects\n");
-		goto cleanup;
-	}
-
-	/* get surface id from frame */
-	ret = mix_videoframe_get_frame_id(frame, &va_surface_id);
-	if (ret != MIX_RESULT_SUCCESS) {
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR,
-				"Failed to get va_surface_id\n");
-		goto cleanup;
-	}
-	guint64 timestamp = 0;
-	mix_videoframe_get_timestamp(frame, &timestamp);
-	mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_VERBOSE, "Displaying surface ID %d, timestamp %"G_GINT64_FORMAT"\n", (int)va_surface_id, timestamp);
-
-	guint32 frame_structure = 0;
-	mix_videoframe_get_frame_structure(frame, &frame_structure);
-	/* TODO: the last param of vaPutSurface is de-interlacing flags,
-	   what is value shall be*/
-	va_status = vaPutSurfaceBuf(priv->va_display, (VASurfaceID) va_surface_id,
-			drawable, iovout->data, &iovout->data_size, src_rect.x, src_rect.y, src_rect.width, src_rect.height,
-			dst_rect.x, dst_rect.y, dst_rect.width, dst_rect.height,
-			va_cliprects, number_of_cliprects, frame_structure);
-
-	if (va_status != VA_STATUS_SUCCESS) {
-		ret = MIX_RESULT_FAIL;
-		mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_ERROR,
-				"Failed vaPutSurface() : va_status = %d\n", va_status);
-		goto cleanup;
-	}
-
-	ret = MIX_RESULT_SUCCESS;
-
-cleanup:
-
-	MIXUNREF(mix_display, mix_display_unref)
-		/*      MIXUNREF(render_params, mix_videorenderparams_unref)*/
-
-		/* ---------------------- end lock --------------------- */
-		g_mutex_unlock(priv->objlock);
-
-	mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_VERBOSE, "End\n");
-
-	return ret;
-}
-#endif
-
-MIX_RESULT mix_video_get_decoded_data(MixVideo * mix, MixIOVec * iovout,
-		MixVideoRenderParams * render_params, MixVideoFrame *frame) {
-	MixVideoClass *klass = MIX_VIDEO_GET_CLASS(mix);
-
-	if (klass->get_decoded_data_func) {
-		return klass->get_decoded_data_func(mix, iovout, render_params, frame);
-	}
-	return MIX_RESULT_NOTIMPL;
-}
+#endif /* ANDROID */
 
 MIX_RESULT mix_video_encode_default(MixVideo * mix, MixBuffer * bufin[],
 		gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
@@ -1508,8 +1440,12 @@ MIX_RESULT mix_video_eos_default(MixVideo * mix) {
 	if (priv->codec_mode == MIX_CODEC_MODE_DECODE && priv->video_format != NULL) {
 		ret = mix_videofmt_eos(priv->video_format);
 
-		/* frame manager will set EOS flag to be TRUE */
-		ret = mix_framemanager_eos(priv->frame_manager);
+		/* We should not call mix_framemanager_eos() here. 
+		 * MixVideoFormat* is responsible to call this function. 
+		 * Commnet the function call here!
+		 */	
+		/* frame manager will set EOS flag to be TRUE */		
+		/* ret = mix_framemanager_eos(priv->frame_manager); */
 	} else if (priv->codec_mode == MIX_CODEC_MODE_ENCODE
 			&& priv->video_format_enc != NULL) {
 		/*No framemanager now*/

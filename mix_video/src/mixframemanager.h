@@ -59,7 +59,7 @@ struct _MixFrameManager {
 
 	gboolean timebased_ordering;
 
-	guint32 next_displayorder;
+        guint32 next_displayorder;
 };
 
 /**

@@ -69,12 +69,22 @@ struct _MixVideoConfigParamsDecMP42 {
 
 	/*< public > */
 
+	/* MPEG version */
 	guint mpegversion;
+	
+	/* DivX version */
 	guint divxversion;
 
+	/* Reserved for future use */
 	void *reserved1;
+	
+	/* Reserved for future use */
 	void *reserved2;
+	
+	/* Reserved for future use */	
 	void *reserved3;
+	
+	/* Reserved for future use */	
 	void *reserved4;
 };
 
@@ -108,7 +118,7 @@ MixVideoConfigParamsDecMP42 *mix_videoconfigparamsdec_mp42_new(void);
 /**
  * mix_videoconfigparamsdec_mp42_ref:
  * @mix: object to add reference
- * @returns: the MixVideoConfigParamsDecMP42 instance where reference count has been increased.
+ * @returns: the #MixVideoConfigParamsDecMP42 instance where reference count has been increased.
  *
  * Add reference count.
  */
@@ -126,15 +136,49 @@ MixVideoConfigParamsDecMP42
 /* Class Methods */
 
 /* TODO: Add getters and setters for other properties */
+
+
+/**
+ * mix_videoconfigparamsdec_mp42_set_mpegversion:
+ * @obj: #MixVideoConfigParamsDecMP42 object
+ * @version: MPEG version
+ * @returns:  <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set MPEG version
+ */
 MIX_RESULT mix_videoconfigparamsdec_mp42_set_mpegversion(
 		MixVideoConfigParamsDecMP42 *obj, guint version);
 
+/**
+ * mix_videoconfigparamsdec_mp42_get_mpegversion:
+ * @obj: #MixVideoConfigParamsDecMP42 object
+ * @version: MPEG version to be returned
+ * @returns:  <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get MPEG version
+ */
 MIX_RESULT mix_videoconfigparamsdec_mp42_get_mpegversion(
 		MixVideoConfigParamsDecMP42 *obj, guint *version);
 
+/**
+ * mix_videoconfigparamsdec_mp42_set_divxversion:
+ * @obj: #MixVideoConfigParamsDecMP42 object
+ * @version: DivX version
+ * @returns:  <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set DivX version
+ */
 MIX_RESULT mix_videoconfigparamsdec_mp42_set_divxversion(
 		MixVideoConfigParamsDecMP42 *obj, guint version);
 
+/**
+ * mix_videoconfigparamsdec_mp42_set_divxversion:
+ * @obj: #MixVideoConfigParamsDecMP42 object
+ * @version: DivX version to be returned
+ * @returns:  <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get DivX version
+ */
 MIX_RESULT mix_videoconfigparamsdec_mp42_get_divxversion(
 		MixVideoConfigParamsDecMP42 *obj, guint *version);
 

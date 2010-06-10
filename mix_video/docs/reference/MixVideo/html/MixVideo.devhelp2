@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE book PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "">
+<book xmlns="http://www.devhelp.net/book" title="Mi-X Video Reference Manual" link="index.html" author="" name="MixVideo" version="2" language="c">
+  <chapters>
+    <sub name="MI-X Video API" link="ch01.html">
+      <sub name="MixVideo" link="MixVideo.html"/>
+      <sub name="MixVideoInitParams" link="MixVideoInitParams.html"/>
+      <sub name="MixDrmParams" link="MixDrmParams.html"/>
+      <sub name="MixDisplay" link="MixDisplay.html"/>
+      <sub name="MixDisplayX11" link="MixDisplayX11.html"/>
+      <sub name="MixBuffer" link="MixBuffer.html"/>
+      <sub name="MixVideoFrame" link="MixVideoFrame.html"/>
+      <sub name="MixVideoConfigParams" link="MixVideoConfigParams.html"/>
+      <sub name="MixVideoConfigParamsDec" link="MixVideoConfigParamsDec.html"/>
+      <sub name="MixVideoConfigParamsDecVC1" link="MixVideoConfigParamsDecVC1.html"/>
+      <sub name="MixVideoConfigParamsDecH264" link="MixVideoConfigParamsDecH264.html"/>
+      <sub name="MixVideoConfigParamsDecMP42" link="MixVideoConfigParamsDecMP42.html"/>
+      <sub name="MixVideoConfigParamsEnc" link="MixVideoConfigParamsEnc.html"/>
+      <sub name="MixVideoConfigParamsEncH264" link="MixVideoConfigParamsEncH264.html"/>
+      <sub name="MixVideoConfigParamsEncMPEG4" link="MixVideoConfigParamsEncMPEG4.html"/>
+      <sub name="MixVideoDecodeParams" link="MixVideoDecodeParams.html"/>
+      <sub name="MixVideoEncodeParams" link="MixVideoEncodeParams.html"/>
+      <sub name="MixVideoRenderParams" link="MixVideoRenderParams.html"/>
+      <sub name="MI-X Video Data Definitons And Common Error Code" link="MixVideo-mixvideodef.html"/>
+    </sub>
+    <sub name="Object Hierarchy" link="object-tree.html"/>
+    <sub name="API Index" link="api-index-full.html"/>
+  </chapters>
+  <functions>
+    <keyword type="struct" name="MixVideo" link="MixVideo.html#MixVideo-struct"/>
+    <keyword type="function" name="mix_video_new ()" link="MixVideo.html#mix-video-new"/>
+    <keyword type="function" name="mix_video_ref ()" link="MixVideo.html#mix-video-ref"/>
+    <keyword type="macro" name="mix_video_unref()" link="MixVideo.html#mix-video-unref"/>
+    <keyword type="function" name="mix_video_get_version ()" link="MixVideo.html#mix-video-get-version"/>
+    <keyword type="function" name="mix_video_initialize ()" link="MixVideo.html#mix-video-initialize"/>
+    <keyword type="function" name="mix_video_deinitialize ()" link="MixVideo.html#mix-video-deinitialize"/>
+    <keyword type="function" name="mix_video_configure ()" link="MixVideo.html#mix-video-configure"/>
+    <keyword type="function" name="mix_video_get_config ()" link="MixVideo.html#mix-video-get-config"/>
+    <keyword type="function" name="mix_video_decode ()" link="MixVideo.html#mix-video-decode"/>
+    <keyword type="function" name="mix_video_get_frame ()" link="MixVideo.html#mix-video-get-frame"/>
+    <keyword type="function" name="mix_video_release_frame ()" link="MixVideo.html#mix-video-release-frame"/>
+    <keyword type="function" name="mix_video_render ()" link="MixVideo.html#mix-video-render"/>
+    <keyword type="function" name="mix_video_encode ()" link="MixVideo.html#mix-video-encode"/>
+    <keyword type="function" name="mix_video_flush ()" link="MixVideo.html#mix-video-flush"/>
+    <keyword type="function" name="mix_video_eos ()" link="MixVideo.html#mix-video-eos"/>
+    <keyword type="function" name="mix_video_get_state ()" link="MixVideo.html#mix-video-get-state"/>
+    <keyword type="function" name="mix_video_get_mixbuffer ()" link="MixVideo.html#mix-video-get-mixbuffer"/>
+    <keyword type="function" name="mix_video_release_mixbuffer ()" link="MixVideo.html#mix-video-release-mixbuffer"/>
+    <keyword type="function" name="mix_video_get_max_coded_buffer_size ()" link="MixVideo.html#mix-video-get-max-coded-buffer-size"/>
+    <keyword type="struct" name="MixVideoInitParams" link="MixVideoInitParams.html#MixVideoInitParams-struct"/>
+    <keyword type="function" name="mix_videoinitparams_new ()" link="MixVideoInitParams.html#mix-videoinitparams-new"/>
+    <keyword type="function" name="mix_videoinitparams_ref ()" link="MixVideoInitParams.html#mix-videoinitparams-ref"/>
+    <keyword type="macro" name="mix_videoinitparams_unref()" link="MixVideoInitParams.html#mix-videoinitparams-unref"/>
+    <keyword type="function" name="mix_videoinitparams_set_display ()" link="MixVideoInitParams.html#mix-videoinitparams-set-display"/>
+    <keyword type="function" name="mix_videoinitparams_get_display ()" link="MixVideoInitParams.html#mix-videoinitparams-get-display"/>
+    <keyword type="struct" name="MixDrmParams" link="MixDrmParams.html#MixDrmParams-struct"/>
+    <keyword type="function" name="mix_drmparams_new ()" link="MixDrmParams.html#mix-drmparams-new"/>
+    <keyword type="function" name="mix_drmparams_ref ()" link="MixDrmParams.html#mix-drmparams-ref"/>
+    <keyword type="macro" name="mix_drmparams_unref()" link="MixDrmParams.html#mix-drmparams-unref"/>
+    <keyword type="macro" name="MIX_DISPLAY_CLASS()" link="MixDisplay.html#MIX-DISPLAY-CLASS--CAPS"/>
+    <keyword type="macro" name="MIX_DISPLAY_CAST()" link="MixDisplay.html#MIX-DISPLAY-CAST--CAPS"/>
+    <keyword type="function" name="MixDisplayDupFunction ()" link="MixDisplay.html#MixDisplayDupFunction"/>
+    <keyword type="function" name="MixDisplayCopyFunction ()" link="MixDisplay.html#MixDisplayCopyFunction"/>
+    <keyword type="function" name="MixDisplayFinalizeFunction ()" link="MixDisplay.html#MixDisplayFinalizeFunction"/>
+    <keyword type="function" name="MixDisplayEqualFunction ()" link="MixDisplay.html#MixDisplayEqualFunction"/>
+    <keyword type="macro" name="MIX_VALUE_HOLDS_DISPLAY()" link="MixDisplay.html#MIX-VALUE-HOLDS-DISPLAY--CAPS"/>
+    <keyword type="macro" name="MIX_DISPLAY_REFCOUNT()" link="MixDisplay.html#MIX-DISPLAY-REFCOUNT--CAPS"/>
+    <keyword type="macro" name="MIX_DISPLAY_REFCOUNT_VALUE()" link="MixDisplay.html#MIX-DISPLAY-REFCOUNT-VALUE--CAPS"/>
+    <keyword type="struct" name="MixDisplay" link="MixDisplay.html#MixDisplay-struct"/>
+    <keyword type="function" name="mix_display_new ()" link="MixDisplay.html#mix-display-new"/>
+    <keyword type="function" name="mix_display_copy ()" link="MixDisplay.html#mix-display-copy"/>
+    <keyword type="function" name="mix_display_ref ()" link="MixDisplay.html#mix-display-ref"/>
+    <keyword type="function" name="mix_display_unref ()" link="MixDisplay.html#mix-display-unref"/>
+    <keyword type="function" name="mix_display_replace ()" link="MixDisplay.html#mix-display-replace"/>
+    <keyword type="function" name="mix_display_dup ()" link="MixDisplay.html#mix-display-dup"/>
+    <keyword type="function" name="mix_display_equal ()" link="MixDisplay.html#mix-display-equal"/>
+    <keyword type="macro" name="MIX_TYPE_PARAM_DISPLAY" link="MixDisplay.html#MIX-TYPE-PARAM-DISPLAY--CAPS"/>
+    <keyword type="macro" name="MIX_IS_PARAM_SPEC_DISPLAY()" link="MixDisplay.html#MIX-IS-PARAM-SPEC-DISPLAY--CAPS"/>
+    <keyword type="macro" name="MIX_PARAM_SPEC_DISPLAY()" link="MixDisplay.html#MIX-PARAM-SPEC-DISPLAY--CAPS"/>
+    <keyword type="struct" name="MixParamSpecDisplay" link="MixDisplay.html#MixParamSpecDisplay"/>
+    <keyword type="function" name="mix_param_spec_display_get_type ()" link="MixDisplay.html#mix-param-spec-display-get-type"/>
+    <keyword type="function" name="mix_param_spec_display ()" link="MixDisplay.html#mix-param-spec-display"/>
+    <keyword type="function" name="mix_value_set_display ()" link="MixDisplay.html#mix-value-set-display"/>
+    <keyword type="function" name="mix_value_take_display ()" link="MixDisplay.html#mix-value-take-display"/>
+    <keyword type="function" name="mix_value_get_display ()" link="MixDisplay.html#mix-value-get-display"/>
+    <keyword type="function" name="mix_value_dup_display ()" link="MixDisplay.html#mix-value-dup-display"/>
+    <keyword type="struct" name="MixDisplayX11" link="MixDisplayX11.html#MixDisplayX11-struct"/>
+    <keyword type="function" name="mix_displayx11_new ()" link="MixDisplayX11.html#mix-displayx11-new"/>
+    <keyword type="function" name="mix_displayx11_ref ()" link="MixDisplayX11.html#mix-displayx11-ref"/>
+    <keyword type="macro" name="mix_displayx11_unref()" link="MixDisplayX11.html#mix-displayx11-unref"/>
+    <keyword type="function" name="mix_displayx11_set_display ()" link="MixDisplayX11.html#mix-displayx11-set-display"/>
+    <keyword type="function" name="mix_displayx11_get_display ()" link="MixDisplayX11.html#mix-displayx11-get-display"/>
+    <keyword type="function" name="mix_displayx11_set_drawable ()" link="MixDisplayX11.html#mix-displayx11-set-drawable"/>
+    <keyword type="function" name="mix_displayx11_get_drawable ()" link="MixDisplayX11.html#mix-displayx11-get-drawable"/>
+    <keyword type="function" name="MixBufferCallback ()" link="MixBuffer.html#MixBufferCallback"/>
+    <keyword type="struct" name="MixBuffer" link="MixBuffer.html#MixBuffer-struct"/>
+    <keyword type="function" name="mix_buffer_new ()" link="MixBuffer.html#mix-buffer-new"/>
+    <keyword type="function" name="mix_buffer_ref ()" link="MixBuffer.html#mix-buffer-ref"/>
+    <keyword type="function" name="mix_buffer_unref ()" link="MixBuffer.html#mix-buffer-unref"/>
+    <keyword type="function" name="mix_buffer_set_data ()" link="MixBuffer.html#mix-buffer-set-data"/>
+    <keyword type="struct" name="MixVideoFrame" link="MixVideoFrame.html#MixVideoFrame-struct"/>
+    <keyword type="function" name="mix_videoframe_new ()" link="MixVideoFrame.html#mix-videoframe-new"/>
+    <keyword type="function" name="mix_videoframe_ref ()" link="MixVideoFrame.html#mix-videoframe-ref"/>
+    <keyword type="function" name="mix_videoframe_unref ()" link="MixVideoFrame.html#mix-videoframe-unref"/>
+    <keyword type="function" name="mix_videoframe_set_frame_id ()" link="MixVideoFrame.html#mix-videoframe-set-frame-id"/>
+    <keyword type="function" name="mix_videoframe_get_frame_id ()" link="MixVideoFrame.html#mix-videoframe-get-frame-id"/>
+    <keyword type="function" name="mix_videoframe_set_ci_frame_idx ()" link="MixVideoFrame.html#mix-videoframe-set-ci-frame-idx"/>
+    <keyword type="function" name="mix_videoframe_get_ci_frame_idx ()" link="MixVideoFrame.html#mix-videoframe-get-ci-frame-idx"/>
+    <keyword type="function" name="mix_videoframe_set_timestamp ()" link="MixVideoFrame.html#mix-videoframe-set-timestamp"/>
+    <keyword type="function" name="mix_videoframe_get_timestamp ()" link="MixVideoFrame.html#mix-videoframe-get-timestamp"/>
+    <keyword type="function" name="mix_videoframe_set_discontinuity ()" link="MixVideoFrame.html#mix-videoframe-set-discontinuity"/>
+    <keyword type="function" name="mix_videoframe_get_discontinuity ()" link="MixVideoFrame.html#mix-videoframe-get-discontinuity"/>
+    <keyword type="struct" name="MixVideoConfigParams" link="MixVideoConfigParams.html#MixVideoConfigParams-struct"/>
+    <keyword type="function" name="mix_videoconfigparams_new ()" link="MixVideoConfigParams.html#mix-videoconfigparams-new"/>
+    <keyword type="function" name="mix_videoconfigparams_ref ()" link="MixVideoConfigParams.html#mix-videoconfigparams-ref"/>
+    <keyword type="macro" name="mix_videoconfigparams_unref()" link="MixVideoConfigParams.html#mix-videoconfigparams-unref"/>
+    <keyword type="struct" name="MixVideoConfigParamsDec" link="MixVideoConfigParamsDec.html#MixVideoConfigParamsDec-struct"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_new ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-new"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_ref ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-ref"/>
+    <keyword type="macro" name="mix_videoconfigparamsdec_unref()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-unref"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_frame_order_mode ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-frame-order-mode"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_frame_order_mode ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-frame-order-mode"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_header ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-header"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_header ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-header"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_mime_type ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-mime-type"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_mime_type ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-mime-type"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_frame_rate ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-frame-rate"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_frame_rate ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-frame-rate"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_picture_res ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-picture-res"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_picture_res ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-picture-res"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_raw_format ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-raw-format"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_raw_format ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-raw-format"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_rate_control ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-rate-control"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_rate_control ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-rate-control"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_buffer_pool_size ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-buffer-pool-size"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_buffer_pool_size ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-buffer-pool-size"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_set_extra_surface_allocation ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-set-extra-surface-allocation"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_get_extra_surface_allocation ()" link="MixVideoConfigParamsDec.html#mix-videoconfigparamsdec-get-extra-surface-allocation"/>
+    <keyword type="struct" name="MixVideoConfigParamsDecVC1" link="MixVideoConfigParamsDecVC1.html#MixVideoConfigParamsDecVC1-struct"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_vc1_new ()" link="MixVideoConfigParamsDecVC1.html#mix-videoconfigparamsdec-vc1-new"/>
+    <keyword type="macro" name="mix_videoconfigparamsdec_vc1_unref()" link="MixVideoConfigParamsDecVC1.html#mix-videoconfigparamsdec-vc1-unref"/>
+    <keyword type="struct" name="MixVideoConfigParamsDecH264" link="MixVideoConfigParamsDecH264.html#MixVideoConfigParamsDecH264-struct"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_h264_new ()" link="MixVideoConfigParamsDecH264.html#mix-videoconfigparamsdec-h264-new"/>
+    <keyword type="macro" name="mix_videoconfigparamsdec_h264_unref()" link="MixVideoConfigParamsDecH264.html#mix-videoconfigparamsdec-h264-unref"/>
+    <keyword type="struct" name="MixVideoConfigParamsDecMP42" link="MixVideoConfigParamsDecMP42.html#MixVideoConfigParamsDecMP42-struct"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_mp42_new ()" link="MixVideoConfigParamsDecMP42.html#mix-videoconfigparamsdec-mp42-new"/>
+    <keyword type="macro" name="mix_videoconfigparamsdec_mp42_unref()" link="MixVideoConfigParamsDecMP42.html#mix-videoconfigparamsdec-mp42-unref"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_mp42_set_mpegversion ()" link="MixVideoConfigParamsDecMP42.html#mix-videoconfigparamsdec-mp42-set-mpegversion"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_mp42_get_mpegversion ()" link="MixVideoConfigParamsDecMP42.html#mix-videoconfigparamsdec-mp42-get-mpegversion"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_mp42_set_divxversion ()" link="MixVideoConfigParamsDecMP42.html#mix-videoconfigparamsdec-mp42-set-divxversion"/>
+    <keyword type="function" name="mix_videoconfigparamsdec_mp42_get_divxversion ()" link="MixVideoConfigParamsDecMP42.html#mix-videoconfigparamsdec-mp42-get-divxversion"/>
+    <keyword type="struct" name="MixVideoConfigParamsEnc" link="MixVideoConfigParamsEnc.html#MixVideoConfigParamsEnc-struct"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_new ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-new"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_ref ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-ref"/>
+    <keyword type="macro" name="mix_videoconfigparamsenc_unref()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-unref"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_mime_type ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-mime-type"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_mime_type ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-mime-type"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_frame_rate ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-frame-rate"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_frame_rate ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-frame-rate"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_picture_res ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-picture-res"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_picture_res ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-picture-res"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_encode_format ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-encode-format"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_encode_format ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-encode-format"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_bit_rate ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-bit-rate"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_bit_rate ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-bit-rate"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_init_qp ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-init-qp"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_init_qp ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-init-qp"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_min_qp ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-min-qp"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_min_qp ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-min-qp"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_intra_period ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-intra-period"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_intra_period ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-intra-period"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_buffer_pool_size ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-buffer-pool-size"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_buffer_pool_size ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-buffer-pool-size"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_share_buf_mode ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-share-buf-mode"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_share_buf_mode ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-share-buf-mode"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_ci_frame_info ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-ci-frame-info"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_ci_frame_info ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-ci-frame-info"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_drawable ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-drawable"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_drawable ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-drawable"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_need_display ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-need-display"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_need_display ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-need-display"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_rate_control ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-rate-control"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_rate_control ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-rate-control"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_raw_format ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-raw-format"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_raw_format ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-raw-format"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_set_profile ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-profile"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_get_profile ()" link="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-profile"/>
+    <keyword type="struct" name="MixVideoConfigParamsEncH264" link="MixVideoConfigParamsEncH264.html#MixVideoConfigParamsEncH264-struct"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_new ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-new"/>
+    <keyword type="macro" name="mix_videoconfigparamsenc_h264_unref()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-unref"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_set_bus ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-set-bus"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_get_bus ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-get-bus"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_set_dlk ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-set-dlk"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_get_dlk ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-get-dlk"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_set_slice_num ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-set-slice-num"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_get_slice_num ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-get-slice-num"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_set_delimiter_type ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-set-delimiter-type"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_h264_get_delimiter_type ()" link="MixVideoConfigParamsEncH264.html#mix-videoconfigparamsenc-h264-get-delimiter-type"/>
+    <keyword type="struct" name="MixVideoConfigParamsEncMPEG4" link="MixVideoConfigParamsEncMPEG4.html#MixVideoConfigParamsEncMPEG4-struct"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_mpeg4_new ()" link="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-new"/>
+    <keyword type="macro" name="mix_videoconfigparamsenc_mpeg4_unref()" link="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-unref"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_mpeg4_set_dlk ()" link="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-set-dlk"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_mpeg4_get_dlk ()" link="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-get-dlk"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_mpeg4_set_profile_level ()" link="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-set-profile-level"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_mpeg4_get_profile_level ()" link="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-get-profile-level"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_mpeg4_set_fixed_vti ()" link="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-set-fixed-vti"/>
+    <keyword type="function" name="mix_videoconfigparamsenc_mpeg4_get_fixed_vti ()" link="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-get-fixed-vti"/>
+    <keyword type="struct" name="MixVideoDecodeParams" link="MixVideoDecodeParams.html#MixVideoDecodeParams-struct"/>
+    <keyword type="function" name="mix_videodecodeparams_new ()" link="MixVideoDecodeParams.html#mix-videodecodeparams-new"/>
+    <keyword type="function" name="mix_videodecodeparams_ref ()" link="MixVideoDecodeParams.html#mix-videodecodeparams-ref"/>
+    <keyword type="macro" name="mix_videodecodeparams_unref()" link="MixVideoDecodeParams.html#mix-videodecodeparams-unref"/>
+    <keyword type="function" name="mix_videodecodeparams_set_timestamp ()" link="MixVideoDecodeParams.html#mix-videodecodeparams-set-timestamp"/>
+    <keyword type="function" name="mix_videodecodeparams_get_timestamp ()" link="MixVideoDecodeParams.html#mix-videodecodeparams-get-timestamp"/>
+    <keyword type="function" name="mix_videodecodeparams_set_discontinuity ()" link="MixVideoDecodeParams.html#mix-videodecodeparams-set-discontinuity"/>
+    <keyword type="function" name="mix_videodecodeparams_get_discontinuity ()" link="MixVideoDecodeParams.html#mix-videodecodeparams-get-discontinuity"/>
+    <keyword type="struct" name="MixVideoEncodeParams" link="MixVideoEncodeParams.html#MixVideoEncodeParams-struct"/>
+    <keyword type="function" name="mix_videoencodeparams_new ()" link="MixVideoEncodeParams.html#mix-videoencodeparams-new"/>
+    <keyword type="function" name="mix_videoencodeparams_ref ()" link="MixVideoEncodeParams.html#mix-videoencodeparams-ref"/>
+    <keyword type="macro" name="mix_videoencodeparams_unref()" link="MixVideoEncodeParams.html#mix-videoencodeparams-unref"/>
+    <keyword type="struct" name="MixVideoRenderParams" link="MixVideoRenderParams.html#MixVideoRenderParams-struct"/>
+    <keyword type="function" name="mix_videorenderparams_new ()" link="MixVideoRenderParams.html#mix-videorenderparams-new"/>
+    <keyword type="function" name="mix_videorenderparams_ref ()" link="MixVideoRenderParams.html#mix-videorenderparams-ref"/>
+    <keyword type="macro" name="mix_videorenderparams_unref()" link="MixVideoRenderParams.html#mix-videorenderparams-unref"/>
+    <keyword type="function" name="mix_videorenderparams_set_display ()" link="MixVideoRenderParams.html#mix-videorenderparams-set-display"/>
+    <keyword type="function" name="mix_videorenderparams_get_display ()" link="MixVideoRenderParams.html#mix-videorenderparams-get-display"/>
+    <keyword type="function" name="mix_videorenderparams_set_src_rect ()" link="MixVideoRenderParams.html#mix-videorenderparams-set-src-rect"/>
+    <keyword type="function" name="mix_videorenderparams_get_src_rect ()" link="MixVideoRenderParams.html#mix-videorenderparams-get-src-rect"/>
+    <keyword type="function" name="mix_videorenderparams_set_dest_rect ()" link="MixVideoRenderParams.html#mix-videorenderparams-set-dest-rect"/>
+    <keyword type="function" name="mix_videorenderparams_get_dest_rect ()" link="MixVideoRenderParams.html#mix-videorenderparams-get-dest-rect"/>
+    <keyword type="function" name="mix_videorenderparams_set_clipping_rects ()" link="MixVideoRenderParams.html#mix-videorenderparams-set-clipping-rects"/>
+    <keyword type="function" name="mix_videorenderparams_get_clipping_rects ()" link="MixVideoRenderParams.html#mix-videorenderparams-get-clipping-rects"/>
+    <keyword type="enum" name="enum MIX_VIDEO_ERROR_CODE" link="MixVideo-mixvideodef.html#MIX-VIDEO-ERROR-CODE--CAPS"/>
+    <keyword type="enum" name="enum MixCodecMode" link="MixVideo-mixvideodef.html#MixCodecMode"/>
+    <keyword type="enum" name="enum MixFrameOrderMode" link="MixVideo-mixvideodef.html#MixFrameOrderMode"/>
+    <keyword type="struct" name="MixIOVec" link="MixVideo-mixvideodef.html#MixIOVec"/>
+    <keyword type="struct" name="MixRect" link="MixVideo-mixvideodef.html#MixRect"/>
+    <keyword type="enum" name="enum MixState" link="MixVideo-mixvideodef.html#MixState"/>
+    <keyword type="enum" name="enum MixRawTargetFormat" link="MixVideo-mixvideodef.html#MixRawTargetFormat"/>
+    <keyword type="enum" name="enum MixEncodeTargetFormat" link="MixVideo-mixvideodef.html#MixEncodeTargetFormat"/>
+    <keyword type="enum" name="enum MixRateControl" link="MixVideo-mixvideodef.html#MixRateControl"/>
+    <keyword type="enum" name="enum MixProfile" link="MixVideo-mixvideodef.html#MixProfile"/>
+    <keyword type="enum" name="enum MixDelimiterType" link="MixVideo-mixvideodef.html#MixDelimiterType"/>
+  </functions>
+</book>

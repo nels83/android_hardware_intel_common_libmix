@@ -70,12 +70,23 @@ struct _MixVideoEncodeParams {
 	/*< public > */
 
 	/* TODO: Add properties */
+	
+	/* < private > */
 	guint64 timestamp;
 	gboolean discontinuity;
 
+	/* < public > */
+	
+	/* Reserved for future use */ 
 	void *reserved1;
+	
+	/* Reserved for future use */	
 	void *reserved2;
+	
+	/* Reserved for future use */	
 	void *reserved3;
+	
+	/* Reserved for future use */	
 	void *reserved4;
 };
 

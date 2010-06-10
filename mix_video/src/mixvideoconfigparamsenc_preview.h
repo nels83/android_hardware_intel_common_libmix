@@ -67,11 +67,7 @@ struct _MixVideoConfigParamsEncPreview
 {
   /*< public > */
   MixVideoConfigParamsEnc parent;
-
-  void *reserved1;
-  void *reserved2;
-  void *reserved3;
-  void *reserved4;
+  
 };
 
 /**

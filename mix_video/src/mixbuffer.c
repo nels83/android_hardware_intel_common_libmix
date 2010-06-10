@@ -8,9 +8,22 @@
 
 /**
  * SECTION:mixbuffer
- * @short_description: VideoConfig parameters
+ * @short_description: MI-X Video Buffer Parameters
  *
- * A data object which stores videoconfig specific parameters.
+ *<para>
+ * #MixBuffer objects are used to wrap input data buffers in a reference counted object as
+ * described in the buffer model section. Data buffers themselves are allocated by the
+ * App/MMF. #MixBuffer objects are allocated by #MixVideo in a pool and retrieved by the
+ * application using mix_video_get_mixbuffer(). The application will wrap a data buffer
+ * in a #Mixbuffer object and pass it into mix_video_decode() or to mix_video_encode().
+ * </para>
+ * <para>
+ * The #MixBuffer objects will be released by #MixVideo when they are no longer needed
+ * for the decode or encoder operation. The App/MMF will also release the #MixBuffer
+ * object after use. When the #MixBuffer is completely released, the callback to the
+ * function registered in the #MixBuffer will be called (allowing the App/MMF to release
+ * data buffers as necessary).
+ * </para>
  */
 
 #include "mixvideolog.h"

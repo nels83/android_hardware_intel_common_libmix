@@ -8,10 +8,11 @@
 
 /**
  * SECTION:mixvideoconfigparamsdec_mp42
- * @short_description: VideoConfig parameters
+ * @short_description: MI-X Video MPEG 4:2 Decode Configuration Parameter
  *
- * A data object which stores videoconfig specific parameters.
+ * MI-X video MPEG 4:2 decode configuration parameter objects.
  */
+
 
 #include "mixvideolog.h"
 #include "mixvideoconfigparamsdec_mp42.h"

@@ -63,18 +63,34 @@ typedef struct _MixBufferClass MixBufferClass;
 /**
  * MixBuffer:
  *
- * MI-X VideoConfig Parameter object
+ * MI-X Buffer Parameter object
  */
 struct _MixBuffer {
 	/*< public > */
 	MixParams parent;
 
 	/*< public > */
+	
+	/* Pointer to coded data buffer */
 	guchar *data;
+	
+	/* Size of coded data buffer */
 	guint size;
+	
+	/* Token that will be passed to 
+	 * the callback function. Can be 
+	 * used by the application for 
+	 * any information to be associated 
+	 * with this coded data buffer, 
+	 * such as a pointer to a structure 
+	 * belonging to the application. */
 	gulong token;
+	
+	/* callback function pointer */
 	MixBufferCallback callback;
 
+	/* < private > */
+	/* reserved */
 	gpointer reserved;
 };
 
@@ -108,7 +124,7 @@ MixBuffer *mix_buffer_new(void);
 /**
  * mix_buffer_ref:
  * @mix: object to add reference
- * @returns: the MixBuffer instance where reference count has been increased.
+ * @returns: the #MixBuffer instance where reference count has been increased.
  *
  * Add reference count.
  */
@@ -124,6 +140,17 @@ void mix_buffer_unref(MixBuffer * mix);
 
 /* Class Methods */
 
+/**
+ * mix_buffer_set_data:
+ * @obj: #MixBuffer object
+ * @data: data buffer  
+ * @size: data buffer size  
+ * @token:  token 
+ * @callback: callback function pointer  
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set data buffer, size, token and callback function 
+ */
 MIX_RESULT mix_buffer_set_data(MixBuffer * obj, guchar *data, guint size,
 		gulong token, MixBufferCallback callback);
 

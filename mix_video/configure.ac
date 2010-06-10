@@ -2,7 +2,7 @@ AC_INIT("", "", [linda.s.cline@intel.com])
 
 AC_CONFIG_MACRO_DIR(m4)
 
-AS_MIX_VERSION(mixvideo, MIXVIDEO, 0, 1, 15)
+AS_MIX_VERSION(mixvideo, MIXVIDEO, 0, 1, 17)
 
 dnl AM_MAINTAINER_MODE provides the option to enable maintainer mode
 AM_MAINTAINER_MODE
@@ -114,8 +114,8 @@ AC_SUBST(MIXVBP_CFLAGS)
 AC_SUBST(MIXVBP_LIBS)
 
 
-#check for gtk-doc
-#GTK_DOC_CHECK(1.9)
+dnl check for gtkdoc. Uncomment the following line to build gtkdoc
+dnl GTK_DOC_CHECK(1.9)
 
 AC_CONFIG_FILES([
 mixvideo.pc
@@ -129,7 +129,7 @@ dnl Un-comment this section to enable building of documentation.
 dnl AC_CONFIG_FILES(
 dnl docs/Makefile
 dnl docs/reference/Makefile
-#dnl docs/reference/MixVideo/Makefile
+dnl docs/reference/MixVideo/Makefile
 dnl )
 
 AC_OUTPUT

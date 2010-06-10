@@ -71,9 +71,17 @@ struct _MixVideoConfigParamsDecH264
   /*< public > */
 
   /* TODO: Add H.264 configuration paramters */
+  
+  /* Reserved for future use */
   void *reserved1;
+  
+  /* Reserved for future use */  
   void *reserved2;
+  
+  /* Reserved for future use */  
   void *reserved3;
+  
+  /* Reserved for future use */  
   void *reserved4;
 };
 
@@ -108,7 +116,7 @@ MixVideoConfigParamsDecH264 *mix_videoconfigparamsdec_h264_new (void);
 /**
 * mix_videoconfigparamsdec_h264_ref:
 * @mix: object to add reference
-* @returns: the MixVideoConfigParamsDecH264 instance where reference count has been increased.
+* @returns: #the MixVideoConfigParamsDecH264 instance where reference count has been increased.
 * 
 * Add reference count.
 */

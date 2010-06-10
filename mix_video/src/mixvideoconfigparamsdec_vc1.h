@@ -72,12 +72,23 @@ struct _MixVideoConfigParamsDecVC1
 
   /* TODO: Add VC1 configuration paramters */
   /* TODO: wmv_version and fourcc type might be changed later */
+  
+  /* WMV version */
   guint wmv_version;
+  
+  /* FourCC code */
   guint fourcc;
 
+  /* Reserved for future use */
   void *reserved1;
+  
+  /* Reserved for future use */  
   void *reserved2;
+  
+  /* Reserved for future use */  
   void *reserved3;
+  
+  /* Reserved for future use */  
   void *reserved4;
 };
 
@@ -112,7 +123,7 @@ MixVideoConfigParamsDecVC1 *mix_videoconfigparamsdec_vc1_new (void);
 /**
 * mix_videoconfigparamsdec_vc1_ref:
 * @mix: object to add reference
-* @returns: the MixVideoConfigParamsDecVC1 instance where reference count has been increased.
+* @returns: the #MixVideoConfigParamsDecVC1 instance where reference count has been increased.
 * 
 * Add reference count.
 */

@@ -70,12 +70,24 @@ struct _MixVideoDecodeParams {
 	/*< public > */
 
 	/* TODO: Add properties */
+	
+	/* Presentation timestamp for the video 
+	 * frame data, in milliseconds */
 	guint64 timestamp;
+	
+	/* Indicates a discontinuity in the stream */
 	gboolean discontinuity;
 
+	/* Reserved for future use */	
 	void *reserved1;
+	
+	/* Reserved for future use */	
 	void *reserved2;
+	
+	/* Reserved for future use */	
 	void *reserved3;
+	
+	/* Reserved for future use */	
 	void *reserved4;
 };
 
@@ -109,7 +121,7 @@ MixVideoDecodeParams *mix_videodecodeparams_new(void);
 /**
  * mix_videodecodeparams_ref:
  * @mix: object to add reference
- * @returns: the MixVideoDecodeParams instance where reference count has been increased.
+ * @returns: the #MixVideoDecodeParams instance where reference count has been increased.
  *
  * Add reference count.
  */
@@ -126,13 +138,50 @@ MixVideoDecodeParams *mix_videodecodeparams_ref(MixVideoDecodeParams * mix);
 /* Class Methods */
 
 /* TODO: Add getters and setters for properties */
+
+
+/**
+ * mix_videodecodeparams_set_timestamp:
+ * @obj: #MixVideoDecodeParams object
+ * @timestamp: Presentation timestamp for the video frame data, in milliseconds    
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set Presentation timestamp 
+ */
 MIX_RESULT mix_videodecodeparams_set_timestamp(MixVideoDecodeParams * obj,
 		guint64 timestamp);
+
+/**
+ * mix_videodecodeparams_get_timestamp:
+ * @obj: #MixVideoDecodeParams object
+ * @timestamp: Presentation timestamp for the video frame data, in milliseconds to be returned.     
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get Presentation timestamp 
+ */
 MIX_RESULT mix_videodecodeparams_get_timestamp(MixVideoDecodeParams * obj,
 		guint64 * timestamp);
 
+/**
+ * mix_videodecodeparams_set_discontinuity:
+ * @obj: #MixVideoDecodeParams object
+ * @discontinuity: Flag to in Indicates a discontinuity in the stream.     
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set discontinuity flag
+ */
 MIX_RESULT mix_videodecodeparams_set_discontinuity(MixVideoDecodeParams * obj,
 		gboolean discontinuity);
+
+
+/**
+ * mix_videodecodeparams_get_discontinuity:
+ * @obj: #MixVideoDecodeParams object
+ * @discontinuity: Discontinuity flag to be returned     
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get discontinuity flag
+ */
 MIX_RESULT mix_videodecodeparams_get_discontinuity(MixVideoDecodeParams * obj,
 		gboolean *discontinuity);
 

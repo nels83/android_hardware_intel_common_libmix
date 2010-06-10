@@ -8,9 +8,28 @@
 
 /**
  * SECTION:mixvideoconfigparams
- * @short_description: VideoConfig parameters
+ * @short_description: MI-X Video Configuration Parameter Base Object
+ * @include: mixvideoconfigparams.h
  *
- * A data object which stores videoconfig specific parameters.
+ * <para>
+ * A base object of MI-X video configuration parameter objects.
+ * </para> 
+ * <para>
+ * The derived MixVideoConfigParams object is created by the MMF/App
+ * and provided in the MixVideo mix_video_configure() function. The get and set
+ * methods for the properties will be available for the caller to set and get information at
+ * configuration time. It will also be created by MixVideo and returned from the
+ * mix_video_get_config() function, whereupon the MMF/App can get the get methods to
+ * obtain current configuration information.
+ * </para> 
+ * <para>
+ * There are decode mode objects (for example, MixVideoConfigParamsDec) and encode
+ * mode objects (for example, MixVideoConfigParamsEnc). Each of these types is refined
+ * further with media specific objects. The application should create the correct type of
+ * object to match the media format of the stream to be handled, e.g. if the media
+ * format of the stream to be decoded is H.264, the application would create a
+ * MixVideoConfigParamsDecH264 object for the mix_video_configure() call.
+ * </para> 
  */
 
 #include <string.h>

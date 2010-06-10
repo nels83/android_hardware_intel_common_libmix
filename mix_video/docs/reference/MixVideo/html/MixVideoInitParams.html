@@ -1,0 +1,214 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>MixVideoInitParams</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
+<link rel="home" href="index.html" title="Mi-X Video Reference Manual">
+<link rel="up" href="ch01.html" title="MI-X Video API">
+<link rel="prev" href="MixVideo.html" title="MixVideo">
+<link rel="next" href="MixDrmParams.html" title="MixDrmParams">
+<meta name="generator" content="GTK-Doc V1.11 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="chapter" href="ch01.html" title="MI-X Video API">
+<link rel="chapter" href="object-tree.html" title="Object Hierarchy">
+<link rel="index" href="api-index-full.html" title="API Index">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="2">
+<tr valign="middle">
+<td><a accesskey="p" href="MixVideo.html"><img src="left.png" width="24" height="24" border="0" alt="Prev"></a></td>
+<td><a accesskey="u" href="ch01.html"><img src="up.png" width="24" height="24" border="0" alt="Up"></a></td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="24" height="24" border="0" alt="Home"></a></td>
+<th width="100%" align="center">Mi-X Video Reference Manual</th>
+<td><a accesskey="n" href="MixDrmParams.html"><img src="right.png" width="24" height="24" border="0" alt="Next"></a></td>
+</tr>
+<tr><td colspan="5" class="shortcuts">
+<a href="#MixVideoInitParams.synopsis" class="shortcut">Top</a>
+                 | 
+                <a href="#MixVideoInitParams.description" class="shortcut">Description</a>
+                 | 
+                <a href="#MixVideoInitParams.object-hierarchy" class="shortcut">Object Hierarchy</a>
+</td></tr>
+</table>
+<div class="refentry" title="MixVideoInitParams">
+<a name="MixVideoInitParams"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="MixVideoInitParams.top_of_page"></a>MixVideoInitParams</span></h2>
+<p>MixVideoInitParams — MI-X Video Initialization Parameters</p>
+</td>
+<td valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsynopsisdiv" title="Synopsis">
+<a name="MixVideoInitParams.synopsis"></a><h2>Synopsis</h2>
+<pre class="synopsis">
+                    <a class="link" href="MixVideoInitParams.html#MixVideoInitParams-struct" title="MixVideoInitParams">MixVideoInitParams</a>;
+<a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> * <a class="link" href="MixVideoInitParams.html#mix-videoinitparams-new" title="mix_videoinitparams_new ()">mix_videoinitparams_new</a>            (void);
+<a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> * <a class="link" href="MixVideoInitParams.html#mix-videoinitparams-ref" title="mix_videoinitparams_ref ()">mix_videoinitparams_ref</a>            (<a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *mix);
+#define             <a class="link" href="MixVideoInitParams.html#mix-videoinitparams-unref" title="mix_videoinitparams_unref()">mix_videoinitparams_unref</a>           (obj)
+MIX_RESULT          <a class="link" href="MixVideoInitParams.html#mix-videoinitparams-set-display" title="mix_videoinitparams_set_display ()">mix_videoinitparams_set_display</a>     (<a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *obj,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *display);
+MIX_RESULT          <a class="link" href="MixVideoInitParams.html#mix-videoinitparams-get-display" title="mix_videoinitparams_get_display ()">mix_videoinitparams_get_display</a>     (<a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *obj,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> **dislay);
+</pre>
+</div>
+<div class="refsect1" title="Object Hierarchy">
+<a name="MixVideoInitParams.object-hierarchy"></a><h2>Object Hierarchy</h2>
+<pre class="synopsis">
+  MixParams
+   +----MixVideoInitParams
+</pre>
+</div>
+<div class="refsect1" title="Description">
+<a name="MixVideoInitParams.description"></a><h2>Description</h2>
+<p>
+The MixVideoInitParams object will be created by the MMF/App 
+and provided in the <a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()"><code class="function">mix_video_initialize()</code></a> function. 
+The get and set methods for the properties will be available for 
+the caller to set and get information used at initialization time.</p>
+</div>
+<div class="refsect1" title="Details">
+<a name="MixVideoInitParams.details"></a><h2>Details</h2>
+<div class="refsect2" title="MixVideoInitParams">
+<a name="MixVideoInitParams-struct"></a><h3>MixVideoInitParams</h3>
+<pre class="programlisting">typedef struct {
+  MixParams parent;
+
+
+  /* Pointer to a MixDisplay object 
+   * such as MixDisplayX11 */
+  MixDisplay *display;
+  
+  /* Reserved for future use */
+  void *reserved1;
+  
+  /* Reserved for future use */  
+  void *reserved2;
+  
+  /* Reserved for future use */  
+  void *reserved3;
+  
+  /* Reserved for future use */  
+  void *reserved4;
+} MixVideoInitParams;
+</pre>
+<p>
+MI-X VideoInit Parameter object</p>
+</div>
+<hr>
+<div class="refsect2" title="mix_videoinitparams_new ()">
+<a name="mix-videoinitparams-new"></a><h3>mix_videoinitparams_new ()</h3>
+<pre class="programlisting"><a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> * mix_videoinitparams_new            (void);</pre>
+<p>
+Use this method to create new instance of <a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams"><span class="type">MixVideoInitParams</span></a></p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> A newly allocated instance of <a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams"><span class="type">MixVideoInitParams</span></a>
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_videoinitparams_ref ()">
+<a name="mix-videoinitparams-ref"></a><h3>mix_videoinitparams_ref ()</h3>
+<pre class="programlisting"><a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> * mix_videoinitparams_ref            (<a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *mix);</pre>
+<p>
+Add reference count.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> object to add reference
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> the <a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams"><span class="type">MixVideoInitParams</span></a> instance where reference count has been increased.
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_videoinitparams_unref()">
+<a name="mix-videoinitparams-unref"></a><h3>mix_videoinitparams_unref()</h3>
+<pre class="programlisting">#define mix_videoinitparams_unref(obj) mix_params_unref(MIX_PARAMS(obj))
+</pre>
+<p>
+Decrement reference count of the object.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> object to unref.
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_videoinitparams_set_display ()">
+<a name="mix-videoinitparams-set-display"></a><h3>mix_videoinitparams_set_display ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_videoinitparams_set_display     (<a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *obj,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *display);</pre>
+<p>
+Set MixDisplay object</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams"><span class="type">MixVideoInitParams</span></a> object
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>display</code></em> :</span></p></td>
+<td> Pointer to a MixDisplay object such as MixDisplayX11   
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_videoinitparams_get_display ()">
+<a name="mix-videoinitparams-get-display"></a><h3>mix_videoinitparams_get_display ()</h3>
+<pre class="programlisting">MIX_RESULT          mix_videoinitparams_get_display     (<a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *obj,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> **dislay);</pre>
+<p>
+Get MixDisplay object</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams"><span class="type">MixVideoInitParams</span></a> object
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>dislay</code></em> :</span></p></td>
+<td> Pointer to pointer of a MixDisplay object such as MixDisplayX11   
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> <a class="link" href="MixVideo-mixvideodef.html" title="MI-X Video Data Definitons And Common Error Code">Common Video Error Return Codes</a>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>
+          Generated by GTK-Doc V1.11</div>
+</body>
+</html>

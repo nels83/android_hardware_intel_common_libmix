@@ -8,9 +8,14 @@
 
 /**
  * SECTION:mixdisplayx11
- * @short_description: VideoInit parameters
+ * @short_description: MI-X Video X11 Display 
  *
- * A data object which stores videoinit specific parameters.
+ * A data object which stores X11 specific parameters.
+ * 
+ * <note>
+ * <title>Data Structures Used in MixDisplayX11 Fields:</title>
+ * See X11/Xlib.h for Display and Drawable definitions.
+ * </note>
  */
 
 #include "mixdisplayx11.h"
@@ -19,12 +24,6 @@
 
 static GType _mix_displayx11_type = 0;
 static MixDisplayClass *parent_class = NULL;
-
-#ifdef ANDROID
-int XSync(Display* display, Bool bvalue) {
-    return 0;
-}
-#endif
 
 #define _do_init { _mix_displayx11_type = g_define_type_id; }
 

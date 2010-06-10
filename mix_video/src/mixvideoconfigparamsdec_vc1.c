@@ -8,10 +8,11 @@
 
 /**
  * SECTION:mixvideoconfigparamsdec_vc1
- * @short_description: VideoConfig parameters
+ * @short_description: MI-X Video VC-1 Decode Configuration Parameter
  *
- * A data object which stores videoconfig specific parameters.
+ * MI-X video VC-1 decode configuration parameter objects.
  */
+
 
 #include "mixvideoconfigparamsdec_vc1.h"
 

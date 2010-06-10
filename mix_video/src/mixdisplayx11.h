@@ -11,16 +11,7 @@ No license under any patent, copyright, trade secret or other intellectual prope
 
 #include "mixdisplay.h"
 #include "mixvideodef.h"
-#ifndef ANDROID
 #include <X11/Xlib.h>
-#else
-#define Display unsigned int
-#define Drawable unsigned int
-#define Bool int
-#define True 1
-#define False 0
-int XSync(Display* display, Bool bvalue);
-#endif
 
 /**
 * MIX_TYPE_DISPLAYX11:
@@ -80,7 +71,13 @@ struct _MixDisplayX11
 
   /*< public > */
 
+  /* Pointer to a X Window Display structure */
   Display *display;
+  
+  /* An X Window Drawable that is either a Window 
+   * or a Pixmap. This field is not used in 
+   * mix_video_initialize(). 
+   * See X11/Xlib.h for Display and Drawable definitions.*/
   Drawable drawable;
 };
 
@@ -115,7 +112,7 @@ MixDisplayX11 *mix_displayx11_new (void);
 /**
 * mix_displayx11_ref:
 * @mix: object to add reference
-* @returns: the MixDisplayX11 instance where reference count has been increased.
+* @returns: the #MixDisplayX11 instance where reference count has been increased.
 * 
 * Add reference count.
 */
@@ -131,19 +128,48 @@ MixDisplayX11 *mix_displayx11_ref (MixDisplayX11 * mix);
 
 /* Class Methods */
 
-/*
-TO DO: Add documents
-*/
 
+/**
+ * mix_displayx11_set_display:
+ * @obj: #MixDisplayX11 object
+ * @display: Pointer to a X Window Display structure    
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set Display 
+ */
 MIX_RESULT mix_displayx11_set_display (MixDisplayX11 * obj,
 				       Display * display);
 
+/**
+ * mix_displayx11_get_display:
+ * @obj: #MixDisplayX11 object
+ * @display: Pointer to pointer of X Window Display structure    
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get Display 
+ */
 MIX_RESULT mix_displayx11_get_display (MixDisplayX11 * obj,
 				       Display ** dislay);
 
+/**
+ * mix_displayx11_set_drawable:
+ * @obj: #MixDisplayX11 object
+ * @drawable: An X Window Drawable that is either a Window or a Pixmap.    
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set drawable 
+ */
 MIX_RESULT mix_displayx11_set_drawable (MixDisplayX11 * obj,
 					Drawable drawable);
 
+/**
+ * mix_displayx11_get_drawable:
+ * @obj: #MixDisplayX11 object
+ * @drawable: An X Window Drawable that is either a Window or a Pixmap to be returned.    
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get drawable 
+ */
 MIX_RESULT mix_displayx11_get_drawable (MixDisplayX11 * obj,
 					Drawable * drawable);
 

@@ -50,11 +50,6 @@ mix_videoconfigparamsenc_preview_init (MixVideoConfigParamsEncPreview * self)
 {
   /* initialize properties here */
   /* TODO: initialize properties */
-
-  self->reserved1 = NULL;
-  self->reserved2 = NULL;
-  self->reserved3 = NULL;
-  self->reserved4 = NULL;
 }
 
 static void

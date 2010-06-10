@@ -1,0 +1,591 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>MixDisplay</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
+<link rel="home" href="index.html" title="Mi-X Video Reference Manual">
+<link rel="up" href="ch01.html" title="MI-X Video API">
+<link rel="prev" href="MixDrmParams.html" title="MixDrmParams">
+<link rel="next" href="MixDisplayX11.html" title="MixDisplayX11">
+<meta name="generator" content="GTK-Doc V1.11 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="chapter" href="ch01.html" title="MI-X Video API">
+<link rel="chapter" href="object-tree.html" title="Object Hierarchy">
+<link rel="index" href="api-index-full.html" title="API Index">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="2">
+<tr valign="middle">
+<td><a accesskey="p" href="MixDrmParams.html"><img src="left.png" width="24" height="24" border="0" alt="Prev"></a></td>
+<td><a accesskey="u" href="ch01.html"><img src="up.png" width="24" height="24" border="0" alt="Up"></a></td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="24" height="24" border="0" alt="Home"></a></td>
+<th width="100%" align="center">Mi-X Video Reference Manual</th>
+<td><a accesskey="n" href="MixDisplayX11.html"><img src="right.png" width="24" height="24" border="0" alt="Next"></a></td>
+</tr>
+<tr><td colspan="5" class="shortcuts">
+<a href="#MixDisplay.synopsis" class="shortcut">Top</a>
+                 | 
+                <a href="#MixDisplay.description" class="shortcut">Description</a>
+                 | 
+                <a href="#MixDisplay.object-hierarchy" class="shortcut">Object Hierarchy</a>
+</td></tr>
+</table>
+<div class="refentry" title="MixDisplay">
+<a name="MixDisplay"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="MixDisplay.top_of_page"></a>MixDisplay</span></h2>
+<p>MixDisplay — Lightweight Base Object for MI-X Video Display</p>
+</td>
+<td valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsynopsisdiv" title="Synopsis">
+<a name="MixDisplay.synopsis"></a><h2>Synopsis</h2>
+<pre class="synopsis">
+#define             <a class="link" href="MixDisplay.html#MIX-DISPLAY-CLASS--CAPS" title="MIX_DISPLAY_CLASS()">MIX_DISPLAY_CLASS</a>                   (klass)
+#define             <a class="link" href="MixDisplay.html#MIX-DISPLAY-CAST--CAPS" title="MIX_DISPLAY_CAST()">MIX_DISPLAY_CAST</a>                    (obj)
+<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        (<a class="link" href="MixDisplay.html#MixDisplayDupFunction" title="MixDisplayDupFunction ()">*MixDisplayDupFunction</a>)            (const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
+gboolean            (<a class="link" href="MixDisplay.html#MixDisplayCopyFunction" title="MixDisplayCopyFunction ()">*MixDisplayCopyFunction</a>)           (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
+                                                         const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *src);
+void                (<a class="link" href="MixDisplay.html#MixDisplayFinalizeFunction" title="MixDisplayFinalizeFunction ()">*MixDisplayFinalizeFunction</a>)       (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
+gboolean            (<a class="link" href="MixDisplay.html#MixDisplayEqualFunction" title="MixDisplayEqualFunction ()">*MixDisplayEqualFunction</a>)          (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *second);
+#define             <a class="link" href="MixDisplay.html#MIX-VALUE-HOLDS-DISPLAY--CAPS" title="MIX_VALUE_HOLDS_DISPLAY()">MIX_VALUE_HOLDS_DISPLAY</a>             (value)
+#define             <a class="link" href="MixDisplay.html#MIX-DISPLAY-REFCOUNT--CAPS" title="MIX_DISPLAY_REFCOUNT()">MIX_DISPLAY_REFCOUNT</a>                (obj)
+#define             <a class="link" href="MixDisplay.html#MIX-DISPLAY-REFCOUNT-VALUE--CAPS" title="MIX_DISPLAY_REFCOUNT_VALUE()">MIX_DISPLAY_REFCOUNT_VALUE</a>          (obj)
+                    <a class="link" href="MixDisplay.html#MixDisplay-struct" title="MixDisplay">MixDisplay</a>;
+<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        <a class="link" href="MixDisplay.html#mix-display-new" title="mix_display_new ()">mix_display_new</a>                     ();
+gboolean            <a class="link" href="MixDisplay.html#mix-display-copy" title="mix_display_copy ()">mix_display_copy</a>                    (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
+                                                         const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *src);
+<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        <a class="link" href="MixDisplay.html#mix-display-ref" title="mix_display_ref ()">mix_display_ref</a>                     (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
+void                <a class="link" href="MixDisplay.html#mix-display-unref" title="mix_display_unref ()">mix_display_unref</a>                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
+void                <a class="link" href="MixDisplay.html#mix-display-replace" title="mix_display_replace ()">mix_display_replace</a>                 (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> **olddata,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *newdata);
+<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        <a class="link" href="MixDisplay.html#mix-display-dup" title="mix_display_dup ()">mix_display_dup</a>                     (const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
+gboolean            <a class="link" href="MixDisplay.html#mix-display-equal" title="mix_display_equal ()">mix_display_equal</a>                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *second);
+#define             <a class="link" href="MixDisplay.html#MIX-TYPE-PARAM-DISPLAY--CAPS" title="MIX_TYPE_PARAM_DISPLAY">MIX_TYPE_PARAM_DISPLAY</a>
+#define             <a class="link" href="MixDisplay.html#MIX-IS-PARAM-SPEC-DISPLAY--CAPS" title="MIX_IS_PARAM_SPEC_DISPLAY()">MIX_IS_PARAM_SPEC_DISPLAY</a>           (pspec)
+#define             <a class="link" href="MixDisplay.html#MIX-PARAM-SPEC-DISPLAY--CAPS" title="MIX_PARAM_SPEC_DISPLAY()">MIX_PARAM_SPEC_DISPLAY</a>              (pspec)
+                    <a class="link" href="MixDisplay.html#MixParamSpecDisplay" title="MixParamSpecDisplay">MixParamSpecDisplay</a>;
+GType               <a class="link" href="MixDisplay.html#mix-param-spec-display-get-type" title="mix_param_spec_display_get_type ()">mix_param_spec_display_get_type</a>     (void);
+GParamSpec *        <a class="link" href="MixDisplay.html#mix-param-spec-display" title="mix_param_spec_display ()">mix_param_spec_display</a>              (const char *name,
+                                                         const char *nick,
+                                                         const char *blurb,
+                                                         GType object_type,
+                                                         GParamFlags flags);
+void                <a class="link" href="MixDisplay.html#mix-value-set-display" title="mix_value_set_display ()">mix_value_set_display</a>               (GValue *value,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
+void                <a class="link" href="MixDisplay.html#mix-value-take-display" title="mix_value_take_display ()">mix_value_take_display</a>              (GValue *value,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
+<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        <a class="link" href="MixDisplay.html#mix-value-get-display" title="mix_value_get_display ()">mix_value_get_display</a>               (const GValue *value);
+<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        <a class="link" href="MixDisplay.html#mix-value-dup-display" title="mix_value_dup_display ()">mix_value_dup_display</a>               (const GValue *value);
+</pre>
+</div>
+<div class="refsect1" title="Object Hierarchy">
+<a name="MixDisplay.object-hierarchy"></a><h2>Object Hierarchy</h2>
+<pre class="synopsis">
+  MixDisplay
+   +----<a class="link" href="MixDisplayX11.html" title="MixDisplayX11">MixDisplayX11</a>
+</pre>
+</div>
+<div class="refsect1" title="Description">
+<a name="MixDisplay.description"></a><h2>Description</h2>
+<p>
+</p>
+</div>
+<div class="refsect1" title="Details">
+<a name="MixDisplay.details"></a><h2>Details</h2>
+<div class="refsect2" title="MIX_DISPLAY_CLASS()">
+<a name="MIX-DISPLAY-CLASS--CAPS"></a><h3>MIX_DISPLAY_CLASS()</h3>
+<pre class="programlisting">#define MIX_DISPLAY_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_DISPLAY, MixDisplayClass))
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="MIX_DISPLAY_CAST()">
+<a name="MIX-DISPLAY-CAST--CAPS"></a><h3>MIX_DISPLAY_CAST()</h3>
+<pre class="programlisting">#define MIX_DISPLAY_CAST(obj)     ((MixDisplay*)(obj))
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="MixDisplayDupFunction ()">
+<a name="MixDisplayDupFunction"></a><h3>MixDisplayDupFunction ()</h3>
+<pre class="programlisting"><a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        (*MixDisplayDupFunction)            (const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);</pre>
+<p>
+Virtual function prototype for methods to create duplicate of instance.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> Display to duplicate
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> reference to cloned instance. 
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="MixDisplayCopyFunction ()">
+<a name="MixDisplayCopyFunction"></a><h3>MixDisplayCopyFunction ()</h3>
+<pre class="programlisting">gboolean            (*MixDisplayCopyFunction)           (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
+                                                         const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *src);</pre>
+<p>
+Virtual function prototype for methods to create copies of instance.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>target</code></em> :</span></p></td>
+<td> target of the copy
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>src</code></em> :</span></p></td>
+<td> source of the copy
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> boolean indicates if copy is successful.
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="MixDisplayFinalizeFunction ()">
+<a name="MixDisplayFinalizeFunction"></a><h3>MixDisplayFinalizeFunction ()</h3>
+<pre class="programlisting">void                (*MixDisplayFinalizeFunction)       (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);</pre>
+<p>
+Virtual function prototype for methods to free ressources used by
+object.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> Display to finalize
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="MixDisplayEqualFunction ()">
+<a name="MixDisplayEqualFunction"></a><h3>MixDisplayEqualFunction ()</h3>
+<pre class="programlisting">gboolean            (*MixDisplayEqualFunction)          (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *second);</pre>
+</div>
+<hr>
+<div class="refsect2" title="MIX_VALUE_HOLDS_DISPLAY()">
+<a name="MIX-VALUE-HOLDS-DISPLAY--CAPS"></a><h3>MIX_VALUE_HOLDS_DISPLAY()</h3>
+<pre class="programlisting">#define MIX_VALUE_HOLDS_DISPLAY(value)  (G_VALUE_HOLDS(value, MIX_TYPE_DISPLAY))
+</pre>
+<p>
+Checks if the given <span class="type">GValue</span> contains a <span class="type">MIX_TYPE_PARAM</span> value.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>value</code></em> :</span></p></td>
+<td> the <span class="type">GValue</span> to check
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="MIX_DISPLAY_REFCOUNT()">
+<a name="MIX-DISPLAY-REFCOUNT--CAPS"></a><h3>MIX_DISPLAY_REFCOUNT()</h3>
+<pre class="programlisting">#define MIX_DISPLAY_REFCOUNT(obj)           ((MIX_DISPLAY_CAST(obj))-&gt;refcount)
+</pre>
+<p>
+Get access to the reference count field of the object.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> a <a class="link" href="MixDisplay.html" title="MixDisplay"><span class="type">MixDisplay</span></a>
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="MIX_DISPLAY_REFCOUNT_VALUE()">
+<a name="MIX-DISPLAY-REFCOUNT-VALUE--CAPS"></a><h3>MIX_DISPLAY_REFCOUNT_VALUE()</h3>
+<pre class="programlisting">#define MIX_DISPLAY_REFCOUNT_VALUE(obj)     (g_atomic_int_get (&amp;(MIX_DISPLAY_CAST(obj))-&gt;refcount))
+</pre>
+<p>
+Get the reference count value of the object</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> a <a class="link" href="MixDisplay.html" title="MixDisplay"><span class="type">MixDisplay</span></a>
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="MixDisplay">
+<a name="MixDisplay-struct"></a><h3>MixDisplay</h3>
+<pre class="programlisting">typedef struct {
+  gint refcount;
+} MixDisplay;
+</pre>
+<p>
+Base class for a refcounted parameter objects.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term">gint <em class="structfield"><code>refcount</code></em>;</span></p></td>
+<td> atomic refcount
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_display_new ()">
+<a name="mix-display-new"></a><h3>mix_display_new ()</h3>
+<pre class="programlisting"><a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        mix_display_new                     ();</pre>
+<p>
+Create new instance of the object.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> return a newly allocated object.
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_display_copy ()">
+<a name="mix-display-copy"></a><h3>mix_display_copy ()</h3>
+<pre class="programlisting">gboolean            mix_display_copy                    (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
+                                                         const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *src);</pre>
+<p>
+Copy data from one instance to the other. This method internally invoked the <span class="type">"copy"</span> method such that derived object will be copied correctly.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>target</code></em> :</span></p></td>
+<td> copy to target
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>src</code></em> :</span></p></td>
+<td> copy from source
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> boolean indicating if copy is successful.
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_display_ref ()">
+<a name="mix-display-ref"></a><h3>mix_display_ref ()</h3>
+<pre class="programlisting"><a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        mix_display_ref                     (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);</pre>
+<p>
+Increment reference count.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> a <a class="link" href="MixDisplay.html" title="MixDisplay"><span class="type">MixDisplay</span></a> object.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> the object with reference count incremented.
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_display_unref ()">
+<a name="mix-display-unref"></a><h3>mix_display_unref ()</h3>
+<pre class="programlisting">void                mix_display_unref                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);</pre>
+<p>
+Decrement reference count.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> a <a class="link" href="MixDisplay.html" title="MixDisplay"><span class="type">MixDisplay</span></a> object.
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_display_replace ()">
+<a name="mix-display-replace"></a><h3>mix_display_replace ()</h3>
+<pre class="programlisting">void                mix_display_replace                 (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> **olddata,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *newdata);</pre>
+<p>
+Replace a pointer of the object with the new one.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>olddata</code></em> :</span></p></td>
+<td> old data
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>newdata</code></em> :</span></p></td>
+<td> new data
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_display_dup ()">
+<a name="mix-display-dup"></a><h3>mix_display_dup ()</h3>
+<pre class="programlisting"><a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        mix_display_dup                     (const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);</pre>
+<p>
+Duplicate the given <a class="link" href="MixDisplay.html" title="MixDisplay"><span class="type">MixDisplay</span></a> and allocate a new instance. This method is chained up properly and derive object will be dupped properly.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> <a class="link" href="MixDisplay.html" title="MixDisplay"><span class="type">MixDisplay</span></a> object to duplicate.
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> A newly allocated duplicate of the object, or NULL if failed.
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_display_equal ()">
+<a name="mix-display-equal"></a><h3>mix_display_equal ()</h3>
+<pre class="programlisting">gboolean            mix_display_equal                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *second);</pre>
+<p>
+Note that the parameter comparison compares the values that are hold inside the object, not for checking if the 2 pointers are of the same instance.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>first</code></em> :</span></p></td>
+<td> first object to compare
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>second</code></em> :</span></p></td>
+<td> second object to compare
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> boolean indicates if the 2 object contains same data.
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="MIX_TYPE_PARAM_DISPLAY">
+<a name="MIX-TYPE-PARAM-DISPLAY--CAPS"></a><h3>MIX_TYPE_PARAM_DISPLAY</h3>
+<pre class="programlisting">#define MIX_TYPE_PARAM_DISPLAY (mix_param_spec_display_get_type())
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="MIX_IS_PARAM_SPEC_DISPLAY()">
+<a name="MIX-IS-PARAM-SPEC-DISPLAY--CAPS"></a><h3>MIX_IS_PARAM_SPEC_DISPLAY()</h3>
+<pre class="programlisting">#define MIX_IS_PARAM_SPEC_DISPLAY(pspec) (G_TYPE_CHECK_INSTANCE_TYPE ((pspec), MIX_TYPE_PARAM_DISPLAY))
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="MIX_PARAM_SPEC_DISPLAY()">
+<a name="MIX-PARAM-SPEC-DISPLAY--CAPS"></a><h3>MIX_PARAM_SPEC_DISPLAY()</h3>
+<pre class="programlisting">#define MIX_PARAM_SPEC_DISPLAY(pspec) (G_TYPE_CHECK_INSTANCE_CAST ((pspec), MIX_TYPE_PARAM_DISPLAY, MixParamSpecDisplay))
+</pre>
+</div>
+<hr>
+<div class="refsect2" title="MixParamSpecDisplay">
+<a name="MixParamSpecDisplay"></a><h3>MixParamSpecDisplay</h3>
+<pre class="programlisting">typedef struct {
+  GParamSpec parent;
+} MixParamSpecDisplay;
+</pre>
+<p>
+A <span class="type">GParamSpec</span> derived structure that contains the meta data
+for <a class="link" href="MixDisplay.html" title="MixDisplay"><span class="type">MixDisplay</span></a> properties.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term">GParamSpec <em class="structfield"><code>parent</code></em>;</span></p></td>
+<td> <span class="type">GParamSpec</span> portion
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_param_spec_display_get_type ()">
+<a name="mix-param-spec-display-get-type"></a><h3>mix_param_spec_display_get_type ()</h3>
+<pre class="programlisting">GType               mix_param_spec_display_get_type     (void);</pre>
+</div>
+<hr>
+<div class="refsect2" title="mix_param_spec_display ()">
+<a name="mix-param-spec-display"></a><h3>mix_param_spec_display ()</h3>
+<pre class="programlisting">GParamSpec *        mix_param_spec_display              (const char *name,
+                                                         const char *nick,
+                                                         const char *blurb,
+                                                         GType object_type,
+                                                         GParamFlags flags);</pre>
+<p>
+Creates a new <span class="type">GParamSpec</span> instance that hold <a class="link" href="MixDisplay.html" title="MixDisplay"><span class="type">MixDisplay</span></a> references.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>name</code></em> :</span></p></td>
+<td> the canonical name of the property
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>nick</code></em> :</span></p></td>
+<td> the nickname of the property
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>blurb</code></em> :</span></p></td>
+<td> a short description of the property
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>object_type</code></em> :</span></p></td>
+<td> the <span class="type">MixDisplayType</span> for the property
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>flags</code></em> :</span></p></td>
+<td> a combination of <span class="type">GParamFlags</span>
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> a newly allocated <span class="type">GParamSpec</span> instance
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_value_set_display ()">
+<a name="mix-value-set-display"></a><h3>mix_value_set_display ()</h3>
+<pre class="programlisting">void                mix_value_set_display               (GValue *value,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);</pre>
+<p>
+Set the contents of a <code class="literal">MIX_TYPE_DISPLAY</code> derived <span class="type">GValue</span> to
+<em class="parameter"><code>obj</code></em>.
+The caller retains ownership of the reference.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>value</code></em> :</span></p></td>
+<td>       a valid <span class="type">GValue</span> of <code class="literal">MIX_TYPE_DISPLAY</code> derived type
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> object value to set
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_value_take_display ()">
+<a name="mix-value-take-display"></a><h3>mix_value_take_display ()</h3>
+<pre class="programlisting">void                mix_value_take_display              (GValue *value,
+                                                         <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);</pre>
+<p>
+Set the contents of a <span class="type">MIX_TYPE_DISPLAY</span> derived <span class="type">GValue</span> to
+<em class="parameter"><code>obj</code></em>.
+Takes over the ownership of the caller's reference to <em class="parameter"><code>obj</code></em>;
+the caller doesn't have to unref it any more.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>value</code></em> :</span></p></td>
+<td> a valid <span class="type">GValue</span> of <span class="type">MIX_TYPE_DISPLAY</span> derived type
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> object value to take
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_value_get_display ()">
+<a name="mix-value-get-display"></a><h3>mix_value_get_display ()</h3>
+<pre class="programlisting"><a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        mix_value_get_display               (const GValue *value);</pre>
+<p>
+refcount of the MixDisplay is not increased.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>value</code></em> :</span></p></td>
+<td> a valid <span class="type">GValue</span> of <span class="type">MIX_TYPE_DISPLAY</span> derived type
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td>object contents of <em class="parameter"><code>value</code></em> 
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_value_dup_display ()">
+<a name="mix-value-dup-display"></a><h3>mix_value_dup_display ()</h3>
+<pre class="programlisting"><a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        mix_value_dup_display               (const GValue *value);</pre>
+<p>
+refcount of MixDisplay is increased.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>value</code></em> :</span></p></td>
+<td>   a valid <span class="type">GValue</span> of <code class="literal">MIX_TYPE_DISPLAY</code> derived type
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> object contents of <em class="parameter"><code>value</code></em>
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>
+          Generated by GTK-Doc V1.11</div>
+</body>
+</html>

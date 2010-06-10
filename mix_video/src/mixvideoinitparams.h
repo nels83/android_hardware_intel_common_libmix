@@ -71,10 +71,20 @@ struct _MixVideoInitParams
 
   /*< public > */
 
+  /* Pointer to a MixDisplay object 
+   * such as MixDisplayX11 */
   MixDisplay *display;
+  
+  /* Reserved for future use */
   void *reserved1;
+  
+  /* Reserved for future use */  
   void *reserved2;
+  
+  /* Reserved for future use */  
   void *reserved3;
+  
+  /* Reserved for future use */  
   void *reserved4;
 };
 
@@ -109,7 +119,7 @@ MixVideoInitParams *mix_videoinitparams_new (void);
 /**
  * mix_videoinitparams_ref:
  * @mix: object to add reference
- * @returns: the MixVideoInitParams instance where reference count has been increased.
+ * @returns: the #MixVideoInitParams instance where reference count has been increased.
  * 
  * Add reference count.
  */
@@ -125,13 +135,26 @@ MixVideoInitParams *mix_videoinitparams_ref (MixVideoInitParams * mix);
 
 /* Class Methods */
 
-/*
-	TO DO: Add documents
-*/
 
+/**
+ * mix_videoinitparams_set_display:
+ * @obj: #MixVideoInitParams object
+ * @display: Pointer to a MixDisplay object such as MixDisplayX11   
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set MixDisplay object 
+ */
 MIX_RESULT mix_videoinitparams_set_display (MixVideoInitParams * obj,
 					    MixDisplay * display);
 
+/**
+ * mix_videoinitparams_get_display:
+ * @obj: #MixVideoInitParams object
+ * @dislay: Pointer to pointer of a MixDisplay object such as MixDisplayX11   
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get MixDisplay object 
+ */
 MIX_RESULT mix_videoinitparams_get_display (MixVideoInitParams * obj,
 					    MixDisplay ** dislay);
 

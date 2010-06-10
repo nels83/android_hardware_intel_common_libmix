@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>MixDrmParams</title>
+<meta name="generator" content="DocBook XSL Stylesheets V1.75.1">
+<link rel="home" href="index.html" title="Mi-X Video Reference Manual">
+<link rel="up" href="ch01.html" title="MI-X Video API">
+<link rel="prev" href="MixVideoInitParams.html" title="MixVideoInitParams">
+<link rel="next" href="MixDisplay.html" title="MixDisplay">
+<meta name="generator" content="GTK-Doc V1.11 (XML mode)">
+<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="chapter" href="ch01.html" title="MI-X Video API">
+<link rel="chapter" href="object-tree.html" title="Object Hierarchy">
+<link rel="index" href="api-index-full.html" title="API Index">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table class="navigation" id="top" width="100%" summary="Navigation header" cellpadding="2" cellspacing="2">
+<tr valign="middle">
+<td><a accesskey="p" href="MixVideoInitParams.html"><img src="left.png" width="24" height="24" border="0" alt="Prev"></a></td>
+<td><a accesskey="u" href="ch01.html"><img src="up.png" width="24" height="24" border="0" alt="Up"></a></td>
+<td><a accesskey="h" href="index.html"><img src="home.png" width="24" height="24" border="0" alt="Home"></a></td>
+<th width="100%" align="center">Mi-X Video Reference Manual</th>
+<td><a accesskey="n" href="MixDisplay.html"><img src="right.png" width="24" height="24" border="0" alt="Next"></a></td>
+</tr>
+<tr><td colspan="5" class="shortcuts">
+<a href="#MixDrmParams.synopsis" class="shortcut">Top</a>
+                 | 
+                <a href="#MixDrmParams.description" class="shortcut">Description</a>
+                 | 
+                <a href="#MixDrmParams.object-hierarchy" class="shortcut">Object Hierarchy</a>
+</td></tr>
+</table>
+<div class="refentry" title="MixDrmParams">
+<a name="MixDrmParams"></a><div class="titlepage"></div>
+<div class="refnamediv"><table width="100%"><tr>
+<td valign="top">
+<h2><span class="refentrytitle"><a name="MixDrmParams.top_of_page"></a>MixDrmParams</span></h2>
+<p>MixDrmParams — Drm Parameters Base Object</p>
+</td>
+<td valign="top" align="right"></td>
+</tr></table></div>
+<div class="refsynopsisdiv" title="Synopsis">
+<a name="MixDrmParams.synopsis"></a><h2>Synopsis</h2>
+<pre class="synopsis">
+                    <a class="link" href="MixDrmParams.html#MixDrmParams-struct" title="MixDrmParams">MixDrmParams</a>;
+<a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *      <a class="link" href="MixDrmParams.html#mix-drmparams-new" title="mix_drmparams_new ()">mix_drmparams_new</a>                   (void);
+<a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *      <a class="link" href="MixDrmParams.html#mix-drmparams-ref" title="mix_drmparams_ref ()">mix_drmparams_ref</a>                   (<a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *mix);
+#define             <a class="link" href="MixDrmParams.html#mix-drmparams-unref" title="mix_drmparams_unref()">mix_drmparams_unref</a>                 (obj)
+</pre>
+</div>
+<div class="refsect1" title="Object Hierarchy">
+<a name="MixDrmParams.object-hierarchy"></a><h2>Object Hierarchy</h2>
+<pre class="synopsis">
+  MixParams
+   +----MixDrmParams
+</pre>
+</div>
+<div class="refsect1" title="Description">
+<a name="MixDrmParams.description"></a><h2>Description</h2>
+<p>
+A data object which stores drm specific parameters.</p>
+</div>
+<div class="refsect1" title="Details">
+<a name="MixDrmParams.details"></a><h2>Details</h2>
+<div class="refsect2" title="MixDrmParams">
+<a name="MixDrmParams-struct"></a><h3>MixDrmParams</h3>
+<pre class="programlisting">typedef struct {
+  MixParams parent;
+
+
+  /* TODO: Add properties */
+} MixDrmParams;
+</pre>
+<p>
+MI-X Drm Parameter object</p>
+</div>
+<hr>
+<div class="refsect2" title="mix_drmparams_new ()">
+<a name="mix-drmparams-new"></a><h3>mix_drmparams_new ()</h3>
+<pre class="programlisting"><a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *      mix_drmparams_new                   (void);</pre>
+<p>
+Use this method to create new instance of <a class="link" href="MixDrmParams.html" title="MixDrmParams"><span class="type">MixDrmParams</span></a></p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> A newly allocated instance of <a class="link" href="MixDrmParams.html" title="MixDrmParams"><span class="type">MixDrmParams</span></a>
+</td>
+</tr></tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_drmparams_ref ()">
+<a name="mix-drmparams-ref"></a><h3>mix_drmparams_ref ()</h3>
+<pre class="programlisting"><a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *      mix_drmparams_ref                   (<a class="link" href="MixDrmParams.html" title="MixDrmParams">MixDrmParams</a> *mix);</pre>
+<p>
+Add reference count.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>mix</code></em> :</span></p></td>
+<td> object to add reference
+</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>returns</code></em> :</span></p></td>
+<td> the MixDrmParams instance where reference count has been increased.
+</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2" title="mix_drmparams_unref()">
+<a name="mix-drmparams-unref"></a><h3>mix_drmparams_unref()</h3>
+<pre class="programlisting">#define mix_drmparams_unref(obj) mix_params_unref(MIX_PARAMS(obj))
+</pre>
+<p>
+Decrement reference count of the object.</p>
+<div class="variablelist"><table border="0">
+<col align="left" valign="top">
+<tbody><tr>
+<td><p><span class="term"><em class="parameter"><code>obj</code></em> :</span></p></td>
+<td> object to unref.
+</td>
+</tr></tbody>
+</table></div>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr>
+          Generated by GTK-Doc V1.11</div>
+</body>
+</html>

@@ -9,7 +9,9 @@
 #include "mixvideolog.h"
 
 #include "mixvideoformat_vc1.h"
+#ifndef ANDROID
 #include <va/va_x11.h>
+#endif
 
 #ifdef YUVDUMP
 //TODO Complete YUVDUMP code and move into base class

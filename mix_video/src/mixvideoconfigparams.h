@@ -67,7 +67,7 @@ struct _MixVideoConfigParams {
 	/*< public > */
 	MixParams parent;
 
-	/*< public > */
+	/*< private > */
 
 	void *reserved1;
 	void *reserved2;
@@ -102,10 +102,11 @@ GType mix_videoconfigparams_get_type(void);
  * Use this method to create new instance of #MixVideoConfigParams
  */
 MixVideoConfigParams *mix_videoconfigparams_new(void);
+
 /**
  * mix_videoconfigparams_ref:
  * @mix: object to add reference
- * @returns: the MixVideoConfigParams instance where reference count has been increased.
+ * @returns: the #MixVideoConfigParams instance where reference count has been increased.
  *
  * Add reference count.
  */

@@ -10,7 +10,6 @@ lib_LTLIBRARIES = libmixvideo.la
 ##############################################################################
 # sources used to compile
 libmixvideo_la_SOURCES = mixdisplay.c \
-			mixdrmparams.c \
 			mixvideo.c \
 			mixvideoconfigparams.c \
 			mixvideoconfigparamsdec.c \
@@ -35,11 +34,13 @@ libmixvideo_la_SOURCES = mixdisplay.c \
 			mixvideoformatenc_h264.c \
 			mixvideoformatenc_mpeg4.c \
 			mixvideoformatenc_preview.c \
-			mixvideoconfigparamsenc.c \
+			mixvideoformatenc_h263.c \
+                        mixvideoconfigparamsenc.c \
 			mixvideoconfigparamsenc_h264.c \
 			mixvideoconfigparamsenc_mpeg4.c \
 			mixvideoconfigparamsenc_preview.c \
-			mixvideoencodeparams.c
+			mixvideoconfigparamsenc_h263.c \
+                        mixvideoencodeparams.c
 
 if MIXLOG_ENABLED
 MIXLOG_CFLAGS = -DMIX_LOG_ENABLE
@@ -78,6 +79,7 @@ libmixvideo_la_LDFLAGS = $(GLIB_LIBS) \
 			$(LIBVA_X11_LIBS) \
 			$(MIXCOMMON_LIBS) \
 			$(MIXVBP_LIBS) \
+			-lva-tpi \
 			-version-info @MIXVIDEO_CURRENT@:@MIXVIDEO_REVISION@:@MIXVIDEO_AGE@
 	
 libmixvideo_la_LIBTOOLFLAGS = --tag=disable-static
@@ -98,7 +100,8 @@ noinst_HEADERS = mixvideoformat.h \
 		mixvideoformatenc_h264.h \
 		mixvideoformatenc_mpeg4.h \
 		mixvideoformatenc_preview.h \
-		mixvideoformatenc.h \
+	        mixvideoformatenc_h263.h \
+	        mixvideoformatenc.h \
 		mixvideolog.h
 
 # TODO: decide whehter a /usr/include/mix is needed for mix headers
@@ -113,7 +116,6 @@ mixinclude_HEADERS = mixvideodef.h \
 			mixvideoframe.h \
 			mixvideoinitparams.h \
 			mixdisplay.h \
-			mixdrmparams.h \
 			mixvideocaps.h \
 			mixvideodecodeparams.h \
 			mixvideoencodeparams.h \
@@ -123,7 +125,8 @@ mixinclude_HEADERS = mixvideodef.h \
 			mixvideoconfigparamsenc_h264.h \
 			mixvideoconfigparamsenc_mpeg4.h \
 			mixvideoconfigparamsenc_preview.h \
-			mixvideoconfigparamsenc.h
+		        mixvideoconfigparamsenc_h263.h \
+	                mixvideoconfigparamsenc.h
 
 
 mixintincludedir=$(includedir)/mixvideoint

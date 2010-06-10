@@ -6,6 +6,27 @@
  No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
  */
 
+/**
+ * SECTION:mixvideodef
+ * @title: MI-X Video Data Definitons And Common Error Code
+ * @short_description: MI-X Video data definitons and common error code
+ * @include: mixvideodef.h
+ * 
+ * The section includes the definition of enum and struct as well as 
+ * <note>
+ * <title>Common Video Error Return Codes of MI-X video functions</title>
+ * <itemizedlist>
+ * <listitem>#MIX_RESULT_SUCCESS, Successfully resumed</listitem>
+ * <listitem>MIX_RESULT_NULL_PTR, The pointer passed to the function was null.</listitem>
+ * <listitem>MIX_RESULT_NO_MEMORY, Memory needed for the operation could not be allocated.</listitem>
+ * <listitem>MIX_RESULT_INVALID_PARAM, An argument passed to the function was invalid.</listitem>
+ * <listitem>MIX_RESULT_NOT_INIT, MixVideo object has not been initialized yet.</listitem>
+ * <listitem>MIX_RESULT_NOT_CONFIGURED, MixVideo object has not been configured yet.</listitem>
+ * <listitem>MIX_RESULT_FAIL, For any failure.</listitem>
+ * </itemizedlist>
+ * </note>
+ */
+
 #ifndef __MIX_VIDEO_DEF_H__
 #define __MIX_VIDEO_DEF_H__
 #include <mixresult.h>

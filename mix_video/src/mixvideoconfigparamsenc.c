@@ -8,10 +8,11 @@
 
 /**
  * SECTION:mixvideoconfigparamsenc
- * @short_description: VideoConfig parameters
+ * @short_description: MI-X Video Encode Configuration Parameter Base Object
  *
- * A data object which stores videoconfig specific parameters.
+ * A base object of MI-X video encode configuration parameter objects.
  */
+
 
 #include <string.h>
 #include "mixvideolog.h"

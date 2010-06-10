@@ -30,7 +30,9 @@
 
 
 #include <va/va.h>
+#ifndef ANDROID
 #include <va/va_x11.h>
+#endif
 #include "mixvideolog.h"
 #include "mixvideoframe.h"
 #include "mixvideoframe_private.h"
@@ -495,4 +497,6 @@ MIX_RESULT mix_videoframe_get_displayorder(MixVideoFrame *obj, guint32 *displayo
         *displayorder = priv -> displayorder;
 	return MIX_RESULT_SUCCESS;
 }
+
+
 

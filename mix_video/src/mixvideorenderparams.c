@@ -8,10 +8,12 @@
 
 /**
  * SECTION:mixvideorenderparams
- * @short_description: VideoRender parameters
+ * @short_description: MI-X Video Render Parameters
  *
- * A data object which stores videorender specific parameters.
+ * The #MixVideoRenderParams object  will be created by the MMF/App 
+ * and provided to #MixVideo in the #MixVideo mix_video_render() function.
  */
+
 #include <va/va.h>             /* libVA */
 #include <glib-object.h>
 

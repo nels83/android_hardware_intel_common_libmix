@@ -1,2 +1,45 @@
+2010-06-04 Tao Tao <tao.q.tao@intel.com>
 
+		* Rolled version number to 0.1.17
+
+2010-06-01 Tao Tao <tao.q.tao@intel.com>
+
+		* Added va_display to MixVideoFrame
+		* Made changes in several MI-X video source files to reflect the MixVideoFrame change.
+
+2010-05-28 Weian Chen <weian.chen@intel.com>
+
+		* Make changes to H.264/H.263/MPEG-4 encode to align with the data structure change of coded buffer in LibVA
+		* Link encode to libva-tpi
+
+2010-05-07 Tao Tao <tao.q.tao@intel.com>
+
+		* Added gtk-doc support to the project
+
+2010-05-03 Tao Tao <tao.q.tao@intel.com>
+
+		* Removed mixdrmparams.h/c files and made related changes.
+
+2010-04-21 Chris Pearson <christopherx.c.pearson@intel.com>
+		
+		* Added null-pointer check to mixvideoformat_h264 to fix shutdown crash.
+
+2010-03-25 Tao Tao <tao.q.tao@intel.com>
+		
+		* Changed mixvideo and mixframemanger to handle last frame correctly.
+
+2010-03-22 Tao Tao <tao.q.tao@intel.com>
+
+		* Rolled version number to 0.1.16
+
+
+2010-03-09 Weian Chen <weian.chen@intel.com>
+
+		* lots of defects fix for mixvideo encode
+
+
+2010-03-09 Weian Chen <weian.chen@intel.com>
+
+		* Change to use Cleanup convention for mixvideoenc (all	mixvideformatenc derived Object, H.264/MPEG-4:2/preview)
+		* remove some unnecessary comments
 

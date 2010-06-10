@@ -170,8 +170,8 @@ void mix_display_unref (MixDisplay * obj);
 
 /**
 * mix_display_replace:
-* @olddata:
-* @newdata:
+* @olddata: old data
+* @newdata: new data
 * 
 * Replace a pointer of the object with the new one.
 */

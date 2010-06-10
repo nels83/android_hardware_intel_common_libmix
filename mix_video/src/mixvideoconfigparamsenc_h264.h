@@ -71,15 +71,29 @@ struct _MixVideoConfigParamsEncH264
   /*< public > */
 
   /* TODO: Add H.264 configuration paramters */
+  
+  /* The basic unit size used by rate control */  
   guint basic_unit_size;
+  
+  /* Number of slices in one frame */
   guint slice_num;
+  
+  /* enable/disable deblocking */
   guint8 disable_deblocking_filter_idc;	
 
+  /* delimiter_type */
   MixDelimiterType delimiter_type;
   
+  /* Reserved for future use */  
   void *reserved1;
+  
+  /* Reserved for future use */  
   void *reserved2;
+  
+  /* Reserved for future use */  
   void *reserved3;
+  
+  /* Reserved for future use */  
   void *reserved4;
 };
 
@@ -114,7 +128,7 @@ MixVideoConfigParamsEncH264 *mix_videoconfigparamsenc_h264_new (void);
 /**
 * mix_videoconfigparamsenc_h264_ref:
 * @mix: object to add reference
-* @returns: the MixVideoConfigParamsEncH264 instance where reference count has been increased.
+* @returns: the #MixVideoConfigParamsEncH264 instance where reference count has been increased.
 * 
 * Add reference count.
 */
@@ -132,27 +146,93 @@ MixVideoConfigParamsEncH264
 /* Class Methods */
 
 /* TODO: Add getters and setters for other properties */
+
+
+/**
+ * mix_videoconfigparamsenc_h264_set_bus:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @basic_unit_size: The basic unit size used by rate control  
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set The basic unit size used by rate control
+ */
 MIX_RESULT mix_videoconfigparamsenc_h264_set_bus (MixVideoConfigParamsEncH264 * obj,
 		guint basic_unit_size);
 
+/**
+ * mix_videoconfigparamsenc_h264_get_bus:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @basic_unit_size: The basic unit size to be returned  
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get The basic unit size used by rate control
+ */
 MIX_RESULT mix_videoconfigparamsenc_h264_get_bus (MixVideoConfigParamsEncH264 * obj,
 		guint * basic_unit_size);
 
+/**
+ * mix_videoconfigparamsenc_h264_set_dlk:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @disable_deblocking_filter_idc: The flag to enable/disable deblocking
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set the The flag to enable/disable deblocking
+ */
 MIX_RESULT mix_videoconfigparamsenc_h264_set_dlk (MixVideoConfigParamsEncH264 * obj,
 		guint disable_deblocking_filter_idc);
 
+/**
+ * mix_videoconfigparamsenc_h264_get_dlk:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @disable_deblocking_filter_idc: deblocking flag to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get the The flag to enable/disable deblocking
+ */
 MIX_RESULT mix_videoconfigparamsenc_h264_get_dlk (MixVideoConfigParamsEncH264 * obj,
 		guint * disable_deblocking_filter_idc);
 
+/**
+ * mix_videoconfigparamsenc_h264_set_slice_num:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @slice_num: Number of slices in one frame
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set the Number of slices in one frame
+ */
 MIX_RESULT mix_videoconfigparamsenc_h264_set_slice_num(MixVideoConfigParamsEncH264 * obj,
 		guint slice_num);
 
+/**
+ * mix_videoconfigparamsenc_h264_get_slice_num:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @slice_num: Number of slices in one frame to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get the Number of slices in one frame
+ */
 MIX_RESULT mix_videoconfigparamsenc_h264_get_slice_num(MixVideoConfigParamsEncH264 * obj,
 		guint * slice_num);
 
+/**
+ * mix_videoconfigparamsenc_h264_set_delimiter_type:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @delimiter_type: Delimiter type
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set Delimiter type
+ */
 MIX_RESULT mix_videoconfigparamsenc_h264_set_delimiter_type (MixVideoConfigParamsEncH264 * obj,
 		MixDelimiterType delimiter_type);
 
+/**
+ * mix_videoconfigparamsenc_h264_get_delimiter_type:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @delimiter_type: Delimiter type to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get Delimiter type
+ */
 MIX_RESULT mix_videoconfigparamsenc_h264_get_delimiter_type (MixVideoConfigParamsEncH264 * obj,
 		MixDelimiterType * delimiter_type);
 

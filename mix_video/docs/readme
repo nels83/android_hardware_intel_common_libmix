@@ -1,0 +1,17 @@
+How to generate gtk-doc?
+
+
+By default, gtk-doc generation is disabled in mix_video. To generate gtk-docs
+
+ 
+01. in mix_video/autogen.sh file, uncomment line #gtkdocize ... 
+02. in mix_video/Makefile.am, uncomment line #SUBDIRS += docs 
+03. in mix_video/configure.ac, uncomment #GTK_DOC_CHECK(1.9) and the commented block AC_CONFIG_FILES ... of gtkdoc 
+04. sh autogen.sh 
+05. ./configure --enable-gtk-doc 
+06. make 
+07. go to directory mix_video/docs/reference/MixVideo, type command 
+08. cp BackupMixVideo-docs.sgml MixVideo-docs.sgml 
+09. make 
+10. use browser to open mix_video/docs/reference/MixVideo/html/index.html 
+
