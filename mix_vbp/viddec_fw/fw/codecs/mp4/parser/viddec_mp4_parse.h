@@ -299,13 +299,18 @@ typedef struct _mp4_VideoObjectPlaneH263
     uint16_t        num_gobs_in_vop;
     uint16_t        num_macroblocks_in_gob;
     uint8_t         num_rows_in_gob;
-
 #if 0
     uint8_t         gob_number;
-    int         gob_header_empty;
-    int         gob_frame_id;
-    int         quant_scale;
+    int             gob_header_empty;
+    int             gob_frame_id;
+    int             quant_scale;
 #endif
+    uint8_t         vop_rounding_type;
+    //the following are required for PLUSPTYPE
+    uint8_t         ufep;
+    uint16_t        pixel_aspect_ratio_code;
+    uint16_t        picture_width_indication;
+    uint16_t        picture_height_indication;
 } mp4_VideoObjectPlaneH263;
 
 typedef struct

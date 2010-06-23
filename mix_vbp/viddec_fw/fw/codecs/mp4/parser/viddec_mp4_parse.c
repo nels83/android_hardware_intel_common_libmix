@@ -6,7 +6,9 @@
 #include "viddec_mp4_videoobjectlayer.h"
 #include "viddec_mp4_videoobjectplane.h"
 #include "viddec_mp4_visualobject.h"
+#ifdef ANDROID
 #include "viddec_types.h"
+#endif
 
 extern uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state);
 
@@ -23,7 +25,7 @@ uint32_t viddec_mp4_wkld_done(void *parent, void *ctxt, uint32_t next_sc, uint32
     viddec_mp4_parser_t *parser = (viddec_mp4_parser_t *) ctxt;
     int result = VIDDEC_PARSE_SUCESS;
     uint8_t frame_boundary = false;
-    uint8_t force_frame_complete = false;
+    uint8_t emit_workload = false;
 
     //DEB("entering is_wkld_done: next_sc: 0x%x, sc_seen: %d\n", next_sc, parser->sc_seen);
 
@@ -38,15 +40,35 @@ uint32_t viddec_mp4_wkld_done(void *parent, void *ctxt, uint32_t next_sc, uint32
                         ((SHORT_THIRD_STARTCODE_BYTE & 0xFC) == (next_sc & 0xFC)) || 
                         (MP4_SC_GROUP_OF_VOP == next_sc)    );
 
-    // EOS and discontinuity should force workload completion.
-    force_frame_complete = ((VIDDEC_PARSE_EOS == next_sc) || (VIDDEC_PARSE_DISCONTINUITY == next_sc));
+    // Mark workload is ready to be emitted based on the start codes seen.
+    if (frame_boundary)
+    {
+        uint8_t vol_error_found = false, frame_complete = false;
+        
+        // Frame is considered complete and without errors, if a VOL was received since startup and
+        // if a VOP was received for this workload (or) if short video header is found.
+        frame_complete = ( ((parser->sc_seen & MP4_SC_SEEN_VOL) && (parser->sc_seen & MP4_SC_SEEN_VOP)) ||
+                           (parser->sc_seen & MP4_SC_SEEN_SVH) );
 
-    if(frame_boundary | force_frame_complete)
+        // For non SVH case, the video object layer data should be followed by video object plane data
+        // If not, error occurred and we need to throw the current workload as error.
+        vol_error_found = ( (parser->prev_sc == MP4_SC_VIDEO_OBJECT_LAYER_MIN) &&
+                            !(MP4_SC_VIDEO_OBJECT_PLANE == next_sc) );
+        
+        emit_workload = (frame_complete || vol_error_found);
+
+        //DEB("emit workload: frame_complete: %d, vol_error_found %d\n", frame_complete, vol_error_found);
+    }
+
+    // EOS and discontinuity should force workload completion.
+    emit_workload |= ((VIDDEC_PARSE_EOS == next_sc) || (VIDDEC_PARSE_DISCONTINUITY == next_sc));
+
+    if(emit_workload)
     {
         *codec_specific_errors = 0;
 
-        // Frame is considered complete and without errors, if a VOL was received since startup and 
-        // if a VOP was received for this workload.
+        // If the frame is not complete but we have received force frame complete because of EOS or
+        // discontinuity, we mark the workload as not decodeable.
         if (!((parser->sc_seen & MP4_SC_SEEN_VOL) && (parser->sc_seen & MP4_SC_SEEN_VOP)) && !(parser->sc_seen & MP4_SC_SEEN_SVH))
             *codec_specific_errors |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
 

@@ -1,5 +1,7 @@
 #include "viddec_mp4_videoobjectlayer.h"
+#ifdef ANDROID
 #include "viddec_types.h"
+#endif
 
 const unsigned char mp4_DefaultIntraQuantMatrix[64] = {
     8, 17, 18, 19, 21, 23, 25, 27, 
@@ -583,7 +585,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
         viddec_fw_mp4_vol_set_fixed_vop_time_increment(&wi.mp4_vol, vidObjLay->fixed_vop_time_increment);
         viddec_fw_mp4_vol_set_vop_time_increment_resolution(&wi.mp4_vol, vidObjLay->vop_time_increment_resolution);
 
-        ret = viddec_pm_append_workitem(parent, &wi);
+        ret = viddec_pm_append_workitem(parent, &wi, false);
         if(ret == 1)
             ret = MP4_STATUS_OK;
 

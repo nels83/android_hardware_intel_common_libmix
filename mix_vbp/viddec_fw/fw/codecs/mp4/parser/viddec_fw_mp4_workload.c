@@ -2,7 +2,9 @@
 #include "viddec_parser_ops.h"
 #include "viddec_fw_mp4.h"
 #include "viddec_mp4_parse.h"
+#ifdef ANDROID
 #include "viddec_types.h"
+#endif
 
 uint32_t viddec_fw_mp4_populate_attr(viddec_workload_t *wl, viddec_mp4_parser_t *parser)
 {
@@ -76,7 +78,7 @@ uint32_t viddec_fw_mp4_insert_vol_workitem(void *parent, viddec_mp4_parser_t *pa
     wi.vwi_payload[1] = vol_info.vol_size;
     wi.vwi_payload[2] = vol_info.vol_item;
 
-    result = viddec_pm_append_workitem(parent, &wi);
+    result = viddec_pm_append_workitem(parent, &wi, false);
 
     return result;
 } // viddec_fw_mp4_insert_vol_workitem
@@ -125,7 +127,7 @@ uint32_t viddec_fw_mp4_insert_vop_workitem(void *parent, viddec_mp4_parser_t *pa
     wi.vwi_payload[1] = vop_info.vop_data;
     wi.vwi_payload[2] = vop_info.bit_offset;
 
-    result = viddec_pm_append_workitem(parent, &wi);
+    result = viddec_pm_append_workitem(parent, &wi, false);
 
     return result;
 } // viddec_fw_mp4_insert_vop_workitem
@@ -150,7 +152,7 @@ uint32_t viddec_fw_mp4_insert_vpsh_workitem(void *parent, viddec_mp4_parser_t *p
     wi.vwi_payload[1] = svh_info.pad1;
     wi.vwi_payload[2] = svh_info.pad2;
 
-    result = viddec_pm_append_workitem(parent, &wi);
+    result = viddec_pm_append_workitem(parent, &wi, false);
 
     return result;
 } // viddec_fw_mp4_insert_vpsh_workitem
@@ -196,7 +198,7 @@ uint32_t viddec_fw_mp4_insert_sprite_workitem(void *parent, viddec_mp4_parser_t 
         wi.vwi_payload[1] = sprite_info.warping_mv_code[1];
         wi.vwi_payload[2] = sprite_info.warping_mv_code[2];
 
-        result = viddec_pm_append_workitem(parent, &wi);
+        result = viddec_pm_append_workitem(parent, &wi, false);
     }
 
     return result;
@@ -213,7 +215,7 @@ uint32_t viddec_fw_mp4_insert_bvop_workitem(void *parent, viddec_mp4_parser_t *p
     wi.vwi_payload[1] = vol->TRD;
     wi.vwi_payload[2] = vol->TRB;
 
-    result = viddec_pm_append_workitem(parent, &wi);
+    result = viddec_pm_append_workitem(parent, &wi, false);
 
     return result;
 } // viddec_fw_mp4_insert_bvop_workitem
@@ -251,7 +253,7 @@ uint32_t viddec_fw_mp4_insert_qmat(void *parent, uint8_t intra_quant_flag, uint3
 
         qmat += 3;
 
-        result = viddec_pm_append_workitem(parent, &wi);
+        result = viddec_pm_append_workitem(parent, &wi, false);
     }
 
     return result;
@@ -283,7 +285,7 @@ uint32_t viddec_fw_mp4_insert_past_frame_workitem(void *parent)
     wi.ref_frame.reference_id = 0;
     wi.ref_frame.luma_phys_addr = 0;
     wi.ref_frame.chroma_phys_addr = 0;
-    result = viddec_pm_append_workitem(parent, &wi);
+    result = viddec_pm_append_workitem(parent, &wi, false);
 
     return result;
 } // viddec_fw_mp4_insert_past_frame_workitem
@@ -297,7 +299,7 @@ uint32_t viddec_fw_mp4_insert_future_frame_workitem(void *parent)
     wi.ref_frame.reference_id = 0;
     wi.ref_frame.luma_phys_addr = 0;
     wi.ref_frame.chroma_phys_addr = 0;
-    result = viddec_pm_append_workitem(parent, &wi);
+    result = viddec_pm_append_workitem(parent, &wi, false);
 
     return result;
 } // viddec_fw_mp4_insert_future_frame_workitem
@@ -313,7 +315,7 @@ uint32_t viddec_fw_mp4_insert_reorder_workitem(void *parent)
     wi.ref_reorder.ref_reorder_00010203 = 0x01010203;
     wi.ref_reorder.ref_reorder_04050607 = 0x04050607;
 
-    result = viddec_pm_append_workitem(parent, &wi);
+    result = viddec_pm_append_workitem(parent, &wi, false);
 
     return result;
 } // viddec_fw_mp4_insert_reorder_workitem

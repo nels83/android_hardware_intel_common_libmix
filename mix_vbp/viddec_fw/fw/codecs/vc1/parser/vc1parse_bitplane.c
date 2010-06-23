@@ -369,20 +369,19 @@ static void vc1_Norm6ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
         ResidualY = height & 1;
     }
 
-#ifndef VBP
     for (i = 0; i < ResidualX; i++)
     {
         int32_t ColSkip;
         VC1_GET_BITS(1, ColSkip);
 
-        if (1 == ColSkip)
+        //if (1 == ColSkip)
         {
             for(j = 0; j < height; j++)
             {
-                int32_t Value = 0;
-                VC1_GET_BITS(1, Value);
-                put_bit(Value, i, j, width, height,pBitplane->invert,
-                        pBitplane->databits);
+			int32_t Value = 0;
+			if (1 == ColSkip) VC1_GET_BITS(1, Value);
+			
+			put_bit(Value, i, j, width, height,pBitplane->invert,pBitplane->databits);
             }
         }
     }
@@ -391,51 +390,17 @@ static void vc1_Norm6ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
     {
         int32_t RowSkip;
         VC1_GET_BITS(1, RowSkip);
-        if (1 == RowSkip)
+        //if (1 == RowSkip)
         {
             for (i = ResidualX; i < width; i++)
             {
-                int32_t Value = 0;
-                VC1_GET_BITS(1, Value);
-                put_bit(Value, i, j, width, height,pBitplane->invert,
-                        pBitplane->databits);
+				int32_t Value = 0;
+				if (1 == RowSkip) VC1_GET_BITS(1, Value);
+				
+				put_bit(Value, i, j, width, height,pBitplane->invert,pBitplane->databits);
             }
         }
     }
- #else
-	int32_t Value = 0;
-    for (i = 0; i < ResidualX; i++)
-    {
-        int32_t ColSkip;
-        VC1_GET_BITS(1, ColSkip);
-        Value = 0;
-		for(j = 0; j < height; j++)
-        {           
-			if (1 == ColSkip)
-        	{
-                VC1_GET_BITS(1, Value);
-        	}
-			put_bit(Value, i, j, width, height,pBitplane->invert,
-                        pBitplane->databits);
-        }
-    }
-
-    for (j = 0; j < ResidualY; j++)
-    {
-        int32_t RowSkip;
-        VC1_GET_BITS(1, RowSkip);
-        Value = 0;
-		for (i = ResidualX; i < width; i++)
-		{
-        	if (1 == RowSkip)
-        	{
-                VC1_GET_BITS(1, Value);
-        	}
-			put_bit(Value, i, j, width, height,pBitplane->invert,
-                        pBitplane->databits);
-        }
-    }
- #endif
 
     /* restore value */
     pBitplane->invert=tmp;
@@ -489,8 +454,7 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
     VC1_GET_BITS(1, tempValue);
     bpp->invert = (uint8_t) tempValue;
 
-    if ((status = vc1_DecodeHuffmanOne(ctxt, &bpp->imode,
-                                       VC1_BITPLANE_IMODE_TBL)) != VC1_STATUS_OK)
+    if ((status = vc1_DecodeHuffmanOne(ctxt, &bpp->imode,VC1_BITPLANE_IMODE_TBL)) != VC1_STATUS_OK)
     {
         return status;
     }
@@ -531,14 +495,12 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
                 for (j = 0; j < width; j++)
                 {
                     VC1_GET_BITS(1, tempValue);
-                    put_bit( tempValue, j, i, width, height, bpp->invert,
-                             bpp->databits);
+                    put_bit( tempValue, j, i, width, height, bpp->invert,bpp->databits);
                 }
             }
             else if (bpp->invert) { //TO TEST
                 for (j = 0; j < width; j++) {
-                    put_bit( 0, j, i, width, height, bpp->invert,
-                             bpp->databits);
+                    put_bit( 0, j, i, width, height, bpp->invert, bpp->databits);
                 }
             }
         }
@@ -555,14 +517,12 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
                 for (j = 0; j < height; j++)
                 {
                     VC1_GET_BITS(1, tempValue);
-                    put_bit( tempValue, i, j, width, height, bpp->invert,
-                             bpp->databits);
+                    put_bit( tempValue, i, j, width, height, bpp->invert, bpp->databits);
                 }
             } 
             else if (bpp->invert) { // fill column with ones
                 for (j = 0; j < height; j++) {
-                    put_bit( 0, i, j, width, height, bpp->invert,
-                             bpp->databits);
+                    put_bit( 0, i, j, width, height, bpp->invert, bpp->databits);
                 }
             }//end for else  
         }
@@ -591,11 +551,12 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
         {
             wi.vwi_type           =  bpnum;
             wi.data.data_offset   = (char *)pl - (char *)bit_dw; // offset within struct
+
             wi.data.data_payload[0] = pl[0];
             wi.data.data_payload[1] = pl[1];
             pl += 2;
 
-            viddec_pm_append_workitem( ctxt, &wi );
+            viddec_pm_append_workitem( ctxt, &wi, false);
         }
     }
 

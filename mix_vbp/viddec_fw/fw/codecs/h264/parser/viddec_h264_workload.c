@@ -317,16 +317,8 @@ static void h264_parse_emit_4X4_scaling_matrix( void *parent, h264_Info *pInfo )
                                          (((uint32_t)(pInfo->active_SPS.ScalingList4x4[i][n_items*8+5]))<<8)+
                                          (((uint32_t)(pInfo->active_SPS.ScalingList4x4[i][n_items*8+6]))<<16)+
                                          (((uint32_t)(pInfo->active_SPS.ScalingList4x4[i][n_items*8+7]))<<24);
-               
-               if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-               {
-						viddec_pm_append_workitem( parent, &wi );
-               }
-               else
-               {
-                  viddec_pm_append_workitem_next( parent, &wi );            
-               }
-               
+               //cur is empty, fill new frame in cur
+               viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
             }
 
             break;
@@ -344,15 +336,8 @@ static void h264_parse_emit_4X4_scaling_matrix( void *parent, h264_Info *pInfo )
                                          (((uint32_t)(pInfo->active_PPS.ScalingList4x4[i][n_items*8+5]))<<8)+
                                          (((uint32_t)(pInfo->active_PPS.ScalingList4x4[i][n_items*8+6]))<<16)+
                                          (((uint32_t)(pInfo->active_PPS.ScalingList4x4[i][n_items*8+7]))<<24);
-               
-               if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-               {            
-                  viddec_pm_append_workitem( parent, &wi );
-               }
-               else
-               {
-                  viddec_pm_append_workitem_next( parent, &wi );            
-               }
+               //cur is empty, fill new frame in cur
+               viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
             }
 
          	break;
@@ -363,14 +348,8 @@ static void h264_parse_emit_4X4_scaling_matrix( void *parent, h264_Info *pInfo )
             wi.data.data_offset = i + (DEFAULT_QM << 4);
             wi.data.data_payload[0] = 0;
             wi.data.data_payload[1] = 0;    
-            if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-            {
-               viddec_pm_append_workitem( parent, &wi );
-            }
-            else
-            {
-               viddec_pm_append_workitem_next( parent, &wi );
-            }
+            //cur is empty, fill new frame in cur
+            viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
          	break;
          }
          default:
@@ -448,12 +427,8 @@ static void h264_parse_emit_8X8_scaling_matrix( void *parent, h264_Info *pInfo )
                                          (((uint32_t)(pInfo->active_SPS.ScalingList8x8[i-6][n_items*8+5]))<<8)+
                                          (((uint32_t)(pInfo->active_SPS.ScalingList8x8[i-6][n_items*8+6]))<<16)+
                                          (((uint32_t)(pInfo->active_SPS.ScalingList8x8[i-6][n_items*8+7]))<<24);
-               
-               if(pInfo->push_to_cur) {	//cur is empty, fill new frame in cur
-                   viddec_pm_append_workitem( parent, &wi );
-               } else {
-                  viddec_pm_append_workitem_next( parent, &wi );            
-               }               
+               //cur is empty, fill new frame in cur
+               viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
             }
             break;
          }
@@ -470,14 +445,9 @@ static void h264_parse_emit_8X8_scaling_matrix( void *parent, h264_Info *pInfo )
                                          (((uint32_t)(pInfo->active_PPS.ScalingList8x8[i-6][n_items*8+5]))<<8)+
                                          (((uint32_t)(pInfo->active_PPS.ScalingList8x8[i-6][n_items*8+6]))<<16)+
                                          (((uint32_t)(pInfo->active_PPS.ScalingList8x8[i-6][n_items*8+7]))<<24);
-               
-               if(pInfo->push_to_cur) { 	//cur is empty, fill new frame in cur
-                  viddec_pm_append_workitem( parent, &wi );
-               } else {	 
-                  viddec_pm_append_workitem_next( parent, &wi );            
-               }
+               //cur is empty, fill new frame in cur
+               viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
             }
-
          	break;
          }
          case (DEFAULT_QM):
@@ -485,12 +455,8 @@ static void h264_parse_emit_8X8_scaling_matrix( void *parent, h264_Info *pInfo )
             wi.data.data_offset = i + (DEFAULT_QM << 4);
             wi.data.data_payload[0] = 0;
             wi.data.data_payload[1] = 0;    
-            if(pInfo->push_to_cur) {		//cur is empty, fill new frame in cur
-               viddec_pm_append_workitem( parent, &wi );
-            } else {
-               viddec_pm_append_workitem_next( parent, &wi );            
-            }           
-
+            //cur is empty, fill new frame in cur
+            viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
          	break;
          }
          default:{
@@ -592,15 +558,9 @@ static void h264_parse_emit_sps(void *parent, h264_Info *pInfo)
       viddec_fw_h264_sps_set_vui_parameters_present_flag(&(wi.h264_sps), pInfo->active_SPS.sps_disp.vui_parameters_present_flag);
 		wi.h264_sps.pic_width_in_mbs_minus1 = pInfo->active_SPS.sps_disp.pic_width_in_mbs_minus1;
 		wi.h264_sps.pic_height_in_map_units_minus1 = pInfo->active_SPS.sps_disp.pic_height_in_map_units_minus1;
-			
-		if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-		{
-			viddec_pm_append_workitem( parent, &wi );
-		}
-		else
-		{
-			viddec_pm_append_workitem_next( parent, &wi );
-		}
+
+      //cur is empty, fill new frame in cur
+      viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 
       viddec_fw_reset_workload_item(&wi);
 		if(pInfo->active_SPS.sps_disp.frame_cropping_flag)
@@ -610,15 +570,8 @@ static void h264_parse_emit_sps(void *parent, h264_Info *pInfo)
          viddec_fw_h264_cropping_set_right(&(wi.h264_cropping), pInfo->active_SPS.sps_disp.frame_crop_rect_right_offset);
          viddec_fw_h264_cropping_set_top(&(wi.h264_cropping), pInfo->active_SPS.sps_disp.frame_crop_rect_top_offset);
          viddec_fw_h264_cropping_set_bottom(&(wi.h264_cropping), pInfo->active_SPS.sps_disp.frame_crop_rect_bottom_offset);
-         
-			if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-			{
-				viddec_pm_append_workitem( parent, &wi );
-			}
-			else
-			{
-				viddec_pm_append_workitem_next( parent, &wi );
-			}
+         //cur is empty, fill new frame in cur
+         viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 		}
       viddec_fw_reset_workload_item(&wi);
 		if(pInfo->active_SPS.sps_disp.vui_parameters_present_flag == 1)
@@ -664,14 +617,8 @@ static void h264_parse_emit_sps(void *parent, h264_Info *pInfo)
             viddec_fw_h264_vui_set_low_delay_hrd_flag(&(wi.h264_vui), pInfo->active_SPS.sps_disp.vui_seq_parameters.low_delay_hrd_flag);
 			}
 
-			if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-			{
-				viddec_pm_append_workitem( parent, &wi );
-			}
-			else
-			{
-				viddec_pm_append_workitem_next( parent, &wi );
-			}			
+         //cur is empty, fill new frame in cur
+         viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 		}
 
       viddec_fw_reset_workload_item(&wi);
@@ -682,17 +629,9 @@ static void h264_parse_emit_sps(void *parent, h264_Info *pInfo)
          
          wi.h264_vui_time_info.num_units_in_tick = pInfo->active_SPS.sps_disp.vui_seq_parameters.num_units_in_tick;
          wi.h264_vui_time_info.time_scale = pInfo->active_SPS.sps_disp.vui_seq_parameters.time_scale;         		
-         if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-			{
-				viddec_pm_append_workitem( parent, &wi );
-			}
-			else
-			{
-				viddec_pm_append_workitem_next( parent, &wi );
-			}
-		}      
-
-
+         //cur is empty, fill new frame in cur
+         viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
+		}
 		pInfo->Is_SPS_updated =0;
       
    }
@@ -795,14 +734,8 @@ static void h264_parse_emit_ref_list( void *parent, h264_Info *pInfo, uint32_t l
          
          if(data_writed&0x1)
          {
-            if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-            {      
-               viddec_pm_append_workitem( parent, &wi );
-            }
-            else
-            {
-               viddec_pm_append_workitem_next( parent, &wi );      
-            }               
+             //cur is empty, fill new frame in cur
+             viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
          }
          data_writed ++;
       }
@@ -896,15 +829,8 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
    wi.data.data_payload[0] = slice_data.h264_bsd_slice_p1;
    wi.data.data_payload[1] = slice_data.h264_bsd_slice_p2;
 
-   if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-   {         
-      viddec_pm_append_workitem( parent , &wi);
-   }
-   else
-   {
-      viddec_pm_append_workitem_next( parent , &wi);       
-   }  
-
+   //cur is empty, fill new frame in cur
+   viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 
    ///////////////////////////predict weight table item and data if have///////////////////////////
    if(pInfo->h264_pwt_enabled)
@@ -916,7 +842,7 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
 
       if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
       {            
-         viddec_pm_append_workitem( parent , &wi);
+          viddec_pm_append_workitem( parent , &wi, false);
 
          wi.vwi_type = VIDDEC_WORKLOAD_H264_PWT_ES_BYTES;
          wi.es.es_flags = 0;
@@ -924,7 +850,7 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
       }
       else
       {
-         viddec_pm_append_workitem_next( parent , &wi);
+          viddec_pm_append_workitem( parent , &wi, true);
 
          wi.vwi_type = VIDDEC_WORKLOAD_H264_PWT_ES_BYTES;
          wi.es.es_flags = 0;
@@ -951,13 +877,8 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
          wi.data.data_offset = bits_offset;
          wi.data.data_payload[0]=0;
          wi.data.data_payload[1]=0;
-
-         if(pInfo->push_to_cur) {			//cur is empty, fill new frame in cur
-            viddec_pm_append_workitem( parent , &wi);            
-         }
-         else {
-            viddec_pm_append_workitem_next( parent , &wi);                
-         }          
+         //cur is empty, fill new frame in cur
+         viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
       }
    }
 
@@ -1004,16 +925,8 @@ void h264_parse_emit_current_pic( void *parent, h264_Info *pInfo )
       wi.data.data_payload[0] = pl[0];
       wi.data.data_payload[1] = pl[1];
       pl += 2;
-      
-      if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-      {
-         
-         viddec_pm_append_workitem( parent, &wi );
-      }
-      else
-      {
-         viddec_pm_append_workitem_next( parent, &wi );         
-      }
+      //cur is empty, fill new frame in cur
+      viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
    }     
 
 	return;
@@ -1059,15 +972,8 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 		wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_displayed[i];
 		wi.ref_frame.luma_phys_addr = 0;
 		wi.ref_frame.chroma_phys_addr = 0;
-
-		if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-		{		   
-		   viddec_pm_append_workitem( parent, &wi );
-		}
-		else
-		{
-		   viddec_pm_append_workitem_next( parent, &wi );		   
-		}
+      //cur is empty, fill new frame in cur
+      viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 	}  
 	pInfo->dpb.frame_numbers_need_to_be_displayed =0;
    
@@ -1081,16 +987,8 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 	   wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_removed[i];
 	   wi.ref_frame.luma_phys_addr = 0;
 	   wi.ref_frame.chroma_phys_addr = 0;
-
-	   if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-	   {	      
-	      viddec_pm_append_workitem( parent, &wi );
-	   }
-	   else
-	   {
-	      viddec_pm_append_workitem_next( parent, &wi );	      
-	   }
-
+      //cur is empty, fill new frame in cur
+      viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 	}  
 	pInfo->dpb.frame_numbers_need_to_be_removed =0;
 
@@ -1103,16 +1001,8 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 	   wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_dropped[i];
 	   wi.ref_frame.luma_phys_addr = 0;
 	   wi.ref_frame.chroma_phys_addr = 0;
-
-	   if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-	   {	      
-	      viddec_pm_append_workitem( parent, &wi );
-	   }
-	   else
-	   {
-	      viddec_pm_append_workitem_next( parent, &wi );	      
-	   }
-
+      //cur is empty, fill new frame in cur
+      viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 	}  
 	pInfo->dpb.frame_numbers_need_to_be_dropped =0;	
 	
@@ -1128,18 +1018,10 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 	      wi.ref_frame.reference_id = fs_id;
 	      wi.ref_frame.luma_phys_addr = 0;
 	      wi.ref_frame.chroma_phys_addr = 0;
-
-	      if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-	      {	      
-	         viddec_pm_append_workitem( parent, &wi );
-	      }
-	      else
-	      {
-	         viddec_pm_append_workitem_next( parent, &wi );	      
-	      } 
+         //cur is empty, fill new frame in cur
+         viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 	   }
 	}
-   
    
 	/////////////////////updata dpb frames info (poc)/////////////////////
 	nitems = pInfo->dpb.used_size;
@@ -1179,17 +1061,8 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 	            break;
 	         };
 	      }
-	    
-
-	      if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-	      {	      
-	         viddec_pm_append_workitem( parent, &wi );
-	      }
-	      else
-	      {
-	         viddec_pm_append_workitem_next( parent, &wi );	      
-	      }         
-	      
+         //cur is empty, fill new frame in cur
+         viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 	   }
 	}
     
@@ -1226,16 +1099,9 @@ void h264_parse_emit_eos( void *parent, h264_Info *pInfo )
    wi.ref_frame.luma_phys_addr = 0;
    wi.ref_frame.chroma_phys_addr = 0;
 
-   if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-   {        
-      viddec_pm_append_workitem( parent, &wi );
-   }
-   else
-   {
-      viddec_pm_append_workitem_next( parent, &wi );        
-   }
+   //cur is empty, fill new frame in cur
+   viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 
-  	//// 
 	//// Now we can flush out all frames in DPB fro display	
 
    if(MPD_DPB_FS_NULL_IDC != pInfo->dpb.fs_dec_idc)
@@ -1260,15 +1126,8 @@ void h264_parse_emit_eos( void *parent, h264_Info *pInfo )
 		wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_displayed[i];
 		wi.ref_frame.luma_phys_addr = 0;
 		wi.ref_frame.chroma_phys_addr = 0;
-
-		if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
-		{		   
-		   viddec_pm_append_workitem( parent, &wi );
-		}
-		else
-		{
-		   viddec_pm_append_workitem_next( parent, &wi );		   
-		}
+      //cur is empty, fill new frame in cur
+      viddec_pm_append_workitem( parent, &wi , !pInfo->push_to_cur);
 	}  
 	pInfo->dpb.frame_numbers_need_to_be_displayed =0;
    
@@ -1285,12 +1144,12 @@ void h264_parse_emit_eos( void *parent, h264_Info *pInfo )
 
 	   if(pInfo->push_to_cur) //cur is empty, fill new frame in cur
 	   {	      
-	      viddec_pm_append_workitem( parent, &wi );
+          viddec_pm_append_workitem( parent, &wi , false);
 			viddec_pm_set_next_frame_error_on_eos(parent, VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE);
 	   }
 	   else
 	   {
-	      viddec_pm_append_workitem_next( parent, &wi );	      
+          viddec_pm_append_workitem( parent, &wi , true);
 			viddec_pm_set_next_frame_error_on_eos(parent, pInfo->wl_err_next);
 	   }
 	}  

@@ -1,5 +1,7 @@
 #include "viddec_mp4_videoobjectplane.h"
+#ifdef ANDROID
 #include "viddec_types.h"
+#endif
 
 mp4_Status_t mp4_Parse_GroupOfVideoObjectPlane(void *parent, viddec_mp4_parser_t *parser)
 {
@@ -55,7 +57,7 @@ mp4_Status_t mp4_Parse_GroupOfVideoObjectPlane(void *parent, viddec_mp4_parser_t
         viddec_fw_mp4_gvop_set_closed_gov(&wi.mp4_gvop, data->closed_gov);
         viddec_fw_mp4_gvop_set_time_code(&wi.mp4_gvop, time_code);
 
-        ret = viddec_pm_append_workitem(parent, &wi);
+        ret = viddec_pm_append_workitem(parent, &wi, false);
         if(ret == 1)
             ret = MP4_STATUS_OK;
     }

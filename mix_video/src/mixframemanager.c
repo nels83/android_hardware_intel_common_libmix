@@ -45,6 +45,10 @@ static void mix_framemanager_init(MixFrameManager * self) {
 	/* for vc1 in asf */
 	self->p_frame = NULL;
 	self->prev_timestamp = 0;
+
+#ifdef ANDROID	
+	self->timestamp_storage = NULL;
+#endif	
 }
 
 static void mix_framemanager_class_init(MixFrameManagerClass * klass) {
@@ -120,6 +124,15 @@ MIX_RESULT mix_framemanager_initialize(MixFrameManager *fm,
 		if (!fm->frame_array) {
 			goto cleanup;
 		}
+		
+
+#ifdef ANDROID		
+		fm->timestamp_storage = g_array_sized_new(FALSE, TRUE,
+				sizeof(guint64), INITIAL_FRAME_ARRAY_SIZE);
+		if (!fm->timestamp_storage) {
+			goto cleanup;
+		}
+#endif		
 	}
 
 	fm->frame_queue = g_queue_new();
@@ -180,6 +193,12 @@ MIX_RESULT mix_framemanager_deinitialize(MixFrameManager *fm) {
 		g_queue_free(fm->frame_queue);
 		fm->frame_queue = NULL;
 	}
+#ifdef ANDROID	
+	if (fm->timestamp_storage) {
+		g_array_free(fm->timestamp_storage, TRUE);
+		fm->timestamp_storage = NULL;
+	}
+#endif	
 
 	fm->initialized = FALSE;
 
@@ -291,6 +310,12 @@ MIX_RESULT mix_framemanager_flush(MixFrameManager *fm) {
 		}
 	}
 
+#ifdef ANDROID	
+	if(fm->timestamp_storage) {
+		g_array_remove_range(fm->timestamp_storage, 0, fm->timestamp_storage->len);
+	}
+#endif
+
 	if (fm->frame_queue) {
 		guint len = fm->frame_queue->length;
 		if (len) {
@@ -385,6 +410,7 @@ MixVideoFrame *get_expected_frame_from_array(GPtrArray *array,
 	return frame;
 }
 
+#ifdef ANDROID
 MixVideoFrame *get_expected_frame_from_array_DO(GPtrArray *array,
 	guint32 expected, guint32 *framedisplayorder) {
 
@@ -453,6 +479,7 @@ MixVideoFrame *get_expected_frame_from_array_DO(GPtrArray *array,
 
     return frame;
 }
+#endif /* ANDROID */
 
 void add_frame_into_array(GPtrArray *array, MixVideoFrame *mvf) {
 
@@ -484,6 +511,7 @@ void add_frame_into_array(GPtrArray *array, MixVideoFrame *mvf) {
 
 }
 
+#ifdef ANDROID
 gint frame_sorting_func_DO(gconstpointer a, gconstpointer b) {
 
     MixVideoFrame *fa = *((MixVideoFrame **) a);
@@ -536,6 +564,7 @@ MIX_RESULT mix_framemanager_displayorder_based_enqueue(MixFrameManager *fm,
 
     MIX_RESULT ret = MIX_RESULT_FAIL;
     guint32 displayorder = 0;
+
 
 first_frame:
 
@@ -687,6 +716,8 @@ cleanup:
 
     return ret;
 }
+#endif /* ANDROID */
+
 
 MIX_RESULT mix_framemanager_timestamp_based_enqueue(MixFrameManager *fm,
 		MixVideoFrame *mvf) {
@@ -982,11 +1013,35 @@ MIX_RESULT mix_framemanager_enqueue(MixFrameManager *fm, MixVideoFrame *mvf) {
 
 	} else {
 
+#ifdef ANDROID
+		guint64 timestamp = 0;
+		mix_videoframe_get_timestamp(mvf, &timestamp);
+
+		/* add timestamp into timestamp storage */
+		if(fm->timestamp_storage) {
+			gint idx = 0;
+			gboolean found = FALSE;
+
+			if(fm->timestamp_storage->len) {
+				for(idx = 0; idx < fm->timestamp_storage->len; idx ++) {
+					if(timestamp == g_array_index(fm->timestamp_storage, guint64, idx)) {
+						found = TRUE;
+						break;
+					}
+				}
+			}
+
+			if(!found) {
+				g_array_append_val(fm->timestamp_storage, timestamp);
+			}
+		}
+#endif
+
 		if (fm->timebased_ordering) {
 #ifndef ANDROID
 			ret = mix_framemanager_timestamp_based_enqueue(fm, mvf);
 #else
-                        ret = mix_framemanager_displayorder_based_enqueue(fm, mvf);
+			ret = mix_framemanager_displayorder_based_enqueue(fm, mvf);
 #endif
 
 		} else {
@@ -998,6 +1053,21 @@ MIX_RESULT mix_framemanager_enqueue(MixFrameManager *fm, MixVideoFrame *mvf) {
 
 	return ret;
 }
+
+#ifdef ANDROID
+gint timestamp_storage_sorting_func(gconstpointer a, gconstpointer b) {
+
+	guint64 ta = *((guint64 *)a);
+	guint64 tb = *((guint64 *)b);
+
+	if(ta > tb) {
+		return +1;
+	} else if(ta == tb) {
+		return 0;
+	}
+	return -1;
+}
+#endif
 
 MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) {
 
@@ -1020,6 +1090,17 @@ MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) {
 	ret = MIX_RESULT_FRAME_NOTAVAIL;
 	*mvf = (MixVideoFrame *) g_queue_pop_head(fm->frame_queue);
 	if (*mvf) {
+#ifdef ANDORID
+		if(fm->timestamp_storage && fm->mode == MIX_FRAMEORDER_MODE_DISPLAYORDER) {
+			if(fm->timestamp_storage->len) {
+				guint64 ts;
+				g_array_sort(fm->timestamp_storage, timestamp_storage_sorting_func);
+				ts = g_array_index(val_array, guint64, 0)
+				mix_videoframe_set_timestamp(*mvf, ts);
+				g_array_remove_index_fast(fm->timestamp_storage, 0);
+			}
+		}
+#endif	
 		ret = MIX_RESULT_SUCCESS;
 	} else if (fm->eos) {
 		ret = MIX_RESULT_EOS;
@@ -1102,7 +1183,7 @@ MIX_RESULT mix_framemanager_eos(MixFrameManager *fm) {
 				/* sorting frames in the array by timestamp */
 				g_ptr_array_sort(fm->frame_array, frame_sorting_func);
 #else
-                                /* sorting frames is the array by displayorder */  
+                /* sorting frames is the array by displayorder */  
 				g_ptr_array_sort(fm->frame_array, frame_sorting_func_DO);
 #endif
 				
@@ -1120,9 +1201,7 @@ MIX_RESULT mix_framemanager_eos(MixFrameManager *fm) {
 		}
 	}
 	
-	
 	fm->eos = TRUE;
-
 	g_mutex_unlock(fm->lock);
 
 	return ret;

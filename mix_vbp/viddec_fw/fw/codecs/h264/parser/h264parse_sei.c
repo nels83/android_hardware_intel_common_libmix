@@ -150,11 +150,7 @@ h264_Status h264_sei_pic_timing(void *parent,h264_Info* pInfo)
 
 #ifndef VBP
       //Push to current if we are in first frame, or we do not detect previous frame end
-		if( (pInfo->Is_first_frame_in_stream)||(!pInfo->is_current_workload_done) ) {
-			viddec_pm_append_workitem( parent, &wi );
-		} else {
-			viddec_pm_append_workitem_next( parent, &wi );
-		}
+      viddec_pm_append_workitem( parent, &wi , !(pInfo->Is_first_frame_in_stream ||(!pInfo->is_current_workload_done)));
 #endif		
 
 		if(sei_msg_ptr->pic_struct < 3) {
@@ -296,17 +292,10 @@ h264_Status h264_sei_pan_scan(void *parent,h264_Info* pInfo)
 		sei_msg_ptr->pan_scan_rect_repetition_period = h264_GetVLCElement(parent, pInfo, false);
 		wi.h264_sei_pan_scan.pan_scan_rect_repetition_period = sei_msg_ptr->pan_scan_rect_repetition_period;
 	}
-
-#ifndef VBP
-	if((pInfo->Is_first_frame_in_stream)||(!pInfo->is_current_workload_done)) //cur is first frame
-	{
-		viddec_pm_append_workitem( parent, &wi );
-	}
-	else
-	{
-		viddec_pm_append_workitem_next( parent, &wi );
-	}
-#endif
+#ifndef VBP	
+   //cur is first frame
+   viddec_pm_append_workitem( parent, &wi , !(pInfo->Is_first_frame_in_stream ||(!pInfo->is_current_workload_done)));
+#endif   
 
 	if(!sei_msg_ptr->pan_scan_rect_cancel_flag)
 	{
@@ -321,14 +310,10 @@ h264_Status h264_sei_pan_scan(void *parent,h264_Info* pInfo)
          viddec_fw_h264_pan_scan_set_right(&(wi.h264_pan_scan_rect), sei_msg_ptr->pan_scan_rect_right_offset[i]);
          viddec_fw_h264_pan_scan_set_top(&(wi.h264_pan_scan_rect), sei_msg_ptr->pan_scan_rect_top_offset[i]);
          viddec_fw_h264_pan_scan_set_bottom(&(wi.h264_pan_scan_rect), sei_msg_ptr->pan_scan_rect_bottom_offset[i]);
-
-#ifndef VBP
-			if(pInfo->Is_first_frame_in_stream) {		//cur is first frame
-				viddec_pm_append_workitem( parent, &wi );
-			} else {
-				viddec_pm_append_workitem_next( parent, &wi );
-			}
-#endif			
+#ifndef VBP         
+         //cur is first frame
+         viddec_pm_append_workitem( parent, &wi , !pInfo->Is_first_frame_in_stream);
+#endif         
 		}
 	}
 
@@ -402,14 +387,8 @@ h264_Status h264_sei_userdata_reg(void *parent,h264_Info* pInfo, uint32_t payloa
     	{  
           viddec_pm_setup_userdata(&wi);
 #ifndef VBP          
-          if((pInfo->Is_first_frame_in_stream)||(!pInfo->is_current_workload_done)) //cur is first frame
-          {
-              viddec_pm_append_workitem( parent, &wi );
-          }
-          else
-          {
-              viddec_pm_append_workitem_next( parent, &wi );
-          }
+          //cur is first frame
+          viddec_pm_append_workitem( parent, &wi , !(pInfo->Is_first_frame_in_stream ||(!pInfo->is_current_workload_done)));
 #endif          
           wi.user_data.size =0;    		
     	}          
@@ -420,16 +399,9 @@ h264_Status h264_sei_userdata_reg(void *parent,h264_Info* pInfo, uint32_t payloa
 	if(0!=wi.user_data.size)
 	{
        viddec_pm_setup_userdata(&wi);
-
-#ifndef VBP   
-       if(pInfo->Is_first_frame_in_stream) //cur is first frame
-       {
-           viddec_pm_append_workitem( parent, &wi );
-       }
-       else
-       {
-           viddec_pm_append_workitem_next( parent, &wi );
-       }
+#ifndef VBP       
+       //cur is first frame
+       viddec_pm_append_workitem( parent, &wi , !pInfo->Is_first_frame_in_stream);
 #endif       
 	}
 	
@@ -474,15 +446,10 @@ h264_Status h264_sei_userdata_unreg(void *parent, h264_Info* pInfo, uint32_t pay
     	if(11 == wi.user_data.size)
     	{  
           viddec_pm_setup_userdata(&wi);
-          if((pInfo->Is_first_frame_in_stream)||(!pInfo->is_current_workload_done)) //cur is first frame
-          {
-              viddec_pm_append_workitem( parent, &wi );
-          }
-          else
-          {
-              viddec_pm_append_workitem_next( parent, &wi );
-          }
-          
+#ifndef VBP          
+          //cur is first frame
+          viddec_pm_append_workitem( parent, &wi , !(pInfo->Is_first_frame_in_stream ||(!pInfo->is_current_workload_done)));
+#endif         
           wi.user_data.size =0;     		
     	}    	
   	}
@@ -490,14 +457,10 @@ h264_Status h264_sei_userdata_unreg(void *parent, h264_Info* pInfo, uint32_t pay
 	if(0!=wi.user_data.size)
 	{
        viddec_pm_setup_userdata(&wi);
-       if(pInfo->Is_first_frame_in_stream) //cur is first frame
-       {
-           viddec_pm_append_workitem( parent, &wi );
-       }
-       else
-       {
-           viddec_pm_append_workitem_next( parent, &wi );
-       }
+#ifndef VBP       
+       //cur is first frame
+       viddec_pm_append_workitem( parent, &wi , !pInfo->Is_first_frame_in_stream);
+#endif       
 	}
 	
 	return H264_STATUS_OK;
@@ -549,15 +512,10 @@ h264_Status h264_sei_recovery_point(void *parent, h264_Info* pInfo)
    viddec_fw_h264_h264_sei_recovery_set_exact_match_flag(&(wi.h264_sei_recovery_point), sei_msg_ptr->exact_match_flag);
    viddec_fw_h264_h264_sei_recovery_set_broken_link_flag(&(wi.h264_sei_recovery_point), sei_msg_ptr->broken_link_flag);
 	wi.h264_sei_recovery_point.changing_slice_group_idc = sei_msg_ptr->changing_slice_group_idc;
-
-	if((pInfo->Is_first_frame_in_stream)||(!pInfo->is_current_workload_done)) //cur is first frame
-	{
-		viddec_pm_append_workitem( parent, &wi );
-	}
-	else
-	{
-		viddec_pm_append_workitem_next( parent, &wi );
-	}
+#ifndef VBP	
+   //cur is first frame
+   viddec_pm_append_workitem( parent, &wi , !(pInfo->Is_first_frame_in_stream ||(!pInfo->is_current_workload_done)));
+#endif   
 
 	return H264_STATUS_OK;
 }

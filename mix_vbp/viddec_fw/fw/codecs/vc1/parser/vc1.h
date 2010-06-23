@@ -187,6 +187,7 @@ typedef struct {
    int anchor[2];   /* one per field */
    int rr_en;       /* range reduction enable flag at sequence layer */ 
    int rr_frm;      /* range reduction flag at picture layer */
+   int tff;
 } ref_frame_t;
 
 typedef struct
@@ -194,7 +195,8 @@ typedef struct
     uint32_t      sc_seen_since_last_wkld;
     uint32_t      sc_seen;
     uint32_t      is_frame_start;
-	uint8_t is_reference_picture; 
+    uint32_t      is_second_start;
+	 uint32_t      is_reference_picture; 
     uint32_t      intcomp_last[4]; /* for B frames */
     uint32_t      intcomp_top[2];
     uint32_t      intcomp_bot[2];

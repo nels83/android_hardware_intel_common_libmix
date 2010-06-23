@@ -61,6 +61,9 @@
 #define VIDDEC_FW_PARSER_IPC_HOST_INT    0x87654321
 #define EMITTER_WORKLOAD_ENTRIES    2048
 
+/* Maximum supported dependent views for H264 MVC. Based on spec this can be 1023 */
+#define MVC_MAX_SUPPORTED_VIEWS  1
+
 /* This enum defines priority level for opening a stream */
 enum viddec_stream_priority
 {

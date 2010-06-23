@@ -1,5 +1,7 @@
 #include "viddec_mp4_shortheader.h"
+#ifdef ANDROID
 #include "viddec_types.h"
+#endif
 
 typedef struct
 {
@@ -25,37 +27,222 @@ mp4_Status_t mp4_Parse_VideoObjectPlane_svh(void *parent, viddec_mp4_parser_t *p
     unsigned int data;
     mp4_VideoObjectPlaneH263 *svh = &(parser->info.VisualObject.VideoObject.VideoObjectPlaneH263);
     int32_t getbits = 0;
+    uint8_t pei = 0;
     
     do
     {
-        getbits = viddec_pm_get_bits(parent, &data, 27);
+        //temporal reference
+        getbits = viddec_pm_get_bits(parent, &data, 8);
         BREAK_GETBITS_REQD_MISSING(getbits, ret);
-
-        data = data >> 1; // zero_bit
-        svh->vop_quant = (data & 0x1F);
-        data = data >> 9; // vop_quant + four_reserved_zero_bits
-        svh->picture_coding_type = (data & 0x1);
-        data = data >> 1; // vop_quant + four_reserved_zero_bits
+        svh->temporal_reference = (data & 0xff);
+        //marker bit
+        getbits = viddec_pm_get_bits(parent, &data, 1);
+        BREAK_GETBITS_REQD_MISSING(getbits, ret);
+        if( 1 != (data & 0x1))
+        {
+            ret = MP4_STATUS_NOTSUPPORT;
+            break;
+        }
+        //zero bit
+        getbits = viddec_pm_get_bits(parent, &data, 1);
+        BREAK_GETBITS_REQD_MISSING(getbits, ret);
+        if( 0 != (data & 0x1))
+        {
+            ret = MP4_STATUS_NOTSUPPORT;
+            break;
+        }
+        //split_screen_indicator, document_camera_indicator, full_picture_freeze_release
+        getbits = viddec_pm_get_bits(parent, &data, 3);
+        BREAK_GETBITS_REQD_MISSING(getbits, ret);
+        //source format
+        getbits = viddec_pm_get_bits(parent, &data, 3);
+        BREAK_GETBITS_REQD_MISSING(getbits, ret);
         svh->source_format = (data & 0x7);
-        data = data >> 8; // source_format + full_picture_freeze_release + document_camera_indicator + split_screen_indicator + zero_bit + marker_bit
-        svh->temporal_reference = data;
-
-        if (svh->source_format == 0 || svh->source_format > 5)
+        if (svh->source_format == 0 || svh->source_format == 6)
         {
             DEB("Error: Bad value for VideoPlaneWithShortHeader.source_format\n");
             ret = MP4_STATUS_NOTSUPPORT;
             break;
         }
-
-        for (;;) 
+        
+        if(svh->source_format != 7)
+        {
+            //picture coding type
+            getbits = viddec_pm_get_bits(parent, &data, 1);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            svh->picture_coding_type = (data & 0x1);            
+            //reserved zero bits
+            getbits = viddec_pm_get_bits(parent, &data, 4);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            if( 0 != (data & 0xf))
+            {
+                ret = MP4_STATUS_NOTSUPPORT;
+                break;
+            }
+            //vop quant
+            getbits = viddec_pm_get_bits(parent, &data, 5);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            svh->vop_quant = (data & 0x1f);
+            //zero bit
+            getbits = viddec_pm_get_bits(parent, &data, 1);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            if( 0 != (data & 0x1))
+            {
+                ret = MP4_STATUS_NOTSUPPORT;
+                break;
+            }
+        }
+        else //extended PTYPE (PLUSPTYPE)
+        {
+            //ufep
+            getbits = viddec_pm_get_bits(parent, &data, 3);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            svh->ufep = (data & 0x7); //ufep
+            if(svh->ufep == 0x0)
+            {
+                DEB("Info: don't support to handle the 0x000 case of Update Full Extended PTYPE\n");
+                ret = MP4_STATUS_NOTSUPPORT;
+                break;
+            }
+            else if (svh->ufep == 0x1)
+            {
+                //source format
+                getbits = viddec_pm_get_bits(parent, &data, 3);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                svh->source_format = (data & 0x7);
+                if(svh->source_format < 1 || svh->source_format > 6)
+                {
+                    DEB("Error: bad value of source_format\n");
+                    ret = MP4_STATUS_PARSE_ERROR;
+                    break;
+                }
+                //optional indicators
+                getbits = viddec_pm_get_bits(parent, &data, 8);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                if( 0 != (data & 0xff))
+                {
+                    ret = MP4_STATUS_PARSE_ERROR;
+                    break;
+                }
+                //reserved zero bits
+                getbits = viddec_pm_get_bits(parent, &data, 3);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                if( 0 != (data & 0x7))
+                {
+                    ret = MP4_STATUS_PARSE_ERROR;
+                    break;
+                }
+                //marker bit
+                getbits = viddec_pm_get_bits(parent, &data, 1);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                if( 1 != (data & 0x1))
+                {
+                    ret = MP4_STATUS_PARSE_ERROR;
+                    break;
+                }
+                //reserved zero bits
+                getbits = viddec_pm_get_bits(parent, &data, 3);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                if( 0 != (data & 0x7))
+                {
+                    ret = MP4_STATUS_PARSE_ERROR;
+                    break;
+                }
+            }
+            else
+            {
+                DEB("Info: don't support to handle the other case of Update Full Extended PTYPE\n");
+                ret = MP4_STATUS_NOTSUPPORT;
+                break;
+            }
+            //MPPTYPE
+            //picture coding type
+            getbits = viddec_pm_get_bits(parent, &data, 3);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            svh->picture_coding_type = (data & 0x7);
+            if(svh->picture_coding_type > 1)
+            {
+                DEB("Info: only support I and P frames\n");
+                ret = MP4_STATUS_NOTSUPPORT;
+                break;
+            }
+            //optional RPR mode
+            getbits = viddec_pm_get_bits(parent, &data, 1);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            if( 0 != (data & 0x1))
+            {
+                ret = MP4_STATUS_PARSE_ERROR;
+                break;
+            }
+            //optional PRU mode
+            getbits = viddec_pm_get_bits(parent, &data, 1);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            if( 0 != (data & 0x1))
+            {
+                ret = MP4_STATUS_PARSE_ERROR;
+                break;
+            }
+            //vop rounding type
+            getbits = viddec_pm_get_bits(parent, &data, 1);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            svh->vop_rounding_type = (data & 0x1);
+            //reserved zero bits
+            getbits = viddec_pm_get_bits(parent, &data, 2);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            if( 0 != (data & 0x3))
+            {
+                ret = MP4_STATUS_PARSE_ERROR;
+                break;
+            }
+            //marker bit
+            getbits = viddec_pm_get_bits(parent, &data, 1);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            if( 1 != (data & 0x1))
+            {
+                ret = MP4_STATUS_PARSE_ERROR;
+                break;
+            }
+            //cpm
+            getbits = viddec_pm_get_bits(parent, &data, 1);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            if(svh->ufep == 1 && svh->source_format == 6)
+            {   //CPFMT
+                getbits = viddec_pm_get_bits(parent, &data, 4);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                svh->pixel_aspect_ratio_code = (data & 0xf);
+                //
+                getbits = viddec_pm_get_bits(parent, &data, 9);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                svh->picture_width_indication = (data & 0x1ff);
+                //marker bit
+                getbits = viddec_pm_get_bits(parent, &data, 1);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                if( 1 != (data & 0x1))
+                {
+                    ret = MP4_STATUS_PARSE_ERROR;
+                    break;
+                }
+                //
+                getbits = viddec_pm_get_bits(parent, &data, 9);
+                BREAK_GETBITS_REQD_MISSING(getbits, ret);
+                svh->picture_height_indication = (data & 0x1ff);
+            }
+            viddec_pm_get_bits(parent, &data, 5);
+            BREAK_GETBITS_REQD_MISSING(getbits, ret);
+            svh->vop_quant = (data & 0x1f);
+        }
+        //PEI
+        do
         {
             getbits = viddec_pm_get_bits(parent, &data, 1); // pei
             BREAK_GETBITS_FAIL(getbits, ret);
-            if (!data)
-                break;
-            getbits = viddec_pm_get_bits(parent, &data, 8); // psupp
-            BREAK_GETBITS_FAIL(getbits, ret);
-        }
+            pei = (data & 0x1);
+            if(0 != pei)
+            {
+                getbits = viddec_pm_get_bits(parent, &data, 8); // psupp
+                BREAK_GETBITS_FAIL(getbits, ret);
+            }
+        }while( 1 == pei);
 
         // Anything after this needs to be fed to the decoder as PIXEL_ES
     } while(0);
@@ -72,6 +259,7 @@ mp4_Status_t mp4_Parse_VideoObject_svh(void *parent, viddec_mp4_parser_t *parser
     mp4_VideoObjectPlane_t  *vop = &(pInfo->VisualObject.VideoObject.VideoObjectPlane);
     mp4_VideoObjectPlaneH263 *svh = &(pInfo->VisualObject.VideoObject.VideoObjectPlaneH263);
     uint8_t index = 0;
+    uint8_t k = 0;
 
     ret = mp4_Parse_VideoObjectPlane_svh(parent, parser);
     if(ret == MP4_STATUS_OK)
@@ -94,7 +282,7 @@ mp4_Status_t mp4_Parse_VideoObject_svh(void *parent, viddec_mp4_parser_t *parser
         vol->fixed_vop_time_increment = 1001;
         vol->aspect_ratio_info = MP4_ASPECT_RATIO_12_11;
 
-        vop->vop_rounding_type = 0;
+        vop->vop_rounding_type = svh->vop_rounding_type;
         vop->vop_fcode_forward = 1;
         vop->vop_coded = 1;
         vop->vop_coding_type = svh->picture_coding_type ? MP4_VOP_TYPE_P: MP4_VOP_TYPE_I;
@@ -104,12 +292,41 @@ mp4_Status_t mp4_Parse_VideoObject_svh(void *parent, viddec_mp4_parser_t *parser
         vst->transfer_characteristics = 1;
         vst->matrix_coefficients = 6;
 
-        index = svh->source_format - 1;
-        vol->video_object_layer_width = svh_src_fmt_defaults[index].vop_width;
-        vol->video_object_layer_height = svh_src_fmt_defaults[index].vop_height;
-        svh->num_macroblocks_in_gob = svh_src_fmt_defaults[index].num_macroblocks_in_gob;
-        svh->num_gobs_in_vop = svh_src_fmt_defaults[index].num_gobs_in_vop;
-        svh->num_rows_in_gob = svh_src_fmt_defaults[index].num_rows_in_gob;
+        if(svh->source_format >= 1 && svh->source_format <= 5)
+        {
+            index = svh->source_format - 1;
+            vol->video_object_layer_width = svh_src_fmt_defaults[index].vop_width;
+            vol->video_object_layer_height = svh_src_fmt_defaults[index].vop_height;
+            svh->num_macroblocks_in_gob = svh_src_fmt_defaults[index].num_macroblocks_in_gob;
+            svh->num_gobs_in_vop = svh_src_fmt_defaults[index].num_gobs_in_vop;
+            svh->num_rows_in_gob = svh_src_fmt_defaults[index].num_rows_in_gob;
+        }
+        else if(svh->source_format == 6) //custom format
+        {
+            vol->video_object_layer_width = (svh->picture_width_indication + 1)*4;
+            vol->video_object_layer_height = (svh->picture_height_indication)*4;
+            if(vol->video_object_layer_height < 404)
+            {
+                k = 1;
+            }
+            else if (vol->video_object_layer_height < 804)
+            {
+                k = 2;
+            }
+            else
+            {
+                k = 4;
+            }
+            svh->num_macroblocks_in_gob = (vol->video_object_layer_width/16)*k;
+            svh->num_gobs_in_vop = (vol->video_object_layer_height)/(16*k);
+            svh->num_rows_in_gob = k;
+        }
+        else
+        {
+            DEB("Error: Bad value for VideoPlaneWithShortHeader.source_format\n");
+            ret = MP4_STATUS_NOTSUPPORT;
+            return ret;
+        }
     }
 
     mp4_set_hdr_bitstream_error(parser, false, ret);
@@ -126,7 +343,7 @@ mp4_Status_t mp4_Parse_VideoObject_svh(void *parent, viddec_mp4_parser_t *parser
 
         viddec_fw_mp4_vpsh_set_source_format(&wi.mp4_vpsh, svh->source_format);
 
-        ret = viddec_pm_append_workitem(parent, &wi);
+        ret = viddec_pm_append_workitem(parent, &wi, false);
         if(ret == 1)
             ret = MP4_STATUS_OK;
     }

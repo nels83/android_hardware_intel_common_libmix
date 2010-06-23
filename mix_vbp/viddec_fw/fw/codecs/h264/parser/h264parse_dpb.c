@@ -1270,7 +1270,8 @@ void h264_dpb_RP_check_list (h264_Info * pInfo)
 
 		int32_t idx, rp_found = 0;
 
-		if(pInfo->SliceHeader.num_ref_idx_l0_active == 1)
+		if( ((pInfo->SliceHeader.num_ref_idx_l0_active == 1)&&(pInfo->SliceHeader.structure == FRAME)) ||
+         ((pInfo->SliceHeader.num_ref_idx_l0_active == 2)&&(pInfo->SliceHeader.structure != FRAME)) )
 		{
 	         if(pInfo->SliceHeader.sh_refpic_l0.ref_pic_list_reordering_flag)
 	         {
@@ -1329,6 +1330,7 @@ void h264_dpb_RP_check_list (h264_Info * pInfo)
 					} 
 				}
 #endif
+
 				///// Set the reference to last I frame
 				if( (pInfo->last_I_frame_idc!=255)&&(pInfo->last_I_frame_idc!=p_list[0])) 
 				{
@@ -1336,8 +1338,9 @@ void h264_dpb_RP_check_list (h264_Info * pInfo)
 					h264_dpb_unmark_for_reference(p_dpb, p_list[0]);
 					h264_dpb_remove_ref_list(p_dpb, p_list[0]);
 					p_list[0] = pInfo->last_I_frame_idc;
+               if (pInfo->SliceHeader.structure != FRAME)
+                  p_list[1] = (pInfo->last_I_frame_idc ^ 0x20);
 				}
-
 			}
 		}
 		
@@ -1398,7 +1401,10 @@ void h264_dpb_reorder_lists(h264_Info * pInfo)
 	}
 
 	//// Check if need recover reference list with previous recovery point
-	h264_dpb_RP_check_list(pInfo);
+	if(!pInfo->img.second_field)
+   {  
+	   h264_dpb_RP_check_list(pInfo);
+   }
 
 
 	return;

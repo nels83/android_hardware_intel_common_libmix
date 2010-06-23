@@ -17,13 +17,23 @@
 
 #ifdef VBP_TRACE /* if VBP_TRACE is defined*/
 
+#ifndef ANDROID
+
 #include <stdio.h>
 #include <stdarg.h>
 
 extern void vbp_trace_util(const char* cat, const char* fun, int line, const char* format, ...);
-	
 #define VBP_TRACE_UTIL(cat, format, ...) \
 vbp_trace_util(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
+
+#else 
+
+#include <utils/Log.h>
+#define VBP_TRACE_UTIL(cat, format,  ...) \
+__android_log_print(ANDROID_LOG_VERBOSE, "mixvbp : "cat, "%s() : %d: "format, \
+__FUNCTION__, __LINE__, ##__VA_ARGS__)
+
+#endif
 
 
 #define ETRACE(format, ...) VBP_TRACE_UTIL("ERROR:   ",  format, ##__VA_ARGS__)

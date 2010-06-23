@@ -398,8 +398,8 @@ void h264_init_Info(h264_Info* pInfo)
 
     pInfo->Is_first_frame_in_stream =1;
     pInfo->img.frame_count = 0;    
-    pInfo->last_I_frame_idc = 255;			   	
-
+    pInfo->last_I_frame_idc = 255;	
+    
     return;
 }
  
@@ -699,7 +699,7 @@ void h264_update_frame_type(h264_Info * pInfo )
 	            {
 	               pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (0x1 << FRAME_TYPE_STRUCTRUE_OFFSET)|(FRAME_TYPE_I << FRAME_TYPE_FRAME_OFFSET);
 	            }
-				pInfo->last_I_frame_idc = pInfo->dpb.fs_dec_idc;
+				   pInfo->last_I_frame_idc = pInfo->dpb.fs_dec_idc;
 				
 	            break;
             default:
@@ -735,6 +735,10 @@ void h264_update_frame_type(h264_Info * pInfo )
             {
                pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_I << FRAME_TYPE_TOP_OFFSET)|(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_BOTTOM_OFFSET));
             }
+            if (pInfo->sei_rp_received)
+               pInfo->last_I_frame_idc = pInfo->dpb.fs_dec_idc;
+            else
+               pInfo->last_I_frame_idc = 255;
             break;
             default:
             break;
@@ -768,6 +772,11 @@ void h264_update_frame_type(h264_Info * pInfo )
             {
                pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_I << FRAME_TYPE_BOTTOM_OFFSET)|(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));
             }
+            if (pInfo->sei_rp_received)
+               pInfo->last_I_frame_idc = pInfo->dpb.fs_dec_idc + PUT_LIST_INDEX_FIELD_BIT(1);
+            else
+               pInfo->last_I_frame_idc = 255;
+
             break;
             default:
             break;

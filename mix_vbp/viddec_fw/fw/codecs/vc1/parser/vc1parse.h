@@ -125,8 +125,12 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo, uint32_t width, uint3
 vc1_Status vc1_DecodeHuffmanOne(void* ctxt, int32_t *pDst, const int32_t *pDecodeTable);
 vc1_Status vc1_DecodeHuffmanPair(void* ctxt, const int32_t *pDecodeTable, int8_t *pFirst, int16_t *pSecond);
 
-void vc1_start_new_frame(void *parent, vc1_viddec_parser_t *parser);
-int32_t vc1_parse_emit_current_frame(void *parent, vc1_viddec_parser_t *parser);
+void vc1_parse_emit_frame_start(void *parent, vc1_viddec_parser_t *parser);
+void vc1_parse_emit_second_field_start(void *parent, vc1_viddec_parser_t *parser);
+void vc1_parse_emit_current_slice(void *parent, vc1_viddec_parser_t *parser);
+
+
+
 
 /* function to handle user data */
 vc1_Status vc1_ParseAndAppendUserData(void* ctxt, uint32_t sc);

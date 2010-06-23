@@ -1369,8 +1369,15 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         LOG_I( 
                 "input buf size = %d\n", bufin->size);			
         
-        guint8 *inbuf = bufin->data;      
-        
+        guint8 *inbuf = bufin->data;
+
+#ifndef ANDROID
+#define USE_SRC_FMT_YUV420
+#else
+#define USE_SRC_FMT_NV21
+#endif
+
+#ifdef USE_SRC_FMT_YUV420
         /*need to convert YUV420 to NV12*/
         dst_y = pvbuf +image->offsets[0];
         
@@ -1389,7 +1396,37 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             }
             dst_uv += image->pitches[1];
         }
-        
+#else //USE_SRC_FMT_NV12 or USE_SRC_FMT_NV21
+            int offset_uv = width * height;
+            guint8 *inbuf_uv = inbuf + offset_uv;
+            int height_uv = height / 2;
+            int width_uv = width;
+
+            dst_y = pvbuf + image->offsets[0];
+            for (i = 0; i < height; i++) {
+                memcpy (dst_y, inbuf + i * width, width);
+                dst_y += image->pitches[0];
+            }
+
+#ifdef USE_SRC_FMT_NV12
+            dst_uv = pvbuf + image->offsets[1];
+            for (i = 0; i < height_uv; i++) {
+                memcpy(dst_uv, inbuf_uv + i * width_uv, width_uv);
+                dst_uv += image->pitches[1];
+            }
+#else //USE_SRC_FMT_NV21
+            dst_uv = pvbuf + image->offsets[1];
+            for (i = 0; i < height_uv; i ++) {
+                for (j = 0; j < width_uv; j += 2) {
+                    dst_uv[j] = inbuf_uv[j+1];  //u
+                    dst_uv[j+1] = inbuf_uv[j];  //v
+                }
+                dst_uv += image->pitches[1];
+                inbuf_uv += width_uv;
+            }
+#endif
+#endif //USE_SRC_FMT_YUV420
+
         va_status = vaUnmapBuffer(va_display, image->buf);	
         if (va_status != VA_STATUS_SUCCESS)	 
         {

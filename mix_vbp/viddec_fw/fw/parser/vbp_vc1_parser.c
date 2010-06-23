@@ -292,7 +292,8 @@ static uint32 vbp_parse_start_code_helper_vc1(
 			/* But even though we want the list to contain a segment as described */
 			/* above, we want the cubby buffer to start just past the prefix, or it will */
 			/* find the same SC again.  So I bump the cubby buffer past the prefix. */
-			cubby.buf = cubby.buf + 
+			cubby.buf = /*cubby.buf +*/
+				cxt->parse_cubby.buf +
 				cxt->list.data[cxt->list.num_items].stpos +
 				PREFIX_SIZE;
 

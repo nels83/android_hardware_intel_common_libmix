@@ -31,6 +31,15 @@ enum vc1_workload_item_type
    VIDDEC_WORKLOAD_VC1_BITPLANE0,
    VIDDEC_WORKLOAD_VC1_BITPLANE1,
    VIDDEC_WORKLOAD_VC1_BITPLANE2,
+   VIDDEC_WORKLOAD_VC1_REGS_SEQ_ENTRY,
+   VIDDEC_WORKLOAD_VC1_REGS_SIZE_AND_AP_RANGEMAP,  
+   VIDDEC_WORKLOAD_VC1_REGS_INT_COM_FW,
+   VIDDEC_WORKLOAD_VC1_REGS_INT_COM_BW,   
+   VIDDEC_WORKLOAD_VC1_REGS_STRUCT_FIELD_AND_SMP_RANGEMAP_INFO,
+   VIDDEC_WORKLOAD_VC1_REGS_SLICE_FRAME_TYPE_INFO,
+   VIDDEC_WORKLOAD_VC1_REGS_SLICE_CONTROL_INFO,
+   VIDDEC_WORKLOAD_VC1_REGS_SLICE_OTHER_INFO, 
+   VIDDEC_WORKLOAD_VC1_REGS_REF_FRAME_TYPE,
    VIDDEC_WORKLOAD_VC1_PAST_FRAME   = VIDDEC_WORKLOAD_REF_FRAME_SOURCE_0,
    VIDDEC_WORKLOAD_VC1_FUTURE_FRAME,
 };
@@ -75,7 +84,7 @@ typedef struct {
    /* 0x08 */ uint32_t coded_size;
    /* 0x0c */ uint32_t stream_format2;
    /* 0x10 */ uint32_t entrypoint1;
-   /* 0x14 */ uint32_t range_map;
+   /* 0x14 */ uint32_t ap_range_map;
    /* 0x18 */ uint32_t frame_type;
    /* 0x1c */ uint32_t recon_control;
    /* 0x20 */ uint32_t mv_control;
@@ -93,7 +102,7 @@ typedef struct {
    /* 0x58 */ uint32_t intcomp_fwd_bot;
    /* 0x5c */ uint32_t intcomp_bwd_top;
    /* 0x60 */ uint32_t intcomp_bwd_bot;
-   /* 0x64 */ uint32_t _stuffing;
+   /* 0x14 */ uint32_t smp_range_map;
 } VC1D_SPR_REGS;
 
 /*
@@ -105,6 +114,7 @@ enum {
    VC1_FRAME_CURRENT_DIS,
    VC1_FRAME_PAST,
    VC1_FRAME_FUTURE,
+   VC1_FRAME_ALT
 };
 
 #endif  //_VC1_COMMON_H_

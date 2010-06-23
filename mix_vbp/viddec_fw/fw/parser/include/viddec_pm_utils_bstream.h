@@ -4,7 +4,6 @@
 #include "viddec_pm_utils_list.h"
 
 #define CUBBY_SIZE 1024
-//#define CUBBY_SIZE 512
 #define SCRATCH_SIZE 20
 #define MIN_DATA     8
 
@@ -32,7 +31,7 @@ typedef struct
 typedef struct
 {
 #ifdef VBP
-	/* counter of emulation preventation byte */
+	/* counter of emulation prevention byte */
 	uint32_t emulation_byte_counter;
 #endif	
     /* After First pass of scan we figure out how many bytes are in the current access unit(N bytes). We store
@@ -64,6 +63,13 @@ uint8_t viddec_pm_utils_bstream_nomoredata(viddec_pm_utils_bstream_cxt_t *cxt);
 
 uint8_t viddec_pm_utils_bstream_nomorerbspdata(viddec_pm_utils_bstream_cxt_t *cxt);
 
+void viddec_pm_utils_skip_if_current_is_emulation(viddec_pm_utils_bstream_cxt_t *cxt);
+
+/*
+  This function gets bit and byte position of where we are in the current AU. We always return the position of next byte to be
+  read.
+  is_emul on true indicates we are on second zero byte in emulation prevention sequence.
+ */
 static inline void viddec_pm_utils_bstream_get_au_offsets(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t *bit, uint32_t *byte, uint8_t *is_emul)
 {
     uint32_t phase=cxt->phase;
@@ -74,6 +80,7 @@ static inline void viddec_pm_utils_bstream_get_au_offsets(viddec_pm_utils_bstrea
     {
         phase = phase - ((cxt->bstrm_buf.buf_bitoff != 0)? 1: 0 );
     }
+    /* Assumption: we will never be parked on 0x3 byte of emulation prevention sequence */
     *is_emul = (cxt->is_emul_reqd) && (phase > 0) &&
         (cxt->bstrm_buf.buf[cxt->bstrm_buf.buf_index] == 0) && 
         (cxt->bstrm_buf.buf[cxt->bstrm_buf.buf_index+1] == 0x3);

@@ -76,65 +76,106 @@
 #define viddec_fw_bitfields_extract(x_32, start, mask)     (((x_32) >> (start)) & (mask) )
 #define viddec_fw_bitfields_insert(x_32, val_32, start, mask) ((x_32) = (((x_32) & ~( (mask) << (start))) | (((val_32) & (mask)) << (start))))
 
+
 /* Workload items type. Each item here represents data that Parser detected ex:slice data which
  is used either by host or decoder.*/
 enum workload_item_type
 {
-    VIDDEC_WORKLOAD_INVALID=0x0,                   /* Unknown type */
-    VIDDEC_WORKLOAD_PIXEL_ES=0x100,                /* Slice data tag */
-    VIDDEC_WORKLOAD_TAG=0x200,                     /* Frame association tag */
-    VIDDEC_WORKLOAD_USERDATA=0x300,                /* user data tag */
-    VIDDEC_WORKLOAD_DECODER_INFO=0x400,            /* decoder specific data tag which decoder module understands*/
-    VIDDEC_WORKLOAD_IBUF_DONE=0x500,               /* Es buffer completely used tag */
-    VIDDEC_WORKLOAD_IBUF_CONTINUED=0x600,          /* Es buffer partially used tag */
-    VIDDEC_WORKLOAD_TAG_BUFFER_LOOSE_START=0x700,  /* ??? */
-    VIDDEC_WORKLOAD_REFERENCE_FRAME_REORDER=0x800, /* Reorder frames in DPB tag */
-    VIDDEC_WORKLOAD_DISPLAY_FRAME=0x900,           /* Display order in DPB tag, for H264 NOT required??? */
+    VIDDEC_WORKLOAD_INVALID                               =0x0,/* Unknown type */
+    VIDDEC_WORKLOAD_PIXEL_ES                              =0x100,/* Slice data tag */
+    VIDDEC_WORKLOAD_TAG                                   =0x200,/* Frame association tag */
+    VIDDEC_WORKLOAD_USERDATA                              =0x300,/* user data tag */
 
-    VIDDEC_WORKLOAD_SEQUENCE_INFO=0xa00,           /* MPEG2 Seq Hdr, H264 SPS, VC1 SeqLayer */
-    VIDDEC_WORKLOAD_DISPLAY_INFO=0xb00,            /* MPEG2 Seq Disp Ext, H264 VUI */
-    VIDDEC_WORKLOAD_GOP_INFO=0xc00,                /* MPEG2 GOP, VC1 Entrypoint */
-    VIDDEC_WORKLOAD_SEQ_USER_DATA=0xd00,           /* MPEG2, VC1 Sequence Level User data */
-    VIDDEC_WORKLOAD_GOP_USER_DATA=0xe00,           /* MPEG2, VC1 Gop Level User data */
-    VIDDEC_WORKLOAD_FRM_USER_DATA=0xf00,           /* MPEG2 Picture User data, VC1 Frame User data */
-    VIDDEC_WORKLOAD_FLD_USER_DATA=0x1000,          /* MPEG2, VC1 Field User data */
-    VIDDEC_WORKLOAD_SLC_USER_DATA=0x1100,          /* VC1 Slice User data */
-    VIDDEC_WORKLOAD_VISUAL_OBJ_USER_DATA=0x1200,   /* MPEG4 Visual Object User data */
-    VIDDEC_WORKLOAD_VIDEO_OBJ_USER_DATA=0x1300,    /* MPEG4 Video Object Layer User data */
+    VIDDEC_WORKLOAD_IBUF_DONE                             =0x500,/* Es buffer completely used tag */
+    VIDDEC_WORKLOAD_IBUF_CONTINUED                        =0x600,/* Es buffer partially used tag */
+    VIDDEC_WORKLOAD_IBUF_DISCONTINUITY                    =0x700,/* Discontinuity tag on first workload after discontinuity */
+    VIDDEC_WORKLOAD_REFERENCE_FRAME_REORDER               =0x800, /* Reorder frames in DPB tag */
+    VIDDEC_WORKLOAD_IBUF_EOS                              =0x900,/* EOS tag on last workload used for current stream */
+    VIDDEC_WORKLOAD_SEQUENCE_INFO                         =0xa00,/* MPEG2 Seq Hdr, H264 SPS, VC1 SeqLayer */
+    VIDDEC_WORKLOAD_DISPLAY_INFO                          =0xb00,/* MPEG2 Seq Disp Ext, H264 VUI */
+    VIDDEC_WORKLOAD_GOP_INFO                              =0xc00,/* MPEG2 GOP, VC1 Entrypoint */
+    VIDDEC_WORKLOAD_SEQ_USER_DATA                         =0xd00,/* MPEG2, VC1 Sequence Level User data */
+    VIDDEC_WORKLOAD_GOP_USER_DATA                         =0xe00,/* MPEG2, VC1 Gop Level User data */
+    VIDDEC_WORKLOAD_FRM_USER_DATA                         =0xf00,/* MPEG2 Picture User data, VC1 Frame User data */
 
-    VIDDEC_WORKLOAD_MPEG2_SEQ_EXT=0x1150,              /* MPEG2 Only - Sequence Extension */
-    VIDDEC_WORKLOAD_VC1_SEQ_HDR_STRUCT_A_C=0x1200,     /* VC1 Only */
+    VIDDEC_WORKLOAD_FLD_USER_DATA                         =0x1000,/* MPEG2, VC1 Field User data */
+    VIDDEC_WORKLOAD_SLC_USER_DATA                         =0x1100,/* VC1 Slice User data */
+    VIDDEC_WORKLOAD_VISUAL_OBJ_USER_DATA                  =0x1200,/* MPEG4 Visual Object User data */
+    VIDDEC_WORKLOAD_VC1_SEQ_HDR_STRUCT_A_C                =0x1200,/* VC1 Only */
+    VIDDEC_WORKLOAD_VIDEO_OBJ_USER_DATA                   =0x1300,/* MPEG4 Video Object Layer User data */
+    VIDDEC_WORKLOAD_H264_CROPPING                         =0x1400,/* H264 only */
+    VIDDEC_WORKLOAD_H264_PAN_SCAN                         =0x1500,/* H264 only */
+    VIDDEC_WORKLOAD_SEI_PIC_TIMING                        =0x1600,/* H264 only */
+    VIDDEC_WORKLOAD_SEI_PAN_SCAN_RECT                     =0x1700,/* H264 only */
+    VIDDEC_WORKLOAD_SEI_USER_DATA_REGISTERED              =0x1800,/* H264 only */
+    VIDDEC_WORKLOAD_SEI_USER_DATA_UNREGISTERED            =0x1900,/* H264 only */
+    VIDDEC_WORKLOAD_SEI_RECOVERY_POINT                    =0x1a00,/* H264 only */
+    VIDDEC_WORKLOAD_MPEG2_SEQ_EXT                         =0x1b00,/* MPEG2 Only - Sequence Extension */
+    VIDDEC_WORKLOAD_H264_MVC_SPS_VIEW_IDS                 =0x1c00,/* H264 only */     
+    VIDDEC_WORKLOAD_MPEG4_VISUAL_SEQ_OBJ                  =0x1d00,/* MPEG4 Only - Visual Sequence */
+    VIDDEC_WORKLOAD_MPEG4_VIDEO_OBJ                       =0x1e00,/* MPEG4 Only - Video Object Layer */
+    VIDDEC_WORKLOAD_MPEG4_GRP_VIDEO_OBJ                   =0x1f00,/* MPEG4 Only - Group of Video Object Planes */
 
-    VIDDEC_WORKLOAD_H264_CROPPING=0x1400,              /* H264 only */
-    VIDDEC_WORKLOAD_H264_PAN_SCAN=0x1500,              /* H264 only */
-    VIDDEC_WORKLOAD_H264_VUI_TIMING_INFO=0x2100,       /* H264 only */
-    VIDDEC_WORKLOAD_SEI_PIC_TIMING=0x1600,             /* H264 only */
-    VIDDEC_WORKLOAD_SEI_PAN_SCAN_RECT=0x1700,          /* H264 only */
-    VIDDEC_WORKLOAD_SEI_USER_DATA_REGISTERED=0x1800,   /* H264 only */
-    VIDDEC_WORKLOAD_SEI_USER_DATA_UNREGISTERED=0x1900, /* H264 only */
-    VIDDEC_WORKLOAD_SEI_RECOVERY_POINT=0x1a00,         /* H264 only */
-    VIDDEC_WORKLOAD_IBUF_EOS=0x1b00,          /* EOS tag on last workload used for current stream */
-    VIDDEC_WORKLOAD_IBUF_DISCONTINUITY=0x1c00,           /* Discontinuity tag on first workload after discontinuity */
-    
-    VIDDEC_WORKLOAD_MPEG4_VISUAL_SEQ_OBJ=0x1d00,       /* MPEG4 Only - Visual Sequence */
-    VIDDEC_WORKLOAD_MPEG4_VIDEO_OBJ=0x1e00,            /* MPEG4 Only - Video Object Layer */
-    VIDDEC_WORKLOAD_MPEG4_GRP_VIDEO_OBJ=0x1f00,        /* MPEG4 Only - Group of Video Object Planes */
-    VIDDEC_WORKLOAD_MPEG4_VIDEO_PLANE_SHORT=0x2000,    /* MPEG4 Only - Video Plane with Short Header */
+    VIDDEC_WORKLOAD_MPEG4_VIDEO_PLANE_SHORT               =0x2000,/* MPEG4 Only - Video Plane with Short Header */
+    VIDDEC_WORKLOAD_H264_VUI_TIMING_INFO                  =0x2100,/* H264 only */
 
-    VIDDEC_WORKLOAD_REF_FRAME_SOURCE_0 = 0x10000,   	/* required reference frames tag, last eight bits tell the id of frame in dpb */
-    VIDDEC_WORKLOAD_REF_FRAME_RELEASE_0 = 0x20000,  	/* release frames tag, last eight bits tell the id of frame in dpb */
-    VIDDEC_WORKLOAD_REF_FRAME_DISPLAY_0 = 0x30000,  	/* Display order in DPB tag, for H264 */
-	 VIDDEC_WORKLOAD_REF_FRAME_DROPOUT_0 = 0x40000,  	   /* Release frames but not display, for H264 */
-	 VIDDEC_WORKLOAD_EOS_RELEASE_FRAME_0 = 0x50000,		/* Release list while EOS, last eight bits tell the id of frame in dpb */
-	 VIDDEC_WORKLOAD_EOS_DISPLAY_FRAME_0 = 0x60000,		/* Diaplay list while EOS, last eight bits tell the id of frame in dpb */
-	 
-    VIDDEC_WORKLOAD_DPB_ACTIVE_FRAME_0  = 0x70000,   	/* required for H264 as it needs whole DPB for each frame */
-    VIDDEC_WORKLOAD_H264_REFR_LIST_0    =  0x80000,   /* ref list 0 for H264 */
-    VIDDEC_WORKLOAD_H264_REFR_LIST_1    =  0x90000,   /* ref list 1 for H264 */
-    VIDDEC_WORKLOAD_EOS_BEGIN_BOUNDARY  =  0xa0000,   /* eos items begin after this */
-    VIDDEC_WORKLOAD_DECODER_SPECIFIC = 0x100000,    /* pvt info for decoder tags */
+    VIDDEC_WORKLOAD_REF_FRAME_SOURCE_0                    =0x10000,/* required reference frames tag,last eight bits indicate index in dpb */
+    VIDDEC_WORKLOAD_REF_FRAME_RELEASE_0                   =0x20000,/* release frames tag, last eight bits indicate index in dpb*/
+    VIDDEC_WORKLOAD_REF_FRAME_DISPLAY_0                   =0x30000,/* Display order in DPB tag, for H264 */
+	 VIDDEC_WORKLOAD_REF_FRAME_DROPOUT_0                   =0x40000,/* Release frames but not display, for H264 */
+	 VIDDEC_WORKLOAD_EOS_RELEASE_FRAME_0                   =0x50000,/* Release list while EOS, last eight bits indicate index in dpb */
+	 VIDDEC_WORKLOAD_EOS_DISPLAY_FRAME_0                   =0x60000,/* Display list while EOS, last eight bits indicate index in dpb */
+    VIDDEC_WORKLOAD_DPB_ACTIVE_FRAME_0                    =0x70000,/* required for H264 as it needs whole DPB for each frame */
+    VIDDEC_WORKLOAD_H264_REFR_LIST_0                      =0x80000,/* ref list 0 for H264 */
+    VIDDEC_WORKLOAD_H264_REFR_LIST_1                      =0x90000,/* ref list 1 for H264 */
+    VIDDEC_WORKLOAD_EOS_BEGIN_BOUNDARY                    =0xa0000,/* eos items begin after this */
+
+    VIDDEC_WORKLOAD_DECODER_SPECIFIC                      =0x100000,/* pvt info for decoder tags */
     VIDDEC_WORKLOAD_MAX,
 };
+
+struct h264_witem_sps_mvc_id
+{
+    /*
+      0-9:    num_views_minus1
+      10-19:  start index of views in current item.
+      20-23:  Number of valid items.
+    */
+#define viddec_fw_h264_sps_mvc_id_get_num_views_minus1(x)         viddec_fw_bitfields_extract( (x)->num_views, 0, 0x3FF)
+#define viddec_fw_h264_sps_mvc_id_set_num_views_minus1(x, val)    viddec_fw_bitfields_insert( (x)->num_views, val, 0, 0x3FF)
+#define viddec_fw_h264_sps_mvc_id_get_cur_start_index(x)          viddec_fw_bitfields_extract( (x)->num_views, 10, 0x3FF)
+#define viddec_fw_h264_sps_mvc_id_set_cur_start_index(x, val)     viddec_fw_bitfields_insert( (x)->num_views, val, 10, 0x3FF)
+#define viddec_fw_h264_sps_mvc_id_get_num_cur_valid_items(x)      viddec_fw_bitfields_extract( (x)->num_views, 20, 0x7)
+#define viddec_fw_h264_sps_mvc_id_set_num_cur_valid_items(x, val) viddec_fw_bitfields_insert( (x)->num_views, val, 20, 0x7)
+    unsigned int num_views;
+
+    /* We pack six id's into two integers.Each packed_view(integer) contains three 10 bit ids at 0-9, 10-19, 20-29
+       These values can be extracted/set using viddec_fw_h264_sps_mvc_id_get_data_frm_index()
+       and viddec_fw_h264_sps_mvc_id_set_data_frm_index() functions.
+    */
+#define viddec_fw_h264_sps_mvc_id_max_packed_ids        6 /* Max number of packed ids in a workload item */
+    unsigned int packed_view[2];
+};
+
+/* This function extracts a 10 bit view id of index( <6) that was packed into h264_witem_sps_mvc_id structure */
+static inline unsigned int viddec_fw_h264_sps_mvc_id_get_data_frm_index(struct h264_witem_sps_mvc_id *data, unsigned int index)
+{
+    unsigned int start=0, *word;
+
+    start = ((index > 2) ?(index - 3) : index) *10;
+    word = &(data->packed_view[(index > 2) ? 1:0]);
+    return viddec_fw_bitfields_extract(*word, start, 0x3FF);
+}
+
+/* This function packs  a 10 bit view id(val) at index( <6) in h264_witem_sps_mvc_id structure */
+static inline void viddec_fw_h264_sps_mvc_id_set_data_frm_index(struct h264_witem_sps_mvc_id *data, unsigned int index, unsigned int val)
+{
+    unsigned int start=0, *word;
+
+    start = ((index > 2) ?(index - 3) : index) *10;
+    word = &(data->packed_view[(index > 2) ? 1:0]);
+    viddec_fw_bitfields_insert(*word, val, start, 0x3FF);
+}
 
 /* 16-byte workload */
 typedef struct viddec_workload_item
@@ -500,6 +541,8 @@ typedef struct viddec_workload_item
             unsigned int pic_height_in_map_units_minus1;
         } h264_sps; // h264 item of type VIDDEC_WORKLOAD_SEQUENCE_INFO
 
+        struct h264_witem_sps_mvc_id h264_sps_mvc_id;
+
         struct
         {
 #define viddec_fw_h264_cropping_get_left(x)  viddec_fw_bitfields_extract( (x)->left_right, 16, 0xFFFF)
@@ -622,6 +665,7 @@ typedef struct viddec_workload_item
             unsigned int changing_slice_group_idc; /* 2bit value for slice_group idc */
 
         } h264_sei_recovery_point; // h264 item of type VIDDEC_WORKLOAD_SEI_RECOVERY_POINT
+        
 
         struct
         {
@@ -734,5 +778,7 @@ typedef struct viddec_workload_item
         unsigned int    vwi_payload[3];
     };
 }viddec_workload_item_t;
+
+
 
 #endif /* VIDDEC_ITEM_TYPES_H */

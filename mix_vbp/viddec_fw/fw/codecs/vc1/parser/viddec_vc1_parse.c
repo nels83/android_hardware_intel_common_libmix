@@ -27,6 +27,7 @@ static void viddec_vc1_init(void *ctxt, uint32_t *persist_mem, uint32_t preserve
         parser->ref_frame[i].anchor[1] = 1;
         parser->ref_frame[i].intcomp_top = 0;
         parser->ref_frame[i].intcomp_bot = 0;
+        parser->ref_frame[i].tff=0;
     }
 
     parser->intcomp_top[0] = 0;
@@ -90,13 +91,14 @@ static uint32_t viddec_vc1_parse(void *parent, void *ctxt)
     ret = viddec_pm_get_bits(parent, &sc, 32);
 #endif
     sc = sc & 0xFF;
-    parser->is_frame_start = (sc == vc1_SCFrameHeader);
+    parser->is_frame_start = 0;
+    parser->is_second_start = 0;
     DEB("START_CODE = %02x\n", sc);
     switch( sc )
     {
         case vc1_SCSequenceHeader:
         {
-            uint32_t data=0;
+            uint32_t data;
             parser->ref_frame[0].anchor[0] = 1;
             parser->ref_frame[0].anchor[1] = 1;
             parser->ref_frame[1].anchor[0] = 1;
@@ -112,7 +114,7 @@ static uint32_t viddec_vc1_parse(void *parent, void *ctxt)
             else
             {
                 status = vc1_ParseRCVSequenceLayer(parent, &parser->info);
-            }            
+            }
             parser->sc_seen = VC1_SC_SEQ; 
             parser->sc_seen_since_last_wkld |= VC1_SC_SEQ; 
 #ifdef VBP
@@ -131,7 +133,7 @@ static uint32_t viddec_vc1_parse(void *parent, void *ctxt)
 #ifdef VBP
 			parser->start_code = VC1_SC_EP;
 #endif              
-			break;
+            break;
         }
 
         case vc1_SCFrameHeader:
@@ -149,17 +151,23 @@ static uint32_t viddec_vc1_parse(void *parent, void *ctxt)
             // Clear all bits indicating data below frm header
             parser->sc_seen &= VC1_FRM_MASK;
             parser->sc_seen_since_last_wkld |= VC1_SC_FRM; 
-            vc1_start_new_frame ( parent, parser );
+            //vc1_start_new_frame ( parent, parser );
+            
+            parser->is_frame_start = 1;
+            vc1_parse_emit_frame_start( parent, parser );            
 #ifdef VBP
 			parser->start_code = VC1_SC_FRM;
 #endif             
-			break;
+            break;
         }
 
         case vc1_SCSlice:
         {
             status = vc1_ParseSliceLayer(parent, &parser->info);
             parser->sc_seen_since_last_wkld |= VC1_SC_SLC; 
+
+            vc1_parse_emit_current_slice( parent, parser );
+
 #ifdef VBP
          	parser->start_code = VC1_SC_SLC;
 #endif   
@@ -203,14 +211,16 @@ static uint32_t viddec_vc1_parse(void *parent, void *ctxt)
             if((parser->info.picLayerHeader.PTypeField2 == VC1_I_FRAME) ||
                (parser->info.picLayerHeader.PTypeField2 == VC1_P_FRAME))
             {
-                vc1_swap_intcomp(parser);
+                //vc1_swap_intcomp(parser);
             }
-
             parser->sc_seen |= VC1_SC_FLD;
             parser->sc_seen_since_last_wkld |= VC1_SC_FLD; 
+
+            parser->is_second_start = 1;
+            vc1_parse_emit_second_field_start( parent, parser );
 #ifdef VBP
-			parser->start_code = VC1_SC_FLD;
-#endif 
+	    parser->start_code = VC1_SC_FLD;
+#endif             
             break;
         }
 
@@ -247,9 +257,7 @@ static uint32_t viddec_vc1_parse(void *parent, void *ctxt)
         }
     }
         
-    if( vc1_is_frame_start_code( sc ) ) {
-        vc1_parse_emit_current_frame( parent, parser );
-    }
+   
 
     return VIDDEC_PARSE_SUCESS;
 } // viddec_vc1_parse

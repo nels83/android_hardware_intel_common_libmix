@@ -836,7 +836,7 @@ static uint32_t vbp_add_pic_data_h264(vbp_context *pcontext, int list_index)
 	int pic_data_index = query_data->num_pictures - 1;
 	if (pic_data_index < 0)
 	{
-		WTRACE("MB address does not start from 0!");
+		ETRACE("MB address does not start from 0!");
 		return VBP_DATA;
 	}
 		
@@ -1256,6 +1256,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
 	if (cxt->parse_cubby.size < 6)
 	{
 		/* need at least 6 bytes to start parsing the structure, see spec 15 */
+                ETRACE ("Need at least 6 bytes to start parsing\n" );
 		return VBP_DATA;
 	}
   
@@ -1299,6 +1300,8 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
 		if (cur_data - cxt->parse_cubby.buf + 2 > cxt->parse_cubby.size)
 		{
 			/* need at least 2 bytes to parse sequence_parameter_set_length */
+
+		        ETRACE ("Need at least 2 bytes to parse sps." );
 			return VBP_DATA;
 		}
 
@@ -1311,6 +1314,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
 		if (cur_data - cxt->parse_cubby.buf + sequence_parameter_set_length > cxt->parse_cubby.size)
 		{
 			/* need at least sequence_parameter_set_length bytes for SPS */
+		        ETRACE ("Need at least sequence paramter set length bytes." );
 			return VBP_DATA;
 		}
 
@@ -1328,6 +1332,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
 	if (cur_data - cxt->parse_cubby.buf + 1 > cxt->parse_cubby.size)
 	{
 		/* need at least one more byte to parse num_of_picture_parameter_sets */
+		ETRACE ("need at least one more byte to parse num_of_picture_parameter_sets." );
 		return VBP_DATA;
 	}
 
@@ -1342,6 +1347,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
 		if (cur_data - cxt->parse_cubby.buf + 2 > cxt->parse_cubby.size)
 		{
 			/* need at least 2 bytes to parse picture_parameter_set_length */
+                        ETRACE ("need at least 2 bytes to parse picture_parameter_set_length.");
 			return VBP_DATA;
 		}
 
@@ -1353,6 +1359,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
 		if (cur_data - cxt->parse_cubby.buf + picture_parameter_set_length > cxt->parse_cubby.size)
 		{
 			/* need at least picture_parameter_set_length bytes for PPS */
+                        ETRACE("need at least picture_parameter_set_length bytes for PPS");
 			return VBP_DATA;
 		}
 
@@ -1420,12 +1427,26 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
 	vbp_data_h264* query_data = (vbp_data_h264*)pcontext->query_data;
 	int i;
 
+#ifndef ANDROID
 	for (i = 0; i < MAX_NUM_PICTURES; i++)
 	{
 		query_data->pic_data[i].num_slices = 0;
 	}
 	query_data->num_pictures = 0;
+#else
+        ITRACE("pcontext->h264_frame_flag = %d\n", pcontext->h264_frame_flag);
+ 
+	if(pcontext->h264_frame_flag == 0)
+        {
+             for (i = 0; i < MAX_NUM_PICTURES; i++)
+             {
+                 query_data->pic_data[i].num_slices = 0;
+             }
+             query_data->num_pictures = 0;
+        }
 
+        pcontext->h264_frame_flag = 1;
+#endif
 	
   	cubby = &(cxt->parse_cubby);
 
@@ -1439,34 +1460,34 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
 #ifndef ANDROID
   	while (size_left >= NAL_length_size)
   	{
-    	NAL_length = vbp_get_NAL_length_h264(cubby->buf + size_parsed);    	
+             NAL_length = vbp_get_NAL_length_h264(cubby->buf + size_parsed);    	
 
-    	size_parsed += NAL_length_size;
+    	     size_parsed += NAL_length_size;
 #else
 	while (size_left > 0)
 	{
-	NAL_length = size_left;
+	     NAL_length = size_left;
 #endif
     	  
-    	cxt->list.data[cxt->list.num_items].stpos = size_parsed;
-    	size_parsed += NAL_length; /* skip NAL bytes */
-    	/* end position is exclusive */
-    	cxt->list.data[cxt->list.num_items].edpos = size_parsed; 
-    	cxt->list.num_items++;
-    	if (cxt->list.num_items >= MAX_IBUFS_PER_SC)
-      	{
+    	     cxt->list.data[cxt->list.num_items].stpos = size_parsed;
+    	     size_parsed += NAL_length; /* skip NAL bytes */
+    	     /* end position is exclusive */
+    	     cxt->list.data[cxt->list.num_items].edpos = size_parsed; 
+    	     cxt->list.num_items++;
+    	     if (cxt->list.num_items >= MAX_IBUFS_PER_SC)
+      	     {
       		ETRACE("num of list items exceeds the limit (%d).", MAX_IBUFS_PER_SC);
       		break;
-      	}
+             }  
       
-    	size_left = cubby->size - size_parsed;
-   	}
+             size_left = cubby->size - size_parsed;
+        }
 
-  	if (size_left != 0)
-  	{
-    	WTRACE("Elementary stream is not aligned (%d).", size_left);
-  	}
-  	return VBP_OK;
+        if (size_left != 0)
+        {
+             WTRACE("Elementary stream is not aligned (%d).", size_left);
+        }
+        return VBP_OK;
 }
 
 /**
@@ -1488,7 +1509,7 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
 	switch (parser->info.nal_unit_type)
     {
 		case h264_NAL_UNIT_TYPE_SLICE:       		
-       	/* ITRACE("slice header is parsed."); */
+       	ITRACE("slice header is parsed."); 
        	error = vbp_add_pic_data_h264(pcontext, i);
        	if (VBP_OK == error)
        	{
@@ -1497,7 +1518,7 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
        	break;
        		
        	case  h264_NAL_UNIT_TYPE_IDR:
-       	/* ITRACE("IDR header is parsed."); */
+       	ITRACE("IDR header is parsed."); 
        	error = vbp_add_pic_data_h264(pcontext, i);
        	if (VBP_OK == error)
        	{

@@ -95,7 +95,7 @@ vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo)
         viddec_fw_vc1_set_rcv_maxbframes(&wi.vc1_sh_struct_a_c, rcv.struct_c.MAXBFRAMES);
         viddec_fw_vc1_set_rcv_finterpflag(&wi.vc1_sh_struct_a_c, rcv.struct_c.FINTERPFLAG);
 
-        result = viddec_pm_append_workitem(ctxt, &wi);
+        result = viddec_pm_append_workitem(ctxt, &wi, false);
     }
 
     return status;
@@ -125,9 +125,10 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
     if(result == 1)
     {
         md->PROFILE = sh.seq_flags.PROFILE;
-#ifdef VBP
         md->LEVEL = sh.seq_flags.LEVEL;
-#endif
+        md->CHROMAFORMAT = sh.seq_flags.COLORDIFF_FORMAT;
+        md->FRMRTQ = sh.seq_flags.FRMRTQ_POSTPROC;
+        md->BITRTQ = sh.seq_flags.BITRTQ_POSTPROC;        
     }
 
     result = viddec_pm_get_bits(ctxt, &sh.max_size, 32);
@@ -230,7 +231,7 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
         viddec_fw_vc1_set_psf(&wi_sl.vc1_sl, sh.seq_max_size.PSF);
         viddec_fw_vc1_set_display_ext(&wi_sl.vc1_sl, sh.seq_max_size.DISPLAY_EXT);
 
-        result = viddec_pm_append_workitem(ctxt, &wi_sl);
+        result = viddec_pm_append_workitem(ctxt, &wi_sl, false);
 
         // send DISPLAY EXTENSION metadata if present
         if (sh.seq_max_size.DISPLAY_EXT)
@@ -258,7 +259,7 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
             viddec_fw_vc1_set_disp_color_prim(&wi_de.vc1_sl_de, sh.seq_color_format.COLOR_PRIM);
             viddec_fw_vc1_set_disp_transfer_char(&wi_de.vc1_sl_de, sh.seq_color_format.TRANSFER_CHAR);
 
-            result = viddec_pm_append_workitem(ctxt, &wi_de);
+            result = viddec_pm_append_workitem(ctxt, &wi_de, false);
         }
     }
 
@@ -298,6 +299,8 @@ vc1_Status vc1_ParseEntryPointLayer(void* ctxt, vc1_Info *pInfo)
         result = viddec_pm_skip_bits(ctxt, hrd_bits);
 
         md->REFDIST = 0;
+        md->BROKEN_LINK = ep.ep_flags.BROKEN_LINK;
+        md->CLOSED_ENTRY = ep.ep_flags.CLOSED_ENTRY;
         md->PANSCAN_FLAG = ep.ep_flags.PANSCAN_FLAG;
         md->REFDIST_FLAG = ep.ep_flags.REFDIST_FLAG;
         md->LOOPFILTER = ep.ep_flags.LOOPFILTER;
@@ -370,14 +373,9 @@ vc1_Status vc1_ParseEntryPointLayer(void* ctxt, vc1_Info *pInfo)
         viddec_fw_vc1_set_ep_range_mapuv_flag(&wi.vc1_ep, ep.RANGE_MAPUV_FLAG);
         viddec_fw_vc1_set_ep_range_mapuv(&wi.vc1_ep, ep.RANGE_MAPUV);
 
-        result = viddec_pm_append_workitem(ctxt, &wi);
+        result = viddec_pm_append_workitem(ctxt, &wi, false);
     }
 
-#ifdef VBP
-    md->BROKEN_LINK = ep.ep_flags.BROKEN_LINK;
-    md->CLOSED_ENTRY = ep.ep_flags.CLOSED_ENTRY;
-#endif
-    
     DEB("ep: res: %dx%d\n", ep.ep_size.CODED_WIDTH, ep.ep_size.CODED_HEIGHT);
     DEB("md: after ep: res: %dx%d\n", md->width, md->height);
     return status;
@@ -534,7 +532,7 @@ vc1_Status vc1_ParseAndAppendUserData(void* ctxt, uint32_t sc)
         if (wi.user_data.size >= 11)
         {
             viddec_pm_setup_userdata(&wi);
-            viddec_pm_append_workitem(ctxt, &wi);
+            viddec_pm_append_workitem(ctxt, &wi,false);
             wi.user_data.size = 0;
         }
         if(user_data == 0x80) // flushing byte
@@ -549,7 +547,7 @@ vc1_Status vc1_ParseAndAppendUserData(void* ctxt, uint32_t sc)
             wi.user_data.data_payload[i] = 0;
         }
         viddec_pm_setup_userdata(&wi);
-        viddec_pm_append_workitem(ctxt, &wi);
+        viddec_pm_append_workitem(ctxt, &wi,false);
         wi.user_data.size = 0;
     }
 

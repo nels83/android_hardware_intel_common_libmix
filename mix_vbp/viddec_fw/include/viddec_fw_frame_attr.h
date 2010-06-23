@@ -58,6 +58,8 @@
 #ifndef VIDDEC_FW_FRAME_ATTR_H
 #define VIDDEC_FW_FRAME_ATTR_H
 
+#include "viddec_fw_item_types.h"
+
 #define VIDDEC_PANSCAN_MAX_OFFSETS 4
 #define VIDDEC_MAX_CPB_CNT 32
 
@@ -140,6 +142,7 @@ typedef struct viddec_mpeg2_frame_attributes
     */
     unsigned int repeat_first_field;
 
+
 }viddec_mpeg2_frame_attributes_t;
 
 /**
@@ -190,38 +193,49 @@ This structure contains the H264 specific frame attributes.
 */
 typedef struct viddec_h264_frame_attributes
 {
-	/**
-	used_for_reference : 1 means this frame is used as ref frame of others. 0 means no any frame ref to this frame
-	*/	 
-	///// This flag hasn't been enable so far
-	unsigned int used_for_reference;
+    /**
+       used_for_reference : 1 means this frame is used as ref frame of others. 0 means no any frame ref to this frame
+    */
+    unsigned int used_for_reference;
+    /**
+       Picture Order Count for the current frame/field.
+       This value is computed using information from the bitstream.
+       Refer to Section 8.2.1, function 8-1 of the ITU-T H.264 Specification.
+       These fileds will be supported in future
+    */
+    int top_field_poc;
+    int bottom_field_poc;
 
+    /**
+       Display size, which is cropped from content size. 
+       Currently, the cont_size is cropped, so this paramter is redundant, but in future, cont_size may be changed
+    */
+    viddec_rect_size_t cropped_size;
 
-	/** -   
-	Picture Order Count for the current frame/field.-    
-	This value is computed using information from the bitstream.-    
-	Refer to Section 8.2.1, function 8-1 of the ITU-T H.264 Specification.-   
-	*/
-	// These fileds will be supported in future
-	int top_field_poc;	
-	int bottom_field_poc;	
+    /**
+       top_field_first: 0 means bottom_field_POC is smaller than top_field_POC, else 1
+    */
+    unsigned int top_field_first;
+    
+    /**
+       field_frame_flag: 0 means all slice of this frame are frame-base encoded, else 1
+    */
+    unsigned int field_pic_flag;
 
-	/**
-	Display size, which is cropped from content size. 
-	Currently, the cont_size is cropped, so this paramter is redundant, but in future, cont_size may be changed
-	*/	 
-	viddec_rect_size_t cropped_size;
-
-	/**
-	top_field_first: 0 means bottom_field_POC is smaller than top_field_POC, else 1
-	*/	 
-	unsigned int top_field_first;
-	
-	/**
-	field_frame_flag: 0 means all slice of this frame are frame-base encoded, else 1
-	*/	 
-	unsigned int field_pic_flag;
-
+    /**
+       This data type holds view specific information of current frame.
+       The following information is packed into this data type:
+         view_id(0-9 bits):        Assigned 10 bit value in the encoded stream.
+         priority_id(10-15bits):   Assigned 6 bit priority id.
+         is_base_view(16th bit):   Flag on true indicates current frame belongs to base view, else dependent view.
+     */
+#define viddec_fw_h264_mvc_get_view_id(x)              viddec_fw_bitfields_extract( (x)->view_spcific_info, 0, 0x3FF)
+#define viddec_fw_h264_mvc_set_view_id(x, val)         viddec_fw_bitfields_insert( (x)->view_spcific_info, val, 0, 0x3FF)
+#define viddec_fw_h264_mvc_get_priority_id(x)          viddec_fw_bitfields_extract( (x)->view_spcific_info, 10, 0x3F)
+#define viddec_fw_h264_mvc_set_priority_id(x, val)     viddec_fw_bitfields_insert( (x)->view_spcific_info, val, 10, 0x3F)
+#define viddec_fw_h264_mvc_get_is_base_view(x)         viddec_fw_bitfields_extract( (x)->view_spcific_info, 16, 0x1)
+#define viddec_fw_h264_mvc_set_is_base_view(x, val)    viddec_fw_bitfields_insert( (x)->view_spcific_info, val, 16, 0x1)
+    unsigned int view_spcific_info;
 }viddec_h264_frame_attributes_t;
 
 /**
@@ -241,7 +255,6 @@ typedef struct viddec_mpeg4_frame_attributes
 This structure groups all the frame attributes that are exported by the firmware.
 The frame attributes are split into attributes that are common to all codecs and
 that are specific to codec type.
-As of this release, it is populated only for mpeg2 only.
 */
 typedef struct viddec_frame_attributes
 {

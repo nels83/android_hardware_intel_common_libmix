@@ -74,7 +74,8 @@ static inline void viddec_pm_utils_bstream_scratch_init(viddec_pm_utils_bstream_
 }
 
 /* This function tells us how much more data is in the current es buffer from current position. Its used to figure out if
-   we need to go to next es buffer */
+   we need to go to next es buffer
+*/
 static inline uint32_t viddec_pm_utils_bstream_datafromindex(viddec_pm_utils_list_t *list, uint32_t index, uint32_t offset)
 {
     uint32_t ret=0;
@@ -87,7 +88,8 @@ static inline uint32_t viddec_pm_utils_bstream_datafromindex(viddec_pm_utils_lis
 
 /* This function seeks to byte offset position starting from lst_index, if more data is present in current ES buffer pointed by
  lst_index returns the remaining data in current buffer along with physical address of byte offset. The lst_index parameter
- at returns index of ES buffer in list which has byte_offset */
+ at returns index of ES buffer in list which has byte_offset
+*/
 static inline uint32_t viddec_pm_utils_bstream_maxbytes_from_index(viddec_pm_utils_bstream_cxt_t *cxt,
                                                                    uint32_t *lst_index,
                                                                    uint32_t byte_offset,
@@ -103,13 +105,7 @@ static inline uint32_t viddec_pm_utils_bstream_maxbytes_from_index(viddec_pm_uti
         last_byte_offst = (list->data[*lst_index].edpos <= (uint32_t)list->total_bytes) ? list->data[*lst_index].edpos: (uint32_t)list->total_bytes;
         if(byte_offset < last_byte_offst)
         {/* Found a match so return with data remaining */
-#if 1
-            int32_t val=0;
-            val = last_byte_offst - (int32_t)byte_offset;
-            if(val > 0) bytes_left = (uint32_t)val;
-#else
             bytes_left = viddec_pm_utils_bstream_datafromindex(list, *lst_index, byte_offset);
-#endif
             *physaddr = viddec_pm_utils_bstream_getphys(cxt, byte_offset, *lst_index);
             break;
         }
@@ -129,7 +125,7 @@ static inline void viddec_pm_utils_bstream_scratch_copyto(viddec_pm_utils_bstrea
     }
 }
 
-/* This function is for copying trailing bytes from scratch buffer to  bitstream buffer*/
+/* This function is for copying trailing bytes from scratch buffer to  bitstream buffer */
 static inline void viddec_pm_utils_bstream_scratch_copyfrom(viddec_pm_utils_bstream_scratch_cxt_t *cxt, uint8_t *data)
 {
     uint32_t i=0;
@@ -221,6 +217,7 @@ static inline void viddec_pm_utils_check_bstream_reload(viddec_pm_utils_bstream_
     }
 #endif
 }
+
 /*
   This function moves the stream position by N bits(parameter bits). The bytes parameter tells us how many bytes were
   read for this N bits(can be different due to emulation bytes).
@@ -236,6 +233,27 @@ static inline void viddec_pm_utils_update_skipoffsets(viddec_pm_utils_bstream_bu
     {
         bstream->buf_bitoff = bits & 0x7;
         bstream->buf_index +=(bytes - 1);
+    }
+}
+
+/*
+  This function skips emulation byte if necessary.
+  During Normal flow we skip emulation byte only if we read at least one bit after the the two zero bytes.
+  However in some cases we might send data to HW without reading the next bit, in which case we are on
+  emulation byte. To avoid sending invalid data, this function has to be called first to skip.
+*/
+   
+void viddec_pm_utils_skip_if_current_is_emulation(viddec_pm_utils_bstream_cxt_t *cxt)
+{
+    viddec_pm_utils_bstream_buf_cxt_t *bstream = &(cxt->bstrm_buf);
+
+    if(cxt->is_emul_reqd &&
+       (cxt->phase >= 2) &&
+       (bstream->buf_bitoff == 0) &&
+       (bstream->buf[bstream->buf_index] == 0x3) )
+    {
+        bstream->buf_index += 1;
+        cxt->phase = 0;
     }
 }
 
@@ -389,10 +407,12 @@ int32_t viddec_pm_utils_bstream_skipbits(viddec_pm_utils_bstream_cxt_t *cxt, uin
                 viddec_pm_utils_update_skipoffsets(bstream, total_bits, act_bytes);
                 ret=1;
                 
+#ifdef VBP                
                 if (act_bytes > bytes_required)
                 {
                 	cxt->emulation_byte_counter = act_bytes - bytes_required;
                 }
+#endif                
             }
         }
     }
@@ -444,7 +464,6 @@ int32_t viddec_pm_utils_bstream_peekbits(viddec_pm_utils_bstream_cxt_t *cxt, uin
                     /* We have to use both the words to get required data */
                     shift_by = total_bits - 32;
                     data.word[0] = (data.word[0] << shift_by) | ( data.word[1] >> (32 - shift_by));
-                    //total_bits -= shift_by;/* BUG */
                 }
                 else
                 {
@@ -458,10 +477,12 @@ int32_t viddec_pm_utils_bstream_peekbits(viddec_pm_utils_bstream_cxt_t *cxt, uin
                     viddec_pm_utils_update_skipoffsets(bstream, total_bits, act_bytes);
                     cxt->phase = phase;
                     
+#ifdef VBP                    
                     if (act_bytes > bytes_required)
                     {
                     	cxt->emulation_byte_counter += act_bytes - bytes_required;
                     }
+#endif                  
                 }
 
                 ret =1;

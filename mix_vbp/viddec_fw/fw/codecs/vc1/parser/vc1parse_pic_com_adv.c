@@ -314,7 +314,9 @@ vc1_Status vc1_ParseFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
             return status;
         }
         md->REFDIST = tmp;
-    }
+    } else if (md->REFDIST_FLAG == 0) {
+		md->REFDIST = 0;
+	}
 
     if ((picLayerHeader->FPTYPE >= 4) && (picLayerHeader->FPTYPE <= 7))
     {

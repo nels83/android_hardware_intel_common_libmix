@@ -3,5 +3,5 @@
 
 #define VIDDEC_FW_MAJOR_NUM 0
 #define VIDDEC_FW_MINOR_NUM 8
-#define VIDDEC_FW_BUILD_NUM 11
+#define VIDDEC_FW_BUILD_NUM 16
 #endif

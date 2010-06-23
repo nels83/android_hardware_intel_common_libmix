@@ -382,6 +382,8 @@ dump_slice_header(pInfo, &next_SliceHeader);
 			
 			h264_parse_emit_eos(parent, pInfo);
          h264_init_dpb(&(pInfo->dpb));
+
+         pInfo->is_current_workload_done=1;
 			
 			/* picture level info which will always be initialized */
 			//h264_init_Info_under_sps_pps_level(pInfo);

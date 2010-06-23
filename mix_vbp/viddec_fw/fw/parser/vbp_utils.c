@@ -144,6 +144,10 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 	*/
 	error = pcontext->func_init_parser_entries(pcontext);
 
+#ifdef ANDROID
+        pcontext->h264_frame_flag = 0;
+#endif
+
 cleanup:
 
 	if (VBP_OK != error)
@@ -545,6 +549,10 @@ uint32 vbp_utils_query(vbp_context *pcontext, void **data)
 	{
 		*data = NULL;
 	}
+#ifdef ANDROID
+	pcontext->h264_frame_flag = 0;
+#endif
+
 	return error;
 }
 

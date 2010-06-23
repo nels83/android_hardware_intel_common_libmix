@@ -551,13 +551,13 @@ uint32 vbp_get_sc_pos_mp42(
 					*sc_end_pos = size;
 					phase = 3;
 
-					if (normal_sc) {
-					} else {
-						/* For short start code since start code is in one nibble just return at this point */
-						phase += 1;
-						ret = 1;
-						break;
-					}
+					//if (normal_sc) {
+					//} else {
+					//	/* For short start code since start code is in one nibble just return at this point */
+					//	phase += 1;
+					//	ret = 1;
+					//	break;
+					//}
 				}
 				ptr++;
 				size++;

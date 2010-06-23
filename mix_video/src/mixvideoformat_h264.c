@@ -17,6 +17,15 @@
 static int mix_video_h264_counter = 0;
 #endif /* MIX_LOG_ENABLE */
 
+#ifdef ANDROID
+typedef struct _NalBuffer {
+	unsigned char *buffer;
+	unsigned int offset;
+	unsigned int length;
+	void *appdata;
+} NalBuffer;
+#endif
+
 /* The parent class. The pointer will be saved
  * in this class's initialization. The pointer
  * can be used for chaining method call if needed.
@@ -669,10 +678,39 @@ MIX_RESULT mix_videofmt_h264_decode(MixVideoFormat *mix, MixBuffer * bufin[],
 
 		LOG_V( "Calling parse for current frame, parse handle %d, buf %x, size %d\n", (int)parent->parser_handle, (guint)bufin[i]->data, bufin[i]->size);
 
+#ifndef ANDROID		
 		pret = vbp_parse(parent->parser_handle, 
 			bufin[i]->data, 
 			bufin[i]->size,
 			FALSE);
+#else
+		/* we got an array of NALs for a frame */
+		{
+			gint nal_index = 0;
+			NalBuffer *nals = (NalBuffer *)bufin[i]->data;
+			gint nal_count = bufin[i]->size;
+			
+                        LOG_V("nal_count = %d\n", nal_count);
+			for(nal_index = 0; nal_index < nal_count; nal_index ++) {
+
+                                LOG_V("nals[%d].offset = 0x%x nals[nal_index].length = %d\n",
+                                                  nal_index, nals[nal_index].offset, nals[nal_index].length);
+
+				pret = vbp_parse(parent->parser_handle, 
+						nals[nal_index].buffer + nals[nal_index].offset, 
+						nals[nal_index].length, 
+						FALSE);                       
+                               
+                                LOG_V("nal_index = %d pret = 0x%x\n", nal_index, pret);
+
+				if(pret != VBP_OK && pret != VBP_DONE) {
+					ret = MIX_RESULT_FAIL;
+                                        LOG_E( "Error parsing data : pret = 0x%x\n", pret);
+					goto cleanup;
+				}
+			}
+		}
+#endif		
 
 		LOG_V( "Called parse for current frame\n");
 

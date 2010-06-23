@@ -55,13 +55,9 @@ int32_t viddec_pm_peek_bits(void *parent, uint32_t *data, uint32_t num_bits);
  */
 int32_t viddec_pm_skip_bits(void *parent, uint32_t num_bits);
 
-/* This function appends a work item to current workload.
+/* This function appends a work item to current/next workload.
  */
-int32_t viddec_pm_append_workitem(void *parent, viddec_workload_item_t *item);
-
-/* This function appends a work item to next workload.
- */
-int32_t viddec_pm_append_workitem_next(void *parent, viddec_workload_item_t *item);
+int32_t viddec_pm_append_workitem(void *parent, viddec_workload_item_t *item, uint32_t next);
 
 /* This function gets current byte and bit positions and information on whether an emulation byte is present after
 current byte.

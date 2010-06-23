@@ -1,5 +1,7 @@
 #include "viddec_mp4_visualobject.h"
+#ifdef ANDROID
 #include "viddec_types.h"
+#endif
 
 static inline uint8_t mp4_pvt_isValid_verID(uint8_t id)
 {
@@ -214,7 +216,7 @@ mp4_Status_t mp4_Parse_VisualObject(void *parent, viddec_mp4_parser_t *parser)
             }
         }
 
-        ret = viddec_pm_append_workitem(parent, &wi);
+        ret = viddec_pm_append_workitem(parent, &wi, false);
         if(ret == 1)
             ret = MP4_STATUS_OK;
     }
@@ -263,7 +265,7 @@ mp4_Status_t mp4_Parse_UserData(void *parent, viddec_mp4_parser_t *parser)
         if (wi.user_data.size >= 11)
         {
             viddec_pm_setup_userdata(&wi);
-            ret = viddec_pm_append_workitem(parent, &wi);
+            ret = viddec_pm_append_workitem(parent, &wi, false);
             wi.user_data.size = 0;
         }
     }
@@ -276,7 +278,7 @@ mp4_Status_t mp4_Parse_UserData(void *parent, viddec_mp4_parser_t *parser)
             wi.user_data.data_payload[i] = 0;
         }
         viddec_pm_setup_userdata(&wi);
-        ret = viddec_pm_append_workitem(parent, &wi);
+        ret = viddec_pm_append_workitem(parent, &wi, false);
         wi.user_data.size = 0;
     }
 

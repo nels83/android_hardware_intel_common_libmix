@@ -1,7 +1,10 @@
 #ifndef VIDDEC_EMITTER_H
 #define VIDDEC_EMITTER_H
-
+#ifndef ANDROID
+#include <stdint.h>
+#else
 #include "../../include/stdint.h"
+#endif
 #ifndef HOST_ONLY
 #define DDR_MEM_MASK 0x80000000
 #else

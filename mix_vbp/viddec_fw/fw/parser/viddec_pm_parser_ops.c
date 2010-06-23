@@ -41,24 +41,20 @@ int32_t viddec_pm_skip_bits(void *parent, uint32_t num_bits)
     return ret;
 }
 
-int32_t viddec_pm_append_workitem(void *parent, viddec_workload_item_t *item)
+int32_t viddec_pm_append_workitem(void *parent, viddec_workload_item_t *item, uint32_t next)
 {
+#ifndef VBP
     int32_t ret = 1;
     viddec_pm_cxt_t *cxt;
-
+    viddec_emitter_wkld *emit;
+    
     cxt = (viddec_pm_cxt_t *)parent;
-    ret = viddec_emit_append(&(cxt->emitter.cur), item);
+    emit = (next) ? &(cxt->emitter.next) : &(cxt->emitter.cur);
+    ret = viddec_emit_append(emit, item);
     return ret;
-}
-
-int32_t viddec_pm_append_workitem_next(void *parent, viddec_workload_item_t *item)
-{
-    int32_t ret = 1;
-    viddec_pm_cxt_t *cxt;
-
-    cxt = (viddec_pm_cxt_t *)parent;
-    ret = viddec_emit_append(&(cxt->emitter.next), item);
-    return ret;
+#else
+	return 1;
+#endif
 }
 
 int32_t viddec_pm_get_au_pos(void *parent, uint32_t *bit, uint32_t *byte, uint8_t *is_emul)
@@ -67,6 +63,7 @@ int32_t viddec_pm_get_au_pos(void *parent, uint32_t *bit, uint32_t *byte, uint8_
     viddec_pm_cxt_t *cxt;
 
     cxt = (viddec_pm_cxt_t *)parent;
+    viddec_pm_utils_skip_if_current_is_emulation(&(cxt->getbits));
     viddec_pm_utils_bstream_get_au_offsets(&(cxt->getbits), bit, byte, is_emul);
 
     return ret;
@@ -82,6 +79,7 @@ static inline int32_t viddec_pm_append_restof_pixel_data(void *parent, uint32_t 
     viddec_workload_item_t wi;
     
     cxt = (viddec_pm_cxt_t *)parent;
+    viddec_pm_utils_skip_if_current_is_emulation(&(cxt->getbits));
     viddec_pm_utils_bstream_get_au_offsets(&(cxt->getbits), &b_off, &start, &emul);
     if(emul) start--;
 

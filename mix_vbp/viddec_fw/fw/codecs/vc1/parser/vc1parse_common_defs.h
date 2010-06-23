@@ -146,12 +146,15 @@ typedef struct
 {
     // From Sequence Layer for Advanced Profile
     uint8_t  PROFILE;                   /**  2 bit(s). */
-#ifdef VBP
-    uint8_t  LEVEL;
-#endif
-    uint8_t  POSTPROCFLAG;              /**  1 bit(s). */
+    uint8_t  LEVEL;                     /**  3 bit(s). */
+    uint8_t  CHROMAFORMAT;              /**  2 bit(s). */
+    uint8_t  FRMRTQ;                    /**  3 bit(s). */
+    
+    uint8_t  BITRTQ;                    /**  5 bit(s). */    
+    uint8_t  POSTPROCFLAG;              /**  1 bit(s). */    
     uint8_t  PULLDOWN;                  /**  1 bit(s). */
     uint8_t  INTERLACE;                 /**  1 bit(s). */
+    
     uint8_t  TFCNTRFLAG;                /**  1 bit(s). */
     uint8_t  FINTERPFLAG;               /**  1 bit(s). */
     uint8_t  PSF;                       /**  1 bit(s). */
@@ -162,18 +165,24 @@ typedef struct
     uint8_t  MULTIRES;                  /**  1 bit(s). */
 
     // From EntryPoint Layer for Advanced Profile
+    uint8_t BROKEN_LINK;
+    uint8_t CLOSED_ENTRY;
+    
     uint8_t PANSCAN_FLAG;
     uint8_t REFDIST_FLAG;
     uint8_t LOOPFILTER;
     uint8_t FASTUVMC;
+    
     uint8_t EXTENDED_MV;
     uint8_t DQUANT;
     uint8_t VSTRANSFORM;
     uint8_t OVERLAP;
+    
     uint8_t QUANTIZER;
     uint8_t EXTENDED_DMV;
     uint8_t RANGE_MAPY_FLAG;
     uint8_t RANGE_MAPY;
+    
     uint8_t RANGE_MAPUV_FLAG;
     uint8_t RANGE_MAPUV;
 
@@ -187,7 +196,9 @@ typedef struct
     uint8_t  INTCOMPFIELD;              /**  ? bit(s)? */
     uint8_t  LUMSCALE2;                 /**  6 bit(s). */
     uint8_t  LUMSHIFT2;                 /**  6 bit(s). */
+    
     uint8_t bp_raw[VC1_MAX_BITPLANE_CHUNKS]; 
+    uint8_t res_1;
 
     // From SequenceLayerHeader, EntryPointHeader or Struct_A
     uint16_t width;
@@ -196,8 +207,6 @@ typedef struct
     uint16_t heightMB;
 
 #ifdef VBP
-    uint8_t CLOSED_ENTRY;
-    uint8_t BROKEN_LINK;
     uint8_t SYNCMARKER;
 #endif
     
