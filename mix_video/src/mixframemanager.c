@@ -1090,12 +1090,12 @@ MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) {
 	ret = MIX_RESULT_FRAME_NOTAVAIL;
 	*mvf = (MixVideoFrame *) g_queue_pop_head(fm->frame_queue);
 	if (*mvf) {
-#ifdef ANDORID
+#ifdef ANDROID
 		if(fm->timestamp_storage && fm->mode == MIX_FRAMEORDER_MODE_DISPLAYORDER) {
 			if(fm->timestamp_storage->len) {
 				guint64 ts;
 				g_array_sort(fm->timestamp_storage, timestamp_storage_sorting_func);
-				ts = g_array_index(val_array, guint64, 0)
+				ts = g_array_index(fm->timestamp_storage, guint64, 0);
 				mix_videoframe_set_timestamp(*mvf, ts);
 				g_array_remove_index_fast(fm->timestamp_storage, 0);
 			}
