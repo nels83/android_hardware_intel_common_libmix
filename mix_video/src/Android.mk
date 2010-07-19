@@ -93,6 +93,7 @@ LOCAL_COPY_HEADERS :=			\
 	mixvideoconfigparamsdec_vc1.h	\
 	mixvideoconfigparamsenc.h	\
 	mixvideoconfigparamsenc_h264.h	\
+        mixvideoconfigparamsenc_h263.h  \
 	mixvideoconfigparamsenc_mpeg4.h	\
 	mixvideoconfigparamsenc_preview.h \
 	mixvideodecodeparams.h		\
@@ -103,6 +104,7 @@ LOCAL_COPY_HEADERS :=			\
 	mixvideoformat_vc1.h		\
 	mixvideoformatenc.h		\
 	mixvideoformatenc_h264.h	\
+	mixvideoformatenc_h263.h        \
 	mixvideoformatenc_mpeg4.h	\
 	mixvideoformatenc_preview.h	\
 	mixvideoformatqueue.h		\

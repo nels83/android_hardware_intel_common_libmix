@@ -47,8 +47,8 @@ struct _MixVideoFormatEnc_H263 {
 	MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
 	MixVideoFrame  *ref_frame;  //reference frame
 	MixVideoFrame  *rec_frame;	//reconstructed frame;	
-	MixVideoFrame  *last_frame;	//last frame;	
-	
+	MixVideoFrame  *last_frame;	//last frame;
+        MixBuffer      *last_mix_buffer;
 
 	guint disable_deblocking_filter_idc;
 	guint slice_num;

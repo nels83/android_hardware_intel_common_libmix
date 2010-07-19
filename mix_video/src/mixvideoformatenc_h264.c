@@ -43,7 +43,8 @@ static void mix_videoformatenc_h264_init(MixVideoFormatEnc_H264 * self) {
     self->is_intra = TRUE;
     self->cur_frame = NULL;
     self->ref_frame = NULL;
-    self->rec_frame = NULL;	
+    self->rec_frame = NULL;
+    self->last_mix_buffer = NULL;
 
     self->ci_shared_surfaces = NULL;
     self->surfaces= NULL;
@@ -775,7 +776,12 @@ MIX_RESULT mix_videofmtenc_h264_flush(MixVideoFormatEnc *mix) {
         mix_videoframe_unref (self->ref_frame);
         self->ref_frame = NULL;       
     }
-    
+
+    if(self->last_mix_buffer) {
+       mix_buffer_unref(self->last_mix_buffer);
+       self->last_mix_buffer = NULL;
+    }
+   
     /*reset the properities*/    
     self->encoded_frames = 0;
     self->pic_skipped = FALSE;
@@ -1641,7 +1647,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         if (coded_seg->next == NULL)	
             break;		
         
-        coded_seg ++;
+        coded_seg = coded_seg->next;
         num_seg ++;
     }
 
@@ -1684,7 +1690,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             if (coded_seg->next == NULL)	
                 break;		            
             
-            coded_seg ++;
+            coded_seg = coded_seg->next;
         }		
 
         //memcpy (iovout->data, buf + 16, iovout->data_size); //parload is started from 17th byte
@@ -1752,7 +1758,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
                     if (coded_seg->next == NULL)	
                         break;		
                     
-                    coded_seg ++;
+                    coded_seg = coded_seg->next;
                 }	
                 
                 ret = mix_videofmtenc_h264_AnnexB_to_length_prefixed (tem_buf, iovout->data_size, iovout->data, &size);
@@ -1870,6 +1876,14 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
     mix->coded_buf_index %=2;
     mix->last_frame = mix->cur_frame;
 
+    if(mix->last_mix_buffer) {       
+       LOG_V("calls to mix_buffer_unref \n");
+       LOG_V("refcount = %d\n", MIX_PARAMS(mix->last_mix_buffer)->refcount);
+       mix_buffer_unref(mix->last_mix_buffer);
+    }
+
+    LOG_V("ref the current bufin\n");
+    mix->last_mix_buffer = mix_buffer_ref(bufin);
 
     if (!(parent->need_display)) {
         mix_videoframe_unref (mix->cur_frame);

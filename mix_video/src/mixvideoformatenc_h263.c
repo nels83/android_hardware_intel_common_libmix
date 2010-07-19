@@ -44,6 +44,7 @@ static void mix_videoformatenc_h263_init(MixVideoFormatEnc_H263 * self) {
     self->cur_frame = NULL;
     self->ref_frame = NULL;
     self->rec_frame = NULL;	
+    self->last_mix_buffer = NULL;
 
     self->ci_shared_surfaces = NULL;
     self->surfaces= NULL;
@@ -748,6 +749,11 @@ MIX_RESULT mix_videofmtenc_h263_flush(MixVideoFormatEnc *mix) {
         mix_videoframe_unref (self->ref_frame);
         self->ref_frame = NULL;       
     }
+
+    if(self->last_mix_buffer) {
+       mix_buffer_unref(self->last_mix_buffer);
+       self->last_mix_buffer = NULL;
+    }
     
     /*reset the properities*/    
     self->encoded_frames = 0;
@@ -1310,7 +1316,13 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
                     "input buf size = %d\n", bufin->size);			
             
             guint8 *inbuf = bufin->data;      
-            
+           
+#ifndef ANDROID
+#define USE_SRC_FMT_YUV420
+#else
+#define USE_SRC_FMT_NV21
+#endif
+#ifdef USE_SRC_FMT_YUV420
             /*need to convert YUV420 to NV12*/
             dst_y = pvbuf +image->offsets[0];
             
@@ -1329,7 +1341,38 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
                 }
                 dst_uv += image->pitches[1];
             }
-            
+           
+#else //USE_SRC_FMT_NV12 or USE_SRC_FMT_NV21
+            int offset_uv = width * height;
+            guint8 *inbuf_uv = inbuf + offset_uv;
+            int height_uv = height / 2;
+            int width_uv = width;
+
+            dst_y = pvbuf + image->offsets[0];
+            for (i = 0; i < height; i++) {
+                memcpy (dst_y, inbuf + i * width, width);
+                dst_y += image->pitches[0];
+            }
+
+#ifdef USE_SRC_FMT_NV12
+            dst_uv = pvbuf + image->offsets[1];
+            for (i = 0; i < height_uv; i++) {
+                memcpy(dst_uv, inbuf_uv + i * width_uv, width_uv);
+                dst_uv += image->pitches[1];
+            }
+#else //USE_SRC_FMT_NV21
+            dst_uv = pvbuf + image->offsets[1];
+            for (i = 0; i < height_uv; i ++) {
+                for (j = 0; j < width_uv; j += 2) {
+                    dst_uv[j] = inbuf_uv[j+1];  //u
+                    dst_uv[j+1] = inbuf_uv[j];  //v
+                }
+                dst_uv += image->pitches[1];
+                inbuf_uv += width_uv;
+            }
+#endif
+#endif //USE_SRC_FMT_YUV420
+ 
             va_status = vaUnmapBuffer(va_display, image->buf);	
             if (va_status != VA_STATUS_SUCCESS)	 
             {
@@ -1405,8 +1448,9 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
             if (mix->cur_frame == NULL)
             {
                 guint ci_idx;
-                memcpy (&ci_idx, bufin->data, bufin->size);
-                
+//                memcpy (&ci_idx, bufin->data, bufin->size);
+                memcpy (&ci_idx, bufin->data, sizeof(unsigned int));
+ 
                 LOG_I( 
                         "surface_num = %d\n", mix->surface_num);			 
                 LOG_I( 
@@ -1536,7 +1580,7 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
             if (coded_seg->next == NULL)	
                 break;		
 
-            coded_seg ++;
+            coded_seg = coded_seg->next;
             num_seg ++;
         }
 
@@ -1572,7 +1616,7 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
             if (coded_seg->next == NULL)	
                 break;		
 
-            coded_seg ++;
+            coded_seg = coded_seg->next;
         }        
 
         iovout->buffer_size = iovout->data_size;
@@ -1678,9 +1722,18 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
         mix->coded_buf_index %=2;
         mix->last_frame = mix->cur_frame;
         
+        if(mix->last_mix_buffer) {
+           LOG_V("calls to mix_buffer_unref \n");
+           LOG_V("refcount = %d\n", MIX_PARAMS(mix->last_mix_buffer)->refcount);
+           mix_buffer_unref(mix->last_mix_buffer);
+        }
+
+        LOG_V("ref the current bufin\n");
+        mix->last_mix_buffer = mix_buffer_ref(bufin);
+
         if (!(parent->need_display)) {
-            mix_videoframe_unref (mix->cur_frame);
-            mix->cur_frame = NULL;
+             mix_videoframe_unref (mix->cur_frame);
+             mix->cur_frame = NULL;
         }
 
 cleanup:

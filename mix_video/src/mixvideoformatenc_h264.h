@@ -47,6 +47,7 @@ struct _MixVideoFormatEnc_H264 {
     MixVideoFrame  *ref_frame;  //reference frame
     MixVideoFrame  *rec_frame;	//reconstructed frame;	
     MixVideoFrame  *last_frame;	//last frame;	
+    MixBuffer      *last_mix_buffer;
 
     guint basic_unit_size;  //for rate control
     guint disable_deblocking_filter_idc;
