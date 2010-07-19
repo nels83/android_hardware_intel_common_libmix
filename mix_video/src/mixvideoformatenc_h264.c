@@ -1504,8 +1504,9 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         if (mix->cur_frame == NULL)
         {
             guint ci_idx;
-            memcpy (&ci_idx, bufin->data, bufin->size);
-            
+            //memcpy (&ci_idx, bufin->data, bufin->size);
+            memcpy (&ci_idx, bufin->data, sizeof(unsigned int));
+
             LOG_I( 
                     "surface_num = %d\n", mix->surface_num);			 
             LOG_I( 
