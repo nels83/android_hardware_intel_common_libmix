@@ -1,3 +1,13 @@
+
+#ifdef ANDROID
+//#ifndef NULL
+//#define NULL (void*)0x0
+//#endif
+
+#define true 1
+#define false 0
+#endif
+
 #include "viddec_pm.h"
 #include "viddec_fw_debug.h"
 #include "viddec_parser_ops.h"

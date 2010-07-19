@@ -1,3 +1,12 @@
+#ifdef ANDROID
+//#ifndef NULL
+//#define NULL (void*)0x0
+//#endif
+
+#define true 1
+#define false 0
+#endif
+
 #include "fw_pvt.h"
 #include "viddec_fw_parser_ipclib_config.h"
 #include "viddec_fw_common_defs.h"

@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 
 VENDORS_INTEL_MRST_LIBMIX_ROOT := $(LOCAL_PATH)
 
-GLIB_TOP := external/glib
+GLIB_TOP := hardware/intel/glib
 
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/mix_common/src/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/mix_audio/src/Android.mk
