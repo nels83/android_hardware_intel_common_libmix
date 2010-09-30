@@ -13,6 +13,7 @@
 
 #include "mixvideoformatenc_h263.h"
 #include "mixvideoconfigparamsenc_h263.h"
+#include <va/va_tpi.h>
 
 #undef SHOW_SRC
 
@@ -43,9 +44,10 @@ static void mix_videoformatenc_h263_init(MixVideoFormatEnc_H263 * self) {
     self->is_intra = TRUE;
     self->cur_frame = NULL;
     self->ref_frame = NULL;
-    self->rec_frame = NULL;	
+    self->rec_frame = NULL;
+#ifdef ANDROID	
     self->last_mix_buffer = NULL;
-
+#endif
     self->ci_shared_surfaces = NULL;
     self->surfaces= NULL;
     self->surface_num = 0;
@@ -749,12 +751,12 @@ MIX_RESULT mix_videofmtenc_h263_flush(MixVideoFormatEnc *mix) {
         mix_videoframe_unref (self->ref_frame);
         self->ref_frame = NULL;       
     }
-
+#ifdef ANDROID
     if(self->last_mix_buffer) {
        mix_buffer_unref(self->last_mix_buffer);
        self->last_mix_buffer = NULL;
     }
-    
+#endif    
     /*reset the properities*/    
     self->encoded_frames = 0;
     self->pic_skipped = FALSE;
@@ -1322,6 +1324,7 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
 #else
 #define USE_SRC_FMT_NV21
 #endif
+
 #ifdef USE_SRC_FMT_YUV420
             /*need to convert YUV420 to NV12*/
             dst_y = pvbuf +image->offsets[0];
@@ -1448,8 +1451,11 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
             if (mix->cur_frame == NULL)
             {
                 guint ci_idx;
-//                memcpy (&ci_idx, bufin->data, bufin->size);
+#ifndef ANDROID
+                memcpy (&ci_idx, bufin->data, bufin->size);
+#else
                 memcpy (&ci_idx, bufin->data, sizeof(unsigned int));
+#endif
  
                 LOG_I( 
                         "surface_num = %d\n", mix->surface_num);			 
@@ -1721,7 +1727,8 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
         mix->coded_buf_index ++; 
         mix->coded_buf_index %=2;
         mix->last_frame = mix->cur_frame;
-        
+
+#ifdef ANDROID        
         if(mix->last_mix_buffer) {
            LOG_V("calls to mix_buffer_unref \n");
            LOG_V("refcount = %d\n", MIX_PARAMS(mix->last_mix_buffer)->refcount);
@@ -1730,6 +1737,7 @@ MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix,
 
         LOG_V("ref the current bufin\n");
         mix->last_mix_buffer = mix_buffer_ref(bufin);
+#endif
 
         if (!(parent->need_display)) {
              mix_videoframe_unref (mix->cur_frame);

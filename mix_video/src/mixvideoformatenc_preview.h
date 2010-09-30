@@ -12,6 +12,8 @@
 #include "mixvideoformatenc.h"
 #include "mixvideoframe_private.h"
 
+G_BEGIN_DECLS
+
 #define MIX_VIDEO_ENC_PREVIEW_SURFACE_NUM       20
 
 #define min(X,Y) (((X) < (Y)) ? (X) : (Y))
@@ -129,5 +131,7 @@ MIX_RESULT mix_videofmtenc_preview_deinitialize(MixVideoFormatEnc *mix);
 /* Local Methods */
 MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mix, MixBuffer * bufin, 
         MixIOVec * iovout);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOFORMATENC_PREVIEW_H__ */

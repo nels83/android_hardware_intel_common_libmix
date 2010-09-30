@@ -168,7 +168,6 @@ noinst_HEADERS = ./vbp_h264_parser.h \
 	./include/viddec_pm_utils_bstream.h \
 	./include/viddec_pm_utils_list.h \
 	./include/viddec_vc1_parse.h \
-	../include/stdint.h \
 	../include/viddec_debug.h \
 	../include/viddec_fw_version.h \
 	../../include/viddec_fw_common_defs.h \
@@ -177,7 +176,6 @@ noinst_HEADERS = ./vbp_h264_parser.h \
 	../../include/viddec_fw_item_types.h \
 	../../include/viddec_fw_parser_host.h \
 	../../include/viddec_fw_workload.h \
-	../../fw/include/stdint.h \
 	../../fw/include/viddec_debug.h \
 	../../fw/include/viddec_fw_version.h \
 	../../fw/codecs/h264/include/h264.h \

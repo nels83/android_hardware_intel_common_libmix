@@ -12,6 +12,8 @@
 #include <mixvideoconfigparams.h>
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_VIDEOCONFIGPARAMSENC:
  *
@@ -75,6 +77,8 @@ struct _MixVideoConfigParamsEnc {
 	/* Encoding profile */
 	MixProfile profile;
 
+	guint8 level;
+
 	/* Raw format to be encoded */
 	MixRawTargetFormat raw_format;
 
@@ -122,6 +126,8 @@ struct _MixVideoConfigParamsEnc {
 	
 	/* Size of the array ci_frame_id */
 	guint	ci_frame_num;
+	
+	guint 	CIR_frame_cnt;
 	
 	/* < private > */
 	gulong draw;
@@ -565,7 +571,58 @@ MIX_RESULT mix_videoconfigparamsenc_set_profile (MixVideoConfigParamsEnc * obj,
 MIX_RESULT mix_videoconfigparamsenc_get_profile (MixVideoConfigParamsEnc * obj,
 		MixProfile * profile);
 
+
+/**
+ * mix_videoconfigparamsenc_set_level:
+ * @obj: #MixVideoConfigParamsEnc object
+ * @level: Encoding level  
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set Encoding level 
+ */
+MIX_RESULT mix_videoconfigparamsenc_set_level (MixVideoConfigParamsEnc * obj, 
+		guint8 level);
+
+
+/**
+ * mix_videoconfigparamsenc_get_level:
+ * @obj: #MixVideoConfigParamsEnc object
+ * @level: Encoding level to be returned  
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get Encoding level 
+ */
+
+MIX_RESULT mix_videoconfigparamsenc_get_level (MixVideoConfigParamsEnc * obj, 
+		guint8 * level);
+
+
+/**
+ * mix_videoconfigparamsenc_set_CIR_frame_cnt:
+ * @obj: #MixVideoConfigParamsEnc object
+ * @CIR_frame_cnt: Encoding CIR frame count  
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set Encoding CIR frame count
+ */
+MIX_RESULT mix_videoconfigparamsenc_set_CIR_frame_cnt (MixVideoConfigParamsEnc * obj, 
+		guint CIR_frame_cnt);
+
+/**
+ * mix_videoconfigparamsenc_set_CIR_frame_cnt:
+ * @obj: #MixVideoConfigParamsEnc object
+ * @CIR_frame_cnt: Encoding CIR frame count to be returned  
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get Encoding CIR frame count 
+ */
+
+MIX_RESULT mix_videoconfigparamsenc_get_CIR_frame_cnt (MixVideoConfigParamsEnc * obj, 
+		guint * CIR_frame_cnt);
+
 /* TODO: Add getters and setters for other properties */
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_H__ */
 

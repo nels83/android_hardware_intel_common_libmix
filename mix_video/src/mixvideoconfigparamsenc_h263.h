@@ -12,6 +12,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsenc.h"
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
 * MIX_TYPE_VIDEOCONFIGPARAMSENC_H263:
 * 
@@ -184,5 +186,7 @@ MIX_RESULT mix_videoconfigparamsenc_h263_set_slice_num (MixVideoConfigParamsEncH
  */
 MIX_RESULT mix_videoconfigparamsenc_h263_get_slice_num (MixVideoConfigParamsEncH263 * obj,
 		guint * slice_num);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_H263_H__ */

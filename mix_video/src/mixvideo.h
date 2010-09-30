@@ -21,6 +21,8 @@
 #include "mixvideocaps.h"
 #include "mixbuffer.h"
 
+G_BEGIN_DECLS
+
 /*
  * Type macros.
  */
@@ -83,6 +85,9 @@ typedef MIX_RESULT (*MixVideoReleaseMixBufferFunc)(MixVideo * mix,
 typedef MIX_RESULT (*MixVideoGetMaxCodedBufferSizeFunc) (MixVideo * mix,
 	      guint *max_size);
 
+
+typedef MIX_RESULT (*MixVideoSetDynamicEncConfigFunc) (MixVideo * mix,
+	      MixEncParamsType params_type, MixEncDynamicParams * dynamic_params);
 /**
  * MixVideo:
  * @parent: Parent object.
@@ -123,6 +128,7 @@ struct _MixVideoClass {
 	MixVideoGetMixBufferFunc get_mix_buffer_func;
 	MixVideoReleaseMixBufferFunc release_mix_buffer_func;
 	MixVideoGetMaxCodedBufferSizeFunc get_max_coded_buffer_size_func;
+	MixVideoSetDynamicEncConfigFunc set_dynamic_enc_config_func;
 };
 
 /**
@@ -541,5 +547,25 @@ MIX_RESULT mix_video_release_mixbuffer(MixVideo * mix, MixBuffer * buf);
  * </para>
  */
 MIX_RESULT mix_video_get_max_coded_buffer_size(MixVideo * mix, guint *bufsize);
+
+
+/**
+ * mix_video_set_dynamic_enc_config:
+ * @mix: #MixVideo object.
+ * @params_type: Dynamic encoder configuration type
+ * @dynamic_params: Point to dynamic control data structure which includes the new value to be changed to
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ * 
+ * <para>
+ * This function can be used to change the encoder parameters at run-time
+ * </para>
+ * <para>
+ * Usually this function is after the encoding session is started.
+ * </para>
+ */
+MIX_RESULT mix_video_set_dynamic_enc_config (MixVideo * mix, 
+	MixEncParamsType params_type, MixEncDynamicParams * dynamic_params);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEO_H__ */

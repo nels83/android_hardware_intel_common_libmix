@@ -13,6 +13,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideodef.h"
 #include <X11/Xlib.h>
 
+G_BEGIN_DECLS
+
 /**
 * MIX_TYPE_DISPLAYX11:
 * 
@@ -172,5 +174,7 @@ MIX_RESULT mix_displayx11_set_drawable (MixDisplayX11 * obj,
  */
 MIX_RESULT mix_displayx11_get_drawable (MixDisplayX11 * obj,
 					Drawable * drawable);
+
+G_END_DECLS
 
 #endif /* __MIX_DISPLAYX11_H__ */

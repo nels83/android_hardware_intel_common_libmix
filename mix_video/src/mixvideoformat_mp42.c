@@ -142,7 +142,7 @@ void mix_videoformat_mp42_finalize(GObject * obj) {
 	parent->initialized = TRUE;
 	parent->parse_in_progress = FALSE;
 	parent->discontinuity_frame_in_progress = FALSE;
-	parent->current_timestamp = 0;
+	parent->current_timestamp = (guint64)-1;
 
 	/* Close the parser */
 	vbp_ret = vbp_close(parent->parser_handle);
@@ -1149,7 +1149,7 @@ MIX_RESULT mix_videofmt_mp42_flush(MixVideoFormat *mix) {
 	 */
 	mix->parse_in_progress = FALSE;
 	mix->discontinuity_frame_in_progress = FALSE;
-	mix->current_timestamp = 0;
+	mix->current_timestamp = (guint64)-1;
 
 	{
 		gint idx = 0;

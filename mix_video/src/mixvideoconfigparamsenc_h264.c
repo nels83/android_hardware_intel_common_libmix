@@ -56,6 +56,7 @@ mix_videoconfigparamsenc_h264_init (MixVideoConfigParamsEncH264 * self)
   self->disable_deblocking_filter_idc = 0;
 
   self->delimiter_type = MIX_DELIMITER_LENGTHPREFIX;
+  self->idr_interval = 2;
 
   self->reserved1 = NULL;
   self->reserved2 = NULL;
@@ -170,6 +171,8 @@ mix_videoconfigparamsenc_h264_copy (MixParams * target, const MixParams * src)
       this_target->slice_num = this_src->slice_num;
       this_target->disable_deblocking_filter_idc = this_src->disable_deblocking_filter_idc;
       this_target->delimiter_type = this_src->delimiter_type;
+      this_target->idr_interval = this_src->idr_interval;	  
+
 	  
 
       // Now chainup base class
@@ -225,7 +228,11 @@ mix_videoconfigparamsencenc_h264_equal (MixParams * first, MixParams * second)
       if (this_first->delimiter_type != this_second->delimiter_type) {
 	  	goto not_equal;
 	}  	  
-	  
+
+      if (this_first->idr_interval != this_second->idr_interval) {
+	  	goto not_equal;
+	}  	  
+	  	  
 
 	ret = TRUE;
 
@@ -319,5 +326,19 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_delimiter_type (MixVideoConfigParam
 		MixDelimiterType * delimiter_type) {
 	MIX_VIDEOCONFIGPARAMSENC_H264_GETTER_CHECK_INPUT (obj, delimiter_type);
 	*delimiter_type = obj->delimiter_type;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_h264_set_IDR_interval (MixVideoConfigParamsEncH264 * obj,
+		guint idr_interval) {
+	MIX_VIDEOCONFIGPARAMSENC_H264_SETTER_CHECK_INPUT (obj);
+	obj->idr_interval = idr_interval;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_h264_get_IDR_interval (MixVideoConfigParamsEncH264 * obj,
+		guint * idr_interval) {
+	MIX_VIDEOCONFIGPARAMSENC_H264_GETTER_CHECK_INPUT (obj, idr_interval);
+	*idr_interval = obj->idr_interval;
 	return MIX_RESULT_SUCCESS;
 }

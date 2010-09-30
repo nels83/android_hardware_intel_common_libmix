@@ -6,14 +6,15 @@
 
 Summary: MIX Video Bitstream Parser
 Name: mixvbp
-Version: 0.1.15
+Version: 0.1.17
 Release: 1
-Source0: %{name}-%{version}.tar.gz
+Source0: %{name}-%{version}.tar.bz2
 NoSource: 0
 License: Proprietary
 Group: System Environment/Libraries
 BuildRoot: %{_tmppath}/%{name}-root
 ExclusiveArch: i586
+BuildRequires: glib2-devel libva-devel
 
 %description
 MIX Video Bitstream Parser is an user library interface for various video format bitstream parsing

@@ -12,6 +12,8 @@
 #include "mixvideoformatenc.h"
 #include "mixvideoframe_private.h"
 
+G_BEGIN_DECLS
+
 #define MIX_VIDEO_ENC_H263_SURFACE_NUM       20
 
 #define min(X,Y) (((X) < (Y)) ? (X) : (Y))
@@ -48,7 +50,9 @@ struct _MixVideoFormatEnc_H263 {
 	MixVideoFrame  *ref_frame;  //reference frame
 	MixVideoFrame  *rec_frame;	//reconstructed frame;	
 	MixVideoFrame  *last_frame;	//last frame;
+#ifdef ANDROID
         MixBuffer      *last_mix_buffer;
+#endif
 
 	guint disable_deblocking_filter_idc;
 	guint slice_num;
@@ -136,6 +140,8 @@ MIX_RESULT mix_videofmtenc_h263_get_max_encoded_buf_size (MixVideoFormatEnc *mix
 MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix, MixBuffer * bufin, 
 	MixIOVec * iovout);
 MIX_RESULT mix_videofmtenc_h263_send_encode_command (MixVideoFormatEnc_H263 *mix);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOFORMATENC_H263_H__ */
 

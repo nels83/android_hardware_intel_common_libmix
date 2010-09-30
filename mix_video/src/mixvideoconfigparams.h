@@ -12,6 +12,8 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_VIDEOCONFIGPARAMS:
  *
@@ -123,5 +125,7 @@ MixVideoConfigParams *mix_videoconfigparams_ref(MixVideoConfigParams * mix);
 /* Class Methods */
 
 /* TODO: Add getters and setters for other properties */
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMS_H__ */

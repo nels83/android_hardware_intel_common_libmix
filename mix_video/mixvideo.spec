@@ -6,15 +6,16 @@
 
 Summary: MIX Video
 Name: mixvideo
-Version: 0.1.17
+Version: 0.1.19
 Release: 1
-Source0: %{name}-%{version}.tar.gz
+Source0: %{name}-%{version}.tar.bz2
 NoSource: 0
 License: Proprietary
 Group: System Environment/Libraries
 BuildRoot: %{_tmppath}/%{name}-root
 ExclusiveArch: i586
-Requires: glib2 , mixcommon, mixvbp
+Requires: glib2 , mixcommon, mixvbp, libva, libX11
+BuildRequires: glib2-devel mixcommon-devel mixvbp-devel libva-devel libX11-devel
 
 %description
 MIX Video is an user library interface for various video codecs available on the platform.

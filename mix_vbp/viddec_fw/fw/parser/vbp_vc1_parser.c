@@ -8,10 +8,6 @@
 
 
 #ifdef ANDROID
-//#ifndef NULL
-//#define NULL (void*)0x0
-//#endif
-
 #define true 1
 #define false 0
 #endif

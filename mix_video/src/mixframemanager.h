@@ -13,6 +13,7 @@
 #include "mixvideodef.h"
 #include "mixvideoframe.h"
 
+G_BEGIN_DECLS
 /*
  * Type macros.
  */
@@ -26,6 +27,21 @@
 typedef struct _MixFrameManager MixFrameManager;
 typedef struct _MixFrameManagerClass MixFrameManagerClass;
 
+/* 
+* MIX_FRAMEORDER_MODE_DECODEORDER is here interpreted as 
+* MIX_DISPLAY_ORDER_FIFO,  a special case of display order mode. 
+*/
+typedef enum
+{
+    MIX_DISPLAY_ORDER_UNKNOWN,
+    MIX_DISPLAY_ORDER_FIFO,
+    MIX_DISPLAY_ORDER_TIMESTAMP,
+    MIX_DISPLAY_ORDER_PICNUMBER,
+    MIX_DISPLAY_ORDER_PICTYPE,
+    MIX_DISPLAY_ORDER_LAST
+} MixDisplayOrderMode;
+
+
 struct _MixFrameManager {
 	/*< public > */
 	GObject parent;
@@ -38,30 +54,20 @@ struct _MixFrameManager {
 	gboolean eos;
 
 	GMutex *lock;
-	GPtrArray *frame_array;
-	GQueue *frame_queue;
+	GSList* frame_list;
 
 	gint framerate_numerator;
 	gint framerate_denominator;
 	guint64 frame_timestamp_delta;
 
-	MixFrameOrderMode mode;
+	MixDisplayOrderMode mode;
 
 	gboolean is_first_frame;
+	guint64 last_frame_timestamp;
 	guint64 next_frame_timestamp;
-
-	/*
-	 * For VC-1 in ASF.
-	 */
-
-	MixVideoFrame *p_frame;
-	guint64 prev_timestamp;
-
-	gboolean timebased_ordering;
-#ifdef ANDROID
-	guint32 next_displayorder;
-	GArray *timestamp_storage;
-#endif	
+	guint32 next_frame_picnumber;
+	gint    max_enqueue_size;
+	guint32 max_picture_number;
 };
 
 /**
@@ -117,8 +123,8 @@ MixFrameManager *mix_framemanager_ref(MixFrameManager * mix);
  * Initialize FM
  */
 MIX_RESULT mix_framemanager_initialize(MixFrameManager *fm,
-		MixFrameOrderMode mode, gint framerate_numerator,
-		gint framerate_denominator, gboolean timebased_ordering);
+		MixDisplayOrderMode mode, gint framerate_numerator,
+		gint framerate_denominator);
 /*
  * Deinitialize FM
  */
@@ -138,10 +144,22 @@ MIX_RESULT mix_framemanager_get_framerate(MixFrameManager *fm,
 
 
 /*
- * Get Frame Order Mode
+ * Set miximum size of queue
  */
-MIX_RESULT mix_framemanager_get_frame_order_mode(MixFrameManager *fm,
-													MixFrameOrderMode *mode);
+MIX_RESULT mix_framemanager_set_max_enqueue_size(MixFrameManager *fm, gint size);
+						
+
+/*
+ * Set miximum picture number
+ */
+MIX_RESULT mix_framemanager_set_max_picture_number(MixFrameManager *fm, guint32 num);
+
+
+/*
+ * Get Display Order Mode
+ */
+MIX_RESULT mix_framemanager_get_display_order_mode(MixFrameManager *fm,
+													MixDisplayOrderMode *mode);
 
 /*
  * For discontiunity, reset FM
@@ -154,7 +172,7 @@ MIX_RESULT mix_framemanager_flush(MixFrameManager *fm);
 MIX_RESULT mix_framemanager_enqueue(MixFrameManager *fm, MixVideoFrame *mvf);
 
 /*
- * Dequeue MixVideoFrame in proper order depends on MixFrameOrderMode value
+ * Dequeue MixVideoFrame in proper order depends on MixDisplayOrderMode value
  * during initialization.
  */
 MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf);
@@ -164,5 +182,5 @@ MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf);
  */
 MIX_RESULT mix_framemanager_eos(MixFrameManager *fm);
 
-
+G_END_DECLS
 #endif /* __MIX_FRAMEMANAGER_H__ */

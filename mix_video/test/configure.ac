@@ -1,5 +1,5 @@
 
-AC_INIT([testmixvideo], [0.1], [tao.q.tao@intel.com])
+AC_INIT([testmixvideo],[0.1],[tao.q.tao@intel.com])
 
 dnl AC_CONFIG_MACRO_DIR([m4])
 
@@ -35,8 +35,8 @@ if test "x$HAVE_MIXVIDEO" = "xno"; then
   AC_MSG_ERROR(You need mixvideo development packages installed !)
 fi
 
-AC_ARG_ENABLE(optimization,     AC_HELP_STRING([  --disable-optimization], [Do not optimize the library for speed. Might be required for debugging.]))
-AC_ARG_ENABLE(debuginfo,        AC_HELP_STRING([  --enable-debuginfo    ],  [add -g to the compiler flags (to create debug information)]))
+AC_ARG_ENABLE(optimization,     AS_HELP_STRING([  --disable-optimization],[Do not optimize the library for speed. Might be required for debugging.]))
+AC_ARG_ENABLE(debuginfo,        AS_HELP_STRING([  --enable-debuginfo    ],[add -g to the compiler flags (to create debug information)]))
 
 if test "$enable_optimization" = "no" ; then
         DEBUG=true

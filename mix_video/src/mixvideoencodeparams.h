@@ -12,6 +12,8 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_VIDEOENCODEPARAMS:
  *
@@ -146,6 +148,8 @@ MIX_RESULT mix_videoencodeparams_set_discontinuity(MixVideoEncodeParams * obj,
 		gboolean discontinuity);
 MIX_RESULT mix_videoencodeparams_get_discontinuity(MixVideoEncodeParams * obj,
 		gboolean *discontinuity);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOENCODEPARAMS_H__ */
 

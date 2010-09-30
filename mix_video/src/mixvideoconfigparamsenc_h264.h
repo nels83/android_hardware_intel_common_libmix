@@ -12,6 +12,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsenc.h"
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
 * MIX_TYPE_VIDEOCONFIGPARAMSENC_H264:
 * 
@@ -83,6 +85,8 @@ struct _MixVideoConfigParamsEncH264
 
   /* delimiter_type */
   MixDelimiterType delimiter_type;
+
+  guint idr_interval;
   
   /* Reserved for future use */  
   void *reserved1;
@@ -235,6 +239,33 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_delimiter_type (MixVideoConfigParam
  */
 MIX_RESULT mix_videoconfigparamsenc_h264_get_delimiter_type (MixVideoConfigParamsEncH264 * obj,
 		MixDelimiterType * delimiter_type);
+
+
+/**
+ * mix_videoconfigparamsenc_h264_set_IDR_interval:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @idr_interval: IDR interval
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set IDR interval
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_set_IDR_interval (MixVideoConfigParamsEncH264 * obj,
+		guint idr_interval);
+
+
+/**
+ * mix_videoconfigparamsenc_h264_get_IDR_interval:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @idr_interval: IDR interval to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get IDR interval
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_get_IDR_interval (MixVideoConfigParamsEncH264 * obj,
+		guint * idr_interval);
+
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_H264_H__ */
 

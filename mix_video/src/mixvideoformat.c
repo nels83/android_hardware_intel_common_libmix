@@ -41,23 +41,27 @@ static void mix_videoformat_init(MixVideoFormat * self) {
 	/* These are all public because MixVideoFormat objects are completely internal to MixVideo,
 		no need for private members  */
 
-	self->initialized = FALSE;
-	self->framemgr = NULL;
-	self->surfacepool = NULL;
-	self->inputbufpool = NULL;
-	self->inputbufqueue = NULL;
-	self->va_display = NULL;
-	self->va_context = VA_INVALID_ID;
-	self->va_config = VA_INVALID_ID;
-	self->va_surfaces = NULL;
-	self->va_num_surfaces = 0;
-	self->mime_type = NULL;
-	self->frame_rate_num = 0;
-	self->frame_rate_denom = 0;
-	self->picture_width = 0;
-	self->picture_height = 0;
-	self->parse_in_progress = FALSE;
-	self->current_timestamp = 0;
+    self->initialized = FALSE;
+    self->va_initialized = FALSE;
+    self->framemgr = NULL;
+    self->surfacepool = NULL;
+    self->inputbufpool = NULL;
+    self->inputbufqueue = NULL;
+    self->va_display = NULL;
+    self->va_context = VA_INVALID_ID;
+    self->va_config = VA_INVALID_ID;
+    self->va_surfaces = NULL;
+    self->va_num_surfaces = 0;
+    self->mime_type = NULL;
+    self->frame_rate_num = 0;
+    self->frame_rate_denom = 0;
+    self->picture_width = 0;
+    self->picture_height = 0;
+    self->parse_in_progress = FALSE;
+    self->current_timestamp = (guint64)-1;
+    self->end_picture_pending = FALSE;
+    self->video_frame = NULL;
+    self->extra_surfaces = 0;
 }
 
 static void mix_videoformat_class_init(MixVideoFormatClass * klass) {
@@ -143,6 +147,11 @@ void mix_videoformat_finalize(GObject * obj) {
 		}
 	}
 
+    if (mix->video_frame)
+    {
+        mix_videoframe_unref(mix->video_frame);
+        mix->video_frame = NULL;
+    }
 
 	//Deinit input buffer queue 
 

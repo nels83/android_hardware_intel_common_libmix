@@ -492,10 +492,10 @@ MIX_RESULT mix_videoframe_set_displayorder(MixVideoFrame *obj, guint32 displayor
 MIX_RESULT mix_videoframe_get_displayorder(MixVideoFrame *obj, guint32 *displayorder) {
 
 	MIX_VIDEOFRAME_GETTER_CHECK_INPUT(obj, displayorder);
-        MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
+    MixVideoFramePrivate *priv = VIDEOFRAME_PRIVATE(obj);
 
-        *displayorder = priv -> displayorder;
-	return MIX_RESULT_SUCCESS;
+    *displayorder = priv -> displayorder;
+    return MIX_RESULT_SUCCESS;
 }
 
 

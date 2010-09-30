@@ -22,6 +22,8 @@
 #include "mixvideoformatqueue.h"
 #include "mixvideoencodeparams.h"
 
+G_BEGIN_DECLS
+
 /*
  * Type macros.
  */
@@ -52,6 +54,9 @@ typedef MIX_RESULT (*MixVideoFmtEncFlushFunc)(MixVideoFormatEnc *mix);
 typedef MIX_RESULT (*MixVideoFmtEncEndOfStreamFunc)(MixVideoFormatEnc *mix);
 typedef MIX_RESULT (*MixVideoFmtEncDeinitializeFunc)(MixVideoFormatEnc *mix);
 typedef MIX_RESULT (*MixVideoFmtEncGetMaxEncodedBufSizeFunc) (MixVideoFormatEnc *mix, guint *max_size);
+typedef MIX_RESULT (*MixVideoFmtEncSetDynamicEncConfigFunc) (MixVideoFormatEnc * mix, 
+	MixVideoConfigParamsEnc * config_params, 
+	MixEncParamsType params_type);
 
 struct _MixVideoFormatEnc {
     /*< public > */
@@ -82,6 +87,10 @@ struct _MixVideoFormatEnc {
     gboolean share_buf_mode;	
     gulong *	ci_frame_id;
     guint	ci_frame_num;	
+
+    gboolean force_key_frame;
+    gboolean new_header_required;
+    guint 	CIR_frame_cnt;	
     
     gulong    drawable;
     gboolean need_display;	
@@ -90,6 +99,7 @@ struct _MixVideoFormatEnc {
     VAEntrypoint va_entrypoint;
     guint va_format;
     guint va_rcmode; 	
+    guint8 level;	
 	
     
     MixBufferPool *inputbufpool;
@@ -115,6 +125,7 @@ struct _MixVideoFormatEncClass {
 	MixVideoFmtEncEndOfStreamFunc eos;
 	MixVideoFmtEncDeinitializeFunc deinitialize;
 	MixVideoFmtEncGetMaxEncodedBufSizeFunc getmaxencodedbufsize;	
+	MixVideoFmtEncSetDynamicEncConfigFunc set_dynamic_config;
 };
 
 /**
@@ -172,7 +183,12 @@ MIX_RESULT mix_videofmtenc_eos(MixVideoFormatEnc *mix);
 
 MIX_RESULT mix_videofmtenc_deinitialize(MixVideoFormatEnc *mix);
 
-MIX_RESULT mix_videofmtenc_get_max_coded_buffer_size(MixVideoFormatEnc *mix, guint *max_size);
+MIX_RESULT mix_videofmtenc_get_max_coded_buffer_size(MixVideoFormatEnc *mix, 
+	guint *max_size);
 
+MIX_RESULT mix_videofmtenc_set_dynamic_enc_config (MixVideoFormatEnc * mix, 
+	MixVideoConfigParamsEnc * config_params, 
+	MixEncParamsType params_type);
 
+G_END_DECLS
 #endif /* __MIX_VIDEOFORMATENC_H__ */

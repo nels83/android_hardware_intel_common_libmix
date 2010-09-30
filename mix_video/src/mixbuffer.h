@@ -12,6 +12,8 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_BUFFER:
  *
@@ -153,5 +155,7 @@ void mix_buffer_unref(MixBuffer * mix);
  */
 MIX_RESULT mix_buffer_set_data(MixBuffer * obj, guchar *data, guint size,
 		gulong token, MixBufferCallback callback);
+
+G_END_DECLS
 
 #endif /* __MIX_BUFFER_H__ */

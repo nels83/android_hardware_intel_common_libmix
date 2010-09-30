@@ -12,6 +12,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixbuffer.h"
 #include "mixbufferpool.h"
 
+G_BEGIN_DECLS
+
 typedef struct _MixBufferPrivate MixBufferPrivate;
 
 struct _MixBufferPrivate
@@ -35,5 +37,6 @@ struct _MixBufferPrivate
 MIX_RESULT
 mix_buffer_set_pool (MixBuffer *obj, MixBufferPool *pool);
 
+G_END_DECLS
 
 #endif /* __MIX_BUFFER_PRIVATE_H__ */

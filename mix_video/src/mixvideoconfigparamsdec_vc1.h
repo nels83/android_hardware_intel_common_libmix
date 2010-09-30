@@ -12,6 +12,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsdec.h"
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
 * MIX_TYPE_VIDEOCONFIGPARAMSDEC_VC1:
 * 
@@ -141,5 +143,7 @@ MixVideoConfigParamsDecVC1
 /* Class Methods */
 
 /* TODO: Add getters and setters for other properties */
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSDECDEC_VC1_H__ */

@@ -60,6 +60,9 @@ static void mix_videoconfigparamsenc_init(MixVideoConfigParamsEnc * self) {
 	self->rate_control = MIX_RATE_CONTROL_NONE;
 	self->raw_format = MIX_RAW_TARGET_FORMAT_YUV420;
 	self->profile = MIX_PROFILE_H264BASELINE;	
+	self->level = 30;
+
+	self->CIR_frame_cnt = 15;
 
 	/* TODO: initialize other properties */
 	self->reserved1 = NULL;
@@ -180,6 +183,8 @@ gboolean mix_videoconfigparamsenc_copy(MixParams * target, const MixParams * src
 	       this_target->rate_control = this_src->rate_control;
 	       this_target->raw_format = this_src->raw_format;
 	       this_target->profile = this_src->profile;		
+	       this_target->level = this_src->level;			   
+	       this_target->CIR_frame_cnt = this_src->CIR_frame_cnt;	
 		
 		/* copy properties of non-primitive */
 
@@ -317,7 +322,13 @@ gboolean mix_videoconfigparamsenc_equal(MixParams * first, MixParams * second) {
 	      if (this_first->profile != this_second->profile) {
 		  	goto not_equal;
 		}	  	
+	      if (this_first->level != this_second->level) {
+		  	goto not_equal;
+		}		
 
+	      if (this_first->CIR_frame_cnt != this_second->CIR_frame_cnt) {
+		  	goto not_equal;
+		}	
 		/* check the equalitiy of the none-primitive type properties */
 
 		/* compare mime_type */
@@ -684,6 +695,35 @@ MIX_RESULT mix_videoconfigparamsenc_get_profile (MixVideoConfigParamsEnc * obj,
 		MixProfile * profile) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, profile);
 	*profile = obj->profile;
+	return MIX_RESULT_SUCCESS;			
+}
+
+MIX_RESULT mix_videoconfigparamsenc_set_level (MixVideoConfigParamsEnc * obj, 
+		guint8 level) {
+	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
+	obj->level = level;
+	return MIX_RESULT_SUCCESS;			
+}
+
+MIX_RESULT mix_videoconfigparamsenc_get_level (MixVideoConfigParamsEnc * obj, 
+		guint8 * level) {
+	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, level);
+	*level = obj->level;
+	return MIX_RESULT_SUCCESS;			
+}
+
+
+MIX_RESULT mix_videoconfigparamsenc_set_CIR_frame_cnt (MixVideoConfigParamsEnc * obj, 
+		guint CIR_frame_cnt) {
+	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
+	obj->CIR_frame_cnt = CIR_frame_cnt;
+	return MIX_RESULT_SUCCESS;			
+}
+
+MIX_RESULT mix_videoconfigparamsenc_get_CIR_frame_cnt (MixVideoConfigParamsEnc * obj, 
+		guint * CIR_frame_cnt) {
+	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, CIR_frame_cnt);
+	*CIR_frame_cnt = obj->CIR_frame_cnt;
 	return MIX_RESULT_SUCCESS;			
 }
 

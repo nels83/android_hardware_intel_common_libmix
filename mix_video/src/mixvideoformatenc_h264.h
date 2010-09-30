@@ -12,6 +12,8 @@
 #include "mixvideoformatenc.h"
 #include "mixvideoframe_private.h"
 
+G_BEGIN_DECLS
+
 #define MIX_VIDEO_ENC_H264_SURFACE_NUM       20
 
 #define min(X,Y) (((X) < (Y)) ? (X) : (Y))
@@ -46,12 +48,15 @@ struct _MixVideoFormatEnc_H264 {
     MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
     MixVideoFrame  *ref_frame;  //reference frame
     MixVideoFrame  *rec_frame;	//reconstructed frame;	
-    MixVideoFrame  *last_frame;	//last frame;	
+    MixVideoFrame  *last_frame;	//last frame;
+#ifdef ANDROID	
     MixBuffer      *last_mix_buffer;
+#endif
 
     guint basic_unit_size;  //for rate control
     guint disable_deblocking_filter_idc;
     MixDelimiterType delimiter_type;
+    guint idr_interval;
     guint slice_num;
     guint va_rcmode; 
 
@@ -129,6 +134,9 @@ MIX_RESULT mix_videofmtenc_h264_encode(MixVideoFormatEnc *mix, MixBuffer * bufin
 MIX_RESULT mix_videofmtenc_h264_flush(MixVideoFormatEnc *mix);
 MIX_RESULT mix_videofmtenc_h264_eos(MixVideoFormatEnc *mix);
 MIX_RESULT mix_videofmtenc_h264_deinitialize(MixVideoFormatEnc *mix);
+MIX_RESULT mix_videofmtenc_h264_set_dynamic_enc_config (MixVideoFormatEnc * mix, 
+	MixVideoConfigParamsEnc * config_params_enc, 
+	MixEncParamsType params_type);
 
 /* Local Methods */
 
@@ -139,5 +147,7 @@ MIX_RESULT mix_videofmtenc_h264_AnnexB_to_length_prefixed (
         guint8 * bufin, guint bufin_len, guint8* bufout, guint *bufout_len);
 
 MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOFORMATENC_H264_H__ */

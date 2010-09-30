@@ -12,6 +12,8 @@
 #include "mixvideoformat.h"
 #include "mixvideoframe_private.h"
 
+G_BEGIN_DECLS
+
 //Note: this is only a max limit.  Actual number of surfaces allocated is calculated in mix_videoformat_vc1_initialize()
 #define MIX_VIDEO_VC1_SURFACE_NUM	8
 
@@ -119,5 +121,7 @@ MIX_RESULT mix_videofmt_vc1_process_decode(MixVideoFormat *mix,
 
 MIX_RESULT mix_videofmt_vc1_release_input_buffers(MixVideoFormat *mix, 
 					guint64 timestamp);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOFORMAT_VC1_H__ */

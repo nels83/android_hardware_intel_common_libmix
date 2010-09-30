@@ -13,6 +13,7 @@
 
 #include "mixvideoformatenc_preview.h"
 #include "mixvideoconfigparamsenc_preview.h"
+#include <va/va_tpi.h>
 
 #undef SHOW_SRC
 

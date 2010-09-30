@@ -12,6 +12,8 @@
 #include "mixvideoconfigparamsdec.h"
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_VIDEOCONFIGPARAMSDEC_MP42:
  *
@@ -181,5 +183,7 @@ MIX_RESULT mix_videoconfigparamsdec_mp42_set_divxversion(
  */
 MIX_RESULT mix_videoconfigparamsdec_mp42_get_divxversion(
 		MixVideoConfigParamsDecMP42 *obj, guint *version);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSDEC_MP42_H__ */

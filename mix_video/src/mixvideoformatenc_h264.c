@@ -13,6 +13,7 @@
 
 #include "mixvideoformatenc_h264.h"
 #include "mixvideoconfigparamsenc_h264.h"
+#include <va/va_tpi.h>
 
 #undef SHOW_SRC
 
@@ -44,7 +45,9 @@ static void mix_videoformatenc_h264_init(MixVideoFormatEnc_H264 * self) {
     self->cur_frame = NULL;
     self->ref_frame = NULL;
     self->rec_frame = NULL;
+#ifdef ANDROID
     self->last_mix_buffer = NULL;
+#endif
 
     self->ci_shared_surfaces = NULL;
     self->surfaces= NULL;
@@ -78,6 +81,7 @@ static void mix_videoformatenc_h264_class_init(
     video_formatenc_class->eos = mix_videofmtenc_h264_eos;
     video_formatenc_class->deinitialize = mix_videofmtenc_h264_deinitialize;
     video_formatenc_class->getmaxencodedbufsize = mix_videofmtenc_h264_get_max_encoded_buf_size;
+    video_formatenc_class->set_dynamic_config = mix_videofmtenc_h264_set_dynamic_enc_config;
 }
 
 MixVideoFormatEnc_H264 *
@@ -230,7 +234,16 @@ MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
                 "Failed to mix_videoconfigparamsenc_h264_get_delimiter_type\n");                 
         goto cleanup;
     }			
+
+    ret = mix_videoconfigparamsenc_h264_get_IDR_interval(config_params_enc_h264,
+            &self->idr_interval);
     
+    if (ret != MIX_RESULT_SUCCESS) {
+        LOG_E ( 
+                "Failed to mix_videoconfigparamsenc_h264_get_IDR_interval\n");                 
+        goto cleanup;
+    }		
+	
     LOG_V( 
             "======H264 Encode Object properities======:\n");
     
@@ -241,7 +254,9 @@ MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
     LOG_I( "self->slice_num = %d\n", 
             self->slice_num);			
     LOG_I ("self->delimiter_type = %d\n", 
-            self->delimiter_type);				
+            self->delimiter_type);		
+    LOG_I ("self->idr_interval = %d\n", 
+            self->idr_interval);		
     
     LOG_V( 
             "Get properities from params done\n");
@@ -251,6 +266,7 @@ MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
     LOG_V( "Get Display\n");
     LOG_I( "Display = 0x%08x\n", 
             (guint)va_display);			
+	
     
 #if 0
     /* query the vender information, can ignore*/
@@ -776,12 +792,12 @@ MIX_RESULT mix_videofmtenc_h264_flush(MixVideoFormatEnc *mix) {
         mix_videoframe_unref (self->ref_frame);
         self->ref_frame = NULL;       
     }
-
+#ifdef ANDROID
     if(self->last_mix_buffer) {
        mix_buffer_unref(self->last_mix_buffer);
        self->last_mix_buffer = NULL;
     }
-   
+#endif   
     /*reset the properities*/    
     self->encoded_frames = 0;
     self->pic_skipped = FALSE;
@@ -934,6 +950,7 @@ MIX_RESULT mix_videofmtenc_h264_send_seq_params (MixVideoFormatEnc_H264 *mix)
     /*set up the sequence params for HW*/
     h264_seq_param.level_idc = 30;  //TODO, hard code now
     h264_seq_param.intra_period = parent->intra_period;
+    h264_seq_param.intra_idr_period = mix->idr_interval;
     h264_seq_param.picture_width_in_mbs = parent->picture_width / 16;
     h264_seq_param.picture_height_in_mbs = parent->picture_height/ 16;
     h264_seq_param.bits_per_second = parent->bitrate;
@@ -954,7 +971,9 @@ MIX_RESULT mix_videofmtenc_h264_send_seq_params (MixVideoFormatEnc_H264 *mix)
     LOG_I( "level_idc = %d\n", 
             (guint)h264_seq_param.level_idc);	
     LOG_I( "intra_period = %d\n", 
-            h264_seq_param.intra_period);			
+            h264_seq_param.intra_period);		
+    LOG_I( "idr_interval = %d\n", 
+            h264_seq_param.intra_idr_period);		
     LOG_I( "picture_width_in_mbs = %d\n", 
             h264_seq_param.picture_width_in_mbs);	 
     LOG_I( "picture_height_in_mbs = %d\n", 
@@ -1510,8 +1529,11 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         if (mix->cur_frame == NULL)
         {
             guint ci_idx;
-            //memcpy (&ci_idx, bufin->data, bufin->size);
+#ifndef ANDROID
+            memcpy (&ci_idx, bufin->data, bufin->size);
+#else
             memcpy (&ci_idx, bufin->data, sizeof(unsigned int));
+#endif
 
             LOG_I( 
                     "surface_num = %d\n", mix->surface_num);			 
@@ -1551,6 +1573,10 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         ret = mix_videoframe_get_frame_id(mix->cur_frame, &surface);
         
     }
+
+    /**
+     * Start encoding process
+     **/
     
     LOG_V( "vaBeginPicture\n");	
     LOG_I( "va_context = 0x%08x\n",(guint)va_context);
@@ -1585,6 +1611,8 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
             goto cleanup;
         }
     }
+
+    LOG_V( "vaEndPicture\n");		
     
     if (mix->encoded_frames == 0) {
         mix->encoded_frames ++;
@@ -1650,6 +1678,8 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         coded_seg = coded_seg->next;
         num_seg ++;
     }
+
+    LOG_I ("segment number = %d\n", num_seg);
 
 #if 0
     // first 4 bytes is the size of the buffer
@@ -1876,6 +1906,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
     mix->coded_buf_index %=2;
     mix->last_frame = mix->cur_frame;
 
+#ifdef ANDROID
     if(mix->last_mix_buffer) {       
        LOG_V("calls to mix_buffer_unref \n");
        LOG_V("refcount = %d\n", MIX_PARAMS(mix->last_mix_buffer)->refcount);
@@ -1884,6 +1915,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
 
     LOG_V("ref the current bufin\n");
     mix->last_mix_buffer = mix_buffer_ref(bufin);
+#endif
 
     if (!(parent->need_display)) {
         mix_videoframe_unref (mix->cur_frame);
@@ -2101,10 +2133,12 @@ MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix
 
     LOG_V( "Begin\n");		
 
+    MixVideoFormatEnc *parent = MIX_VIDEOFORMATENC(&(mix->parent));
+	
     if (!MIX_IS_VIDEOFORMATENC_H264(mix))
         return MIX_RESULT_INVALID_PARAM;	
 	
-    if (mix->encoded_frames == 0) {
+    if (mix->encoded_frames == 0 || parent->new_header_required) {
         ret = mix_videofmtenc_h264_send_seq_params (mix);
         if (ret != MIX_RESULT_SUCCESS)
         {
@@ -2112,6 +2146,8 @@ MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix
                     "Failed mix_videofmtenc_h264_send_seq_params\n");
             return MIX_RESULT_FAIL;
         }
+
+	 parent->new_header_required = FALSE; //Set to require new header filed to FALSE
     }
     
     ret = mix_videofmtenc_h264_send_picture_parameter (mix);	
@@ -2136,5 +2172,99 @@ MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix
 
 
     return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videofmtenc_h264_set_dynamic_enc_config (MixVideoFormatEnc * mix, 
+	MixVideoConfigParamsEnc * config_params_enc, 
+	MixEncParamsType params_type) {
+
+
+	MIX_RESULT ret = MIX_RESULT_SUCCESS;
+	MixVideoFormatEnc *parent = NULL;
+	MixVideoConfigParamsEncH264 * config_params_enc_h264;
+
+	LOG_V( "Begin\n");		
+
+	if (!MIX_IS_VIDEOFORMATENC_H264(mix))
+		return MIX_RESULT_INVALID_PARAM;	
+
+	MixVideoFormatEnc_H264 *self = MIX_VIDEOFORMATENC_H264(mix);
+
+	parent = MIX_VIDEOFORMATENC(&(mix->parent));
+
+	if (MIX_IS_VIDEOCONFIGPARAMSENC_H264 (config_params_enc)) {
+		config_params_enc_h264 = 
+			MIX_VIDEOCONFIGPARAMSENC_H264 (config_params_enc);
+	} else {
+		LOG_V( 
+			"mix_videofmtenc_h264_initialize:  no h264 config params found\n");
+		return MIX_RESULT_FAIL;
+	}	
+
+	/*
+	* For case params_type == MIX_ENC_PARAMS_SLICE_SIZE
+	* we don't need to chain up to parent method, as we will handle
+	* dynamic slice height change inside this method, and other dynamic
+	* controls will be handled in parent method.
+	*/
+	if (params_type == MIX_ENC_PARAMS_SLICE_SIZE) {
+
+		g_mutex_lock(parent->objectlock);     	
+		
+		ret = mix_videoconfigparamsenc_h264_get_slice_num (config_params_enc_h264,
+			&self->slice_num);
+
+		if (ret != MIX_RESULT_SUCCESS) {
+			LOG_E( 
+				"Failed to mix_videoconfigparamsenc_h264_get_slice_num\n");  
+
+			g_mutex_unlock(parent->objectlock);       
+
+			return ret;
+		}			
+
+		g_mutex_unlock(parent->objectlock);       
+		
+	} else if (params_type == MIX_ENC_PARAMS_IDR_INTERVAL) {
+
+		g_mutex_lock(parent->objectlock);     	
+		
+		ret = mix_videoconfigparamsenc_h264_get_IDR_interval(config_params_enc_h264,
+			&self->idr_interval);
+
+		if (ret != MIX_RESULT_SUCCESS) {
+			LOG_E( 
+				"Failed to mix_videoconfigparamsenc_h264_get_IDR_interval\n");  
+
+			g_mutex_unlock(parent->objectlock);       
+
+			return ret;
+		}			
+
+		parent->new_header_required = TRUE;
+
+		g_mutex_unlock(parent->objectlock);    
+		
+	} else{
+
+		/* Chainup parent method. */
+		if (parent_class->set_dynamic_config) {
+			ret = parent_class->set_dynamic_config(mix, config_params_enc,
+				params_type);
+		}
+
+		if (ret != MIX_RESULT_SUCCESS)
+		{
+			LOG_V( 
+				"chainup parent method (set_dynamic_config) failed \n");
+			return ret;
+		}	
+	}
+
+
+	LOG_V( "End\n");		
+
+	return MIX_RESULT_SUCCESS;
+	
 }
 

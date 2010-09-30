@@ -156,6 +156,7 @@ gboolean mix_videoconfigparamsdec_copy(MixParams * target, const MixParams * src
 
 		/* copy properties of primitive type */
 
+		this_target->frame_order_mode = this_src->frame_order_mode;
 		this_target->frame_rate_num = this_src->frame_rate_num;
 		this_target->frame_rate_denom = this_src->frame_rate_denom;
 		this_target->picture_width = this_src->picture_width;
@@ -332,6 +333,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_frame_order_mode(
 		MixVideoConfigParamsDec * obj, MixFrameOrderMode frame_order_mode) {
 	MIX_VIDEOCONFIGPARAMSDEC_SETTER_CHECK_INPUT (obj);
 	obj->frame_order_mode = frame_order_mode;
+        LOG_V("obj->frame_order_mode = %d", obj->frame_order_mode);
 	return MIX_RESULT_SUCCESS;
 }
 
@@ -339,6 +341,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_frame_order_mode(
 		MixVideoConfigParamsDec * obj, MixFrameOrderMode * frame_order_mode) {
 	MIX_VIDEOCONFIGPARAMSDEC_GETTER_CHECK_INPUT (obj, frame_order_mode);
 	*frame_order_mode = obj->frame_order_mode;
+        LOG_V("obj->frame_order_mode = %d", obj->frame_order_mode);
 	return MIX_RESULT_SUCCESS;
 }
 

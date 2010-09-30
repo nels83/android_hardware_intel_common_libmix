@@ -79,6 +79,7 @@ struct _MixSurfacePool
   gulong free_list_max_size;	/* initial size of the free list */
   gulong free_list_cur_size;	/* current size of the free list */
   gulong high_water_mark;	/* most surfaces in use at one time */
+  gboolean initialized;
 //  guint64 timestamp;
 
   void *reserved1;

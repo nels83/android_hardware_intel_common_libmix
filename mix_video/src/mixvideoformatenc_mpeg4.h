@@ -12,6 +12,8 @@
 #include "mixvideoformatenc.h"
 #include "mixvideoframe_private.h"
 
+G_BEGIN_DECLS
+
 #define MIX_VIDEO_ENC_MPEG4_SURFACE_NUM       20
 
 #define min(X,Y) (((X) < (Y)) ? (X) : (Y))
@@ -138,6 +140,8 @@ MIX_RESULT mix_videofmtenc_mpeg4_get_max_encoded_buf_size (MixVideoFormatEnc *mi
 MIX_RESULT mix_videofmtenc_mpeg4_process_encode (MixVideoFormatEnc_MPEG4 *mix, MixBuffer * bufin, 
 	MixIOVec * iovout);
 MIX_RESULT mix_videofmtenc_mpeg4_send_encode_command (MixVideoFormatEnc_MPEG4 *mix);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOFORMATENC_MPEG4_H__ */
 

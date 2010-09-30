@@ -12,6 +12,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include <mixparams.h>
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
 * MIX_TYPE_VIDEOCAPS:
 * 
@@ -133,5 +135,7 @@ MIX_RESULT mix_videocaps_set_video_hw_caps (MixVideoCaps * obj,
 					    gchar * video_hw_caps);
 MIX_RESULT mix_videocaps_get_video_hw_caps (MixVideoCaps * obj,
 					    gchar ** video_hw_caps);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCAPS_H__ */

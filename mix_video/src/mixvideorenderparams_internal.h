@@ -9,6 +9,9 @@
 #ifndef __MIX_VIDEORENDERPARAMS_PRIVATE_H__
 #define __MIX_VIDEORENDERPARAMS_PRIVATE_H__
 
+G_BEGIN_DECLS
+
+
 typedef struct _MixVideoRenderParamsPrivate MixVideoRenderParamsPrivate;
 
 struct _MixVideoRenderParamsPrivate {
@@ -32,5 +35,7 @@ MIX_RESULT mix_videorenderparams_get_cliprects_internal(
 		MixVideoRenderParams * obj,
 		VARectangle ** va_cliprects,
 		guint* number_of_cliprects);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEORENDERPARAMS_PRIVATE_H__ */

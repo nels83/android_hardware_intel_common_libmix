@@ -12,6 +12,8 @@
 #include <mixvideoconfigparams.h>
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_VIDEOCONFIGPARAMSDEC:
  *
@@ -374,5 +376,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_extra_surface_allocation(MixVideoConfigP
 		guint *extra_surface_allocation);
 
 /* TODO: Add getters and setters for other properties */
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSDEC_H__ */

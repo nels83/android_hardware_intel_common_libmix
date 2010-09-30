@@ -10,6 +10,7 @@
 #define __MIX_VIDEO_LOG_H__
 #include <mixlog.h>
 
+G_BEGIN_DECLS
 #ifdef MIX_LOG_ENABLE
 #define LOG_V(format, ...) mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_VERBOSE, format, ##__VA_ARGS__)
 #define LOG_I(format, ...) mix_log(MIX_VIDEO_COMP, MIX_LOG_LEVEL_INFO, format, ##__VA_ARGS__)
@@ -21,5 +22,7 @@
 #define LOG_W(format, ...)
 #define LOG_E(format, ...)
 #endif
+
+G_END_DECLS
 
 #endif /*  __MIX_VIDEO_LOG_H__ */

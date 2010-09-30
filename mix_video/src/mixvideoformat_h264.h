@@ -12,6 +12,8 @@
 #include "mixvideoformat.h"
 #include "mixvideoframe_private.h"
 
+G_BEGIN_DECLS
+
 #define MIX_VIDEO_H264_SURFACE_NUM       20
 
 /*
@@ -123,7 +125,7 @@ void mix_videofmt_h264_destroy_DPB_key(gpointer data);
 void mix_videofmt_h264_destroy_DPB_value(gpointer data);
 guint mix_videofmt_h264_get_poc(VAPictureH264 *pic);
 
-
+G_END_DECLS
 
 
 #endif /* __MIX_VIDEOFORMAT_H264_H__ */

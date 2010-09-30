@@ -7,10 +7,6 @@
  */
 
 #ifdef ANDROID
-//#ifndef NULL
-//#define NULL (void*)0x0
-//#endif
-
 #define true 1
 #define false 0
 #endif
@@ -632,7 +628,7 @@ mp4_Status_t vbp_video_packet_header_mp42(
 			getbits = viddec_pm_get_bits(parent, &code, length);
 			BREAK_GETBITS_FAIL(getbits, ret);
 
-			length = code;
+			_macroblock_number = code;
 		}
 
 		/* quant_scale */
@@ -953,6 +949,17 @@ mp4_Status_t vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
 			if (slice_index >= MAX_NUM_SLICES) {
 				ret = MP4_STATUS_PARSE_ERROR;
 				break;
+			}
+
+			if (bit_offset)
+			{
+				/* byte-align parsing position */
+				getbits = viddec_pm_get_bits(parent, &code, 8 - bit_offset);
+				if (getbits == -1)
+				{
+					ret = MP4_STATUS_PARSE_ERROR;
+					return ret;
+				}
 			}
 
 			picture_data->number_slices = slice_index;

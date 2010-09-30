@@ -1,8 +1,8 @@
-AC_INIT("", "", [linda.s.cline@intel.com])
+AC_INIT([""],[""],[linda.s.cline@intel.com])
 
 AC_CONFIG_MACRO_DIR(m4)
 
-AS_MIX_VERSION(mixvideo, MIXVIDEO, 0, 1, 17)
+UMG_MIX_VERSION(mixvideo, MIXVIDEO, 0, 1, 19)
 
 dnl AM_MAINTAINER_MODE provides the option to enable maintainer mode
 AM_MAINTAINER_MODE
@@ -13,11 +13,11 @@ AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
 dnl make aclocal work in maintainer mode
 AC_SUBST(ACLOCAL_AMFLAGS, "-I m4")
 
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 
 dnl check for tools
 AC_PROG_CC
-AC_PROG_LIBTOOL
+LT_INIT
 
 #MIX_CFLAGS="-Wall -Werror"
 MIX_CFLAGS="-Wall"

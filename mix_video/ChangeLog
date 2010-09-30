@@ -1,3 +1,24 @@
+2010-09-15 Tao Tao <tao.q.tao@intel.com>
+
+		* Merged the changes for Android
+
+2010-09-02 Andy Qiu <junhai.qiu@intel.com>
+		* Refactored h.264 decoder to support partial frame and byte stream handling and delayed decoder configuration.
+		* Supported MPEG-4 video decoding with "video/x-xvid" mime type.
+		* Rolled version number to 0.1.19
+
+2010-07-29 Andy Qiu <junhai.qiu@intel.com>
+		* use high profile for baseline H.264 contents
+		* Rolled version number to 0.1.18
+
+2010-06-30 Tao Tao <tao.q.tao@intel.com>
+
+		* Added G_BEGIN_DECLS and G_END_DECLS to all header files
+
+2010-06-09 Weian Chen <weian.chen@intel.com>
+
+		* convert DOS line end format to Unix
+
 2010-06-04 Tao Tao <tao.q.tao@intel.com>
 
 		* Rolled version number to 0.1.17

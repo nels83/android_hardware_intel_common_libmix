@@ -5,17 +5,10 @@
 
  No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
  */
-
-
 #ifdef ANDROID
-//#ifndef NULL
-//#define NULL (void*)0x0
-//#endif
-
 #define true 1
 #define false 0
 #endif
-
 
 #include <glib.h>
 #include <dlfcn.h>
@@ -153,10 +146,6 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 		is_frame_start
 	*/
 	error = pcontext->func_init_parser_entries(pcontext);
-
-#ifdef ANDROID
-        pcontext->h264_frame_flag = 0;
-#endif
 
 cleanup:
 
@@ -515,7 +504,7 @@ uint32 vbp_utils_parse_buffer(vbp_context *pcontext, uint8 *data, uint32 size,  
 
 	uint32 error = VBP_OK;
 
-	/* ITRACE("buffer counter: %d",buffer_counter);  */
+    //ITRACE("buffer counter: %d",buffer_counter);
 
 	/* set up emitter. */
 	pcontext->parser_cxt->emitter.cur.data = pcontext->workload1;
@@ -559,10 +548,6 @@ uint32 vbp_utils_query(vbp_context *pcontext, void **data)
 	{
 		*data = NULL;
 	}
-#ifdef ANDROID
-	pcontext->h264_frame_flag = 0;
-#endif
-
 	return error;
 }
 

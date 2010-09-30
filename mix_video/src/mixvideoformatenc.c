@@ -30,6 +30,9 @@ static MIX_RESULT mix_videofmtenc_eos_default(MixVideoFormatEnc *mix);
 static MIX_RESULT mix_videofmtenc_deinitialize_default(MixVideoFormatEnc *mix);
 static MIX_RESULT mix_videofmtenc_get_max_coded_buffer_size_default(
 	MixVideoFormatEnc *mix, guint *max_size);
+MIX_RESULT mix_videofmtenc_set_dynamic_enc_config_default (MixVideoFormatEnc * mix, 
+	MixVideoConfigParamsEnc * config_params_enc, 
+	MixEncParamsType params_type);
 
 
 static GObjectClass *parent_class = NULL;
@@ -71,6 +74,10 @@ static void mix_videoformatenc_init(MixVideoFormatEnc * self) {
       self->va_format = VA_RT_FORMAT_YUV420;
       self->va_entrypoint = VAEntrypointEncSlice;
       self->va_profile = VAProfileH264Baseline;	   
+      self->level = 30;
+      self->CIR_frame_cnt = 15; //default value
+      self->force_key_frame = FALSE;
+      self->new_header_required = FALSE;
 	
 	//add more properties here
 }
@@ -91,6 +98,7 @@ static void mix_videoformatenc_class_init(MixVideoFormatEncClass * klass) {
 	klass->eos = mix_videofmtenc_eos_default;
 	klass->deinitialize = mix_videofmtenc_deinitialize_default;
 	klass->getmaxencodedbufsize = mix_videofmtenc_get_max_coded_buffer_size_default;
+	klass->set_dynamic_config = mix_videofmtenc_set_dynamic_enc_config_default;
 }
 
 MixVideoFormatEnc *
@@ -350,7 +358,31 @@ static MIX_RESULT mix_videofmtenc_initialize_default(MixVideoFormatEnc *mix,
         g_mutex_unlock(mix->objectlock);
         return MIX_RESULT_FAIL;
     }			
+
+    ret = mix_videoconfigparamsenc_get_level (config_params_enc,
+            &(mix->level));
     
+    if (ret != MIX_RESULT_SUCCESS) {
+        //TODO cleanup
+
+        LOG_E( 
+                "Failed to mix_videoconfigparamsenc_get_level\n");                            
+        g_mutex_unlock(mix->objectlock);
+        return MIX_RESULT_FAIL;
+    }			
+
+    ret = mix_videoconfigparamsenc_get_CIR_frame_cnt(config_params_enc, 
+            &(mix->CIR_frame_cnt));
+    
+    if (ret != MIX_RESULT_SUCCESS) {
+        //TODO cleanup
+
+        LOG_E( 
+                "Failed to mix_videoconfigparamsenc_get_CIR_frame_cnt\n");                            
+        g_mutex_unlock(mix->objectlock);
+        return MIX_RESULT_FAIL;
+    }		
+
     
     LOG_V( 
             "======Video Encode Parent Object properities======:\n");
@@ -419,6 +451,157 @@ static MIX_RESULT mix_videofmtenc_get_max_coded_buffer_size_default(
 
 
 	return MIX_RESULT_SUCCESS;	
+}
+
+MIX_RESULT mix_videofmtenc_set_dynamic_enc_config_default (MixVideoFormatEnc * mix, 
+	MixVideoConfigParamsEnc * config_params_enc, 
+	MixEncParamsType params_type) {
+
+	MIX_RESULT ret = MIX_RESULT_SUCCESS;	
+
+	if (mix == NULL ||config_params_enc == NULL) {
+		LOG_E( 
+			"!mix || config_params_enc == NULL\n");				
+		return MIX_RESULT_NULL_PTR;
+	}
+
+
+	MixVideoFormatEncClass *klass = MIX_VIDEOFORMATENC_GET_CLASS(mix);
+	
+
+	g_mutex_lock(mix->objectlock);
+
+	mix->new_header_required = FALSE;
+
+	switch (params_type) {
+		case MIX_ENC_PARAMS_BITRATE:
+		{
+			ret = mix_videoconfigparamsenc_get_bit_rate (config_params_enc, &(mix->bitrate));
+			if (ret != MIX_RESULT_SUCCESS) {
+				//TODO cleanup
+				LOG_E(
+					"Failed to mix_videoconfigparamsenc_get_bit_rate\n");                            
+				g_mutex_unlock(mix->objectlock);
+				return MIX_RESULT_FAIL;
+			}	
+
+			mix->new_header_required = TRUE;
+		}
+			break;
+		case MIX_ENC_PARAMS_SLICE_SIZE:
+		{
+			/*
+			* This type of dynamic control will be handled in H.264 override method
+			*/
+		}
+			break;
+			
+		case MIX_ENC_PARAMS_RC_MODE:	
+		{
+			ret = mix_videoconfigparamsenc_get_rate_control (config_params_enc, &(mix->va_rcmode));
+			if (ret != MIX_RESULT_SUCCESS) {
+				//TODO cleanup
+
+				LOG_E(
+					"Failed to mix_videoconfigparamsenc_get_rate_control\n");                            
+				g_mutex_unlock(mix->objectlock);
+				return MIX_RESULT_FAIL;
+			}	
+
+			mix->new_header_required = TRUE;					
+		}
+			break;
+			
+		case MIX_ENC_PARAMS_RESOLUTION:
+		{
+
+			ret = mix_videoconfigparamsenc_get_picture_res (config_params_enc, &(mix->picture_width), &(mix->picture_height));
+			if (ret != MIX_RESULT_SUCCESS) {
+				//TODO cleanup
+
+				LOG_E(
+					"Failed to mix_videoconfigparamsenc_get_picture_res\n");                            
+				g_mutex_unlock(mix->objectlock);
+				return MIX_RESULT_FAIL;
+			}	
+
+			mix->new_header_required = TRUE;			
+		}
+			break;
+		case MIX_ENC_PARAMS_GOP_SIZE:
+		{
+
+			ret = mix_videoconfigparamsenc_get_intra_period (config_params_enc, &(mix->intra_period));
+			if (ret != MIX_RESULT_SUCCESS) {
+				//TODO cleanup
+
+				LOG_E(
+					"Failed to mix_videoconfigparamsenc_get_intra_period\n");                            
+				g_mutex_unlock(mix->objectlock);
+				return MIX_RESULT_FAIL;
+			}				
+
+			mix->new_header_required = TRUE;						
+
+		}
+			break;
+		case MIX_ENC_PARAMS_FRAME_RATE:
+		{
+			ret = mix_videoconfigparamsenc_get_frame_rate (config_params_enc, &(mix->frame_rate_num),  &(mix->frame_rate_denom));
+			if (ret != MIX_RESULT_SUCCESS) {
+				//TODO cleanup
+
+				LOG_E(
+					"Failed to mix_videoconfigparamsenc_get_frame_rate\n");                            
+				g_mutex_unlock(mix->objectlock);
+				return MIX_RESULT_FAIL;
+			}				
+			
+			mix->new_header_required = TRUE;			
+		}
+			break;
+		case MIX_ENC_PARAMS_FORCE_KEY_FRAME:
+		{
+			mix->new_header_required = TRUE;			
+			
+		}
+			break;
+		case MIX_ENC_PARAMS_QP:
+		{
+			ret = mix_videoconfigparamsenc_get_init_qp (config_params_enc, &(mix->initial_qp));
+			if (ret != MIX_RESULT_SUCCESS) {
+				//TODO cleanup
+
+				LOG_E(
+					"Failed to mix_videoconfigparamsenc_get_init_qp\n");                            
+				g_mutex_unlock(mix->objectlock);
+				return MIX_RESULT_FAIL;
+			}			
+
+			mix->new_header_required = TRUE;			
+		}
+			break;
+		case MIX_ENC_PARAMS_CIR_FRAME_CNT:
+		{
+			ret = mix_videoconfigparamsenc_get_CIR_frame_cnt (config_params_enc, &(mix->CIR_frame_cnt));
+			if (ret != MIX_RESULT_SUCCESS) {
+				//TODO cleanup
+
+				LOG_E(
+					"Failed to mix_videoconfigparamsenc_get_CIR_frame_cnt\n");                            
+				g_mutex_unlock(mix->objectlock);
+				return MIX_RESULT_FAIL;
+			}			
+		}
+			break;
+			
+		default:
+			break;
+	}
+
+ 	g_mutex_unlock(mix->objectlock);	
+
+    	return MIX_RESULT_SUCCESS;	
 }
 
 /* mixvideoformatenc class methods implementation */
@@ -499,4 +682,16 @@ MIX_RESULT mix_videofmtenc_get_max_coded_buffer_size(MixVideoFormatEnc *mix, gui
     }
     
     return MIX_RESULT_FAIL;
+}
+
+MIX_RESULT mix_videofmtenc_set_dynamic_enc_config (MixVideoFormatEnc * mix, 
+	MixVideoConfigParamsEnc * config_params_enc, 
+	MixEncParamsType params_type) {
+
+    MixVideoFormatEncClass *klass = MIX_VIDEOFORMATENC_GET_CLASS(mix);	
+    if (klass->set_dynamic_config) {
+        return klass->set_dynamic_config(mix, config_params_enc, params_type);
+    }
+    
+    return MIX_RESULT_FAIL;	
 }

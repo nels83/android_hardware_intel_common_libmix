@@ -13,6 +13,7 @@
 
 #include "mixvideoformatenc_mpeg4.h"
 #include "mixvideoconfigparamsenc_mpeg4.h"
+#include <va/va_tpi.h>
 
 #undef SHOW_SRC
 
@@ -1552,7 +1553,7 @@ MIX_RESULT mix_videofmtenc_mpeg4_process_encode (MixVideoFormatEnc_MPEG4 *mix,
             if (coded_seg->next == NULL)	
                 break;		
             
-            coded_seg ++;
+            coded_seg = coded_seg->next;
             num_seg ++;
         }
         
@@ -1588,7 +1589,7 @@ MIX_RESULT mix_videofmtenc_mpeg4_process_encode (MixVideoFormatEnc_MPEG4 *mix,
             if (coded_seg->next == NULL)	
                 break;		
             
-            coded_seg ++;
+            coded_seg = coded_seg->next;
         }        
         
         iovout->buffer_size = iovout->data_size;

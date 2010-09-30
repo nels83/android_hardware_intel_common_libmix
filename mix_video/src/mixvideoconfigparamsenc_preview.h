@@ -12,6 +12,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsenc.h"
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
 * MIX_TYPE_VIDEOCONFIGPARAMSENC_PREVIEW:
 * 
@@ -115,6 +117,8 @@ MixVideoConfigParamsEncPreview
 * Decrement reference count of the object.
 */
 #define mix_videoconfigparamsenc_preview_unref(obj) mix_params_unref(MIX_PARAMS(obj))
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_PREVIEW_H__ */
 

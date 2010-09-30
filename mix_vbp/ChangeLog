@@ -1,2 +1,8 @@
+2010-09-15 Andy Qiu <tao.q.tao@intel.com>
+	* Merged changes for Android
 
+2010-09-02 Andy Qiu <junhai.qiu@intel.com>
+	* change H.264 parser to support partial frame parsing
+	* change H.264 parser to support byte stream parsing
+	* change version number to 0.1.17
 

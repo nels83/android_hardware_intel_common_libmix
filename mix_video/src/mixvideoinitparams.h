@@ -13,6 +13,8 @@
 #include "mixdisplay.h"
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_VIDEOINITPARAMS:
  * 
@@ -157,5 +159,7 @@ MIX_RESULT mix_videoinitparams_set_display (MixVideoInitParams * obj,
  */
 MIX_RESULT mix_videoinitparams_get_display (MixVideoInitParams * obj,
 					    MixDisplay ** dislay);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOINITPARAMS_H__ */

@@ -9,6 +9,7 @@
 #ifndef __MIX_VIDEO_PRIVATE_H__
 #define __MIX_VIDEO_PRIVATE_H__
 
+G_BEGIN_DECLS
 
 typedef struct _MixVideoPrivate MixVideoPrivate;
 
@@ -53,5 +54,6 @@ struct _MixVideoPrivate {
 void mix_video_private_initialize(MixVideoPrivate* priv);
 void mix_video_private_cleanup(MixVideoPrivate* priv);
 
+G_END_DECLS
 
 #endif /* __MIX_VIDEO_PRIVATE_H__ */

@@ -111,7 +111,10 @@ typedef struct _vbp_codec_data_h264
 	
 	/* video fromat */
 	uint8   	video_signal_type_present_flag; 	
-	uint8  		video_format;  		
+	uint8  		video_format;  
+
+    uint8       pic_order_cnt_type;
+    int         log2_max_pic_order_cnt_lsb_minus4;
 		
 } vbp_codec_data_h264;
 
@@ -141,20 +144,26 @@ typedef struct _vbp_slice_data_h264
 
 typedef struct _vbp_data_h264
 {
-     /* rolling counter of buffers sent by vbp_parse */
-     uint32 buf_number;
+    /* rolling counter of buffers sent by vbp_parse */
+    uint32 buf_number;
 
-	 uint32 num_pictures;
-	 
-	 vbp_picture_data_h264* pic_data;
-	      
-     /** 
-	 * do we need to send matrix to VA for each picture? If not, we need
-     * a flag indicating whether it is updated.
-	 */
-     VAIQMatrixBufferH264* IQ_matrix_buf;
+    uint32 num_pictures;
 
-     vbp_codec_data_h264* codec_data;
+    /* if SPS has been received */         
+    uint8  has_sps;
+
+    /* if PPS has been received */
+    uint8  has_pps;
+
+    vbp_picture_data_h264* pic_data;
+
+    /** 
+        * do we need to send matrix to VA for each picture? If not, we need
+        * a flag indicating whether it is updated.
+        */
+    VAIQMatrixBufferH264* IQ_matrix_buf;
+
+    vbp_codec_data_h264* codec_data;
 
 } vbp_data_h264; 
 

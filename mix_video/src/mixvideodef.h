@@ -29,7 +29,10 @@
 
 #ifndef __MIX_VIDEO_DEF_H__
 #define __MIX_VIDEO_DEF_H__
+
 #include <mixresult.h>
+
+G_BEGIN_DECLS
 
 /*
  * MI-X video error code
@@ -131,5 +134,40 @@ typedef enum
     MIX_DELIMITER_ANNEXB
 } MixDelimiterType;
 
+
+typedef enum {
+	MIX_ENC_PARAMS_START_UNUSED = 0x01000000,
+	MIX_ENC_PARAMS_BITRATE,
+	MIX_ENC_PARAMS_SLICE_SIZE,
+	MIX_ENC_PARAMS_RESOLUTION,
+	MIX_ENC_PARAMS_GOP_SIZE,
+	MIX_ENC_PARAMS_FRAME_RATE,
+	MIX_ENC_PARAMS_FORCE_KEY_FRAME,
+	MIX_ENC_PARAMS_IDR_INTERVAL,
+	MIX_ENC_PARAMS_RC_MODE,
+	MIX_ENC_PARAMS_MAX_ENCODED_SLICE_SIZE,
+	MIX_ENC_PARAMS_QP,
+	MIX_ENC_PARAMS_CIR_FRAME_CNT,
+	MIX_ENC_PARAMS_LAST
+} MixEncParamsType;
+
+typedef struct _MixEncDynamicParams {
+	guint bitrate;
+	guint slice_num;
+	guint width;
+	guint height;
+	guint frame_rate_num;
+	guint frame_rate_denom;	
+	guint intra_period;
+	guint idr_interval;	
+	guint QP;
+	guint CIR_frame_cnt;
+	guint max_slice_size;
+	gboolean force_idr;
+	MixRateControl rc_mode;
+	
+} MixEncDynamicParams;
+
+G_END_DECLS
 
 #endif /*  __MIX_VIDEO_DEF_H__ */

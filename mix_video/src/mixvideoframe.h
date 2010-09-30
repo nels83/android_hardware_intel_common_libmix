@@ -12,6 +12,8 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_VIDEOFRAME:
  *
@@ -234,5 +236,7 @@ MIX_RESULT mix_videoframe_get_discontinuity(MixVideoFrame * obj, gboolean * disc
 MIX_RESULT mix_videoframe_set_vadisplay(MixVideoFrame * obj, void *va_display);
 MIX_RESULT mix_videoframe_get_vadisplay(MixVideoFrame * obj, void **va_display);
 MIX_RESULT mix_videoframe_get_frame_structure(MixVideoFrame * obj, guint32* frame_structure);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOFRAME_H__ */

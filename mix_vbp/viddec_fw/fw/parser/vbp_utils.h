@@ -76,10 +76,6 @@ struct vbp_context_t
 	function_process_parsing_result func_process_parsing_result;
 	function_populate_query_data 	func_populate_query_data;
 
-#ifdef ANDROID
-	uint32 h264_frame_flag;
-#endif
-
 };
 
 /**

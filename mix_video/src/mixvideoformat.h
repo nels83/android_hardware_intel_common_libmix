@@ -23,6 +23,8 @@
 #include "mixbufferpool.h"
 #include "mixvideoformatqueue.h"
 
+G_BEGIN_DECLS
+
 // Redefine the Handle defined in vbp_loader.h
 #define	VBPhandle	Handle
 
@@ -56,32 +58,36 @@ typedef MIX_RESULT (*MixVideoFmtEndOfStreamFunc)(MixVideoFormat *mix);
 typedef MIX_RESULT (*MixVideoFmtDeinitializeFunc)(MixVideoFormat *mix);
 
 struct _MixVideoFormat {
-	/*< public > */
-	GObject parent;
+    /*< public > */
+    GObject parent;
 
-	/*< public > */
+    /*< public > */
 
-	/*< private > */
-        GMutex *objectlock;
-	gboolean initialized;
-	MixFrameManager *framemgr;
-	MixSurfacePool *surfacepool;
-	VADisplay va_display;
-	VAContextID va_context;
-	VAConfigID va_config;
-	VASurfaceID *va_surfaces;
-	guint va_num_surfaces;
-	VBPhandle parser_handle;
-	GString *mime_type;
-	guint frame_rate_num;
-	guint frame_rate_denom;
-	guint picture_width;
-	guint picture_height;
-	gboolean parse_in_progress;
-	gboolean discontinuity_frame_in_progress;
-	guint64 current_timestamp;
-	MixBufferPool *inputbufpool;
-	GQueue *inputbufqueue;
+    /*< private > */
+    GMutex *objectlock;
+    gboolean initialized;
+    MixFrameManager *framemgr;
+    MixSurfacePool *surfacepool;
+    VADisplay va_display;
+    VAContextID va_context;
+    VAConfigID va_config;
+    VASurfaceID *va_surfaces;
+    guint va_num_surfaces;
+    VBPhandle parser_handle;
+    GString *mime_type;
+    guint frame_rate_num;
+    guint frame_rate_denom;
+    guint picture_width;
+    guint picture_height;
+    gboolean parse_in_progress;
+    gboolean discontinuity_frame_in_progress;
+    guint64 current_timestamp;
+    MixBufferPool *inputbufpool;
+    GQueue *inputbufqueue;    
+    gboolean va_initialized;
+    gboolean end_picture_pending;
+    MixVideoFrame* video_frame;    
+    guint extra_surfaces;
 };
 
 /**
@@ -156,5 +162,7 @@ MIX_RESULT mix_videofmt_flush(MixVideoFormat *mix);
 MIX_RESULT mix_videofmt_eos(MixVideoFormat *mix);
 
 MIX_RESULT mix_videofmt_deinitialize(MixVideoFormat *mix);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOFORMAT_H__ */

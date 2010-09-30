@@ -14,6 +14,8 @@
 #include "mixdisplay.h"
 #include "mixvideoframe.h"
 
+G_BEGIN_DECLS
+
 /**
  * MIX_TYPE_VIDEORENDERPARAMS:
  *
@@ -252,5 +254,7 @@ MIX_RESULT mix_videorenderparams_get_clipping_rects(MixVideoRenderParams * obj,
 		MixRect ** clipping_rects, guint* number_of_clipping_rects);
 
 /* TODO: Add getters and setters for other properties */
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEORENDERPARAMS_H__ */

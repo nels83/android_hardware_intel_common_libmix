@@ -12,6 +12,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsenc.h"
 #include "mixvideodef.h"
 
+G_BEGIN_DECLS
+
 /**
 * MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4:
 * 
@@ -219,5 +221,7 @@ MIX_RESULT mix_videoconfigparamsenc_mpeg4_set_fixed_vti (MixVideoConfigParamsEnc
  */
 MIX_RESULT mix_videoconfigparamsenc_mpeg4_get_fixed_vti (MixVideoConfigParamsEncMPEG4 * obj,
 		guint * fixed_vop_time_increment);
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_MPEG4_H__ */

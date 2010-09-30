@@ -12,6 +12,8 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoframe.h"
 #include "mixsurfacepool.h"
 
+G_BEGIN_DECLS
+
 typedef enum _MixFrameType
 {
   TYPE_I,
@@ -33,7 +35,7 @@ struct _MixVideoFramePrivate
   gboolean sync_flag;
   guint32 frame_structure; // 0: frame, 1: top field, 2: bottom field
   void *va_display;
-  guint32 displayorder;  	
+  guint32 displayorder; 
 };
 
 /**
@@ -85,5 +87,8 @@ mix_videoframe_set_displayorder(MixVideoFrame *obj, guint32 displayorder);
 
 MIX_RESULT
 mix_videoframe_get_displayorder(MixVideoFrame *obj, guint32 *displayorder);
+
+
+G_END_DECLS
 
 #endif /* __MIX_VIDEOFRAME_PRIVATE_H__ */

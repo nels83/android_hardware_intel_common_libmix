@@ -42,6 +42,7 @@ static void mix_surfacepool_init(MixSurfacePool * self) {
 	self->free_list_max_size = 0;
 	self->free_list_cur_size = 0;
 	self->high_water_mark = 0;
+	self->initialized = FALSE;
 
 	self->reserved1 = NULL;
 	self->reserved2 = NULL;
@@ -256,6 +257,9 @@ MIX_RESULT mix_surfacepool_initialize(MixSurfacePool * obj,
 
 		obj->high_water_mark = 0;
 
+        /* assume it is initialized */
+        obj->initialized = TRUE;
+        
 		MIX_UNLOCK(obj->objectlock);
 
 		return MIX_RESULT_SUCCESS;
@@ -301,6 +305,8 @@ MIX_RESULT mix_surfacepool_initialize(MixSurfacePool * obj,
 	obj->free_list_cur_size = num_surfaces;
 
 	obj->high_water_mark = 0;
+
+    obj->initialized = TRUE;
 
 	MIX_UNLOCK(obj->objectlock);
 
@@ -536,6 +542,14 @@ MIX_RESULT mix_surfacepool_check_available(MixSurfacePool * obj) {
 
 	MIX_LOCK(obj->objectlock);
 
+    if (obj->initialized == FALSE)
+    {
+        LOG_W("surface pool is not initialized, probably configuration data has not been received yet.\n");
+        MIX_UNLOCK(obj->objectlock);
+        return MIX_RESULT_NOT_INIT;
+    }
+
+    
 #if 0
 	if (obj->free_list == NULL) {
 #else

@@ -1,9 +1,9 @@
 dnl as-mix-version.m4 
 
-dnl AS_MIX_VERSION(PACKAGE, PREFIX, MAJOR, MINOR, RELEASE)
+dnl UMG_MIX_VERSION(PACKAGE, PREFIX, MAJOR, MINOR, RELEASE)
 
 dnl example
-dnl AS_MIX_VERSION(mixvideo,MIXVIDEO, 0, 3, 2,)
+dnl UMG_MIX_VERSION(mixvideo,MIXVIDEO, 0, 3, 2,)
 dnl for a 0.3.2 release version
 
 dnl this macro
@@ -11,7 +11,7 @@ dnl - defines [$PREFIX]_MAJOR, MINOR and REVISION, CURRENT, AGE
 dnl - defines [$PREFIX], VERSION
 dnl - AC_SUBST's all defined vars
 
-AC_DEFUN([AS_MIX_VERSION],
+AC_DEFUN([UMG_MIX_VERSION],
 [
   PACKAGE=[$1]
   [$2]_MAJOR=[$3]

@@ -120,7 +120,7 @@ void mix_videoformat_vc1_finalize(GObject * obj) {
         parent->initialized = TRUE;
         parent->parse_in_progress = FALSE;
 	parent->discontinuity_frame_in_progress = FALSE;
-	parent->current_timestamp = 0;
+	parent->current_timestamp = (guint64)-1;
 
 	//Close the parser
         pret = vbp_close(parent->parser_handle);
@@ -1526,7 +1526,7 @@ MIX_RESULT mix_videofmt_vc1_flush(MixVideoFormat *mix)
 	//Clear parse_in_progress flag and current timestamp
 	mix->parse_in_progress = FALSE;
 	mix->discontinuity_frame_in_progress = FALSE;
-	mix->current_timestamp = 0;
+	mix->current_timestamp = (guint64)-1;
 
 	int i = 0;
 	for (; i < 2; i++)
