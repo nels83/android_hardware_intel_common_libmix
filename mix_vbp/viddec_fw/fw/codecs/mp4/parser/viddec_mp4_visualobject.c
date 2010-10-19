@@ -1,7 +1,4 @@
 #include "viddec_mp4_visualobject.h"
-#ifdef ANDROID
-#include "viddec_types.h"
-#endif
 
 static inline uint8_t mp4_pvt_isValid_verID(uint8_t id)
 {

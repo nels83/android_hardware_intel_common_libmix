@@ -1,10 +1,3 @@
-
-#ifdef ANDROID
-#define true 1
-#define false 0
-#endif
-
-
 /*!
  ***********************************************************************
  *  \file: h264_dpb_ctl.c

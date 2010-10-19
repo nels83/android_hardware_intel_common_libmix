@@ -211,6 +211,10 @@ enum viddec_fw_mpeg2_error_codes
 #define false 0
 #endif
 
+#ifndef bool
+typedef int bool;
+#endif
+
 #endif 
 /* end of #ifdef VBP */
 

@@ -1,3 +1,8 @@
+2010-09-29 Andy Qiu <junhai.qiu@intel.com>
+		* Supported FLV playback
+		* Re-factored frame manager
+		* Changed version number to 0.1.20
+
 2010-09-15 Tao Tao <tao.q.tao@intel.com>
 
 		* Merged the changes for Android

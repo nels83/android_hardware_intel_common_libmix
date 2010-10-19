@@ -6,9 +6,6 @@
 #include "viddec_mp4_videoobjectlayer.h"
 #include "viddec_mp4_videoobjectplane.h"
 #include "viddec_mp4_visualobject.h"
-#ifdef ANDROID
-#include "viddec_types.h"
-#endif
 
 extern uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state);
 

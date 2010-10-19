@@ -1,4 +1,8 @@
-2010-09-15 Andy Qiu <tao.q.tao@intel.com>
+2010-09-29 Andy Qiu <junhai.qiu@intel.com>
+	* Enhanced H.264 bitstream parsing
+	* Changed version number to 0.1.18
+
+2010-09-15 Tao Tao  <tao.q.tao@intel.com>
 	* Merged changes for Android
 
 2010-09-02 Andy Qiu <junhai.qiu@intel.com>

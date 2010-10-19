@@ -6,7 +6,7 @@
 
 Summary: MIX Video
 Name: mixvideo
-Version: 0.1.19
+Version: 0.1.20
 Release: 1
 Source0: %{name}-%{version}.tar.bz2
 NoSource: 0
@@ -42,27 +42,40 @@ The %{name}-int-devel package contains the header files and static libraries for
 
 %prep
 %setup -q
+
 %build
 ./autogen.sh
 ./configure --prefix=%{_prefix}
 make
+
 %install
 make DESTDIR=$RPM_BUILD_ROOT install
+
 %clean
 rm -rf $RPM_BUILD_ROOT
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
 %files
 %defattr(-,root,root)
-%{_prefix}/lib/libmixvideo.so*
+%{_prefix}/lib/libmixvideo.so.*
 
 %files devel
 %defattr(-,root,root)
 %{_prefix}/include/mix
+%{_prefix}/lib/libmixvideo.so
 %{_prefix}/lib/*.la
 %{_prefix}/lib/pkgconfig/mixvideo.pc
 
 %files int-devel
 %defattr(-,root,root)
+%{_prefix}/lib/libmixvideo.so
 %{_prefix}/include/mixvideoint
 %{_prefix}/lib/pkgconfig/mixvideoint.pc
 
+%changelog
+* Mon Sep 13 2010 John Q Public <umg@intel.com> 0.0
+- Dummy changelog to satisfy rpmlint.
 

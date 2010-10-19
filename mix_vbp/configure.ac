@@ -2,7 +2,7 @@ AC_INIT([""],[""],[linda.s.cline@intel.com])
 
 AC_CONFIG_MACRO_DIR(m4)
 
-UMG_MIX_VERSION(mixvbp, MIXVBP, 0, 1, 17)
+UMG_MIX_VERSION(mixvbp, MIXVBP, 0, 1, 18)
 
 dnl AM_MAINTAINER_MODE provides the option to enable maintainer mode
 AM_MAINTAINER_MODE

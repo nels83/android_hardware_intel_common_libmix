@@ -12,6 +12,8 @@
 #include "mixvideoformat.h"
 #include "mixvideoframe_private.h"
 
+#define DECODER_ROBUSTNESS
+
 G_BEGIN_DECLS
 
 #define MIX_VIDEO_H264_SURFACE_NUM       20
@@ -37,6 +39,10 @@ struct _MixVideoFormat_H264 {
 
 	/*< private > */
 	GHashTable *dpb_surface_table;
+#ifdef DECODER_ROBUSTNESS
+	//Can improve which frame is used for this at a later time
+	MixVideoFrame  *last_decoded_frame;  //last surface decoded, to be used as reference frame when reference frames are missing
+#endif
 };
 
 /**
@@ -90,7 +96,7 @@ MixVideoFormat_H264 *mix_videoformat_h264_ref(MixVideoFormat_H264 * mix);
 
 /* H.264 vmethods */
 MIX_RESULT mix_videofmt_h264_getcaps(MixVideoFormat *mix, GString *msg);
-MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix, 
+MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
 				  MixVideoConfigParamsDec * config_params,
 				  MixFrameManager * frame_mgr,
 				  MixBufferPool * input_buf_pool,
@@ -110,12 +116,12 @@ MIX_RESULT mix_videofmt_h264_handle_ref_frames(MixVideoFormat *mix,
 
 
 MIX_RESULT mix_videofmt_h264_process_decode(MixVideoFormat *mix,
-                                        vbp_data_h264 *data, 
+                                        vbp_data_h264 *data,
 					guint64 timestamp,
 					gboolean discontinuity);
 
 
-MIX_RESULT mix_videofmt_h264_release_input_buffers(MixVideoFormat *mix, 
+MIX_RESULT mix_videofmt_h264_release_input_buffers(MixVideoFormat *mix,
 					guint64 timestamp);
 
 

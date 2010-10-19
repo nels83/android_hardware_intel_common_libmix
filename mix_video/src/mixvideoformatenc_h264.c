@@ -1117,6 +1117,8 @@ MIX_RESULT mix_videofmtenc_h264_send_slice_parameter (MixVideoFormatEnc_H264 *mi
     slice_height += 15;
     slice_height &= (~15);
 
+    slice_num = mix->slice_num = (parent->picture_height + 15) / slice_height;
+
 #if 1 		 
     va_status = vaCreateBuffer (parent->va_display, parent->va_context, 
             VAEncSliceParameterBufferType,

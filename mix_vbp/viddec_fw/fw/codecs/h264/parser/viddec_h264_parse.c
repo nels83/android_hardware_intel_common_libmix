@@ -1,8 +1,3 @@
-#ifdef ANDROID
-#define true 1
-#define false 0
-#endif
-
 #include "viddec_fw_debug.h"
 #include "viddec_parser_ops.h"
 

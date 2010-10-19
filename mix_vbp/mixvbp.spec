@@ -6,7 +6,7 @@
 
 Summary: MIX Video Bitstream Parser
 Name: mixvbp
-Version: 0.1.17
+Version: 0.1.18
 Release: 1
 Source0: %{name}-%{version}.tar.bz2
 NoSource: 0
@@ -29,25 +29,40 @@ The %{name}-devel package contains the header files and static libraries for bui
 
 %prep
 %setup -q
+
 %build
 ./autogen.sh
 ./configure --prefix=%{_prefix}
 make
+
 %install
 make DESTDIR=$RPM_BUILD_ROOT install
 rm -f $RPM_BUILD_ROOT/%{_prefix}/lib/libmixvbp_mpeg2*
+
+%post -p /sbin/ldconfig
+%postun -p /sbin/ldconfig
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root)
-%{_prefix}/lib/libmixvbp.so*
-%{_prefix}/lib/libmixvbp_vc1.so*
-%{_prefix}/lib/libmixvbp_h264.so*
-%{_prefix}/lib/libmixvbp_mpeg4.so*
+%{_prefix}/lib/libmixvbp.so.*
+%{_prefix}/lib/libmixvbp_vc1.so.*
+%{_prefix}/lib/libmixvbp_h264.so.*
+%{_prefix}/lib/libmixvbp_mpeg4.so.*
 
 %files devel
 %defattr(-,root,root)
-%{_prefix}/include
+%{_prefix}/include/mixvbp
 %{_prefix}/lib/*.la
 %{_prefix}/lib/pkgconfig/mixvbp.pc
+%{_prefix}/lib/libmixvbp.so
+%{_prefix}/lib/libmixvbp_vc1.so
+%{_prefix}/lib/libmixvbp_h264.so
+%{_prefix}/lib/libmixvbp_mpeg4.so
+
+
+%changelog
+* Mon Sep 13 2010 John Q Public <umg@intel.com> 0.0
+- Dummy changelog to satisfy rpmlint.
+

@@ -29,11 +29,6 @@ typedef unsigned short uint16;
 #ifndef uint32
 typedef unsigned int uint32;
 #endif
-#ifndef ANDROID
-#ifndef bool
-typedef int bool;
-#endif
-#endif
 
 typedef void *Handle;
 

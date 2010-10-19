@@ -1,7 +1,4 @@
 #include "viddec_mp4_videoobjectplane.h"
-#ifdef ANDROID
-#include "viddec_types.h"
-#endif
 
 mp4_Status_t mp4_Parse_GroupOfVideoObjectPlane(void *parent, viddec_mp4_parser_t *parser)
 {

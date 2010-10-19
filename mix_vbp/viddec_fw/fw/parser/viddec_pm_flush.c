@@ -1,7 +1,3 @@
-#ifdef ANDROID
-#define true 1
-#define false 0
-#endif
 
 #include "fw_pvt.h"
 #include "viddec_fw_parser_ipclib_config.h"

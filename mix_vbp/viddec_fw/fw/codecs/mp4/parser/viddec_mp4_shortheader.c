@@ -1,7 +1,4 @@
 #include "viddec_mp4_shortheader.h"
-#ifdef ANDROID
-#include "viddec_types.h"
-#endif
 
 typedef struct
 {

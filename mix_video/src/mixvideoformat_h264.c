@@ -18,8 +18,6 @@
 static int mix_video_h264_counter = 0;
 #endif /* MIX_LOG_ENABLE */
 
-#define DECODER_ROBUSTNESS
-
 /* The parent class. The pointer will be saved
  * in this class's initialization. The pointer
  * can be used for chaining method call if needed.
@@ -40,6 +38,9 @@ static void mix_videoformat_h264_init(MixVideoFormat_H264 * self) {
 	/* These are all public because MixVideoFormat objects are completely internal to MixVideo,
 		no need for private members  */
 	self->dpb_surface_table = NULL;
+#ifdef DECODER_ROBUSTNESS
+	self->last_decoded_frame = NULL;
+#endif
 
 	/* NOTE: we don't need to do this here.
 	 * This just demostrates how to access
@@ -165,7 +166,7 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
     VAConfigAttrib attrib;
 
     MixVideoFormat *parent = MIX_VIDEOFORMAT(mix);
-    MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);  
+    MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);
 
     if (parent->va_initialized)
     {
@@ -183,11 +184,11 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
     //Initialize and save the VA config ID
     //We use high profile for all kinds of H.264 profiles (baseline, main and high)
     vret = vaCreateConfig(
-        parent->va_display, 
-        VAProfileH264High, 
-        VAEntrypointVLD, 
-        &attrib, 
-        1, 
+        parent->va_display,
+        VAProfileH264High,
+        VAEntrypointVLD,
+        &attrib,
+        1,
         &(parent->va_config));
 
     if (vret != VA_STATUS_SUCCESS)
@@ -207,7 +208,7 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
     //Adding 1 to work around VBLANK issue, and another 1 to compensate cached frame that
     // will not start decoding until a new frame is received.
     parent->va_num_surfaces = 1 + 1 + parent->extra_surfaces + (((num_ref_pictures + 3) <
-        MIX_VIDEO_H264_SURFACE_NUM) ? 
+        MIX_VIDEO_H264_SURFACE_NUM) ?
         (num_ref_pictures + 3)
         : MIX_VIDEO_H264_SURFACE_NUM);
 
@@ -219,17 +220,17 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
         goto cleanup;
     }
 
-    LOG_V( "Codec data says picture size is %d x %d\n", 
-        (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16, 
+    LOG_V( "Codec data says picture size is %d x %d\n",
+        (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16,
         (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16);
     LOG_V( "getcaps says picture size is %d x %d\n", parent->picture_width, parent->picture_height);
 
     vret = vaCreateSurfaces(
-        parent->va_display, 
-        (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16, 
-        (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16, 
+        parent->va_display,
+        (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16,
+        (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16,
         VA_RT_FORMAT_YUV420,
-        parent->va_num_surfaces, 
+        parent->va_num_surfaces,
         parent->va_surfaces);
 
     if (vret != VA_STATUS_SUCCESS)
@@ -244,8 +245,8 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
     //Initialize the surface pool
     ret = mix_surfacepool_initialize(
         parent->surfacepool,
-        parent->va_surfaces, 
-        parent->va_num_surfaces, 
+        parent->va_surfaces,
+        parent->va_num_surfaces,
         parent->va_display);
 
     switch (ret)
@@ -265,16 +266,16 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
         int max = (int)pow(2, data->codec_data->log2_max_pic_order_cnt_lsb_minus4 + 4);
         mix_framemanager_set_max_picture_number(parent->framemgr, max);
     }
-    
+
     //Initialize and save the VA context ID
     //Note: VA_PROGRESSIVE libva flag is only relevant to MPEG2
     vret = vaCreateContext(
-        parent->va_display, 
+        parent->va_display,
         parent->va_config,
-        parent->picture_width, 
+        parent->picture_width,
         parent->picture_height,
         0,  // no flag set
-        parent->va_surfaces, 
+        parent->va_surfaces,
         parent->va_num_surfaces,
         &(parent->va_context));
 
@@ -288,7 +289,7 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
     parent->va_initialized = TRUE;
 
 cleanup:
-    /* nothing to clean up */      
+    /* nothing to clean up */
 
     return ret;
 
@@ -296,20 +297,20 @@ cleanup:
 
 
 MIX_RESULT mix_videofmt_h264_update_ref_pic_list(
-    MixVideoFormat *mix, 
+    MixVideoFormat *mix,
     VAPictureParameterBufferH264* picture_params,
     VASliceParameterBufferH264* slice_params)
 {
-    MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);  
-    
+    MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);
+
     //Do slice parameters
-    
+
     //First patch up the List0 and List1 surface IDs
     int j = 0;
-    guint poc = 0;   
+    guint poc = 0;
     gpointer video_frame = NULL;
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
-    
+
     for (; j <= slice_params->num_ref_idx_l0_active_minus1; j++)
     {
         if (!(slice_params->RefPicList0[j].flags & VA_PICTURE_H264_INVALID))
@@ -318,20 +319,20 @@ MIX_RESULT mix_videofmt_h264_update_ref_pic_list(
             video_frame = g_hash_table_lookup(self->dpb_surface_table, (gpointer)poc);
             if (video_frame == NULL)
             {
-                LOG_E("unable to find surface of picture %d (current picture %d).", 
+                LOG_E("unable to find surface of picture %d (current picture %d).",
                     poc, mix_videofmt_h264_get_poc(&(picture_params->CurrPic)));
                 ret = MIX_RESULT_DROPFRAME;  //return non-fatal error
                 goto cleanup;
             }
             else
             {
-                slice_params->RefPicList0[j].picture_id = 
+                slice_params->RefPicList0[j].picture_id =
                     ((MixVideoFrame *)video_frame)->frame_id;
             }
         }
-    
+
     }
-    
+
     if ((slice_params->slice_type == 1) || (slice_params->slice_type == 6))
     {
         for (j = 0; j <= slice_params->num_ref_idx_l1_active_minus1; j++)
@@ -342,14 +343,14 @@ MIX_RESULT mix_videofmt_h264_update_ref_pic_list(
                 video_frame = g_hash_table_lookup(self->dpb_surface_table, (gpointer)poc);
                 if (video_frame == NULL)
                 {
-                    LOG_E("unable to find surface of picture %d (current picture %d).", 
+                    LOG_E("unable to find surface of picture %d (current picture %d).",
                     poc, mix_videofmt_h264_get_poc(&(picture_params->CurrPic)));
                     ret = MIX_RESULT_DROPFRAME;  //return non-fatal error
                     goto cleanup;
                 }
                 else
-                {                       
-                    slice_params->RefPicList1[j].picture_id = 
+                {
+                    slice_params->RefPicList1[j].picture_id =
                         ((MixVideoFrame *)video_frame)->frame_id;
                 }
             }
@@ -368,7 +369,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
     vbp_data_h264 *data,
     int picture_index,
     int slice_index)
-{  
+{
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
     VAStatus vret = VA_STATUS_SUCCESS;
     VADisplay vadisplay = NULL;
@@ -409,7 +410,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
             }
 
             // for interlace content, top field may be valid only after the second field is parsed
-            mix_videoframe_set_displayorder(mix->video_frame, pic_params->CurrPic.TopFieldOrderCnt);            
+            mix_videoframe_set_displayorder(mix->video_frame, pic_params->CurrPic.TopFieldOrderCnt);
         }
 
         gulong surface = 0;
@@ -417,7 +418,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
         LOG_V("mix->video_frame = 0x%x\n", mix->video_frame);
 
         //Get our surface ID from the frame object
-        ret = mix_videoframe_get_frame_id(mix->video_frame, &surface);    
+        ret = mix_videoframe_get_frame_id(mix->video_frame, &surface);
         if (ret != MIX_RESULT_SUCCESS)
         {
             LOG_E( "Error getting surface ID from frame object\n");
@@ -453,7 +454,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
             goto cleanup;
         }
 
-        // vaBeginPicture needs a matching vaEndPicture 
+        // vaBeginPicture needs a matching vaEndPicture
         mix->end_picture_pending = TRUE;
 
 #else
@@ -468,7 +469,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
             goto cleanup;
         }
 
-        // vaBeginPicture needs a matching vaEndPicture 
+        // vaBeginPicture needs a matching vaEndPicture
         mix->end_picture_pending = TRUE;
 
         LOG_V( "Updating DPB for libva\n");
@@ -496,7 +497,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
 
         //First the picture parameter buffer
         vret = vaCreateBuffer(
-            vadisplay, 
+            vadisplay,
             vacontext,
             VAPictureParameterBufferType,
             sizeof(VAPictureParameterBufferH264),
@@ -532,7 +533,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
             LOG_E( "Video driver returned error from vaCreateBuffer\n");
             goto cleanup;
         }
-        buffer_id_cnt++;           
+        buffer_id_cnt++;
     }
 
 #ifndef DECODER_ROBUSTNESS
@@ -556,7 +557,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
     LOG_V( "Creating libva slice parameter buffer\n");
 
     vret = vaCreateBuffer(
-        vadisplay, 
+        vadisplay,
         vacontext,
         VASliceParameterBufferType,
         sizeof(VASliceParameterBufferH264),
@@ -581,11 +582,11 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
     // offset to the actual slice data is provided in
     // slice_data_offset in VASliceParameterBufferH264
 
-    LOG_V( "Creating libva slice data buffer, using slice address %x, with offset %d and size %u\n", 
+    LOG_V( "Creating libva slice data buffer, using slice address %x, with offset %d and size %u\n",
         (guint)slice_data->buffer_addr, slice_params->slice_data_offset, slice_data->slice_size);
 
     vret = vaCreateBuffer(
-        vadisplay, 
+        vadisplay,
         vacontext,
         VASliceDataBufferType,
         slice_data->slice_size, //size
@@ -629,13 +630,17 @@ cleanup:
 
 
 MIX_RESULT mix_videofmt_h264_decode_end(
-    MixVideoFormat *mix, 
+    MixVideoFormat *mix,
     gboolean drop_picture)
 {
-    MIX_RESULT ret = MIX_RESULT_SUCCESS;    
+    MIX_RESULT ret = MIX_RESULT_SUCCESS;
     VAStatus vret = VA_STATUS_SUCCESS;
     MixVideoFormat* parent = MIX_VIDEOFORMAT(mix);
-    //MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);  
+#ifdef DECODER_ROBUSTNESS
+    MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);
+#else
+    //MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);
+#endif
 
     LOG_V("Begin\n");
 
@@ -647,7 +652,7 @@ MIX_RESULT mix_videofmt_h264_decode_end(
             LOG_E("Unexpected: video_frame is not unreferenced.\n");
         }
         goto cleanup;
-    }    
+    }
 
     if (parent->video_frame == NULL)
     {
@@ -655,8 +660,8 @@ MIX_RESULT mix_videofmt_h264_decode_end(
         LOG_E("Unexpected: video_frame has been unreferenced.\n");
         goto cleanup;
     }
-    
-	LOG_V( "Calling vaEndPicture\n");    
+
+	LOG_V( "Calling vaEndPicture\n");
     vret = vaEndPicture(parent->va_display, parent->va_context);
 
     if (vret != VA_STATUS_SUCCESS)
@@ -689,8 +694,15 @@ MIX_RESULT mix_videofmt_h264_decode_end(
         goto cleanup;
     }
 
-	LOG_V( "Enqueueing the frame with frame manager, timestamp %"G_GINT64_FORMAT"\n", 
-	    parent->current_timestamp);
+	LOG_V( "Enqueueing the frame with frame manager, timestamp %"G_GINT64_FORMAT"\n",
+	    parent->video_frame->timestamp);
+
+#ifdef DECODER_ROBUSTNESS
+	if (self->last_decoded_frame)
+		mix_videoframe_unref(self->last_decoded_frame);
+	self->last_decoded_frame = parent->video_frame;
+	mix_videoframe_ref(self->last_decoded_frame);
+#endif
 
     //Enqueue the decoded frame using frame manager
     ret = mix_framemanager_enqueue(parent->framemgr, parent->video_frame);
@@ -709,7 +721,7 @@ MIX_RESULT mix_videofmt_h264_decode_end(
 cleanup:
     if (parent->video_frame)
     {
-        /* this always indicates an error */        
+        /* this always indicates an error */
         mix_videoframe_unref(parent->video_frame);
         parent->video_frame = NULL;
     }
@@ -721,7 +733,7 @@ cleanup:
 
 
 MIX_RESULT mix_videofmt_h264_decode_continue(
-    MixVideoFormat *mix, 
+    MixVideoFormat *mix,
     vbp_data_h264 *data)
 {
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
@@ -745,26 +757,26 @@ MIX_RESULT mix_videofmt_h264_decode_continue(
             ret = MIX_RESULT_FAIL;
             LOG_E("pic_data->slc_data is NULL.\n");
             goto cleanup;
-        }	
+        }
 
         if (pic_data->num_slices == 0)
         {
             ret = MIX_RESULT_FAIL;
             LOG_E("pic_data->num_slices == 0.\n");
             goto cleanup;
-        }	    
+        }
 
-	    LOG_V( "num_slices is %d\n", pic_data->num_slices);        
+	    LOG_V( "num_slices is %d\n", pic_data->num_slices);
         for (j = 0; j < pic_data->num_slices; j++)
         {
-    	    LOG_V( "Decoding slice %d\n", j);        
+    	    LOG_V( "Decoding slice %d\n", j);
 	        ret = mix_videofmt_h264_decode_a_slice(mix, data, i, j);
             if (ret != 	MIX_RESULT_SUCCESS)
             {
                 LOG_E( "mix_videofmt_h264_decode_a_slice failed, error =  %#X.", ret);
                 goto cleanup;
-           }			  
-        }		
+           }
+        }
     }
 
 cleanup:
@@ -776,9 +788,9 @@ cleanup:
 
 
 MIX_RESULT mix_videofmt_h264_set_frame_type(
-    MixVideoFormat *mix, 
+    MixVideoFormat *mix,
     vbp_data_h264 *data)
-{    
+{
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
 
     //Set the picture type (I, B or P frame)
@@ -810,7 +822,7 @@ MIX_RESULT mix_videofmt_h264_set_frame_type(
     //Do not have to check for B frames after a seek
     //Note:  Demux should seek to IDR (instantaneous decoding refresh) frame, otherwise
     //  DPB will not be correct and frames may come in with invalid references
-    //  This will be detected when DPB is checked for valid mapped surfaces and 
+    //  This will be detected when DPB is checked for valid mapped surfaces and
     //  error returned from there.
 
 	LOG_V( "frame type is %d\n", frame_type);
@@ -828,14 +840,14 @@ MIX_RESULT mix_videofmt_h264_set_frame_type(
 
 
 MIX_RESULT mix_videofmt_h264_set_frame_structure(
-    MixVideoFormat *mix, 
+    MixVideoFormat *mix,
     vbp_data_h264 *data)
-{    
+{
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
 
     if (data->pic_data[0].pic_parms->CurrPic.flags & VA_PICTURE_H264_TOP_FIELD)
     {
-        mix_videoframe_set_frame_structure(mix->video_frame, VA_BOTTOM_FIELD | VA_TOP_FIELD); 
+        mix_videoframe_set_frame_structure(mix->video_frame, VA_BOTTOM_FIELD | VA_TOP_FIELD);
     }
     else
     {
@@ -847,7 +859,7 @@ MIX_RESULT mix_videofmt_h264_set_frame_structure(
 
 
 MIX_RESULT mix_videofmt_h264_decode_begin(
-    MixVideoFormat *mix, 
+    MixVideoFormat *mix,
     vbp_data_h264 *data)
 {
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
@@ -859,7 +871,7 @@ MIX_RESULT mix_videofmt_h264_decode_begin(
     if (ret != MIX_RESULT_SUCCESS)
     {
         LOG_E( "Error getting frame from surfacepool\n");
-        return ret; 
+        return ret;
     }
 
     /* the following calls will always succeed */
@@ -874,10 +886,10 @@ MIX_RESULT mix_videofmt_h264_decode_begin(
     mix_videoframe_set_discontinuity(mix->video_frame, mix->discontinuity_frame_in_progress);
 
     //Set the timestamp
-    mix_videoframe_set_timestamp(mix->video_frame, mix->current_timestamp);	
+    mix_videoframe_set_timestamp(mix->video_frame, mix->current_timestamp);
 
     // Set displayorder
-    ret = mix_videoframe_set_displayorder(mix->video_frame, 
+    ret = mix_videoframe_set_displayorder(mix->video_frame,
         data->pic_data[0].pic_parms->CurrPic.TopFieldOrderCnt);
     if(ret != MIX_RESULT_SUCCESS)
     {
@@ -894,10 +906,10 @@ MIX_RESULT mix_videofmt_h264_decode_begin(
 
 
 MIX_RESULT mix_videofmt_h264_decode_a_buffer(
-    MixVideoFormat *mix, 
+    MixVideoFormat *mix,
     MixBuffer * bufin,
     guint64 ts,
-    gboolean discontinuity) 
+    gboolean discontinuity)
 {
     uint32 pret = 0;
     MixVideoFormat *parent = NULL;
@@ -909,8 +921,8 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
     parent = MIX_VIDEOFORMAT(mix);
 
     LOG_V( "Calling parse for current frame, parse handle %d\n", (int)parent->parser_handle);
-    pret = vbp_parse(parent->parser_handle, 
-        bufin->data, 
+    pret = vbp_parse(parent->parser_handle,
+        bufin->data,
         bufin->size,
         FALSE);
 
@@ -938,7 +950,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
     {
         ret = MIX_RESULT_SUCCESS;
         LOG_V("SPS or PPS is not available.\n");
-        goto cleanup;      
+        goto cleanup;
     }
 
     if (parent->va_initialized == FALSE)
@@ -946,9 +958,9 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
         LOG_V("try initializing VA...\n");
         ret = mix_videofmt_h264_initialize_va(parent, data);
         if (ret != MIX_RESULT_SUCCESS)
-        {         
+        {
             LOG_V("mix_videofmt_h264_initialize_va failed.\n");
-            goto cleanup; 
+            goto cleanup;
         }
     }
 
@@ -957,10 +969,10 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
     {
         ret = MIX_RESULT_SUCCESS;
         LOG_V("slice is not available.\n");
-        goto cleanup;      
+        goto cleanup;
     }
-    
-    guint64 last_ts = parent->current_timestamp;    
+
+    guint64 last_ts = parent->current_timestamp;
     parent->current_timestamp = ts;
     parent->discontinuity_frame_in_progress = discontinuity;
 
@@ -971,18 +983,18 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
         // finish decoding the last frame
         ret = mix_videofmt_h264_decode_end(parent, FALSE);
         if (ret != MIX_RESULT_SUCCESS)
-        {         
+        {
             LOG_V("mix_videofmt_h264_decode_end failed.\n");
-            goto cleanup; 
+            goto cleanup;
         }
 
         // start decoding a new frame
-        ret = mix_videofmt_h264_decode_begin(parent, data); 
+        ret = mix_videofmt_h264_decode_begin(parent, data);
         if (ret != MIX_RESULT_SUCCESS)
-        {         
+        {
             LOG_V("mix_videofmt_h264_decode_begin failed.\n");
-            goto cleanup; 
-        }        
+            goto cleanup;
+        }
     }
     else
     {
@@ -990,10 +1002,10 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
         LOG_V("partial frame handling...\n");
         ret = mix_videofmt_h264_decode_continue(parent, data);
         if (ret != MIX_RESULT_SUCCESS)
-        {         
+        {
             LOG_V("mix_videofmt_h264_decode_continue failed.\n");
-            goto cleanup; 
-        }        
+            goto cleanup;
+        }
     }
 
     cleanup:
@@ -1004,7 +1016,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
 }
 
 
-MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix, 
+MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
 		MixVideoConfigParamsDec * config_params,
         MixFrameManager * frame_mgr,
 		MixBufferPool * input_buf_pool,
@@ -1032,7 +1044,7 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
 
     if (parent_class->initialize) {
         ret = parent_class->initialize(mix, config_params,
-            frame_mgr, input_buf_pool, surface_pool, 
+            frame_mgr, input_buf_pool, surface_pool,
             va_display);
     }
 
@@ -1064,9 +1076,9 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
 
     //Create our table of Decoded Picture Buffer "in use" surfaces
     self->dpb_surface_table = g_hash_table_new_full(
-        NULL, 
-        NULL, 
-        mix_videofmt_h264_destroy_DPB_key, 
+        NULL,
+        NULL,
+        mix_videofmt_h264_destroy_DPB_key,
         mix_videofmt_h264_destroy_DPB_value);
 
     if (self->dpb_surface_table == NULL)
@@ -1085,7 +1097,7 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
         ret = MIX_RESULT_FAIL;
         LOG_E( "Cannot get extra surface allocation setting\n");
         goto cleanup;
-    }    
+    }
 
 	LOG_V( "Before vbp_open\n");
     //Load the bitstream parser
@@ -1115,7 +1127,7 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
 
     pret = vbp_parse(
         parent->parser_handle,
-        header->data, 
+        header->data,
         header->data_size,
         TRUE);
 
@@ -1144,8 +1156,13 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
     pic_width_in_codec_data  = (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16;
     pic_height_in_codec_data = (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16;
     mix_videoconfigparamsdec_set_picture_res (config_params, pic_width_in_codec_data, pic_height_in_codec_data);
-    parent->picture_width  = pic_width_in_codec_data;
-    parent->picture_height = pic_height_in_codec_data;
+
+    if (parent->picture_width == 0 || parent->picture_height == 0)
+    {
+        // Update picture resolution only if it is not set. The derived picture res from mbs may not be accurate.
+        parent->picture_width  = pic_width_in_codec_data;
+        parent->picture_height = pic_height_in_codec_data;
+    }
 
     ret = mix_videofmt_h264_initialize_va(mix, data);
     if (ret != MIX_RESULT_SUCCESS)
@@ -1153,7 +1170,6 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
         LOG_E( "Error initializing va. \n");
         goto cleanup;
     }
-
 
     cleanup:
     if (ret != MIX_RESULT_SUCCESS) {
@@ -1182,9 +1198,9 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
 }
 
 MIX_RESULT mix_videofmt_h264_decode(
-    MixVideoFormat *mix, 
+    MixVideoFormat *mix,
     MixBuffer * bufin[],
-    gint bufincnt, 
+    gint bufincnt,
     MixVideoDecodeParams * decode_params) {
 
     int i = 0;
@@ -1239,11 +1255,11 @@ MIX_RESULT mix_videofmt_h264_decode(
 
     for (i = 0; i < bufincnt; i++)
     {
-		LOG_V( "Decoding a buf %x, size %d\n", (guint)bufin[i]->data, bufin[i]->size);  
-		    
+		LOG_V( "Decoding a buf %x, size %d\n", (guint)bufin[i]->data, bufin[i]->size);
+
         // decode a buffer at a time
         ret = mix_videofmt_h264_decode_a_buffer(
-            mix, 
+            mix,
             bufin[i],
             ts,
             discontinuity);
@@ -1252,7 +1268,7 @@ MIX_RESULT mix_videofmt_h264_decode(
         {
             LOG_E("mix_videofmt_h264_decode_a_buffer failed.\n");
             goto cleanup;
-        }        
+        }
     }
 
 
@@ -1296,7 +1312,7 @@ MIX_RESULT mix_videofmt_h264_flush(MixVideoFormat *mix) {
 
     // drop any decode-pending picture, and ignore return value
     mix_videofmt_h264_decode_end(mix, TRUE);
-	
+
 	//Clear parse_in_progress flag and current timestamp
     mix->parse_in_progress = FALSE;
 	mix->discontinuity_frame_in_progress = FALSE;
@@ -1343,7 +1359,7 @@ MIX_RESULT mix_videofmt_h264_eos(MixVideoFormat *mix) {
 
     // finished decoding the pending frame
     mix_videofmt_h264_decode_end(mix, FALSE);
-    
+
     g_mutex_unlock(mix->objectlock);
 
 	//Call Frame Manager with _eos()
@@ -1385,9 +1401,9 @@ MIX_RESULT mix_videofmt_h264_deinitialize(MixVideoFormat *mix) {
 
 #define HACK_DPB
 #ifdef HACK_DPB
-static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix, 
+static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 					vbp_picture_data_h264* pic_data
-					) 
+					)
 {
 
 	gboolean found = FALSE;
@@ -1402,9 +1418,9 @@ static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 	for (i = 0; i < 16; i++)
 	{
 		pic_params->ReferenceFrames[i].picture_id = VA_INVALID_SURFACE;
-		pic_params->ReferenceFrames[i].frame_idx = -1; 
-		pic_params->ReferenceFrames[i].TopFieldOrderCnt = -1; 
-		pic_params->ReferenceFrames[i].BottomFieldOrderCnt = -1; 
+		pic_params->ReferenceFrames[i].frame_idx = -1;
+		pic_params->ReferenceFrames[i].TopFieldOrderCnt = -1;
+		pic_params->ReferenceFrames[i].BottomFieldOrderCnt = -1;
 		pic_params->ReferenceFrames[i].flags = VA_PICTURE_H264_INVALID;  //assuming we don't need to OR with existing flags
 	}
 
@@ -1417,7 +1433,7 @@ static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 		pRefList = pic_data->slc_data[i].slc_parms.RefPicList0;
 		for (list = 0; list < 2; list++)
 		{
-			for (j = 0; j < 32; j++)  
+			for (j = 0; j < 32; j++)
 			{
 				if (pRefList[j].flags & VA_PICTURE_H264_INVALID)
 				{
@@ -1443,20 +1459,41 @@ static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 					guint poc = mix_videofmt_h264_get_poc(&(pRefList[j]));
 					gpointer video_frame = g_hash_table_lookup(self->dpb_surface_table, (gpointer)poc);
 
+#ifdef DECODER_ROBUSTNESS
+					if (!video_frame)
+					{
+						if (!self->last_decoded_frame)
+						{
+							//No saved reference frame, can't recover this one
+							return MIX_RESULT_DROPFRAME;
+						}
+
+						pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id =
+							((MixVideoFrame *)self->last_decoded_frame)->frame_id;
+						LOG_V( "Reference frame not found, substituting %d\n", pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id);
+
+					}
+					else
+					{
+						pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id =
+							((MixVideoFrame *)video_frame)->frame_id;
+					}
+#else
 					if (!video_frame) return MIX_RESULT_DROPFRAME; //return non-fatal error
 
-					pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id = 
+					pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id =
 						((MixVideoFrame *)video_frame)->frame_id;
+#endif
 
         			LOG_V( "Inserting frame id %d into DPB\n", pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id);
 
-					pic_params->ReferenceFrames[pic_params->num_ref_frames].flags = 
+					pic_params->ReferenceFrames[pic_params->num_ref_frames].flags =
 						pRefList[j].flags;
-					pic_params->ReferenceFrames[pic_params->num_ref_frames].frame_idx = 
+					pic_params->ReferenceFrames[pic_params->num_ref_frames].frame_idx =
 						pRefList[j].frame_idx;
-					pic_params->ReferenceFrames[pic_params->num_ref_frames].TopFieldOrderCnt = 
+					pic_params->ReferenceFrames[pic_params->num_ref_frames].TopFieldOrderCnt =
 						pRefList[j].TopFieldOrderCnt;
-					pic_params->ReferenceFrames[pic_params->num_ref_frames++].BottomFieldOrderCnt = 
+					pic_params->ReferenceFrames[pic_params->num_ref_frames++].BottomFieldOrderCnt =
 						pRefList[j].BottomFieldOrderCnt;
 				}
 
@@ -1469,9 +1506,9 @@ static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 }
 #endif
 
-	
 
-MIX_RESULT mix_videofmt_h264_handle_ref_frames(MixVideoFormat *mix, 
+
+MIX_RESULT mix_videofmt_h264_handle_ref_frames(MixVideoFormat *mix,
 					VAPictureParameterBufferH264* pic_params,
 					MixVideoFrame * current_frame
 					) {
@@ -1550,11 +1587,11 @@ MIX_RESULT mix_videofmt_h264_handle_ref_frames(MixVideoFormat *mix,
 	pic_params->CurrPic.picture_id = current_frame->frame_id;
 
 	//Check to see if current frame is a reference frame
-	if ((pic_params->CurrPic.flags & VA_PICTURE_H264_SHORT_TERM_REFERENCE) || 
+	if ((pic_params->CurrPic.flags & VA_PICTURE_H264_SHORT_TERM_REFERENCE) ||
         (pic_params->CurrPic.flags & VA_PICTURE_H264_LONG_TERM_REFERENCE))
 	{
 		//Get current frame's POC
-		poc = mix_videofmt_h264_get_poc(&(pic_params->CurrPic));	
+		poc = mix_videofmt_h264_get_poc(&(pic_params->CurrPic));
 
 		//Increment the reference count for this frame
 		mix_videoframe_ref(current_frame);
@@ -1569,7 +1606,7 @@ MIX_RESULT mix_videofmt_h264_handle_ref_frames(MixVideoFormat *mix,
 	return MIX_RESULT_SUCCESS;
 }
 
-MIX_RESULT mix_videofmt_h264_cleanup_ref_frame(MixVideoFormat *mix, 
+MIX_RESULT mix_videofmt_h264_cleanup_ref_frame(MixVideoFormat *mix,
 					VAPictureParameterBufferH264* pic_params,
 					MixVideoFrame * current_frame
 					) {
@@ -1593,10 +1630,9 @@ MIX_RESULT mix_videofmt_h264_cleanup_ref_frame(MixVideoFormat *mix,
 	if ((pic_params->CurrPic.flags & VA_PICTURE_H264_SHORT_TERM_REFERENCE) || (pic_params->CurrPic.flags & VA_PICTURE_H264_LONG_TERM_REFERENCE))
 	{
 		//Get current frame's POC
-		poc = mix_videofmt_h264_get_poc(&(pic_params->CurrPic));	
+		poc = mix_videofmt_h264_get_poc(&(pic_params->CurrPic));
 
-		//Decrement the reference count for this frame
-//		mix_videoframe_unref(current_frame);
+		//We don't need to decrement the ref count for the video frame here; it's done elsewhere
 
 		LOG_V( "Removing poc %d, surfaceID %d\n", poc, (gint)current_frame->frame_id);
 		//Remove this frame from the DPB surface table
@@ -1639,7 +1675,7 @@ gboolean mix_videofmt_h264_check_in_DPB(gpointer key, gpointer value, gpointer u
 		vaPic = &(((VAPictureParameterBufferH264*)user_data)->ReferenceFrames[i]);
 		if (vaPic->flags & VA_PICTURE_H264_INVALID)
 			continue;
-			
+
 		if ((guint)key == vaPic->TopFieldOrderCnt ||
 			(guint)key == vaPic->BottomFieldOrderCnt)
 		{
@@ -1673,7 +1709,7 @@ void mix_videofmt_h264_destroy_DPB_value(gpointer data)
 }
 
 
-MIX_RESULT mix_videofmt_h264_release_input_buffers(MixVideoFormat *mix, 
+MIX_RESULT mix_videofmt_h264_release_input_buffers(MixVideoFormat *mix,
 					guint64 timestamp
 					) {
 

@@ -1,8 +1,4 @@
 
-#ifdef ANDROID
-#define true 1
-#define false 0
-#endif
 
 #include "viddec_emitter.h"
 #include "viddec_fw_workload.h"
