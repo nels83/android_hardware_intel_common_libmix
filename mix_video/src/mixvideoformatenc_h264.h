@@ -49,7 +49,8 @@ struct _MixVideoFormatEnc_H264 {
     MixVideoFrame  *ref_frame;  //reference frame
     MixVideoFrame  *rec_frame;	//reconstructed frame;	
     MixVideoFrame  *last_frame;	//last frame;
-#ifdef ANDROID	
+    MixVideoFrame  *lookup_frame;
+#ifdef ANDROID
     MixBuffer      *last_mix_buffer;
 #endif
 
