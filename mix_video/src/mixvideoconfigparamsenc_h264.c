@@ -1,6 +1,6 @@
-/* 
+/*
 INTEL CONFIDENTIAL
-Copyright 2009 Intel Corporation All Rights Reserved. 
+Copyright 2009 Intel Corporation All Rights Reserved.
 The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
 
 No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
@@ -53,6 +53,8 @@ mix_videoconfigparamsenc_h264_init (MixVideoConfigParamsEncH264 * self)
   /* TODO: initialize properties */
   self->basic_unit_size = 0;
   self->slice_num = 1;
+  self->I_slice_num = 1;
+  self->P_slice_num = 1;
   self->disable_deblocking_filter_idc = 0;
 
   self->delimiter_type = MIX_DELIMITER_LENGTHPREFIX;
@@ -119,7 +121,7 @@ MixVideoConfigParamsEncH264
 * mix_videoconfigparamsenc_h264_dup:
 * @obj: a #MixVideoConfigParams object
 * @returns: a newly allocated duplicate of the object.
-* 
+*
 * Copy duplicate of the object.
 */
 MixParams *
@@ -148,7 +150,7 @@ mix_videoconfigparamsenc_h264_dup (const MixParams * obj)
 * @target: copy to target
 * @src: copy from src
 * @returns: boolean indicates if copy is successful.
-* 
+*
 * Copy instance data from @src to @target.
 */
 gboolean
@@ -157,7 +159,7 @@ mix_videoconfigparamsenc_h264_copy (MixParams * target, const MixParams * src)
     MixVideoConfigParamsEncH264 *this_target, *this_src;
     MixParamsClass *root_class;
 
-    LOG_V( "Begin\n");	
+    LOG_V( "Begin\n");
 
     if (MIX_IS_VIDEOCONFIGPARAMSENC_H264 (target)
       && MIX_IS_VIDEOCONFIGPARAMSENC_H264 (src))
@@ -169,11 +171,13 @@ mix_videoconfigparamsenc_h264_copy (MixParams * target, const MixParams * src)
       //add properties
       this_target->basic_unit_size = this_src->basic_unit_size;
       this_target->slice_num = this_src->slice_num;
+      this_target->I_slice_num = this_src->I_slice_num;
+      this_target->P_slice_num = this_src->P_slice_num;
       this_target->disable_deblocking_filter_idc = this_src->disable_deblocking_filter_idc;
       this_target->delimiter_type = this_src->delimiter_type;
-      this_target->idr_interval = this_src->idr_interval;	  
+      this_target->idr_interval = this_src->idr_interval;
 
-	  
+
 
       // Now chainup base class
       root_class = MIX_PARAMS_CLASS (parent_class);
@@ -196,7 +200,7 @@ mix_videoconfigparamsenc_h264_copy (MixParams * target, const MixParams * src)
 * @first: first object to compare
 * @second: seond object to compare
 * @returns: boolean indicates if instance are equal.
-* 
+*
 * Copy instance data from @src to @target.
 */
 gboolean
@@ -216,23 +220,31 @@ mix_videoconfigparamsencenc_h264_equal (MixParams * first, MixParams * second)
       if (this_first->basic_unit_size != this_second->basic_unit_size) {
 	  	goto not_equal;
 	}
-	  
+
       if (this_first->slice_num != this_second->slice_num) {
 	  	goto not_equal;
 	}
 
+      if (this_first->I_slice_num != this_second->I_slice_num) {
+		goto not_equal;
+	}
+
+      if (this_first->P_slice_num != this_second->P_slice_num) {
+		goto not_equal;
+	}
+
       if (this_first->disable_deblocking_filter_idc != this_second->disable_deblocking_filter_idc) {
 	  	goto not_equal;
-	}  
+	}
 
       if (this_first->delimiter_type != this_second->delimiter_type) {
 	  	goto not_equal;
-	}  	  
+	}
 
       if (this_first->idr_interval != this_second->idr_interval) {
 	  	goto not_equal;
-	}  	  
-	  	  
+	}
+
 
 	ret = TRUE;
 
@@ -240,7 +252,7 @@ mix_videoconfigparamsencenc_h264_equal (MixParams * first, MixParams * second)
 
 	if (ret != TRUE) {
 		return ret;
-	}		
+	}
 
       /* TODO: add comparison for properties */
       {
@@ -283,7 +295,7 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_bus (MixVideoConfigParamsEncH264 * 
 	MIX_VIDEOCONFIGPARAMSENC_H264_GETTER_CHECK_INPUT (obj, basic_unit_size);
 	*basic_unit_size = obj->basic_unit_size;
 	return MIX_RESULT_SUCCESS;
-}	
+}
 
 
 MIX_RESULT mix_videoconfigparamsenc_h264_set_dlk (MixVideoConfigParamsEncH264 * obj,
@@ -298,13 +310,15 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_dlk (MixVideoConfigParamsEncH264 * 
 	MIX_VIDEOCONFIGPARAMSENC_H264_GETTER_CHECK_INPUT (obj, disable_deblocking_filter_idc);
 	*disable_deblocking_filter_idc = obj->disable_deblocking_filter_idc;
 	return MIX_RESULT_SUCCESS;
-}	
+}
 
 
 MIX_RESULT mix_videoconfigparamsenc_h264_set_slice_num(MixVideoConfigParamsEncH264 * obj,
 		guint slice_num) {
 	MIX_VIDEOCONFIGPARAMSENC_H264_SETTER_CHECK_INPUT (obj);
 	obj->slice_num = slice_num;
+	obj->I_slice_num = slice_num;
+	obj->P_slice_num = slice_num;
 	return MIX_RESULT_SUCCESS;
 }
 
@@ -313,7 +327,35 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_slice_num(MixVideoConfigParamsEncH2
 	MIX_VIDEOCONFIGPARAMSENC_H264_GETTER_CHECK_INPUT (obj, slice_num);
 	*slice_num = obj->slice_num;
 	return MIX_RESULT_SUCCESS;
-}	
+}
+
+MIX_RESULT mix_videoconfigparamsenc_h264_set_I_slice_num(MixVideoConfigParamsEncH264 * obj,
+		guint I_slice_num) {
+	MIX_VIDEOCONFIGPARAMSENC_H264_SETTER_CHECK_INPUT (obj);
+	obj->I_slice_num = I_slice_num;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_h264_get_I_slice_num(MixVideoConfigParamsEncH264 * obj,
+		guint * I_slice_num) {
+	MIX_VIDEOCONFIGPARAMSENC_H264_GETTER_CHECK_INPUT (obj, I_slice_num);
+	*I_slice_num = obj->I_slice_num;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_h264_set_P_slice_num(MixVideoConfigParamsEncH264 * obj,
+		guint P_slice_num) {
+	MIX_VIDEOCONFIGPARAMSENC_H264_SETTER_CHECK_INPUT (obj);
+	obj->P_slice_num = P_slice_num;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_h264_get_P_slice_num(MixVideoConfigParamsEncH264 * obj,
+		guint * P_slice_num) {
+	MIX_VIDEOCONFIGPARAMSENC_H264_GETTER_CHECK_INPUT (obj, P_slice_num);
+	*P_slice_num = obj->P_slice_num;
+	return MIX_RESULT_SUCCESS;
+}
 
 MIX_RESULT mix_videoconfigparamsenc_h264_set_delimiter_type (MixVideoConfigParamsEncH264 * obj,
 		MixDelimiterType delimiter_type) {

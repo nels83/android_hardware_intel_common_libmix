@@ -150,13 +150,19 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
         if(result == 1)
         {
             if (sh.seq_disp_size.ASPECT_RATIO_FLAG == 1)
-            {
+            {   
                 result = viddec_pm_get_bits(ctxt, &tempValue, 4);
                 sh.ASPECT_RATIO = tempValue;
                 if (sh.ASPECT_RATIO == 15)
                 {
                     result = viddec_pm_get_bits(ctxt, &sh.aspect_size, 16);
                 }
+#ifdef VBP
+                md->ASPECT_RATIO_FLAG = 1;
+                md->ASPECT_RATIO = sh.ASPECT_RATIO;
+                md->ASPECT_HORIZ_SIZE = sh.seq_aspect_size.ASPECT_HORIZ_SIZE;
+                md->ASPECT_VERT_SIZE = sh.seq_aspect_size.ASPECT_VERT_SIZE;
+#endif
             }
 
             result = viddec_pm_get_bits(ctxt, &tempValue, 1);
@@ -182,6 +188,10 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
             {
                 result = viddec_pm_get_bits(ctxt, &sh.color_format, 24);
             }
+#ifdef VBP
+            md->COLOR_FORMAT_FLAG = sh.COLOR_FORMAT_FLAG;
+            md->MATRIX_COEF = sh.seq_color_format.MATRIX_COEF;
+#endif
         } // Successful get of display size
     } // DISPLAY_EXT is 1
 

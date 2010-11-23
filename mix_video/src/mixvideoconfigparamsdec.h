@@ -105,6 +105,26 @@ struct _MixVideoConfigParamsDec {
 	
 	/* Extra surfaces for MixVideoFrame objects to be allocated */
 	guint extra_surface_allocation;
+
+    /* video range, 0 for short range and 1 for full range, output only */
+	guint8 video_range;
+
+    /* 
+        color matrix, output only. Possible values defined in va.h
+        #define VA_SRC_BT601            0x00000010
+        #define VA_SRC_BT709            0x00000020
+        #define VA_SRC_SMPTE_240     0x00000040
+      */
+    guint8  color_matrix;
+
+    /* bit rate in bps, output only */
+    guint8 bit_rate;
+
+	/* Pixel aspect ratio numerator value */
+	guint par_num;
+	
+	/* Pixel aspect ratio  denominator value */	
+	guint par_denom;
 	
 	/* Reserved for future use */
 	void *reserved1;
@@ -374,6 +394,102 @@ MIX_RESULT mix_videoconfigparamsdec_set_extra_surface_allocation(MixVideoConfigP
  */
 MIX_RESULT mix_videoconfigparamsdec_get_extra_surface_allocation(MixVideoConfigParamsDec * obj,
 		guint *extra_surface_allocation);
+
+
+/**
+ * mix_videoconfigparamsdec_set_video_range:
+ * @obj: #MixVideoConfigParamsDec object
+ * @video_range: 1 for full video range, 0 for short video range.
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set video range
+ */
+MIX_RESULT mix_videoconfigparamsdec_set_video_range(MixVideoConfigParamsDec * obj,
+		guint8 video_range);
+
+/**
+ * mix_videoconfigparamsdec_get_video_range:
+ * @obj: #MixVideoConfigParamsDec object
+ * @video_range: video range to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get video range
+ */
+MIX_RESULT mix_videoconfigparamsdec_get_video_range(MixVideoConfigParamsDec * obj,
+		guint8 *video_range);
+
+
+/**
+ * mix_videoconfigparamsdec_set_color_matrix:
+ * @obj: #MixVideoConfigParamsDec object
+ * @color_matrix: BT601 or BT709, defined in va.h. 0 for any other including unspecified color matrix.
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set color matrix
+ */
+MIX_RESULT mix_videoconfigparamsdec_set_color_matrix(MixVideoConfigParamsDec * obj,
+		guint8 color_matrix);
+
+/**
+ * mix_videoconfigparamsdec_get_color_matrix:
+ * @obj: #MixVideoConfigParamsDec object
+ * @color_matrix: color matrix to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get color matrix
+ */
+MIX_RESULT mix_videoconfigparamsdec_get_color_matrix(MixVideoConfigParamsDec * obj,
+		guint8 *color_matrix);
+
+
+/**
+ * mix_videoconfigparamsdec_set_bit_rate:
+ * @obj: #MixVideoConfigParamsDec object
+ * @bit_rate: bit rate in bit per second.
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set bit rate
+ */
+MIX_RESULT mix_videoconfigparamsdec_set_bit_rate(MixVideoConfigParamsDec * obj,
+		guint bit_rate);
+
+/**
+ * mix_videoconfigparamsdec_get_bit_rate:
+ * @obj: #MixVideoConfigParamsDec object
+ * @bit_rate: bit rate to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get bit rate
+ */
+MIX_RESULT mix_videoconfigparamsdec_get_bit_rate(MixVideoConfigParamsDec * obj,
+		guint *bit_rate);		
+
+
+
+/**
+ * mix_videoconfigparamsdec_set_pixel_aspect_ratio:
+ * @obj: #MixVideoConfigParamsDec object
+ * @par_num: Pixel aspect ratio numerator value
+ * @par_denom: Pixel aspect ratio denominator value *  
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set pixel aspect ratio
+ */
+MIX_RESULT mix_videoconfigparamsdec_set_pixel_aspect_ratio(MixVideoConfigParamsDec * obj,
+		guint par_num, guint par_denom);
+
+/**
+ * mix_videoconfigparamsdec_get_pixel_aspect_ratio:
+ * @obj: #MixVideoConfigParamsDec object
+ * @par_num: Pixel aspect ratio  numerator value to be returned 
+ * @par_denom: Pixel aspect ratio denominator value to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get pixel aspect ratio
+ */
+MIX_RESULT mix_videoconfigparamsdec_get_pixel_aspect_ratio(MixVideoConfigParamsDec * obj,
+		guint * par_num, guint * par_denom);
+		
 
 /* TODO: Add getters and setters for other properties */
 

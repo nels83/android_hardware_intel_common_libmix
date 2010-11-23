@@ -50,6 +50,13 @@ static void mix_videoconfigparamsdec_init(MixVideoConfigParamsDec * self) {
 	self->mixbuffer_pool_size = 0;
 	self->extra_surface_allocation = 0;
 
+	self->video_range = 0;
+	self->color_matrix = 0;
+	self->bit_rate = 0;
+
+	self->par_num = 0;
+	self->par_denom= 0;
+
 	/* TODO: initialize other properties */
 	self->reserved1 = NULL;
 	self->reserved2 = NULL;
@@ -165,6 +172,11 @@ gboolean mix_videoconfigparamsdec_copy(MixParams * target, const MixParams * src
 		this_target->rate_control = this_src->rate_control;
 		this_target->mixbuffer_pool_size = this_src->mixbuffer_pool_size;
 		this_target->extra_surface_allocation = this_src->extra_surface_allocation;
+		this_target->video_range = this_src->video_range;
+		this_target->color_matrix = this_src->color_matrix;
+		this_target->bit_rate = this_src->bit_rate;
+		this_target->par_num = this_src->par_num;
+		this_target->par_denom = this_src->par_denom;	
 
 		/* copy properties of non-primitive */
 
@@ -297,6 +309,31 @@ gboolean mix_videoconfigparamsdec_equal(MixParams * first, MixParams * second) {
 			goto not_equal;
 		}
 
+        if (this_first->video_range != this_second->video_range)
+        {
+            goto not_equal;
+        }
+        
+        if (this_first->color_matrix != this_second->color_matrix)
+        {
+            goto not_equal;
+        }
+        
+        if (this_first->bit_rate != this_second->bit_rate)
+        {
+            goto not_equal;
+        }
+
+        if (this_first->par_num != this_second->par_num)
+        {
+            goto not_equal;
+        }  
+
+        if (this_first->par_denom != this_second->par_denom)
+        {
+            goto not_equal;
+        }        
+		        
 		ret = TRUE;
 
 		not_equal:
@@ -533,5 +570,80 @@ MIX_RESULT mix_videoconfigparamsdec_get_extra_surface_allocation(
 }
 
 
+MIX_RESULT mix_videoconfigparamsdec_set_video_range(
+		MixVideoConfigParamsDec * obj,
+        guint8 video_range) 
+{
+	MIX_VIDEOCONFIGPARAMSDEC_SETTER_CHECK_INPUT (obj);
+	obj->video_range = video_range;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_get_video_range(
+		MixVideoConfigParamsDec * obj,
+        guint8 *video_range) 
+{
+	MIX_VIDEOCONFIGPARAMSDEC_GETTER_CHECK_INPUT (obj, video_range);
+	*video_range = obj->video_range;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_set_color_matrix(
+		MixVideoConfigParamsDec * obj,
+        guint8 color_matrix) 
+{
+	MIX_VIDEOCONFIGPARAMSDEC_SETTER_CHECK_INPUT (obj);
+	obj->color_matrix = color_matrix;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_get_color_matrix(
+		MixVideoConfigParamsDec * obj,
+        guint8 *color_matrix) 
+{
+	MIX_VIDEOCONFIGPARAMSDEC_GETTER_CHECK_INPUT (obj, color_matrix);
+	*color_matrix = obj->color_matrix;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_set_bit_rate(
+		MixVideoConfigParamsDec * obj,
+        guint bit_rate) 
+{
+	MIX_VIDEOCONFIGPARAMSDEC_SETTER_CHECK_INPUT (obj);
+	obj->bit_rate = bit_rate;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_get_bit_rate(
+		MixVideoConfigParamsDec * obj,
+        guint *bit_rate) 
+{
+	MIX_VIDEOCONFIGPARAMSDEC_GETTER_CHECK_INPUT (obj, bit_rate);
+	*bit_rate = obj->bit_rate;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_set_pixel_aspect_ratio(
+    MixVideoConfigParamsDec * obj,
+    guint par_num, 
+    guint par_denom) 
+{
+	MIX_VIDEOCONFIGPARAMSDEC_SETTER_CHECK_INPUT (obj);
+	obj->par_num = par_num;
+	obj->par_denom = par_denom;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_get_pixel_aspect_ratio(
+    MixVideoConfigParamsDec * obj,
+    guint * par_num, 
+    guint * par_denom) 
+{
+	MIX_VIDEOCONFIGPARAMSDEC_GETTER_CHECK_INPUT_PAIR (obj, par_num, par_denom);
+	*par_num = obj->par_num;
+	*par_denom = obj->par_denom;
+	return MIX_RESULT_SUCCESS;
+}
 
 

@@ -62,6 +62,7 @@ static void mix_videoformat_init(MixVideoFormat * self) {
     self->end_picture_pending = FALSE;
     self->video_frame = NULL;
     self->extra_surfaces = 0;
+    self->config_params = NULL;
 }
 
 static void mix_videoformat_class_init(MixVideoFormatClass * klass) {
@@ -116,6 +117,12 @@ void mix_videoformat_finalize(GObject * obj) {
 	  mix_surfacepool_deinitialize(mix->surfacepool);
 	  MIXUNREF(mix->surfacepool, mix_surfacepool_unref);
 	}
+
+    if (mix->config_params)
+	{
+	    mix_videoconfigparams_unref(mix->config_params);
+	    mix->config_params = NULL;
+	}	
 
 	//libVA cleanup (vaTerminate is called from MixVideo object)
 	if (mix->va_display) {
@@ -222,6 +229,13 @@ static MIX_RESULT mix_videofmt_initialize_default(MixVideoFormat *mix,
 	MIXUNREF(mix->framemgr, mix_framemanager_unref);
 	mix->framemgr = frame_mgr;
 	mix_framemanager_ref(mix->framemgr);
+
+	if (mix->config_params)
+	{
+	    mix_videoconfigparams_unref(mix->config_params);
+	}
+	mix->config_params = config_params;
+	mix_videoconfigparams_ref(mix->config_params);
 
 	mix->va_display = va_display;
 

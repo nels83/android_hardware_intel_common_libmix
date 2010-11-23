@@ -102,6 +102,31 @@ unsigned char* UseDefaultList[8] =
     Default_8x8_Inter
 };
 
+static uint8 h264_aspect_ratio_table[][2] = 
+{
+    {0, 0},
+    {1, 1},
+    {12, 11},
+    {10, 11},
+    {16, 11},
+    {40, 33},
+    {24, 11},
+    {20, 11},
+    {32, 11},
+    {80, 33},
+    {18, 11},
+    {15, 11},
+    {64, 33},
+    {160, 99},
+    {4, 3},
+    {3, 2},
+    {2, 1},
+    // reserved
+    {0, 0}
+};
+
+
+
 /**
  *
  */
@@ -468,7 +493,7 @@ static inline void vbp_set_reference_frames_h264(
 	/* set short term reference frames */
 	for (buffer_idx = 0; buffer_idx < dpb->ref_frames_in_buffer; buffer_idx++)
 	{
-		if (frame_idx >= 16)
+		if (frame_idx >= 16 || buffer_idx >= 16)
 		{
 			WTRACE("Frame index is out of bound.");
 			break;
@@ -508,7 +533,7 @@ static inline void vbp_set_reference_frames_h264(
 	/* set long term reference frames */
 	for (buffer_idx = 0; buffer_idx < dpb->ltref_frames_in_buffer; buffer_idx++)
 	{
-		if (frame_idx >= 16)
+		if (frame_idx >= 16 || buffer_idx >= 16)
 		{
 			WTRACE("Frame index is out of bound.");
 			break;
@@ -792,41 +817,67 @@ static void vbp_set_codec_data_h264(
 	codec_data->frame_height = (2 - parser->info.active_SPS.sps_disp.frame_mbs_only_flag) * 
 			(parser->info.active_SPS.sps_disp.pic_height_in_map_units_minus1 + 1) * 16;
 			
-	/* frame cropping */
-	codec_data->frame_cropping_flag = 
-		parser->info.active_SPS.sps_disp.frame_cropping_flag;
 	
-	codec_data->frame_crop_rect_left_offset = 
-		parser->info.active_SPS.sps_disp.frame_crop_rect_left_offset;
-	
-	codec_data->frame_crop_rect_right_offset = 
-		parser->info.active_SPS.sps_disp.frame_crop_rect_right_offset;
-		                 
-	codec_data->frame_crop_rect_top_offset =
-		parser->info.active_SPS.sps_disp.frame_crop_rect_top_offset;
-		 
-	codec_data->frame_crop_rect_bottom_offset = 
-		parser->info.active_SPS.sps_disp.frame_crop_rect_bottom_offset;
-	
-	/* aspect ratio	  */
-	codec_data->aspect_ratio_info_present_flag = 
-		parser->info.active_SPS.sps_disp.vui_seq_parameters.aspect_ratio_info_present_flag;
+	/* aspect ratio */
+    if (parser->info.active_SPS.sps_disp.vui_seq_parameters.aspect_ratio_info_present_flag)
+    {		
+    	codec_data->aspect_ratio_idc = 
+		    parser->info.active_SPS.sps_disp.vui_seq_parameters.aspect_ratio_idc;
+
+        if (codec_data->aspect_ratio_idc < 17)
+        {
+            codec_data->sar_width = h264_aspect_ratio_table[codec_data->aspect_ratio_idc][0];
+            codec_data->sar_height = h264_aspect_ratio_table[codec_data->aspect_ratio_idc][1];            
+        }
+        else if (codec_data->aspect_ratio_idc == 255)
+        {
+        	codec_data->sar_width = 
+        		parser->info.active_SPS.sps_disp.vui_seq_parameters.sar_width;
+        		                        
+        	codec_data->sar_height = 
+        		parser->info.active_SPS.sps_disp.vui_seq_parameters.sar_height;
+        }
+        else
+        {
+            codec_data->sar_width = 0;
+            codec_data->sar_height = 0;        
+        }
+    }
+    else
+    {
+        // unspecified
+    	codec_data->aspect_ratio_idc = 0;
+    	codec_data->sar_width = 0;
+    	codec_data->sar_height = 0;        
+    }
 		
-	codec_data->aspect_ratio_idc = 
-		parser->info.active_SPS.sps_disp.vui_seq_parameters.aspect_ratio_idc;
-	
-	codec_data->sar_width = 
-		parser->info.active_SPS.sps_disp.vui_seq_parameters.sar_width;
-		                        
-	codec_data->sar_height = 
-		parser->info.active_SPS.sps_disp.vui_seq_parameters.sar_height;
-		
-	 /* video format */
-	 codec_data->video_format =
-		parser->info.active_SPS.sps_disp.vui_seq_parameters.video_format;  			
+    /* video format */
+	if (parser->info.active_SPS.sps_disp.vui_seq_parameters.video_signal_type_present_flag)
+	{
+        codec_data->video_format =
+	    	parser->info.active_SPS.sps_disp.vui_seq_parameters.video_format;
+    }	    
+    else
+    {
+        // Unspecified video format
+        codec_data->video_format = 5;
+    }
 	 
-	codec_data->video_format =
-		parser->info.active_SPS.sps_disp.vui_seq_parameters.video_signal_type_present_flag;  
+	codec_data->video_full_range_flag = 
+		parser->info.active_SPS.sps_disp.vui_seq_parameters.video_full_range_flag; 
+	
+
+    if (parser->info.active_SPS.sps_disp.vui_seq_parameters.colour_description_present_flag)
+    {
+    	codec_data->matrix_coefficients = 
+	    	parser->info.active_SPS.sps_disp.vui_seq_parameters.matrix_coefficients; 
+    }
+    else
+    {
+        // Unspecified
+    	codec_data->matrix_coefficients = 2;    
+    }
+
 
     /* picture order type and count */
     codec_data->log2_max_pic_order_cnt_lsb_minus4 = parser->info.active_SPS.log2_max_pic_order_cnt_lsb_minus4;
@@ -1481,6 +1532,16 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
     }
     query_data->num_pictures = 0;
 
+    if (query_data->new_sps && !query_data->has_pps)
+    {
+        // we are waiting for a new pps, so should net reset new_sps flag
+    }
+    else
+    {
+        query_data->new_sps = 0;
+    }
+    query_data->new_pps = 0;
+
     cxt->list.num_items = 0;
 
     /* reset start position of first item to 0 in case there is only one item */
@@ -1664,12 +1725,17 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
        	break;
        		
      	case h264_NAL_UNIT_TYPE_SPS:
+     	if (query_data->has_sps)
+     	    query_data->new_sps = 1;
      	query_data->has_sps = 1;
      	query_data->has_pps = 0;
         ITRACE("SPS header is parsed.");
  		break;
        		
        	case h264_NAL_UNIT_TYPE_PPS:
+       	if (query_data->has_pps || query_data->new_sps)
+       	    query_data->new_pps = 1;
+       	    
        	query_data->has_pps = 1;
        	ITRACE("PPS header is parsed.");
        	break;

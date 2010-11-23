@@ -80,6 +80,9 @@ struct _MixVideoDecodeParams {
 	/* Indicates a discontinuity in the stream */
 	gboolean discontinuity;
 
+    /* output only, indicate if stream contains a new sequence */
+    gboolean new_sequence;
+    
 	/* Reserved for future use */	
 	void *reserved1;
 	
@@ -167,7 +170,7 @@ MIX_RESULT mix_videodecodeparams_get_timestamp(MixVideoDecodeParams * obj,
 /**
  * mix_videodecodeparams_set_discontinuity:
  * @obj: #MixVideoDecodeParams object
- * @discontinuity: Flag to in Indicates a discontinuity in the stream.     
+ * @discontinuity: Flag to indicate a discontinuity in the stream.     
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set discontinuity flag
@@ -186,6 +189,31 @@ MIX_RESULT mix_videodecodeparams_set_discontinuity(MixVideoDecodeParams * obj,
  */
 MIX_RESULT mix_videodecodeparams_get_discontinuity(MixVideoDecodeParams * obj,
 		gboolean *discontinuity);
+
+
+/**
+ * mix_videodecodeparams_set_new_sequence:
+ * @obj: #MixVideoDecodeParams object
+ * @new_sequence: Flag to indicate if stream contains a new sequence.     
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set new_sequence flag
+ */
+MIX_RESULT mix_videodecodeparams_set_new_sequence(MixVideoDecodeParams * obj,
+		gboolean new_sequence);
+
+
+/**
+ * mix_videodecodeparams_get_new_sequence:
+ * @obj: #MixVideoDecodeParams object
+ * @new_sequence: new_sequence flag to be returned     
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get new_sequence flag
+ */
+MIX_RESULT mix_videodecodeparams_get_new_sequence(MixVideoDecodeParams * obj,
+		gboolean *new_sequence);
+		
 
 G_END_DECLS
 

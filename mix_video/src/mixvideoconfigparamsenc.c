@@ -34,12 +34,16 @@ G_DEFINE_TYPE_WITH_CODE (MixVideoConfigParamsEnc, mix_videoconfigparamsenc,
 		MIX_TYPE_VIDEOCONFIGPARAMS, _do_init);
 
 static void mix_videoconfigparamsenc_init(MixVideoConfigParamsEnc * self) {
-    /* initialize properties here */	
+    /* initialize properties here */
 	self->bitrate = 0;
 	self->frame_rate_num = 30;
-	self->frame_rate_denom = 1;	
+	self->frame_rate_denom = 1;
 	self->initial_qp = 15;
 	self->min_qp = 0;
+	self->target_percentage = 95;
+	self->window_size = 500;
+
+	self->max_slice_size = 0;  /*Set to 0 means it won't take effect*/
 
 	self->picture_width = 0;
 	self->picture_height = 0;
@@ -54,15 +58,20 @@ static void mix_videoconfigparamsenc_init(MixVideoConfigParamsEnc * self) {
 
 	self->ci_frame_id = NULL;
 	self->ci_frame_num = 0;
-	
-	self->need_display = TRUE;	
+
+	self->need_display = TRUE;
 
 	self->rate_control = MIX_RATE_CONTROL_NONE;
 	self->raw_format = MIX_RAW_TARGET_FORMAT_YUV420;
-	self->profile = MIX_PROFILE_H264BASELINE;	
+	self->profile = MIX_PROFILE_H264BASELINE;
 	self->level = 30;
 
 	self->CIR_frame_cnt = 15;
+	self->refresh_type = MIX_VIDEO_NONIR;
+
+	self->air_params.air_MBs = 0;
+	self->air_params.air_threshold = 0;
+	self->air_params.air_auto = 0;
 
 	/* TODO: initialize other properties */
 	self->reserved1 = NULL;
@@ -73,10 +82,10 @@ static void mix_videoconfigparamsenc_init(MixVideoConfigParamsEnc * self) {
 
 static void mix_videoconfigparamsenc_class_init(MixVideoConfigParamsEncClass * klass) {
     MixParamsClass *mixparams_class = MIX_PARAMS_CLASS(klass);
-    
+
     /* setup static parent class */
     parent_class = (MixParamsClass *) g_type_class_peek_parent(klass);
-    
+
     mixparams_class->finalize = mix_videoconfigparamsenc_finalize;
     mixparams_class->copy = (MixParamsCopyFunction) mix_videoconfigparamsenc_copy;
     mixparams_class->dup = (MixParamsDupFunction) mix_videoconfigparamsenc_dup;
@@ -89,7 +98,7 @@ mix_videoconfigparamsenc_new(void) {
     MixVideoConfigParamsEnc *ret =
         (MixVideoConfigParamsEnc *) g_type_create_instance(
                 MIX_TYPE_VIDEOCONFIGPARAMSENC);
-    
+
     return ret;
 }
 
@@ -128,9 +137,9 @@ mix_videoconfigparamsenc_ref(MixVideoConfigParamsEnc * mix) {
 MixParams *
 mix_videoconfigparamsenc_dup(const MixParams * obj) {
     MixParams *ret = NULL;
-    
-    LOG_V( "Begin\n");	
-    
+
+    LOG_V( "Begin\n");
+
     if (MIX_IS_VIDEOCONFIGPARAMSENC(obj)) {
         MixVideoConfigParamsEnc *duplicate = mix_videoconfigparamsenc_new();
         if (mix_videoconfigparamsenc_copy(MIX_PARAMS(duplicate), MIX_PARAMS(obj))) {
@@ -156,7 +165,7 @@ gboolean mix_videoconfigparamsenc_copy(MixParams * target, const MixParams * src
 	MixVideoConfigParamsEnc *this_target, *this_src;
 	MIX_RESULT mix_result = MIX_RESULT_FAIL;
 
-    LOG_V( "Begin\n");	
+    LOG_V( "Begin\n");
 
 	if (MIX_IS_VIDEOCONFIGPARAMSENC(target) && MIX_IS_VIDEOCONFIGPARAMSENC(src)) {
 
@@ -168,24 +177,31 @@ gboolean mix_videoconfigparamsenc_copy(MixParams * target, const MixParams * src
 
 		this_target->bitrate   = this_src->bitrate;
 		this_target->frame_rate_num = this_src->frame_rate_num;
-		this_target->frame_rate_denom = this_src->frame_rate_denom;		
+		this_target->frame_rate_denom = this_src->frame_rate_denom;
 		this_target->initial_qp = this_src->initial_qp;
 		this_target->min_qp = this_src->min_qp;
+		this_target->target_percentage = this_src->target_percentage;
+		this_target->window_size = this_src->window_size;
+		this_target->max_slice_size = this_src->max_slice_size;
 		this_target->intra_period    = this_src->intra_period;
-		this_target->picture_width    = this_src->picture_width;		
+		this_target->picture_width    = this_src->picture_width;
 		this_target->picture_height   = this_src->picture_height;
 		this_target->mixbuffer_pool_size = this_src->mixbuffer_pool_size;
 		this_target->share_buf_mode = this_src->share_buf_mode;
-		this_target->encode_format = this_src->encode_format;		
-		this_target->ci_frame_num = this_src->ci_frame_num;		
-		this_target->draw= this_src->draw;		
+		this_target->encode_format = this_src->encode_format;
+		this_target->ci_frame_num = this_src->ci_frame_num;
+		this_target->draw= this_src->draw;
 		this_target->need_display = this_src->need_display;
-	       this_target->rate_control = this_src->rate_control;
-	       this_target->raw_format = this_src->raw_format;
-	       this_target->profile = this_src->profile;		
-	       this_target->level = this_src->level;			   
-	       this_target->CIR_frame_cnt = this_src->CIR_frame_cnt;	
-		
+		this_target->rate_control = this_src->rate_control;
+		this_target->raw_format = this_src->raw_format;
+		this_target->profile = this_src->profile;
+		this_target->level = this_src->level;
+		this_target->CIR_frame_cnt = this_src->CIR_frame_cnt;
+		this_target->refresh_type = this_src->refresh_type;
+		this_target->air_params.air_MBs = this_src->air_params.air_MBs;
+		this_target->air_params.air_threshold = this_src->air_params.air_threshold;
+		this_target->air_params.air_auto = this_src->air_params.air_auto;
+
 		/* copy properties of non-primitive */
 
 		/* copy mime_type */
@@ -193,32 +209,32 @@ gboolean mix_videoconfigparamsenc_copy(MixParams * target, const MixParams * src
 		if (this_src->mime_type) {
 #ifdef MDEBUG
             if (this_src->mime_type->str) {
-                
-                LOG_I( "this_src->mime_type->str = %s  %x\n", 
-                        this_src->mime_type->str, (unsigned int)this_src->mime_type->str);	
+
+                LOG_I( "this_src->mime_type->str = %s  %x\n",
+                        this_src->mime_type->str, (unsigned int)this_src->mime_type->str);
             }
 #endif
 
             mix_result = mix_videoconfigparamsenc_set_mime_type(this_target,
                     this_src->mime_type->str);
         } else {
-            
+
             LOG_I( "this_src->mime_type = NULL\n");
-            
+
             mix_result = mix_videoconfigparamsenc_set_mime_type(this_target, NULL);
         }
-        
+
         if (mix_result != MIX_RESULT_SUCCESS) {
-            
-            LOG_E( "Failed to mix_videoconfigparamsenc_set_mime_type\n");	
+
+            LOG_E( "Failed to mix_videoconfigparamsenc_set_mime_type\n");
             return FALSE;
-        }	
-        
+        }
+
         mix_result = mix_videoconfigparamsenc_set_ci_frame_info (this_target, this_src->ci_frame_id,
                 this_src->ci_frame_num);
-        
+
         /* TODO: copy other properties if there's any */
-        
+
 		/* Now chainup base class */
 		if (parent_class->copy) {
             return parent_class->copy(MIX_PARAMS_CAST(target), MIX_PARAMS_CAST(
@@ -227,7 +243,7 @@ gboolean mix_videoconfigparamsenc_copy(MixParams * target, const MixParams * src
             return TRUE;
         }
     }
-    
+
     return FALSE;
 }
 
@@ -273,10 +289,22 @@ gboolean mix_videoconfigparamsenc_equal(MixParams * first, MixParams * second) {
 		if (this_first->min_qp != this_second->min_qp) {
 			goto not_equal;
 		}
-		
+
+		if (this_first->target_percentage != this_second->target_percentage) {
+			goto not_equal;
+		}
+
+		if (this_first->window_size != this_second->window_size) {
+			goto not_equal;
+		}
+
+		if (this_first->max_slice_size != this_second->max_slice_size) {
+			goto not_equal;
+		}
+
 		if (this_first->intra_period != this_second->intra_period) {
 			goto not_equal;
-		}		
+		}
 
 		if (this_first->picture_width != this_second->picture_width
 				&& this_first->picture_height != this_second->picture_height) {
@@ -289,11 +317,11 @@ gboolean mix_videoconfigparamsenc_equal(MixParams * first, MixParams * second) {
 
 		if (this_first->mixbuffer_pool_size != this_second->mixbuffer_pool_size) {
 			goto not_equal;
-		}	
+		}
 
 		if (this_first->share_buf_mode != this_second->share_buf_mode) {
 			goto not_equal;
-		}		
+		}
 
 		if (this_first->ci_frame_id != this_second->ci_frame_id) {
 			goto not_equal;
@@ -301,34 +329,52 @@ gboolean mix_videoconfigparamsenc_equal(MixParams * first, MixParams * second) {
 
 		if (this_first->ci_frame_num != this_second->ci_frame_num) {
 			goto not_equal;
-		}		
+		}
 
 		if (this_first->draw != this_second->draw) {
 			goto not_equal;
-		}	
+		}
 
 		if (this_first->need_display!= this_second->need_display) {
 			goto not_equal;
-		}		
+		}
 
-	      if (this_first->rate_control != this_second->rate_control) {
-		  	goto not_equal;
-		}	  
+        if (this_first->rate_control != this_second->rate_control) {
+            goto not_equal;
+        }
 
-	      if (this_first->raw_format != this_second->raw_format) {
-		  	goto not_equal;
-		}	  
+        if (this_first->raw_format != this_second->raw_format) {
+            goto not_equal;
+        }
 
-	      if (this_first->profile != this_second->profile) {
-		  	goto not_equal;
-		}	  	
-	      if (this_first->level != this_second->level) {
-		  	goto not_equal;
-		}		
+        if (this_first->profile != this_second->profile) {
+            goto not_equal;
+        }
 
-	      if (this_first->CIR_frame_cnt != this_second->CIR_frame_cnt) {
-		  	goto not_equal;
-		}	
+        if (this_first->level != this_second->level) {
+            goto not_equal;
+		}
+
+        if (this_first->CIR_frame_cnt != this_second->CIR_frame_cnt) {
+            goto not_equal;
+        }
+
+        if (this_first->refresh_type != this_second->refresh_type) {
+            goto not_equal;
+        }
+
+        if (this_first->air_params.air_MBs != this_second->air_params.air_MBs) {
+            goto not_equal;
+        }
+
+        if (this_first->air_params.air_threshold != this_second->air_params.air_threshold) {
+            goto not_equal;
+        }
+
+        if (this_first->air_params.air_auto != this_second->air_params.air_auto) {
+            goto not_equal;
+        }
+
 		/* check the equalitiy of the none-primitive type properties */
 
 		/* compare mime_type */
@@ -340,7 +386,7 @@ gboolean mix_videoconfigparamsenc_equal(MixParams * first, MixParams * second) {
 			}
 		} else if (!(!this_first->mime_type && !this_second->mime_type)) {
 			goto not_equal;
-		}	
+		}
 
 		ret = TRUE;
 
@@ -385,7 +431,7 @@ MIX_RESULT mix_videoconfigparamsenc_set_mime_type(MixVideoConfigParamsEnc * obj,
 		return MIX_RESULT_NULL_PTR;
 	}
 
-	LOG_I( "mime_type = %s  %x\n", 
+	LOG_I( "mime_type = %s  %x\n",
 		mime_type, (unsigned int)mime_type);
 
 	if (obj->mime_type) {
@@ -396,9 +442,9 @@ MIX_RESULT mix_videoconfigparamsenc_set_mime_type(MixVideoConfigParamsEnc * obj,
 	}
 
 
-	LOG_I( "mime_type = %s  %x\n", 
+	LOG_I( "mime_type = %s  %x\n",
 		mime_type, (unsigned int)mime_type);
-	
+
 	obj->mime_type = g_string_new(mime_type);
 	if (!obj->mime_type) {
 		return MIX_RESULT_NO_MEMORY;
@@ -479,13 +525,13 @@ MIX_RESULT mix_videoconfigparamsenc_set_bit_rate (MixVideoConfigParamsEnc * obj,
 	obj->bitrate= bitrate;
 	return MIX_RESULT_SUCCESS;
 
-}              
+}
 
 MIX_RESULT mix_videoconfigparamsenc_get_bit_rate (MixVideoConfigParamsEnc * obj,
         guint *bitrate) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, bitrate);
 	*bitrate = obj->bitrate;
-	return MIX_RESULT_SUCCESS;              
+	return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videoconfigparamsenc_set_init_qp (MixVideoConfigParamsEnc * obj,
@@ -493,20 +539,20 @@ MIX_RESULT mix_videoconfigparamsenc_set_init_qp (MixVideoConfigParamsEnc * obj,
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
 	obj->initial_qp = initial_qp;
 	return MIX_RESULT_SUCCESS;
-}              
+}
 
 MIX_RESULT mix_videoconfigparamsenc_get_init_qp (MixVideoConfigParamsEnc * obj,
         guint *initial_qp) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, initial_qp);
 	*initial_qp = obj->initial_qp;
 	return MIX_RESULT_SUCCESS;
-             
-}              
+
+}
 
 MIX_RESULT mix_videoconfigparamsenc_set_min_qp (MixVideoConfigParamsEnc * obj,
         guint min_qp) {
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
-	obj->min_qp = min_qp;	
+	obj->min_qp = min_qp;
 	return MIX_RESULT_SUCCESS;
 }
 
@@ -514,15 +560,51 @@ MIX_RESULT mix_videoconfigparamsenc_get_min_qp(MixVideoConfigParamsEnc * obj,
         guint *min_qp) {
     MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, min_qp);
     *min_qp = obj->min_qp;
-    
+
+    return MIX_RESULT_SUCCESS;
+}
+
+
+MIX_RESULT mix_videoconfigparamsenc_set_target_percentage (MixVideoConfigParamsEnc * obj,
+        guint target_percentage) {
+
+	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
+	obj->target_percentage = target_percentage;
+	return MIX_RESULT_SUCCESS;
+	}
+
+
+MIX_RESULT mix_videoconfigparamsenc_get_target_percentage(MixVideoConfigParamsEnc * obj,
+        guint *target_percentage) {
+
+    MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, target_percentage);
+    *target_percentage = obj->target_percentage;
+
+    return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_set_window_size (MixVideoConfigParamsEnc * obj,
+        guint window_size) {
+
+	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
+	obj->window_size = window_size;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_get_window_size (MixVideoConfigParamsEnc * obj,
+        guint *window_size) {
+
+    MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, window_size);
+    *window_size = obj->window_size;
+
     return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videoconfigparamsenc_set_intra_period (MixVideoConfigParamsEnc * obj,
         guint intra_period) {
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
-	obj->intra_period = intra_period;	
-	
+	obj->intra_period = intra_period;
+
 	return MIX_RESULT_SUCCESS;
 }
 
@@ -530,7 +612,7 @@ MIX_RESULT mix_videoconfigparamsenc_get_intra_period (MixVideoConfigParamsEnc * 
         guint *intra_period) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, intra_period);
 	*intra_period = obj->intra_period;
-	
+
 	return MIX_RESULT_SUCCESS;
 }
 
@@ -564,15 +646,15 @@ MIX_RESULT mix_videoconfigparamsenc_get_share_buf_mode(MixVideoConfigParamsEnc *
 		gboolean *share_buf_mod) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, share_buf_mod);
 
-	*share_buf_mod = obj->share_buf_mode;	
-	return MIX_RESULT_SUCCESS;		
+	*share_buf_mod = obj->share_buf_mode;
+	return MIX_RESULT_SUCCESS;
 }
 
-MIX_RESULT mix_videoconfigparamsenc_set_ci_frame_info(MixVideoConfigParamsEnc * obj, 
+MIX_RESULT mix_videoconfigparamsenc_set_ci_frame_info(MixVideoConfigParamsEnc * obj,
         gulong * ci_frame_id, guint ci_frame_num) {
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
-	
-	
+
+
 	if (!ci_frame_id || !ci_frame_num) {
 		obj->ci_frame_id = NULL;
 		obj->ci_frame_num = 0;
@@ -584,7 +666,7 @@ MIX_RESULT mix_videoconfigparamsenc_set_ci_frame_info(MixVideoConfigParamsEnc * 
 
 	guint size = ci_frame_num * sizeof (gulong);
 	obj->ci_frame_num = ci_frame_num;
-	
+
 	obj->ci_frame_id = g_malloc (ci_frame_num * sizeof (gulong));
 	if (!(obj->ci_frame_id)) {
 		return MIX_RESULT_NO_MEMORY;
@@ -600,7 +682,7 @@ MIX_RESULT mix_videoconfigparamsenc_get_ci_frame_info (MixVideoConfigParamsEnc *
     MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT_PAIR (obj, ci_frame_id, ci_frame_num);
 
 	*ci_frame_num = obj->ci_frame_num;
-	
+
 	if (!obj->ci_frame_id) {
 		*ci_frame_id = NULL;
 		return MIX_RESULT_SUCCESS;
@@ -608,36 +690,36 @@ MIX_RESULT mix_videoconfigparamsenc_get_ci_frame_info (MixVideoConfigParamsEnc *
 
 	if (obj->ci_frame_num) {
 		*ci_frame_id = g_malloc (obj->ci_frame_num * sizeof (gulong));
-		
+
 		if (!*ci_frame_id) {
 			return MIX_RESULT_NO_MEMORY;
-		}		
-		
+		}
+
 		memcpy (*ci_frame_id, obj->ci_frame_id, obj->ci_frame_num * sizeof (gulong));
-		
+
 	} else {
 		*ci_frame_id = NULL;
 	}
-	
-	return MIX_RESULT_SUCCESS;		
+
+	return MIX_RESULT_SUCCESS;
 }
 
 
-MIX_RESULT mix_videoconfigparamsenc_set_drawable (MixVideoConfigParamsEnc * obj, 
+MIX_RESULT mix_videoconfigparamsenc_set_drawable (MixVideoConfigParamsEnc * obj,
         gulong draw) {
-		
+
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
 	obj->draw = draw;
 	return MIX_RESULT_SUCCESS;
-		
+
 }
 
 MIX_RESULT mix_videoconfigparamsenc_get_drawable (MixVideoConfigParamsEnc * obj,
         gulong *draw) {
 
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, draw);
-	*draw = obj->draw;	
-	return MIX_RESULT_SUCCESS;		
+	*draw = obj->draw;
+	return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videoconfigparamsenc_set_need_display (
@@ -652,8 +734,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_need_display(MixVideoConfigParamsEnc * o
 		gboolean *need_display) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, need_display);
 
-	*need_display = obj->need_display;	
-	return MIX_RESULT_SUCCESS;		
+	*need_display = obj->need_display;
+	return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videoconfigparamsenc_set_rate_control(MixVideoConfigParamsEnc * obj,
@@ -668,62 +750,110 @@ MIX_RESULT mix_videoconfigparamsenc_get_rate_control(MixVideoConfigParamsEnc * o
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, rate_control);
 	*rate_control = obj->rate_control;
 	return MIX_RESULT_SUCCESS;
-}	
+}
 
 MIX_RESULT mix_videoconfigparamsenc_set_raw_format (MixVideoConfigParamsEnc * obj,
 		MixRawTargetFormat raw_format) {
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
 	obj->raw_format = raw_format;
-	return MIX_RESULT_SUCCESS;		
+	return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videoconfigparamsenc_get_raw_format (MixVideoConfigParamsEnc * obj,
 		MixRawTargetFormat * raw_format) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, raw_format);
 	*raw_format = obj->raw_format;
-	return MIX_RESULT_SUCCESS;		
+	return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videoconfigparamsenc_set_profile (MixVideoConfigParamsEnc * obj,
 		MixProfile profile) {
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
 	obj->profile = profile;
-	return MIX_RESULT_SUCCESS;			
+	return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videoconfigparamsenc_get_profile (MixVideoConfigParamsEnc * obj,
 		MixProfile * profile) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, profile);
 	*profile = obj->profile;
-	return MIX_RESULT_SUCCESS;			
+	return MIX_RESULT_SUCCESS;
 }
 
-MIX_RESULT mix_videoconfigparamsenc_set_level (MixVideoConfigParamsEnc * obj, 
+MIX_RESULT mix_videoconfigparamsenc_set_level (MixVideoConfigParamsEnc * obj,
 		guint8 level) {
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
 	obj->level = level;
-	return MIX_RESULT_SUCCESS;			
+	return MIX_RESULT_SUCCESS;
 }
 
-MIX_RESULT mix_videoconfigparamsenc_get_level (MixVideoConfigParamsEnc * obj, 
+MIX_RESULT mix_videoconfigparamsenc_get_level (MixVideoConfigParamsEnc * obj,
 		guint8 * level) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, level);
 	*level = obj->level;
-	return MIX_RESULT_SUCCESS;			
+	return MIX_RESULT_SUCCESS;
 }
 
 
-MIX_RESULT mix_videoconfigparamsenc_set_CIR_frame_cnt (MixVideoConfigParamsEnc * obj, 
+MIX_RESULT mix_videoconfigparamsenc_set_CIR_frame_cnt (MixVideoConfigParamsEnc * obj,
 		guint CIR_frame_cnt) {
 	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
 	obj->CIR_frame_cnt = CIR_frame_cnt;
-	return MIX_RESULT_SUCCESS;			
+	return MIX_RESULT_SUCCESS;
 }
 
-MIX_RESULT mix_videoconfigparamsenc_get_CIR_frame_cnt (MixVideoConfigParamsEnc * obj, 
+MIX_RESULT mix_videoconfigparamsenc_get_CIR_frame_cnt (MixVideoConfigParamsEnc * obj,
 		guint * CIR_frame_cnt) {
 	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, CIR_frame_cnt);
 	*CIR_frame_cnt = obj->CIR_frame_cnt;
-	return MIX_RESULT_SUCCESS;			
+	return MIX_RESULT_SUCCESS;
+}
+
+
+MIX_RESULT mix_videoconfigparamsenc_set_max_slice_size (MixVideoConfigParamsEnc * obj,
+		guint max_slice_size) {
+	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
+	obj->max_slice_size = max_slice_size;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_get_max_slice_size (MixVideoConfigParamsEnc * obj,
+		guint * max_slice_size) {
+	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, max_slice_size);
+	*max_slice_size = obj->max_slice_size;
+	return MIX_RESULT_SUCCESS;
+}
+
+
+MIX_RESULT mix_videoconfigparamsenc_set_refresh_type(MixVideoConfigParamsEnc * obj,
+		MixVideoIntraRefreshType refresh_type) {
+	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
+	obj->refresh_type = refresh_type;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_get_refresh_type (MixVideoConfigParamsEnc * obj,
+		MixVideoIntraRefreshType * refresh_type) {
+	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, refresh_type);
+	*refresh_type = obj->refresh_type;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_set_AIR_params (MixVideoConfigParamsEnc * obj,
+		MixAIRParams air_params) {
+	MIX_VIDEOCONFIGPARAMSENC_SETTER_CHECK_INPUT (obj);
+	obj->air_params.air_MBs = air_params.air_MBs;
+	obj->air_params.air_threshold = air_params.air_threshold;
+	obj->air_params.air_auto = air_params.air_auto;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_get_AIR_params (MixVideoConfigParamsEnc * obj,
+		MixAIRParams * air_params) {
+	MIX_VIDEOCONFIGPARAMSENC_GETTER_CHECK_INPUT (obj, air_params);
+	air_params->air_MBs = obj->air_params.air_MBs;
+	air_params->air_threshold = obj->air_params.air_threshold;
+	air_params->air_auto = obj->air_params.air_auto;
+	return MIX_RESULT_SUCCESS;
 }
 

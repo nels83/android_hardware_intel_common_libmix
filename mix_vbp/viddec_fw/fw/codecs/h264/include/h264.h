@@ -502,6 +502,10 @@ typedef struct _vui_seq_parameters_t_used
 	uint8_t   aspect_ratio_idc;                                // u(8)	
 	uint8_t   video_signal_type_present_flag;                  // u(1)
 	uint8_t   video_format;                                    // u(3)
+#ifdef VBP
+    uint8_t   video_full_range_flag;                           // u(1)
+    uint8_t   matrix_coefficients;                              // u(8) 
+#endif
 	
 	uint8_t   colour_description_present_flag;                 // u(1)	
 	uint8_t   colour_primaries;                                // u(8)	

@@ -234,7 +234,7 @@ static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
 		{
 			/* mandatory for H.264 */
 			ETRACE("Failed to allocate memory");
-			error =  VBP_CXT;
+			error =  VBP_TYPE;
 			goto cleanup;
 		}
 	}
@@ -376,23 +376,6 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
 			return error;
 		}			
 	}
-
-	/* currently always assume a complete frame is supplied for parsing, so
-	 * there is no need to check if workload is done
-	 */
-	 
-	/*
-	uint32_t codec_errors = 0;
-	uint32_t state;
-
-	error = ops->is_wkld_done(
-		(void *)cxt, 
-		(void *)&(cxt->codec_data[0]),
-		(uint32_t)cxt->sc_prefix_info.next_sc, 
-		&codec_errors);
-	state = (ret == VIDDEC_PARSE_FRMDONE) ? VBP_DONE : VBP_OK;
-	return state;
-	*/
 
 	return VBP_OK;
 }
@@ -554,6 +537,6 @@ uint32 vbp_utils_query(vbp_context *pcontext, void **data)
  */
 uint32 vbp_utils_flush(vbp_context *pcontext)
 {
-	return VBP_IMPL;
+	return VBP_OK;
 }
 

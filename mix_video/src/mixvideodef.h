@@ -11,8 +11,8 @@
  * @title: MI-X Video Data Definitons And Common Error Code
  * @short_description: MI-X Video data definitons and common error code
  * @include: mixvideodef.h
- * 
- * The section includes the definition of enum and struct as well as 
+ *
+ * The section includes the definition of enum and struct as well as
  * <note>
  * <title>Common Video Error Return Codes of MI-X video functions</title>
  * <itemizedlist>
@@ -44,6 +44,10 @@ typedef enum {
 	MIX_RESULT_OUTOFSURFACES,
 	MIX_RESULT_DROPFRAME,
 	MIX_RESULT_NOTIMPL,
+	MIX_RESULT_VIDEO_ENC_SLICESIZE_OVERFLOW,
+	MIX_RESULT_NOT_PERMITTED,
+	MIX_RESULT_ERROR_PROCESS_STREAM,
+	MIX_RESULT_MISSING_CONFIG,
 	MIX_RESULT_VIDEO_LAST
 } MIX_VIDEO_ERROR_CODE;
 
@@ -89,7 +93,7 @@ typedef enum
     MIX_RAW_TARGET_FORMAT_YUV420 = 1,
     MIX_RAW_TARGET_FORMAT_YUV422 = 2,
     MIX_RAW_TARGET_FORMAT_YUV444 = 4,
-    MIX_RAW_TARGET_FORMAT_PROTECTED = 0x80000000,    
+    MIX_RAW_TARGET_FORMAT_PROTECTED = 0x80000000,
     MIX_RAW_TARGET_FORMAT_LAST
 } MixRawTargetFormat;
 
@@ -109,6 +113,7 @@ typedef enum
     MIX_RATE_CONTROL_NONE = 1,
     MIX_RATE_CONTROL_CBR = 2,
     MIX_RATE_CONTROL_VBR = 4,
+    MIX_RATE_CONTROL_VCM = 8,
     MIX_RATE_CONTROL_LAST
 } MixRateControl;
 
@@ -134,38 +139,65 @@ typedef enum
     MIX_DELIMITER_ANNEXB
 } MixDelimiterType;
 
+typedef enum {
+    MIX_VIDEO_NONIR,
+    MIX_VIDEO_CIR, 		/*Cyclic intra refresh*/
+    MIX_VIDEO_AIR, 		/*Adaptive intra refresh*/
+    MIX_VIDEO_BOTH,
+    MIX_VIDEO_LAST
+} MixVideoIntraRefreshType;
+
+typedef struct _MixAIRParams
+{
+	guint air_MBs;
+	guint air_threshold;
+	guint air_auto;
+} MixAIRParams;
 
 typedef enum {
 	MIX_ENC_PARAMS_START_UNUSED = 0x01000000,
 	MIX_ENC_PARAMS_BITRATE,
-	MIX_ENC_PARAMS_SLICE_SIZE,
+	MIX_ENC_PARAMS_INIT_QP,
+	MIX_ENC_PARAMS_MIN_QP,
+	MIX_ENC_PARAMS_WINDOW_SIZE,
+	MIX_ENC_PARAMS_TARGET_PERCENTAGE,
+	MIX_ENC_PARAMS_SLICE_NUM,
+	MIX_ENC_PARAMS_I_SLICE_NUM,
+	MIX_ENC_PARAMS_P_SLICE_NUM,
 	MIX_ENC_PARAMS_RESOLUTION,
 	MIX_ENC_PARAMS_GOP_SIZE,
 	MIX_ENC_PARAMS_FRAME_RATE,
 	MIX_ENC_PARAMS_FORCE_KEY_FRAME,
 	MIX_ENC_PARAMS_IDR_INTERVAL,
 	MIX_ENC_PARAMS_RC_MODE,
-	MIX_ENC_PARAMS_MAX_ENCODED_SLICE_SIZE,
-	MIX_ENC_PARAMS_QP,
+	MIX_ENC_PARAMS_MTU_SLICE_SIZE,
+	MIX_ENC_PARAMS_REFRESH_TYPE,
+	MIX_ENC_PARAMS_AIR,
 	MIX_ENC_PARAMS_CIR_FRAME_CNT,
 	MIX_ENC_PARAMS_LAST
 } MixEncParamsType;
 
 typedef struct _MixEncDynamicParams {
 	guint bitrate;
+	guint init_QP;
+	guint min_QP;
+	guint window_size;
+	guint target_percentage;
 	guint slice_num;
+	guint I_slice_num;
+	guint P_slice_num;
 	guint width;
 	guint height;
 	guint frame_rate_num;
-	guint frame_rate_denom;	
+	guint frame_rate_denom;
 	guint intra_period;
-	guint idr_interval;	
-	guint QP;
+	guint idr_interval;
 	guint CIR_frame_cnt;
 	guint max_slice_size;
 	gboolean force_idr;
 	MixRateControl rc_mode;
-	
+	MixVideoIntraRefreshType refresh_type;
+	MixAIRParams air_params;
 } MixEncDynamicParams;
 
 G_END_DECLS

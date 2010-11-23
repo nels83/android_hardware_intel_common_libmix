@@ -10,6 +10,8 @@
 #include "mixvideolog.h"
 #include "mixvideoformat_mp42.h"
 
+// Value of VOP type defined here follows MP4 spec, and has the same value of corresponding frame type
+// defined in enumeration MixFrameType (except sprite (S))
 enum {
 	MP4_VOP_TYPE_I = 0,
 	MP4_VOP_TYPE_P = 1,
@@ -17,24 +19,6 @@ enum {
 	MP4_VOP_TYPE_S = 3,
 };
 
-/*
- * This is for divx packed stream
- */
-typedef struct _PackedStream PackedStream;
-struct _PackedStream {
-	vbp_picture_data_mp42 *picture_data;
-	MixBuffer *mix_buffer;
-};
-
-/*
- * Clone and destroy vbp_picture_data_mp42
- */
-static vbp_picture_data_mp42 *mix_videoformat_mp42_clone_picture_data(
-		vbp_picture_data_mp42 *picture_data);
-static void mix_videoformat_mp42_free_picture_data(
-		vbp_picture_data_mp42 *picture_data);
-static void mix_videoformat_mp42_flush_packed_stream_queue(
-		GQueue *packed_stream_queue);
 
 /* The parent class. The pointer will be saved
  * in this class's initialization. The pointer
@@ -57,8 +41,9 @@ static void mix_videoformat_mp42_init(MixVideoFormat_MP42 * self) {
 
 	self->last_frame = NULL;
 	self->last_vop_coding_type = -1;
-
-	self->packed_stream_queue = NULL;
+	self->last_vop_time_increment = 0;
+	self->next_nvop_for_PB_frame = FALSE;
+	self->iq_matrix_buf_sent = FALSE;
 
 	/* NOTE: we don't need to do this here.
 	 * This just demostrates how to access
@@ -104,6 +89,7 @@ void mix_videoformat_mp42_finalize(GObject * obj) {
 	MixVideoFormat *parent = NULL;
 	gint32 vbp_ret = VBP_OK;
 	MixVideoFormat_MP42 *self = NULL;
+    gint idx = 0;
 
 	LOG_V("Begin\n");
 
@@ -127,32 +113,32 @@ void mix_videoformat_mp42_finalize(GObject * obj) {
 	g_mutex_lock(parent->objectlock);
 
 	/* unref reference frames */
-	{
-		gint idx = 0;
-		for (idx = 0; idx < 2; idx++) {
-			if (self->reference_frames[idx] != NULL) {
-				mix_videoframe_unref(self->reference_frames[idx]);
-				self->reference_frames[idx] = NULL;
-			}
+	for (idx = 0; idx < 2; idx++) {
+		if (self->reference_frames[idx] != NULL) {
+			mix_videoframe_unref(self->reference_frames[idx]);
+			self->reference_frames[idx] = NULL;
 		}
 	}
-
+    if (self->last_frame)
+    {
+        mix_videoframe_unref(self->last_frame);
+        self->last_frame = NULL;
+    }
+    self->next_nvop_for_PB_frame = FALSE;
+    self->iq_matrix_buf_sent = FALSE;
 
 	/* Reset state */
 	parent->initialized = TRUE;
-	parent->parse_in_progress = FALSE;
+	parent->end_picture_pending = FALSE;
 	parent->discontinuity_frame_in_progress = FALSE;
 	parent->current_timestamp = (guint64)-1;
 
 	/* Close the parser */
-	vbp_ret = vbp_close(parent->parser_handle);
-	parent->parser_handle = NULL;
-
-	if (self->packed_stream_queue) {
-		mix_videoformat_mp42_flush_packed_stream_queue(self->packed_stream_queue);
-		g_queue_free(self->packed_stream_queue);
-	}
-	self->packed_stream_queue = NULL;
+	if (parent->parser_handle)
+	{
+    	vbp_ret = vbp_close(parent->parser_handle);
+	    parent->parser_handle = NULL;
+    }	    
 
 	g_mutex_unlock(parent->objectlock);
 
@@ -183,938 +169,1097 @@ MIX_RESULT mix_videofmt_mp42_getcaps(MixVideoFormat *mix, GString *msg) {
 	return MIX_RESULT_NOTIMPL;
 }
 
-MIX_RESULT mix_videofmt_mp42_initialize(MixVideoFormat *mix,
-		MixVideoConfigParamsDec * config_params, MixFrameManager * frame_mgr,
-		MixBufferPool * input_buf_pool, MixSurfacePool ** surface_pool,
-		VADisplay va_display) {
-	uint32 vbp_ret = 0;
-	MIX_RESULT ret = MIX_RESULT_FAIL;
 
-	vbp_data_mp42 *data = NULL;
-	MixVideoFormat *parent = NULL;
-	MixIOVec *header = NULL;
+MIX_RESULT mix_videofmt_mp42_update_config_params(
+    MixVideoFormat *mix,
+    vbp_data_mp42 *data)
+{
+    MixVideoFormat *parent = MIX_VIDEOFORMAT(mix);
+    //MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);  
 
-	VAProfile va_profile = VAProfileMPEG4AdvancedSimple;
-	VAConfigAttrib attrib;
+    if (parent->picture_width == 0 || 
+        parent->picture_height == 0 ||
+       parent->picture_width < data->codec_data.video_object_layer_width ||
+       parent->picture_height < data->codec_data.video_object_layer_height)
+    {
+        parent->picture_width = data->codec_data.video_object_layer_width;
+        parent->picture_height = data->codec_data.video_object_layer_height;
 
-	VAStatus va_ret = VA_STATUS_SUCCESS;
-	guint number_extra_surfaces = 0;
-	VASurfaceID *surfaces = NULL;
-	guint numSurfaces = 0;
+        mix_videoconfigparamsdec_set_picture_res(
+            mix->config_params, 
+            parent->picture_width, 
+            parent->picture_height);        
+    }
+    
 
-	MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);
+    // video_range has default value of 0. Y ranges from 16 to 235.
+    mix_videoconfigparamsdec_set_video_range(mix->config_params, data->codec_data.video_range);
+    
+    uint8  color_matrix;
+    
+    switch (data->codec_data.matrix_coefficients)
+    {
+        case 1:
+            color_matrix = VA_SRC_BT709;
+            break;
 
-	if (mix == NULL || config_params == NULL || frame_mgr == NULL) {
-		return MIX_RESULT_NULL_PTR;
-	}
+        // ITU-R Recommendation BT.470-6 System B, G (MP4), same as 
+        // SMPTE 170M/BT601
+        case 5:
+        case 6:
+            color_matrix = VA_SRC_BT601;
+            break;
 
-	if (!MIX_IS_VIDEOFORMAT_MP42(mix)) {
-		return MIX_RESULT_INVALID_PARAM;
-	}
+        default:
+            // unknown color matrix, set to 0 so color space flag will not be set.
+            color_matrix = 0;
+            break;        
+    }            
+    mix_videoconfigparamsdec_set_color_matrix(mix->config_params, color_matrix); 
 
-	LOG_V("begin\n");
-
-	if (parent_class->initialize) {
-		ret = parent_class->initialize(mix, config_params, frame_mgr,
-				input_buf_pool, surface_pool, va_display);
-		if (ret != MIX_RESULT_SUCCESS) {
-			LOG_E("Failed to initialize parent!\n");
-			return ret;
-		}
-	}
-
-	parent = MIX_VIDEOFORMAT(mix);
-
-	g_mutex_lock(parent->objectlock);
-
-	parent->initialized = FALSE;
-
-	vbp_ret = vbp_open(VBP_MPEG4, &(parent->parser_handle));
-
-	if (vbp_ret != VBP_OK) {
-		LOG_E("Failed to call vbp_open()\n");
-		ret = MIX_RESULT_FAIL;
-		goto cleanup;
-	}
-
-	/*
-	 * avidemux doesn't pass codec_data, we need handle this.
-	 */
-
-	LOG_V("Try to get header data from config_param\n");
-
-	ret = mix_videoconfigparamsdec_get_header(config_params, &header);
-	if (ret == MIX_RESULT_SUCCESS && header != NULL) {
-
-		LOG_V("Found header data from config_param\n");
-		vbp_ret = vbp_parse(parent->parser_handle, header->data, header->data_size,
-				TRUE);
-
-		LOG_V("vbp_parse() returns 0x%x\n", vbp_ret);
-
-		g_free(header->data);
-		g_free(header);
-
-		if (!((vbp_ret == VBP_OK) || (vbp_ret == VBP_DONE))) {
-			LOG_E("Failed to call vbp_parse() to parse header data!\n");
-			goto cleanup;
-		}
-
-		/* Get the header data and save */
-
-		LOG_V("Call vbp_query()\n");
-		vbp_ret = vbp_query(parent->parser_handle, (void *) &data);
-		LOG_V("vbp_query() returns 0x%x\n", vbp_ret);
-
-		if ((vbp_ret != VBP_OK) || (data == NULL)) {
-			LOG_E("Failed to call vbp_query() to query header data parsing result\n");
-			goto cleanup;
-		}
-
-		if ((data->codec_data.profile_and_level_indication & 0xF8) == 0xF0) {
-			va_profile = VAProfileMPEG4AdvancedSimple;
-			LOG_V("The profile is VAProfileMPEG4AdvancedSimple from header data\n");
-		} else {
-			va_profile = VAProfileMPEG4Simple;
-			LOG_V("The profile is VAProfileMPEG4Simple from header data\n");
-		}
-	}
-
-	va_display = parent->va_display;
-
-	/* We are requesting RT attributes */
-	attrib.type = VAConfigAttribRTFormat;
-
-	va_ret = vaGetConfigAttributes(va_display, va_profile, VAEntrypointVLD,
-			&attrib, 1);
-	if (va_ret != VA_STATUS_SUCCESS) {
-		LOG_E("Failed to call vaGetConfigAttributes()\n");
-		goto cleanup;
-	}
-
-	if ((attrib.value & VA_RT_FORMAT_YUV420) == 0) {
-		LOG_E("The attrib.value is wrong!\n");
-		goto cleanup;
-	}
-
-	va_ret = vaCreateConfig(va_display, va_profile, VAEntrypointVLD, &attrib,
-			1, &(parent->va_config));
-
-	if (va_ret != VA_STATUS_SUCCESS) {
-		LOG_E("Failed to call vaCreateConfig()!\n");
-		goto cleanup;
-	}
-
-	ret = mix_videoconfigparamsdec_get_extra_surface_allocation(config_params,
-			&number_extra_surfaces);
-
-	if (ret != MIX_RESULT_SUCCESS) {
-		LOG_E("Failed to call mix_videoconfigparams_get_extra_surface_allocation()!\n");
-		goto cleanup;
-	}
-
-	parent->va_num_surfaces = number_extra_surfaces + 4;
-	if (parent->va_num_surfaces > MIX_VIDEO_MP42_SURFACE_NUM) {
-		parent->va_num_surfaces = MIX_VIDEO_MP42_SURFACE_NUM;
-	}
-
-	numSurfaces = parent->va_num_surfaces;
-
-	parent->va_surfaces = g_malloc(sizeof(VASurfaceID) * numSurfaces);
-	if (!parent->va_surfaces) {
-		LOG_E("Not enough memory to allocate surfaces!\n");
-		ret = MIX_RESULT_NO_MEMORY;
-		goto cleanup;
-	}
-
-	surfaces = parent->va_surfaces;
-
-	va_ret = vaCreateSurfaces(va_display, parent->picture_width,
-			parent->picture_height, VA_RT_FORMAT_YUV420, numSurfaces,
-			surfaces);
-	if (va_ret != VA_STATUS_SUCCESS) {
-		LOG_E("Failed to call vaCreateSurfaces()!\n");
-		goto cleanup;
-	}
-
-	parent->surfacepool = mix_surfacepool_new();
-	if (parent->surfacepool == NULL) {
-		LOG_E("Not enough memory to create surface pool!\n");
-		ret = MIX_RESULT_NO_MEMORY;
-		goto cleanup;
-	}
-
-	*surface_pool = parent->surfacepool;
-
-	ret = mix_surfacepool_initialize(parent->surfacepool, surfaces,
-			numSurfaces, va_display);
-
-	/* Initialize and save the VA context ID
-	 * Note: VA_PROGRESSIVE libva flag is only relevant to MPEG2
-	 */
-	va_ret = vaCreateContext(va_display, parent->va_config,
-			parent->picture_width, parent->picture_height, 0, surfaces,
-			numSurfaces, &(parent->va_context));
-
-	if (va_ret != VA_STATUS_SUCCESS) {
-		LOG_E("Failed to call vaCreateContext()!\n");
-		ret = MIX_RESULT_FAIL;
-		goto cleanup;
-	}
-
-	/*
-	 * Packed stream queue
-	 */
-
-	self->packed_stream_queue = g_queue_new();
-	if (!self->packed_stream_queue) {
-		LOG_E("Failed to crate packed stream queue!\n");
-		ret = MIX_RESULT_NO_MEMORY;
-		goto cleanup;
-	}
-
-	self->last_frame = NULL;
-	self->last_vop_coding_type = -1;
-	parent->initialized = FALSE;
-	ret = MIX_RESULT_SUCCESS;
-
-	cleanup:
-
-	g_mutex_unlock(parent->objectlock);
-
-	LOG_V("End\n");
-
-	return ret;
+    mix_videoconfigparamsdec_set_pixel_aspect_ratio(
+        mix->config_params,
+        data->codec_data.par_width,
+        data->codec_data.par_height);
+    
+    return MIX_RESULT_SUCCESS;
 }
 
-MIX_RESULT mix_videofmt_mp42_decode(MixVideoFormat *mix, MixBuffer * bufin[],
-		gint bufincnt, MixVideoDecodeParams * decode_params) {
-	uint32 vbp_ret = 0;
-	MixVideoFormat *parent = NULL;
-	MIX_RESULT ret = MIX_RESULT_FAIL;
-	guint64 ts = 0;
-	vbp_data_mp42 *data = NULL;
-	gboolean discontinuity = FALSE;
-	MixInputBufferEntry *bufentry = NULL;
-	gint i = 0;
 
-	LOG_V("Begin\n");
+MIX_RESULT mix_videofmt_mp42_initialize_va(
+    MixVideoFormat *mix,
+    vbp_data_mp42 *data)
+{
+    MIX_RESULT ret = MIX_RESULT_SUCCESS;
+    VAStatus vret = VA_STATUS_SUCCESS;
+    VAConfigAttrib attrib;
+    VAProfile va_profile;      
+    MixVideoFormat *parent = MIX_VIDEOFORMAT(mix);
+    //MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);  
 
-	if (mix == NULL || bufin == NULL || decode_params == NULL) {
-		return MIX_RESULT_NULL_PTR;
+    LOG_V( "Begin\n");
+
+    if (parent->va_initialized)
+    {
+        LOG_W("va already initialized.\n");
+        return MIX_RESULT_SUCCESS;
+    }
+    
+    //We are requesting RT attributes
+    attrib.type = VAConfigAttribRTFormat;
+    attrib.value = VA_RT_FORMAT_YUV420;
+
+    //Initialize and save the VA config ID
+	if ((data->codec_data.profile_and_level_indication & 0xF8) == 0xF0) 
+	{
+		va_profile = VAProfileMPEG4AdvancedSimple;
+	} 
+	else 
+	{
+		va_profile = VAProfileMPEG4Simple;
 	}
+		
+    vret = vaCreateConfig(
+        parent->va_display, 
+        va_profile, 
+        VAEntrypointVLD, 
+        &attrib, 
+        1, 
+        &(parent->va_config));
 
-	if (!MIX_IS_VIDEOFORMAT_MP42(mix)) {
-		return MIX_RESULT_INVALID_PARAM;
-	}
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E("vaCreateConfig failed\n");
+        goto cleanup;
+    }
 
-	parent = MIX_VIDEOFORMAT(mix);
+    // add 1 more surface for packed frame (PB frame), and another one
+    // for partial frame handling
+	parent->va_num_surfaces = parent->extra_surfaces + 4 + 1 + 1;
+	//if (parent->va_num_surfaces > MIX_VIDEO_MP42_SURFACE_NUM) 
+	//	parent->va_num_surfaces = MIX_VIDEO_MP42_SURFACE_NUM;
+                
+    parent->va_surfaces = g_malloc(sizeof(VASurfaceID)*parent->va_num_surfaces);
+    if (parent->va_surfaces == NULL)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "parent->va_surfaces == NULL. \n");
+        goto cleanup;
+    }
+    
+    vret = vaCreateSurfaces(
+        parent->va_display, 
+        parent->picture_width,
+        parent->picture_height,
+        VA_RT_FORMAT_YUV420,
+        parent->va_num_surfaces, 
+        parent->va_surfaces);
+    
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Error allocating surfaces\n");
+        goto cleanup;
+    }
+    
+    LOG_V( "Created %d libva surfaces\n", parent->va_num_surfaces);
+    
+    //Initialize the surface pool
+    ret = mix_surfacepool_initialize(
+        parent->surfacepool,
+        parent->va_surfaces, 
+        parent->va_num_surfaces, 
+        parent->va_display);
+    
+    switch (ret)
+    {
+        case MIX_RESULT_SUCCESS:
+            break;
+        case MIX_RESULT_ALREADY_INIT:  //This case is for future use when we can be  initialized multiple times.  It is to detect when we have not been reset before re-initializing.
+        default:
+            ret = MIX_RESULT_ALREADY_INIT;
+            LOG_E( "Error init surface pool\n");
+            goto cleanup;
+            break;
+    }
+    
+    //Initialize and save the VA context ID
+    //Note: VA_PROGRESSIVE libva flag is only relevant to MPEG2
+    vret = vaCreateContext(
+        parent->va_display, 
+        parent->va_config,
+        parent->picture_width, 
+        parent->picture_height,
+        0, 
+        parent->va_surfaces, 
+        parent->va_num_surfaces,
+        &(parent->va_context));
+    
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Error initializing video driver\n");
+        goto cleanup;
+    }
+    
+    parent->va_initialized = TRUE;
+    
+cleanup:
+    /* nothing to clean up */      
+      
+    return ret;
 
-	g_mutex_lock(parent->objectlock);
-
-	ret = mix_videodecodeparams_get_timestamp(decode_params, &ts);
-	if (ret != MIX_RESULT_SUCCESS) {
-		LOG_E("Failed to get timestamp\n");
-		goto cleanup;
-	}
-
-	LOG_I("ts after mix_videodecodeparams_get_timestamp() = %"G_GINT64_FORMAT"\n", ts);
-
-	ret
-			= mix_videodecodeparams_get_discontinuity(decode_params,
-					&discontinuity);
-	if (ret != MIX_RESULT_SUCCESS) {
-		LOG_E("Failed to get discontinuity\n");
-		goto cleanup;
-	}
-
-	/*  If this is a new frame and we haven't retrieved parser
-	 *	workload data from previous frame yet, do so
-	 */
-
-	if ((ts != parent->current_timestamp) && (parent->parse_in_progress)) {
-
-		LOG_V("timestamp changed and parsing is still in progress\n");
-
-		/* this is new data and the old data parsing is not complete, continue
-		 * to parse the old data
-		 */
-		vbp_ret = vbp_query(parent->parser_handle, (void *) &data);
-		LOG_V("vbp_query() returns 0x%x\n", vbp_ret);
-
-		if ((vbp_ret != VBP_OK) || (data == NULL)) {
-			ret = MIX_RESULT_FAIL;
-			LOG_E("vbp_ret != VBP_OK || data == NULL\n");
-			goto cleanup;
-		}
-
-		ret = mix_videofmt_mp42_process_decode(mix, data,
-				parent->current_timestamp,
-				parent->discontinuity_frame_in_progress);
-
-		if (ret != MIX_RESULT_SUCCESS) {
-			/* We log this but need to process 
-			 * the new frame data, so do not return
-			 */
-			LOG_W("process_decode failed.\n");
-		}
-
-		/* we are done parsing for old data */
-		parent->parse_in_progress = FALSE;
-	}
-
-	parent->current_timestamp = ts;
-	parent->discontinuity_frame_in_progress = discontinuity;
-
-	/* we parse data buffer one by one */
-	for (i = 0; i < bufincnt; i++) {
-
-		LOG_V(
-				"Calling parse for current frame, parse handle %d, buf %x, size %d\n",
-				(int) parent->parser_handle, (guint) bufin[i]->data,
-				bufin[i]->size);
-
-		vbp_ret = vbp_parse(parent->parser_handle, bufin[i]->data,
-				bufin[i]->size, FALSE);
-
-		LOG_V("vbp_parse() returns 0x%x\n", vbp_ret);
-
-		/* The parser failed to parse */
-		if (vbp_ret != VBP_DONE && vbp_ret != VBP_OK) {
-			LOG_E("vbp_parse() ret = %d\n", vbp_ret);
-			ret = MIX_RESULT_FAIL;
-			goto cleanup;
-		}
-
-		LOG_V("vbp_parse() ret = %d\n", vbp_ret);
-
-		if (vbp_ret == VBP_OK || vbp_ret == VBP_DONE) {
-
-			LOG_V("Now, parsing is done (VBP_DONE)!\n");
-
-			vbp_ret = vbp_query(parent->parser_handle, (void *) &data);
-			LOG_V("vbp_query() returns 0x%x\n", vbp_ret);
-
-			if ((vbp_ret != VBP_OK) || (data == NULL)) {
-				ret = MIX_RESULT_FAIL;
-				goto cleanup;
-			}
-
-			/* Increase the ref count of this input buffer */
-			mix_buffer_ref(bufin[i]);
-
-			/* Create a new MixInputBufferEntry
-			 * TODO: make this from a pool later 
-			 */
-			bufentry = g_malloc(sizeof(MixInputBufferEntry));
-			if (bufentry == NULL) {
-				ret = MIX_RESULT_NO_MEMORY;
-				goto cleanup;
-			}
-
-			bufentry->buf = bufin[i];
-			bufentry->timestamp = ts;
-
-			LOG_I("bufentry->buf = %x bufentry->timestamp FOR VBP_DONE = %"G_GINT64_FORMAT"\n", bufentry->buf, bufentry->timestamp);
-
-			/* Enqueue this input buffer */
-			g_queue_push_tail(parent->inputbufqueue, (gpointer) bufentry);
-
-			/* process and decode data */
-			ret
-					= mix_videofmt_mp42_process_decode(mix, data, ts,
-							discontinuity);
-
-			if (ret != MIX_RESULT_SUCCESS) {
-				/* We log this but continue since we need 
-				 * to complete our processing
-				 */
-				LOG_W("process_decode failed.\n");
-			}
-
-			LOG_V("Called process and decode for current frame\n");
-
-			parent->parse_in_progress = FALSE;
-
-		}
-#if 0
-		/*
-		 * The DHG parser checks for next_sc, if next_sc is a start code, it thinks the current parsing is done: VBP_DONE.
-		 * For our situtation, this not the case. The start code is always begin with the gstbuffer. At the end of frame,
-		 * the start code is never found.
-		 */
-
-		else if (vbp_ret == VBP_OK) {
-
-			LOG_V("Now, parsing is not done (VBP_OK)!\n");
-
-			LOG_V(
-					"Enqueuing buffer and going on to next (if any) for this frame\n");
-
-			/* Increase the ref count of this input buffer */
-			mix_buffer_ref(bufin[i]);
-
-			/* Create a new MixInputBufferEntry
-			 * TODO make this from a pool later
-			 */
-			bufentry = g_malloc(sizeof(MixInputBufferEntry));
-			if (bufentry == NULL) {
-				ret = MIX_RESULT_FAIL;
-				goto cleanup;
-			}
-
-			bufentry->buf = bufin[i];
-			bufentry->timestamp = ts;
-			LOG_I("bufentry->buf = %x bufentry->timestamp FOR VBP_OK = %"G_GINT64_FORMAT"\n", bufentry->buf, bufentry->timestamp);
-
-			/* Enqueue this input buffer */
-			g_queue_push_tail(parent->inputbufqueue, (gpointer) bufentry);
-			parent->parse_in_progress = TRUE;
-		}
-#endif
-	}
-
-	cleanup:
-
-	g_mutex_unlock(parent->objectlock);
-
-	LOG_V("End\n");
-
-	return ret;
 }
 
-MIX_RESULT mix_videofmt_mp42_process_decode(MixVideoFormat *mix,
-		vbp_data_mp42 *data, guint64 timestamp, gboolean discontinuity) {
-
-	MIX_RESULT ret = MIX_RESULT_SUCCESS;
-	VAStatus va_ret = VA_STATUS_SUCCESS;
-	VADisplay va_display = NULL;
-	VAContextID va_context;
-
-	MixVideoFormat_MP42 *self = NULL;
-	vbp_picture_data_mp42 *picture_data = NULL;
-	VAPictureParameterBufferMPEG4 *picture_param = NULL;
-	VAIQMatrixBufferMPEG4 *iq_matrix_buffer = NULL;
-	vbp_slice_data_mp42 *slice_data = NULL;
-	VASliceParameterBufferMPEG4 *slice_param = NULL;
-
-	gint frame_type = -1;
-	guint buffer_id_number = 0;
-	guint buffer_id_cnt = 0;
-	VABufferID *buffer_ids = NULL;
-	MixVideoFrame *frame = NULL;
-
-	gint idx = 0, jdx = 0;
-	gulong surface = 0;
-
-	MixBuffer *mix_buffer = NULL;
-	gboolean is_from_queued_data = FALSE;
-
-	LOG_V("Begin\n");
-
-	if ((mix == NULL) || (data == NULL)) {
-		return MIX_RESULT_NULL_PTR;
-	}
-
-	if (!MIX_IS_VIDEOFORMAT_MP42(mix)) {
-		return MIX_RESULT_INVALID_PARAM;
-	}
-
-	self = MIX_VIDEOFORMAT_MP42(mix);
-
-	LOG_V("data->number_pictures = %d\n", data->number_pictures);
-
-	if (data->number_pictures == 0) {
-		LOG_W("data->number_pictures == 0\n");
-		mix_videofmt_mp42_release_input_buffers(mix, timestamp);
-		return ret;
-	}
-
-	is_from_queued_data = FALSE;
-
-	/* Do we have packed frames? */
-	if (data->number_pictures > 1) {
-
-		/*
-
-		 Assumption:
-
-		 1. In one packed frame, there's only one P or I frame and the
-		 reference frame will be the first one in the packed frame
-		 2. In packed frame, there's no skipped frame(vop_coded = 0)
-		 3. In one packed frame, if there're n B frames, there will be
-		 n N-VOP frames to follow the packed frame.
-		 The timestamp of each N-VOP frame will be used for each B frames
-		 in the packed frame
-		 4. N-VOP frame is the frame with vop_coded = 0.
-
-		 {P, B, B, B }, N, N, N, P, P, P, I, ...
-
-		 */
-
-		MixInputBufferEntry *bufentry = NULL;
-		PackedStream *packed_stream = NULL;
-		vbp_picture_data_mp42 *cloned_picture_data = NULL;
-
-		LOG_V("This is packed frame\n");
-
-		/*
-		 * Is the packed_frame_queue empty? If not, how come
-		 * a packed frame can follow another packed frame without
-		 * necessary number of N-VOP between them?
-		 */
-
-		if (!g_queue_is_empty(self->packed_stream_queue)) {
-			ret = MIX_RESULT_DROPFRAME;
-			LOG_E("The previous packed frame is not fully processed yet!\n");
-			goto cleanup;
-		}
-
-		/* Packed frame shall be something like this {P, B, B, B, ... B } */
-		for (idx = 0; idx < data->number_pictures; idx++) {
-			picture_data = &(data->picture_data[idx]);
-			picture_param = &(picture_data->picture_param);
-			frame_type = picture_param->vop_fields.bits.vop_coding_type;
-
-			/* Is the first frame in the packed frames a reference frame? */
-			if (idx == 0 && frame_type != MP4_VOP_TYPE_I && frame_type
-					!= MP4_VOP_TYPE_P) {
-				ret = MIX_RESULT_DROPFRAME;;
-				LOG_E("The first frame in packed frame is not I or B\n");
-				goto cleanup;
-			}
-
-			if (idx != 0 && frame_type != MP4_VOP_TYPE_B) {
-				ret = MIX_RESULT_DROPFRAME;;
-				LOG_E("The frame other than the first one in packed frame is not B\n");
-				goto cleanup;
-			}
-
-			if (picture_data->vop_coded == 0) {
-				ret = MIX_RESULT_DROPFRAME;
-				LOG_E("In packed frame, there's unexpected skipped frame\n");
-				goto cleanup;
-			}
-		}
-
-		LOG_V("The packed frame looks valid\n");
-
-		/* Okay, the packed-frame looks ok. Now, we enqueue all the B frames */
-		bufentry
-				= (MixInputBufferEntry *) g_queue_peek_head(mix->inputbufqueue);
-		if (bufentry == NULL) {
-			ret = MIX_RESULT_FAIL;
-			LOG_E("There's data in in inputbufqueue\n");
-			goto cleanup;
-		}
-
-		LOG_V("Enqueue all B frames in the packed frame\n");
-
-		mix_buffer = bufentry->buf;
-		for (idx = 1; idx < data->number_pictures; idx++) {
-			picture_data = &(data->picture_data[idx]);
-			cloned_picture_data = mix_videoformat_mp42_clone_picture_data(
-					picture_data);
-			if (!cloned_picture_data) {
-				ret = MIX_RESULT_NO_MEMORY;
-				LOG_E("Failed to allocate memory for cloned picture_data\n");
-				goto cleanup;
-			}
-
-			packed_stream = g_malloc(sizeof(PackedStream));
-			if (packed_stream == NULL) {
-				ret = MIX_RESULT_NO_MEMORY;
-				LOG_E("Failed to allocate memory for packed_stream\n");
-				goto cleanup;
-			}
-
-			packed_stream->mix_buffer = mix_buffer_ref(mix_buffer);
-			packed_stream->picture_data = cloned_picture_data;
-
-			g_queue_push_tail(self->packed_stream_queue,
-					(gpointer) packed_stream);
-		}
-
-		LOG_V("Prepare to decode the first frame in the packed frame\n");
-
-		/* we are going to process the firs frame */
-		picture_data = &(data->picture_data[0]);
-
-	} else {
-
-		LOG_V("This is a single frame\n");
-
-		/* Okay, we only have one frame */
-		if (g_queue_is_empty(self->packed_stream_queue)) {
-			/* If the packed_stream_queue is empty, everything is fine */
-			picture_data = &(data->picture_data[0]);
-
-			LOG_V("There's no packed frame not processed yet\n");
-
-		} else {
-			/*	The packed_stream_queue is not empty, is this frame N-VOP? */
-			picture_data = &(data->picture_data[0]);
-			if (picture_data->vop_coded != 0) {
-
-				LOG_V("The packed frame queue is not empty, we will flush it\n");
-
-				/* 
-				 * Unexpected! We flush the packed_stream_queue and begin to process the 
-				 * current frame if it is not a B frame
-				 */
-				mix_videoformat_mp42_flush_packed_stream_queue(
-						self->packed_stream_queue);
-
-				picture_param = &(picture_data->picture_param);
-				frame_type = picture_param->vop_fields.bits.vop_coding_type;
-
-				if (frame_type == MP4_VOP_TYPE_B) {
-					ret = MIX_RESULT_DROPFRAME;
-					LOG_E("The frame right after packed frame is B frame!\n");
-					goto cleanup;
-				}
-
-			} else {
-				/*	This is N-VOP, process B frame from the packed_stream_queue */
-				PackedStream *packed_stream = NULL;
-
-				LOG_V("N-VOP found, we ignore it and start to process the B frame from the packed frame queue\n");
-
-				packed_stream = (PackedStream *) g_queue_pop_head(
-						self->packed_stream_queue);
-				picture_data = packed_stream->picture_data;
-				mix_buffer = packed_stream->mix_buffer;
-				g_free(packed_stream);
-				is_from_queued_data = TRUE;
-			}
-		}
-	}
-
-	picture_param = &(picture_data->picture_param);
-	iq_matrix_buffer = &(picture_data->iq_matrix_buffer);
-
-	if (picture_param == NULL) {
-		ret = MIX_RESULT_NULL_PTR;
-		LOG_E("picture_param == NULL\n");
-		goto cleanup;
-	}
-
-	/* If the frame type is not I, P or B */
-	frame_type = picture_param->vop_fields.bits.vop_coding_type;
-	if (frame_type != MP4_VOP_TYPE_I && frame_type != MP4_VOP_TYPE_P
-			&& frame_type != MP4_VOP_TYPE_B) {
-		ret = MIX_RESULT_FAIL;
-		LOG_E("frame_type is not I, P or B. frame_type = %d\n", frame_type);
-		goto cleanup;
-	}
-
-	/*
-	 * This is a skipped frame (vop_coded = 0)
-	 * Please note that this is not a N-VOP (DivX).
-	 */
-	if (picture_data->vop_coded == 0) {
-
-		MixVideoFrame *skip_frame = NULL;
-		gulong frame_id = VA_INVALID_SURFACE;
-
-		LOG_V("vop_coded == 0\n");
-		if (self->last_frame == NULL) {
-			LOG_W("Previous frame is NULL\n");
-
-			/*
-			 * We shouldn't get a skipped frame
-			 * before we are able to get a real frame
-			 */
-			ret = MIX_RESULT_DROPFRAME;
-			goto cleanup;
-		}
-
-		skip_frame = mix_videoframe_new();
-		ret = mix_videoframe_set_is_skipped(skip_frame, TRUE);
-		mix_videoframe_ref(self->last_frame);
-
-		ret = mix_videoframe_get_frame_id(self->last_frame, &frame_id);
-		ret = mix_videoframe_set_frame_id(skip_frame, frame_id);
-		ret = mix_videoframe_set_frame_type(skip_frame, MP4_VOP_TYPE_P);
-		ret = mix_videoframe_set_real_frame(skip_frame, self->last_frame);
-		ret = mix_videoframe_set_timestamp(skip_frame, timestamp);
-		ret = mix_videoframe_set_discontinuity(skip_frame, FALSE);
-
-		LOG_V("Processing skipped frame %x, frame_id set to %d, ts %"G_GINT64_FORMAT"\n",
-				(guint)skip_frame, (guint)frame_id, timestamp);
-
-		/* Release our input buffers */
-		ret = mix_videofmt_mp42_release_input_buffers(mix, timestamp);
-
-		/* Enqueue the skipped frame using frame manager */
-		ret = mix_framemanager_enqueue(mix->framemgr, skip_frame);
-		goto cleanup;
-	}
-
-	/*
-	 * Decide the number of buffer to use
-	 */
-
-	buffer_id_number = picture_data->number_slices * 2 + 2;
-	LOG_V("number_slices is %d, allocating %d buffer_ids\n",
-			picture_data->number_slices, buffer_id_number);
-
-	/*
-	 * Check for B frames after a seek
-	 * We need to have both reference frames in hand before we can decode a B frame
-	 * If we don't have both reference frames, we must return MIX_RESULT_DROPFRAME
-	 */
-	if (frame_type == MP4_VOP_TYPE_B) {
-
-		if (self->reference_frames[1] == NULL) {
-			LOG_W("Insufficient reference frames for B frame\n");
-			ret = MIX_RESULT_DROPFRAME;
-			goto cleanup;
-		}
-	}
-
-	buffer_ids = g_malloc(sizeof(VABufferID) * buffer_id_number);
-	if (buffer_ids == NULL) {
-		ret = MIX_RESULT_NO_MEMORY;
-		LOG_E("Failed to allocate buffer_ids!\n");
-		goto cleanup;
-	}
-
-	LOG_V("Getting a new surface\n");LOG_V("frame type is %d\n", frame_type);
-
-	/* Get a frame from the surface pool */
-	ret = mix_surfacepool_get(mix->surfacepool, &frame);
-	if (ret != MIX_RESULT_SUCCESS) {
-		LOG_E("Failed to get frame from surface pool!\n");
-		goto cleanup;
-	}
-
-	/*
-	 * Set the frame type for the frame object (used in reordering by frame manager)
-	 */
-	ret = mix_videoframe_set_frame_type(frame, frame_type);
-	if (ret != MIX_RESULT_SUCCESS) {
-		LOG_E("Failed to set frame type!\n");
-		goto cleanup;
-	}
-
-	/* If I or P frame, update the reference array */
-	if ((frame_type == MP4_VOP_TYPE_I) || (frame_type == MP4_VOP_TYPE_P)) {
-		LOG_V("Updating forward/backward references for libva\n");
-
-		self->last_vop_coding_type = frame_type;
-		mix_videofmt_mp42_handle_ref_frames(mix, frame_type, frame);
-	}
-
-	LOG_V("Setting reference frames in picparams, frame_type = %d\n",
-			frame_type);
-
+MIX_RESULT mix_videofmt_mp42_decode_a_slice(
+    MixVideoFormat *mix,
+    vbp_data_mp42* data,
+    vbp_picture_data_mp42* pic_data)
+{  
+    MIX_RESULT ret = MIX_RESULT_SUCCESS;
+    VAStatus vret = VA_STATUS_SUCCESS;
+    VADisplay vadisplay = NULL;
+    VAContextID vacontext;
+    guint buffer_id_cnt = 0;
+    gint frame_type = -1;
+    // maximum 4 buffers to render a slice: picture parameter, IQMatrix, slice parameter, slice data
+    VABufferID buffer_ids[4];
+    MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);    
+    VAPictureParameterBufferMPEG4* pic_params = &(pic_data->picture_param);
+    vbp_slice_data_mp42* slice_data = &(pic_data->slice_data);
+    VASliceParameterBufferMPEG4* slice_params = &(slice_data->slice_param);
+    
+    LOG_V( "Begin\n");
+
+    vadisplay = mix->va_display;
+    vacontext = mix->va_context;
+
+    if (!mix->end_picture_pending)
+    {
+        LOG_E("picture decoder is not started!\n");
+        ret = MIX_RESULT_FAIL;
+        goto cleanup;
+    }
+
+    // update reference pictures
+    frame_type = pic_params->vop_fields.bits.vop_coding_type;
+    
 	switch (frame_type) {
 	case MP4_VOP_TYPE_I:
-		picture_param->forward_reference_picture = VA_INVALID_SURFACE;
-		picture_param->backward_reference_picture = VA_INVALID_SURFACE;
-		LOG_V("I frame, surface ID %u\n", (guint) frame->frame_id);
+		pic_params->forward_reference_picture = VA_INVALID_SURFACE;
+		pic_params->backward_reference_picture = VA_INVALID_SURFACE;
 		break;
+		
 	case MP4_VOP_TYPE_P:
-		picture_param-> forward_reference_picture
+		pic_params-> forward_reference_picture
 				= self->reference_frames[0]->frame_id;
-		picture_param-> backward_reference_picture = VA_INVALID_SURFACE;
-
-		LOG_V("P frame, surface ID %u, forw ref frame is %u\n",
-				(guint) frame->frame_id,
-				(guint) self->reference_frames[0]->frame_id);
+		pic_params-> backward_reference_picture = VA_INVALID_SURFACE;
 		break;
+		
 	case MP4_VOP_TYPE_B:
-
-		picture_param->vop_fields.bits.backward_reference_vop_coding_type
+		pic_params->vop_fields.bits.backward_reference_vop_coding_type
 				= self->last_vop_coding_type;
-
-		picture_param->forward_reference_picture
-				= self->reference_frames[1]->frame_id;
-		picture_param->backward_reference_picture
+		pic_params->forward_reference_picture
+				= self->reference_frames[1]->frame_id;				
+		pic_params->backward_reference_picture
 				= self->reference_frames[0]->frame_id;
-
-		LOG_V("B frame, surface ID %u, forw ref %d, back ref %d\n",
-				(guint) frame->frame_id,
-				(guint) picture_param->forward_reference_picture,
-				(guint) picture_param->backward_reference_picture);
 		break;
+		
 	case MP4_VOP_TYPE_S:
-		LOG_W("MP4_VOP_TYPE_S, Will never reach here\n");
+		pic_params-> forward_reference_picture
+				= self->reference_frames[0]->frame_id;
+		pic_params-> backward_reference_picture = VA_INVALID_SURFACE;
 		break;
 
 	default:
 		LOG_W("default, Will never reach here\n");
+		ret = MIX_RESULT_FAIL;
+		goto cleanup;
 		break;
 
 	}
+	
+    //Now for slices
 
-	/* Libva buffer set up */
-	va_display = mix->va_display;
-	va_context = mix->va_context;
+    LOG_V( "Creating libva picture parameter buffer\n");
 
-	LOG_V("Creating libva picture parameter buffer\n");
+    //First the picture parameter buffer
+    vret = vaCreateBuffer(
+        vadisplay, 
+        vacontext,
+        VAPictureParameterBufferType,
+        sizeof(VAPictureParameterBufferMPEG4),
+        1,
+        pic_params,
+        &buffer_ids[buffer_id_cnt]);
 
-	/* First the picture parameter buffer */
-	buffer_id_cnt = 0;
-	va_ret = vaCreateBuffer(va_display, va_context,
-			VAPictureParameterBufferType,
-			sizeof(VAPictureParameterBufferMPEG4), 1, picture_param,
-			&buffer_ids[buffer_id_cnt]);
-	buffer_id_cnt++;
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Video driver returned error from vaCreateBuffer\n");
+        goto cleanup;
+    }
 
-	if (va_ret != VA_STATUS_SUCCESS) {
-		ret = MIX_RESULT_FAIL;
-		LOG_E("Failed to create va buffer of type VAPictureParameterBufferMPEG4!\n");
+    buffer_id_cnt++;
+            
+    if (pic_params->vol_fields.bits.quant_type && self->iq_matrix_buf_sent == FALSE) 
+    {
+        LOG_V( "Creating libva IQMatrix buffer\n");
+        // only send IQ matrix for the first slice in the picture
+        vret = vaCreateBuffer(
+            vadisplay,
+            vacontext,
+            VAIQMatrixBufferType,
+            sizeof(VAIQMatrixBufferMPEG4),
+            1,
+            &(data->iq_matrix_buffer),
+            &buffer_ids[buffer_id_cnt]);
+    
+        if (vret != VA_STATUS_SUCCESS)
+        {
+            ret = MIX_RESULT_FAIL;
+            LOG_E( "Video driver returned error from vaCreateBuffer\n");
+            goto cleanup;
+        }
+        self->iq_matrix_buf_sent = TRUE;
+        buffer_id_cnt++;      
+    }           
+
+    vret = vaCreateBuffer(
+        vadisplay, 
+        vacontext,
+        VASliceParameterBufferType,
+        sizeof(VASliceParameterBufferMPEG4),
+        1,
+        slice_params,
+        &buffer_ids[buffer_id_cnt]);
+
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Video driver returned error from vaCreateBuffer\n");
+        goto cleanup;
+    }
+
+    buffer_id_cnt++;
+
+
+    //Do slice data
+
+    //slice data buffer pointer
+    //Note that this is the original data buffer ptr;
+    // offset to the actual slice data is provided in
+    // slice_data_offset in VASliceParameterBufferMP42
+
+    vret = vaCreateBuffer(
+        vadisplay, 
+        vacontext,
+        VASliceDataBufferType,
+        slice_data->slice_size, //size
+        1,        //num_elements
+        slice_data->buffer_addr + slice_data->slice_offset,
+        &buffer_ids[buffer_id_cnt]);
+
+    buffer_id_cnt++;
+
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Video driver returned error from vaCreateBuffer\n");
+        goto cleanup;
+    }
+     
+    
+    LOG_V( "Calling vaRenderPicture\n");
+    
+    //Render the picture
+    vret = vaRenderPicture(
+        vadisplay,
+        vacontext,
+        buffer_ids,
+        buffer_id_cnt);
+
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Video driver returned error from vaRenderPicture\n");
+        goto cleanup;
+    }
+    
+
+cleanup:
+    LOG_V( "End\n");
+
+    return ret;
+
+}
+
+
+MIX_RESULT mix_videofmt_mp42_decode_end(
+    MixVideoFormat *mix, 
+    gboolean drop_picture)
+{
+    MIX_RESULT ret = MIX_RESULT_SUCCESS;    
+    VAStatus vret = VA_STATUS_SUCCESS;
+    MixVideoFormat* parent = MIX_VIDEOFORMAT(mix);
+    //MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);  
+    
+    if (!parent->end_picture_pending)
+    {
+        if (parent->video_frame)
+        {
+            ret = MIX_RESULT_FAIL;
+            LOG_E("Unexpected: video_frame is not unreferenced.\n");
+        }
+        goto cleanup;
+    }    
+
+    if (parent->video_frame == NULL)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E("Unexpected: video_frame has been unreferenced.\n");
+        goto cleanup;
+        
+    }
+    vret = vaEndPicture(parent->va_display, parent->va_context);
+    
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_DROPFRAME;
+        LOG_E( "Video driver returned error from vaEndPicture\n");
+        goto cleanup;
+    }
+    
+#if 0	/* we don't call vaSyncSurface here, the call is moved to mix_video_render() */
+    
+    LOG_V( "Calling vaSyncSurface\n");
+
+    //Decode the picture
+    vret = vaSyncSurface(vadisplay, surface);
+
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Video driver returned error from vaSyncSurface\n");
+        goto cleanup;
+    }
+#endif
+
+    if (drop_picture)
+    {
+        // we are asked to drop this decoded picture
+        mix_videoframe_unref(parent->video_frame);
+        parent->video_frame = NULL;
+        goto cleanup;
+    }
+  
+    //Enqueue the decoded frame using frame manager
+    ret = mix_framemanager_enqueue(parent->framemgr, parent->video_frame);
+    if (ret != MIX_RESULT_SUCCESS)
+    {
+        LOG_E( "Error enqueuing frame object\n");
+        goto cleanup;
+    }
+    else
+    {
+        // video frame is passed to frame manager
+        parent->video_frame = NULL;
+    }
+    
+cleanup:
+   if (parent->video_frame)
+   {
+        /* this always indicates an error */        
+        mix_videoframe_unref(parent->video_frame);
+        parent->video_frame = NULL;
+   }
+   parent->end_picture_pending = FALSE;
+   return ret;
+
+}
+
+
+MIX_RESULT mix_videofmt_mp42_decode_continue(
+    MixVideoFormat *mix, 
+    vbp_data_mp42 *data)
+{
+    MIX_RESULT ret = MIX_RESULT_SUCCESS;
+    VAStatus vret = VA_STATUS_SUCCESS;
+    int i;   
+    gint frame_type = -1;
+    vbp_picture_data_mp42* pic_data = NULL;
+    VAPictureParameterBufferMPEG4* pic_params = NULL;
+    MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);
+
+    /*
+	 Packed Frame Assumption:
+
+ 	 1. In one packed frame, there's only one P or I frame and only one B frame.
+	 2. In packed frame, there's no skipped frame (vop_coded = 0)
+	 3. For one packed frame, there will be one N-VOP frame to follow the packed frame (may not immediately).
+	 4. N-VOP frame is the frame with vop_coded = 0.
+	 5. The timestamp of  N-VOP frame will be used for P or I frame in the packed frame
+
+
+	 I, P, {P, B}, B, N, P, N, I, ...
+	 I, P, {P, B}, N, P, N, I, ...
+
+	 The first N is placeholder for P frame in the packed frame
+	 The second N is a skipped frame
+	 */ 	 
+
+    pic_data = data->picture_data;
+	for (i = 0; i < data->number_picture_data; i++, pic_data = pic_data->next_picture_data)
+	{
+	    pic_params = &(pic_data->picture_param);
+	    frame_type = pic_params->vop_fields.bits.vop_coding_type;
+    	if (frame_type == MP4_VOP_TYPE_S && pic_params->no_of_sprite_warping_points > 1)
+    	{
+    	    // hardware only support up to one warping point (stationary or translation)
+    	    LOG_E("sprite with %d warping points is not supported by HW.\n",
+    	        pic_params->no_of_sprite_warping_points);    	        
+    	    return MIX_RESULT_DROPFRAME;
+    	}
+        
+    	if (pic_data->vop_coded == 0)
+    	{
+    	    // this should never happen
+    	    LOG_E("VOP is not coded.\n");
+    	    return MIX_RESULT_DROPFRAME;
+    	}
+    	
+        if (pic_data->new_picture_flag == 1 || mix->end_picture_pending == FALSE)
+        {
+            if (pic_data->new_picture_flag == 0)
+            {
+                LOG_W("First slice of picture is lost!\n");
+            }
+            
+            gulong surface = 0;                    
+            if (mix->end_picture_pending)
+            {
+                // this indicates the start of a new frame in the packed frame
+                LOG_V("packed frame is found.\n");
+
+                // Update timestamp for packed frame as timestamp is for the B frame!
+                if (mix->video_frame && pic_params->vop_time_increment_resolution)
+                {
+                    guint64 ts, ts_inc;
+                    mix_videoframe_get_timestamp(mix->video_frame, &ts);
+                    ts_inc= self->last_vop_time_increment - pic_data->vop_time_increment + 
+                        pic_params->vop_time_increment_resolution;
+                    ts_inc = ts_inc % pic_params->vop_time_increment_resolution;
+                    LOG_V("timestamp is incremented by %d at %d resolution.\n",
+                        ts_inc, pic_params->vop_time_increment_resolution);
+                    // convert to nano-second
+                    ts_inc = ts_inc * 1e9 / pic_params->vop_time_increment_resolution;
+                    LOG_V("timestamp of P frame in packed frame is updated from %"G_GINT64_FORMAT"  to %"G_GUINT64_FORMAT".\n",
+                        ts, ts + ts_inc);
+
+                    ts += ts_inc; 
+                    mix_videoframe_set_timestamp(mix->video_frame, ts);
+                }
+                
+                mix_videofmt_mp42_decode_end(mix, FALSE);
+                self->next_nvop_for_PB_frame = TRUE;
+            }     
+            if (self->next_nvop_for_PB_frame == TRUE && frame_type != MP4_VOP_TYPE_B)
+            {
+                LOG_E("The second frame in the packed frame is not B frame.\n");
+                self->next_nvop_for_PB_frame = FALSE;
+                return MIX_RESULT_DROPFRAME;
+            }
+            
+        	//Get a frame from the surface pool
+        	ret = mix_surfacepool_get(mix->surfacepool, &(mix->video_frame));
+        	if (ret != MIX_RESULT_SUCCESS)
+        	{
+        		LOG_E( "Error getting frame from surfacepool\n");
+        		return MIX_RESULT_FAIL;
+        	}
+	
+        	/* the following calls will always succeed */
+
+            // set frame type
+            if (frame_type == MP4_VOP_TYPE_S)
+            {
+                // sprite is treated as P frame in the display order
+                mix_videoframe_set_frame_type(mix->video_frame, MP4_VOP_TYPE_P);
+            }
+            else
+            {
+                mix_videoframe_set_frame_type(mix->video_frame, frame_type);
+            }
+            
+
+            // set frame structure
+            if (pic_data->picture_param.vol_fields.bits.interlaced)
+            {
+                // only MPEG-4 studio profile can have field coding. All other profiles 
+                // use frame coding only, i.e, no field VOP.  (see vop_structure in MP4 spec)
+                mix_videoframe_set_frame_structure(
+                    mix->video_frame, 
+                    VA_BOTTOM_FIELD | VA_TOP_FIELD);
+
+                LOG_W("Interlaced content, set frame structure to 3 (TOP | BOTTOM field) !\n");                                    
+            }        
+            else
+            {   
+                mix_videoframe_set_frame_structure(mix->video_frame, VA_FRAME_PICTURE);
+            }
+
+            //Set the discontinuity flag
+            mix_videoframe_set_discontinuity(
+                mix->video_frame, 
+                mix->discontinuity_frame_in_progress);
+
+            //Set the timestamp
+            mix_videoframe_set_timestamp(mix->video_frame, mix->current_timestamp);	
+       
+            //Get our surface ID from the frame object
+            ret = mix_videoframe_get_frame_id(mix->video_frame, &surface);    
+            if (ret != MIX_RESULT_SUCCESS)
+            {
+                LOG_E( "Error getting surface ID from frame object\n");
+                goto cleanup;
+            }    
+
+            /* If I or P frame, update the reference array */
+        	if ((frame_type == MP4_VOP_TYPE_I) || (frame_type == MP4_VOP_TYPE_P)) 
+        	{
+        		LOG_V("Updating forward/backward references for libva\n");
+
+        		self->last_vop_coding_type = frame_type;
+        		self->last_vop_time_increment = pic_data->vop_time_increment;
+        		mix_videofmt_mp42_handle_ref_frames(mix, frame_type, mix->video_frame);
+                if (self->last_frame != NULL) 
+                {
+                    mix_videoframe_unref(self->last_frame);
+                }
+                self->last_frame = mix->video_frame;
+                mix_videoframe_ref(self->last_frame);
+        	}        
+    	
+            //Now we can begin the picture
+            vret = vaBeginPicture(mix->va_display, mix->va_context, surface);
+            if (vret != VA_STATUS_SUCCESS)
+            {
+                ret = MIX_RESULT_FAIL;
+                LOG_E( "Video driver returned error from vaBeginPicture\n");
+                goto cleanup;
+            }            
+
+            // vaBeginPicture needs a matching vaEndPicture 
+            mix->end_picture_pending = TRUE;
+            self->iq_matrix_buf_sent = FALSE;
+        }
+        
+        
+        ret = mix_videofmt_mp42_decode_a_slice(mix, data, pic_data);
+		if (ret != 	MIX_RESULT_SUCCESS)
+    	{
+	    	LOG_E( "mix_videofmt_mp42_decode_a_slice failed, error =  %#X.", ret);
+		    goto cleanup;
+		}		
+	}
+
+cleanup:
+    // nothing to cleanup;
+
+    return ret;
+}
+
+
+MIX_RESULT mix_videofmt_mp42_decode_begin(
+    MixVideoFormat *mix, 
+    vbp_data_mp42* data)
+{
+	MIX_RESULT ret = MIX_RESULT_SUCCESS;	
+	gint frame_type = -1;
+    VAPictureParameterBufferMPEG4* pic_params = NULL;
+    MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);
+    vbp_picture_data_mp42 *pic_data = NULL;
+
+    pic_data = data->picture_data;
+    pic_params = &(pic_data->picture_param);
+    frame_type = pic_params->vop_fields.bits.vop_coding_type;
+    
+    if (self->next_nvop_for_PB_frame)
+    {
+        // if we are waiting for n-vop for packed frame, and the new frame is coded, the coding type 
+        // of this frame must be B. 
+        // for example: {PB} B N P B B P...
+        if (pic_data->vop_coded == 1 && frame_type != MP4_VOP_TYPE_B)
+        {
+            LOG_E("Invalid coding type while waiting for n-vop for packed frame.\n");
+            // timestamp of P frame in the queue is not correct
+            mix_framemanager_flush(mix->framemgr);
+            self->next_nvop_for_PB_frame = FALSE;
+        }
+    }
+    
+    if (pic_data->vop_coded == 0)
+    {
+        if (self->last_frame == NULL)
+        {
+            LOG_E("The forward reference frame is NULL, couldn't reconstruct skipped frame.\n");
+            mix_framemanager_flush(mix->framemgr);
+            self->next_nvop_for_PB_frame = FALSE;
+            return MIX_RESULT_DROPFRAME;
+        }
+        
+        if (self->next_nvop_for_PB_frame)
+        {
+            // P frame is already in queue, just need to update time stamp.
+            mix_videoframe_set_timestamp(self->last_frame, mix->current_timestamp);
+            self->next_nvop_for_PB_frame = FALSE;
+        }
+        else
+        {
+            // handle skipped frame
+            MixVideoFrame *skip_frame = NULL;
+            gulong frame_id = VA_INVALID_SURFACE;
+	
+    		skip_frame = mix_videoframe_new();
+    		ret = mix_videoframe_set_is_skipped(skip_frame, TRUE);
+    		ret = mix_videoframe_get_frame_id(self->last_frame, &frame_id);
+    		ret = mix_videoframe_set_frame_id(skip_frame, frame_id);
+    		ret = mix_videoframe_set_frame_type(skip_frame, MP4_VOP_TYPE_P);
+    		ret = mix_videoframe_set_real_frame(skip_frame, self->last_frame);
+    		// add a reference as skip_frame holds the last_frame.
+    		mix_videoframe_ref(self->last_frame);
+    		ret = mix_videoframe_set_timestamp(skip_frame, mix->current_timestamp);
+    		ret = mix_videoframe_set_discontinuity(skip_frame, FALSE);
+
+    		LOG_V("Processing skipped frame %x, frame_id set to %d, ts %"G_GINT64_FORMAT"\n",
+    				(guint)skip_frame, (guint)frame_id, mix->current_timestamp);
+
+    		/* Enqueue the skipped frame using frame manager */
+    		ret = mix_framemanager_enqueue(mix->framemgr, skip_frame);         
+        }
+
+        if (data->number_picture_data > 1)
+        {
+            LOG_E("Unexpected to have more picture data following a not-coded VOP.\n");
+            //picture data is thrown away. No issue if picture data is for N-VOP. if picture data is for
+            // coded picture, a frame is lost.
+        }
+        return MIX_RESULT_SUCCESS;
+    }
+    else
+    {     
+        /*
+             * Check for B frames after a seek
+             * We need to have both reference frames in hand before we can decode a B frame
+             * If we don't have both reference frames, we must return MIX_RESULT_DROPFRAME
+             */
+        if (frame_type == MP4_VOP_TYPE_B) 
+        {        
+            if (self->reference_frames[0] == NULL ||
+                self->reference_frames[1] == NULL) 
+            {
+                LOG_W("Insufficient reference frames for B frame\n");
+                return MIX_RESULT_DROPFRAME;
+            }
+        }
+        else if (frame_type == MP4_VOP_TYPE_P || frame_type == MP4_VOP_TYPE_S)
+        {
+            if (self->reference_frames[0] == NULL)
+            {
+                LOG_W("Reference frames for P/S frame is missing\n");
+                return MIX_RESULT_DROPFRAME;
+            }
+        }
+        
+        // all sanity check passes, continue decoding through mix_videofmt_mp42_decode_continue
+        ret = mix_videofmt_mp42_decode_continue(mix, data);
+    }  
+   
+	return ret;
+
+}
+
+
+MIX_RESULT mix_videofmt_mp42_decode_a_buffer(
+    MixVideoFormat *mix, 
+    MixBuffer * bufin,
+    guint64 ts,
+    gboolean discontinuity) 
+{
+    uint32 pret = 0;
+    MixVideoFormat *parent = NULL;
+	MIX_RESULT ret = MIX_RESULT_SUCCESS;
+	vbp_data_mp42 *data = NULL;
+
+    LOG_V( "Begin\n");
+
+    parent = MIX_VIDEOFORMAT(mix);
+
+	pret = vbp_parse(parent->parser_handle, 
+		bufin->data, 
+		bufin->size,
+		FALSE);
+        
+	if (pret != VBP_OK)
+    {
+        ret = MIX_RESULT_DROPFRAME;
+        LOG_E( "vbp_parse failed.\n");
+        goto cleanup;
+    }
+    else
+    {
+        LOG_V("vbp_parse succeeded.\n");
+    }
+
+	//query for data
+	pret = vbp_query(parent->parser_handle, (void *) &data);
+
+	if ((pret != VBP_OK) || (data == NULL))
+	{
+	    // never happen!
+	    ret = MIX_RESULT_FAIL;
+	    LOG_E( "vbp_query failed.\n");
+        goto cleanup;
+	}
+    else
+    {
+        LOG_V("vbp_query succeeded.\n");
+    }
+
+    if (parent->va_initialized == FALSE)
+    {    
+        mix_videofmt_mp42_update_config_params(parent, data);
+        
+        LOG_V("try initializing VA...\n");
+        ret = mix_videofmt_mp42_initialize_va(parent, data);
+        if (ret != MIX_RESULT_SUCCESS)
+        {         
+            LOG_V("mix_videofmt_mp42_initialize_va failed.\n");
+            goto cleanup; 
+        }
+    }
+
+    // check if any slice is parsed, we may just receive configuration data
+    if (data->number_picture_data == 0)
+    {
+        ret = MIX_RESULT_SUCCESS;
+        LOG_V("slice is not available.\n");
+        goto cleanup;      
+    }
+
+    guint64 last_ts = parent->current_timestamp;    
+    parent->current_timestamp = ts;
+    parent->discontinuity_frame_in_progress = discontinuity;
+
+    if (last_ts != ts)
+    {
+		// finish decoding the last frame
+		ret = mix_videofmt_mp42_decode_end(parent, FALSE);
+        if (ret != MIX_RESULT_SUCCESS)
+        {         
+            LOG_V("mix_videofmt_mp42_decode_end failed.\n");
+            goto cleanup; 
+        }
+
+        // start decoding a new frame
+		ret = mix_videofmt_mp42_decode_begin(parent, data); 
+        if (ret != MIX_RESULT_SUCCESS)
+        {         
+            LOG_V("mix_videofmt_mp42_decode_begin failed.\n");
+            goto cleanup; 
+        }        
+    }
+    else
+    {
+        ret = mix_videofmt_mp42_decode_continue(parent, data);
+        if (ret != MIX_RESULT_SUCCESS)
+        {         
+            LOG_V("mix_videofmt_mp42_decode_continue failed.\n");
+            goto cleanup; 
+        }
+    }
+
+cleanup:
+
+    LOG_V( "End\n");
+
+	return ret;
+}
+
+
+
+MIX_RESULT mix_videofmt_mp42_initialize(
+    MixVideoFormat *mix, 
+	MixVideoConfigParamsDec * config_params,
+    MixFrameManager * frame_mgr,
+	MixBufferPool * input_buf_pool,
+	MixSurfacePool ** surface_pool,
+	VADisplay va_display ) 
+{
+	uint32 pret = 0;
+	MIX_RESULT ret = MIX_RESULT_SUCCESS;
+	enum _vbp_parser_type ptype = VBP_MPEG4;
+	vbp_data_mp42 *data = NULL;
+	MixVideoFormat *parent = NULL;
+	MixIOVec *header = NULL;
+	
+	if (mix == NULL || config_params == NULL || frame_mgr == NULL || input_buf_pool == NULL || va_display == NULL)
+	{
+		LOG_E( "NUll pointer passed in\n");
+		return MIX_RESULT_NULL_PTR;
+	}
+
+	LOG_V( "Begin\n");
+
+	/* Chainup parent method. */
+
+	if (parent_class->initialize) {
+		ret = parent_class->initialize(mix, config_params,
+				frame_mgr, input_buf_pool, surface_pool, 
+				va_display);
+	}
+
+	if (ret != MIX_RESULT_SUCCESS)
+	{
+		LOG_E( "Error initializing\n");
+		return ret;
+	}
+
+	if (!MIX_IS_VIDEOFORMAT_MP42(mix))
+		return MIX_RESULT_INVALID_PARAM;
+
+	parent = MIX_VIDEOFORMAT(mix);
+	//MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);
+
+	LOG_V( "Locking\n");
+	//From now on, we exit this function through cleanup:
+	g_mutex_lock(parent->objectlock);
+
+	parent->surfacepool = mix_surfacepool_new();
+	*surface_pool = parent->surfacepool;
+
+	if (parent->surfacepool == NULL)
+	{
+		ret = MIX_RESULT_NO_MEMORY;
+		LOG_E( "parent->surfacepool == NULL.\n");
 		goto cleanup;
 	}
 
-	LOG_V("Creating libva VAIQMatrixBufferMPEG4 buffer\n");
+    ret = mix_videoconfigparamsdec_get_extra_surface_allocation(config_params,
+            &parent->extra_surfaces);
 
-	if (picture_param->vol_fields.bits.quant_type) {
-		va_ret = vaCreateBuffer(va_display, va_context, VAIQMatrixBufferType,
-				sizeof(VAIQMatrixBufferMPEG4), 1, iq_matrix_buffer,
-				&buffer_ids[buffer_id_cnt]);
+    if (ret != MIX_RESULT_SUCCESS)
+    {
+    	ret = MIX_RESULT_FAIL;
+    	LOG_E( "Cannot get extra surface allocation setting\n");
+    	goto cleanup;
+    }    
 
-		if (va_ret != VA_STATUS_SUCCESS) {
-			ret = MIX_RESULT_FAIL;
-			LOG_E("Failed to create va buffer of type VAIQMatrixBufferType!\n");
-			goto cleanup;
-		}
-		buffer_id_cnt++;
+	//Load the bitstream parser
+	pret = vbp_open(ptype, &(parent->parser_handle));
+
+    if (!(pret == VBP_OK))
+	{
+		ret = MIX_RESULT_FAIL;
+		LOG_E( "Error opening parser\n");
+		goto cleanup;
+	}
+	LOG_V( "Opened parser\n");
+
+
+    ret = mix_videoconfigparamsdec_get_header(config_params, &header);
+    
+    if ((ret != MIX_RESULT_SUCCESS) || (header == NULL))
+    {
+        // Delay initializing VA if codec configuration data is not ready, but don't return an error.
+        ret = MIX_RESULT_SUCCESS;
+        LOG_W( "Codec data is not available in the configuration parameter.\n");
+        goto cleanup;
+    }
+
+    LOG_V( "Calling parse on header data, handle %d\n", (int)parent->parser_handle);
+
+	pret = vbp_parse(parent->parser_handle, header->data, 
+			header->data_size, TRUE);
+
+    if (pret != VBP_OK)
+    {
+    	ret = MIX_RESULT_FAIL;
+    	LOG_E( "Error parsing header data\n");
+    	goto cleanup;
+    }
+
+    LOG_V( "Parsed header\n");
+
+   //Get the header data and save
+    pret = vbp_query(parent->parser_handle, (void *)&data);
+
+	if ((pret != VBP_OK) || (data == NULL))
+	{
+		ret = MIX_RESULT_FAIL;
+		LOG_E( "Error reading parsed header data\n");
+		goto cleanup;
 	}
 
-	/* Now for slices */
-	for (jdx = 0; jdx < picture_data->number_slices; jdx++) {
+	LOG_V( "Queried parser for header data\n");
+	
+    mix_videofmt_mp42_update_config_params(mix, data);
 
-		slice_data = &(picture_data->slice_data[jdx]);
-		slice_param = &(slice_data->slice_param);
+    ret = mix_videofmt_mp42_initialize_va(mix, data);
+    if (ret != MIX_RESULT_SUCCESS)
+    {
+        LOG_E( "Error initializing va. \n");
+        goto cleanup;
+    }
 
-		LOG_V(
-				"Creating libva slice parameter buffer, for slice %d\n",
-				jdx);
 
-		/* Do slice parameters */
-		va_ret = vaCreateBuffer(va_display, va_context,
-				VASliceParameterBufferType,
-				sizeof(VASliceParameterBufferMPEG4), 1, slice_param,
-				&buffer_ids[buffer_id_cnt]);
-		if (va_ret != VA_STATUS_SUCCESS) {
-			ret = MIX_RESULT_FAIL;
-			LOG_E("Failed to create va buffer of type VASliceParameterBufferMPEG4!\n");
-			goto cleanup;
-		}
-		buffer_id_cnt++;
-
-		/* Do slice data */
-		va_ret = vaCreateBuffer(va_display, va_context, VASliceDataBufferType,
-				slice_data->slice_size, 1, slice_data->buffer_addr
-						+ slice_data->slice_offset, &buffer_ids[buffer_id_cnt]);
-		if (va_ret != VA_STATUS_SUCCESS) {
-			ret = MIX_RESULT_FAIL;
-			LOG_E("Failed to create va buffer of type VASliceDataBufferType!\n");
-			goto cleanup;
-		}
-		buffer_id_cnt++;
-	}
-
-	/* Get our surface ID from the frame object */
-	ret = mix_videoframe_get_frame_id(frame, &surface);
+cleanup:
 	if (ret != MIX_RESULT_SUCCESS) {
-		LOG_E("Failed to get frame id: ret = 0x%x\n", ret);
-		goto cleanup;
+	    if (parent->parser_handle)
+	    {
+            pret = vbp_close(parent->parser_handle);
+            parent->parser_handle = NULL;
+    	}
+        parent->initialized = FALSE;
+
+	} else {
+        parent->initialized = TRUE;
+	}
+    
+	if (header != NULL)
+	{
+		if (header->data != NULL)
+			g_free(header->data);
+		g_free(header);
+		header = NULL;
 	}
 
-	LOG_V("Calling vaBeginPicture\n");
 
-	/* Now we can begin the picture */
-	va_ret = vaBeginPicture(va_display, va_context, surface);
-	if (va_ret != VA_STATUS_SUCCESS) {
-		ret = MIX_RESULT_FAIL;
-		LOG_E("Failed to vaBeginPicture(): va_ret = 0x%x\n", va_ret);
-		goto cleanup;
+	LOG_V( "Unlocking\n");
+    g_mutex_unlock(parent->objectlock);
+
+
+	return ret;
+}
+
+
+MIX_RESULT mix_videofmt_mp42_decode(MixVideoFormat *mix, MixBuffer * bufin[],
+                gint bufincnt, MixVideoDecodeParams * decode_params) {
+
+  	int i = 0;
+    MixVideoFormat *parent = NULL;
+	MIX_RESULT ret = MIX_RESULT_SUCCESS;
+	guint64 ts = 0;
+	gboolean discontinuity = FALSE;
+
+    LOG_V( "Begin\n");
+
+    if (mix == NULL || bufin == NULL || decode_params == NULL )
+	{
+		LOG_E( "NUll pointer passed in\n");
+        return MIX_RESULT_NULL_PTR;
 	}
 
-	LOG_V("Calling vaRenderPicture\n");
+	/* Chainup parent method.
+		We are not chaining up to parent method for now.
+	 */
 
-	/* Render the picture */
-	va_ret = vaRenderPicture(va_display, va_context, buffer_ids, buffer_id_cnt);
-	if (va_ret != VA_STATUS_SUCCESS) {
-		ret = MIX_RESULT_FAIL;
-		LOG_E("Failed to vaRenderPicture(): va_ret = 0x%x\n", va_ret);
-		goto cleanup;
+#if 0
+    if (parent_class->decode) {
+        return parent_class->decode(mix, bufin, bufincnt, decode_params);
+	}
+#endif
+
+	if (!MIX_IS_VIDEOFORMAT_MP42(mix))
+		return MIX_RESULT_INVALID_PARAM;
+
+	parent = MIX_VIDEOFORMAT(mix);
+
+	ret = mix_videodecodeparams_get_timestamp(decode_params, &ts);
+	if (ret != MIX_RESULT_SUCCESS)
+	{
+	    // never happen
+		return MIX_RESULT_FAIL;
 	}
 
-	LOG_V("Calling vaEndPicture\n");
-
-	/* End picture */
-	va_ret = vaEndPicture(va_display, va_context);
-	if (va_ret != VA_STATUS_SUCCESS) {
-		ret = MIX_RESULT_FAIL;
-		LOG_E("Failed to vaEndPicture(): va_ret = 0x%x\n", va_ret);
-		goto cleanup;
+	ret = mix_videodecodeparams_get_discontinuity(decode_params, &discontinuity);
+	if (ret != MIX_RESULT_SUCCESS)
+	{
+	    // never happen
+		return MIX_RESULT_FAIL;
 	}
 
-#if 0   /* we don't call vaSyncSurface here, the call is moved to mix_video_render() */
-	LOG_V("Calling vaSyncSurface\n");
+	//From now on, we exit this function through cleanup:
 
-	/* Decode the picture */
-	va_ret = vaSyncSurface(va_display, surface);
-	if (va_ret != VA_STATUS_SUCCESS) {
-		ret = MIX_RESULT_FAIL;
-		LOG_E("Failed to vaSyncSurface(): va_ret = 0x%x\n", va_ret);
-		goto cleanup;
-	}
-#endif 
+	LOG_V( "Locking\n");
+    g_mutex_lock(parent->objectlock);
 
-	/* Set the discontinuity flag */
-	mix_videoframe_set_discontinuity(frame, discontinuity);
+	LOG_I("ts after mix_videodecodeparams_get_timestamp() = %"G_GINT64_FORMAT"\n", ts);
 
-	/* Set the timestamp */
-	mix_videoframe_set_timestamp(frame, timestamp);
+	for (i = 0; i < bufincnt; i++)
+	{
+	    // decode a buffer at a time
+        ret = mix_videofmt_mp42_decode_a_buffer(
+            mix, 
+            bufin[i],
+            ts,
+            discontinuity);
+        
+		if (ret != MIX_RESULT_SUCCESS)
+		{
+			LOG_E("mix_videofmt_mp42_decode_a_buffer failed.\n");
+   			goto cleanup;
+		}        
+    }
 
-	LOG_V("Enqueueing the frame with frame manager, timestamp %"G_GINT64_FORMAT"\n", timestamp);
 
-	/* Enqueue the decoded frame using frame manager */
-	ret = mix_framemanager_enqueue(mix->framemgr, frame);
-	if (ret != MIX_RESULT_SUCCESS) {
-		LOG_E("Failed to mix_framemanager_enqueue()!\n");
-		goto cleanup;
-	}
+cleanup:
 
-	/* For I or P frames, save this frame off for skipped frame handling */
-	if ((frame_type == MP4_VOP_TYPE_I) || (frame_type == MP4_VOP_TYPE_P)) {
-		if (self->last_frame != NULL) {
-			mix_videoframe_unref(self->last_frame);
-		}
-		self->last_frame = frame;
-		mix_videoframe_ref(frame);
-	}
+	LOG_V( "Unlocking\n");
+ 	g_mutex_unlock(parent->objectlock);
 
-	ret = MIX_RESULT_SUCCESS;
-
-	cleanup:
-
-	if (ret != MIX_RESULT_SUCCESS && frame != NULL) {
-		mix_videoframe_unref(frame);
-	}
-
-	if (ret != MIX_RESULT_SUCCESS) {
-		mix_videoformat_mp42_flush_packed_stream_queue(
-				self->packed_stream_queue);
-	}
-
-	g_free(buffer_ids);
-	mix_videofmt_mp42_release_input_buffers(mix, timestamp);
-
-	if (is_from_queued_data) {
-		if (mix_buffer) {
-			mix_buffer_unref(mix_buffer);
-		}
-		mix_videoformat_mp42_free_picture_data(picture_data);
-	}
-
-	LOG_V("End\n");
+    LOG_V( "End\n");
 
 	return ret;
 }
@@ -1123,26 +1268,13 @@ MIX_RESULT mix_videofmt_mp42_flush(MixVideoFormat *mix) {
 
 	MIX_RESULT ret = MIX_RESULT_SUCCESS;
 	MixVideoFormat_MP42 *self = MIX_VIDEOFORMAT_MP42(mix);
-	MixInputBufferEntry *bufentry = NULL;
 
 	LOG_V("Begin\n");
 
 	g_mutex_lock(mix->objectlock);
 
-	mix_videoformat_mp42_flush_packed_stream_queue(self->packed_stream_queue);
-
-	/*
-	 * Clear the contents of inputbufqueue
-	 */
-	while (!g_queue_is_empty(mix->inputbufqueue)) {
-		bufentry = (MixInputBufferEntry *) g_queue_pop_head(mix->inputbufqueue);
-		if (bufentry == NULL) {
-			continue;
-		}
-
-		mix_buffer_unref(bufentry->buf);
-		g_free(bufentry);
-	}
+    // drop any decode-pending picture, and ignore return value
+     mix_videofmt_mp42_decode_end(mix, TRUE);
 
 	/*
 	 * Clear parse_in_progress flag and current timestamp
@@ -1150,16 +1282,21 @@ MIX_RESULT mix_videofmt_mp42_flush(MixVideoFormat *mix) {
 	mix->parse_in_progress = FALSE;
 	mix->discontinuity_frame_in_progress = FALSE;
 	mix->current_timestamp = (guint64)-1;
+	self->next_nvop_for_PB_frame = FALSE;
 
-	{
-		gint idx = 0;
-		for (idx = 0; idx < 2; idx++) {
-			if (self->reference_frames[idx] != NULL) {
-				mix_videoframe_unref(self->reference_frames[idx]);
-				self->reference_frames[idx] = NULL;
-			}
+	gint idx = 0;
+	for (idx = 0; idx < 2; idx++) {
+		if (self->reference_frames[idx] != NULL) {
+			mix_videoframe_unref(self->reference_frames[idx]);
+			self->reference_frames[idx] = NULL;
 		}
 	}
+	if (self->last_frame)
+	{
+	    mix_videoframe_unref(self->last_frame);
+	    self->last_frame = NULL;
+	}
+	
 
 	/* Call parser flush */
 	vbp_flush(mix->parser_handle);
@@ -1174,8 +1311,6 @@ MIX_RESULT mix_videofmt_mp42_flush(MixVideoFormat *mix) {
 MIX_RESULT mix_videofmt_mp42_eos(MixVideoFormat *mix) {
 
 	MIX_RESULT ret = MIX_RESULT_SUCCESS;
-	vbp_data_mp42 *data = NULL;
-	uint32 vbp_ret = 0;
 
 	LOG_V("Begin\n");
 
@@ -1189,28 +1324,9 @@ MIX_RESULT mix_videofmt_mp42_eos(MixVideoFormat *mix) {
 
 	g_mutex_lock(mix->objectlock);
 
-	/* if a frame is in progress, process the frame */
-	if (mix->parse_in_progress) {
-		/* query for data */
-		vbp_ret = vbp_query(mix->parser_handle, (void *) &data);
-		LOG_V("vbp_query() returns 0x%x\n", vbp_ret);
-
-		if ((vbp_ret != VBP_OK) || (data == NULL)) {
-			ret = MIX_RESULT_FAIL;
-			LOG_E("vbp_ret != VBP_OK || data == NULL\n");
-			goto cleanup;
-		}
-
-		/* process and decode data */
-		ret = mix_videofmt_mp42_process_decode(mix, data,
-				mix->current_timestamp, mix->discontinuity_frame_in_progress);
-		mix->parse_in_progress = FALSE;
-
-	}
-
+    mix_videofmt_mp42_decode_end(mix, FALSE);
+	
 	ret = mix_framemanager_eos(mix->framemgr);
-
-	cleanup:
 
 	g_mutex_unlock(mix->objectlock);
 
@@ -1294,125 +1410,6 @@ MIX_RESULT mix_videofmt_mp42_handle_ref_frames(MixVideoFormat *mix,
 MIX_RESULT mix_videofmt_mp42_release_input_buffers(MixVideoFormat *mix,
 		guint64 timestamp) {
 
-	MixInputBufferEntry *bufentry = NULL;
-	gboolean done = FALSE;
-
-	LOG_V("Begin\n");
-
-	if (mix == NULL) {
-		return MIX_RESULT_NULL_PTR;
-	}
-
-	/* Dequeue and release all input buffers for this frame */
-	LOG_V("Releasing all the MixBuffers for this frame\n");
-
-	/*
-	 * While the head of the queue has timestamp == current ts
-	 * dequeue the entry, unref the MixBuffer, and free the struct
-	 */
-	done = FALSE;
-	while (!done) {
-		bufentry
-				= (MixInputBufferEntry *) g_queue_peek_head(mix->inputbufqueue);
-		if (bufentry == NULL) {
-			break;
-		}
-
-		LOG_V("head of queue buf %x, timestamp %"G_GINT64_FORMAT", buffer timestamp %"G_GINT64_FORMAT"\n",
-				(guint)bufentry->buf, timestamp, bufentry->timestamp);
-
-		if (bufentry->timestamp != timestamp) {
-			LOG_V("buf %x, timestamp %"G_GINT64_FORMAT", buffer timestamp %"G_GINT64_FORMAT"\n",
-					(guint)bufentry->buf, timestamp, bufentry->timestamp);
-
-			done = TRUE;
-			break;
-		}
-
-		bufentry = (MixInputBufferEntry *) g_queue_pop_head(mix->inputbufqueue);
-		LOG_V("Unref this MixBuffers %x\n", (guint) bufentry->buf);
-
-		mix_buffer_unref(bufentry->buf);
-		g_free(bufentry);
-	}
-
-	LOG_V("End\n");
-
+    // not used, to be removed
 	return MIX_RESULT_SUCCESS;
-}
-
-vbp_picture_data_mp42 *mix_videoformat_mp42_clone_picture_data(
-		vbp_picture_data_mp42 *picture_data) {
-
-	gboolean succ = FALSE;
-
-	if (!picture_data) {
-		return NULL;
-	}
-
-	if (picture_data->number_slices == 0) {
-		return NULL;
-	}
-
-	vbp_picture_data_mp42 *cloned_picture_data = g_try_new0(
-			vbp_picture_data_mp42, 1);
-	if (cloned_picture_data == NULL) {
-		goto cleanup;
-	}
-
-	memcpy(cloned_picture_data, picture_data, sizeof(vbp_picture_data_mp42));
-
-	cloned_picture_data->number_slices = picture_data->number_slices;
-	cloned_picture_data->slice_data = g_try_new0(vbp_slice_data_mp42,
-			picture_data->number_slices);
-	if (cloned_picture_data->slice_data == NULL) {
-		goto cleanup;
-	}
-
-	memcpy(cloned_picture_data->slice_data, picture_data->slice_data,
-			sizeof(vbp_slice_data_mp42) * (picture_data->number_slices));
-
-	succ = TRUE;
-
-	cleanup:
-
-	if (!succ) {
-		mix_videoformat_mp42_free_picture_data(cloned_picture_data);
-		return NULL;
-	}
-
-	return cloned_picture_data;
-}
-
-void mix_videoformat_mp42_free_picture_data(vbp_picture_data_mp42 *picture_data) {
-	if (picture_data) {
-		if (picture_data->slice_data) {
-			g_free(picture_data->slice_data);
-		}
-		g_free(picture_data);
-	}
-}
-
-void mix_videoformat_mp42_flush_packed_stream_queue(GQueue *packed_stream_queue) {
-
-	PackedStream *packed_stream = NULL;
-
-	if (packed_stream_queue == NULL) {
-		return;
-	}
-	while (!g_queue_is_empty(packed_stream_queue)) {
-		packed_stream = (PackedStream *) g_queue_pop_head(packed_stream_queue);
-		if (packed_stream == NULL) {
-			continue;
-		}
-
-		if (packed_stream->picture_data) {
-			mix_videoformat_mp42_free_picture_data(packed_stream->picture_data);
-		}
-
-		if (packed_stream->mix_buffer) {
-			mix_buffer_unref(packed_stream->mix_buffer);
-		}
-		g_free(packed_stream);
-	}
 }

@@ -13,7 +13,7 @@
 
 #define INITIAL_FRAME_ARRAY_SIZE 	16
 
-// Assume only one backward reference is used. This will hold up to 2 frames before forcing
+// Assume only one backward reference is used. This will hold up to 2 frames before forcing 
 // the earliest frame out of queue.
 #define MIX_MAX_ENQUEUE_SIZE        2
 
@@ -101,10 +101,10 @@ MIX_RESULT mix_framemanager_initialize(MixFrameManager *fm,
 
 	MIX_RESULT ret = MIX_RESULT_SUCCESS;
 
-	if (!MIX_IS_FRAMEMANAGER(fm) ||
+	if (!MIX_IS_FRAMEMANAGER(fm) || 
 	    mode <= MIX_DISPLAY_ORDER_UNKNOWN ||
-	    mode >= MIX_DISPLAY_ORDER_LAST ||
-	    framerate_numerator <= 0 ||
+	    mode >= MIX_DISPLAY_ORDER_LAST || 
+	    framerate_numerator <= 0 || 
 	    framerate_denominator <= 0) {
 		return MIX_RESULT_INVALID_PARAM;
 	}
@@ -259,7 +259,7 @@ MIX_RESULT mix_framemanager_set_max_enqueue_size(MixFrameManager *fm, gint size)
     {
 		return MIX_RESULT_FAIL;
     }
-
+    
 	g_mutex_lock(fm->lock);
 
 	fm->max_enqueue_size = size;
@@ -286,12 +286,12 @@ MIX_RESULT mix_framemanager_set_max_picture_number(MixFrameManager *fm, guint32 
         // Refer to H.264 spec: log2_max_pic_order_cnt_lsb_minus4. Max pic order will never be less than 16.
 		return MIX_RESULT_INVALID_PARAM;
     }
-
+    
 	g_mutex_lock(fm->lock);
 
     // max_picture_number is exclusie (range from 0 to num - 1).
     // Note that this number may not be reliable if encoder does not conform to the spec, as of this, the
-    // implementaion will not automatically roll-over fm->next_frame_picnumber when it reaches
+    // implementaion will not automatically roll-over fm->next_frame_picnumber when it reaches 
     // fm->max_picture_number.
 	fm->max_picture_number = num;
 	LOG_V("max picture number is %d\n", num);
@@ -322,7 +322,7 @@ MIX_RESULT mix_framemanager_flush(MixFrameManager *fm) {
         fm->frame_list = g_slist_remove(fm->frame_list, (gconstpointer)frame);
         mix_videoframe_unref(frame);
 	    LOG_V("one frame is flushed\n");
-    };
+    };     
 
 	fm->eos = FALSE;
 	fm->is_first_frame = TRUE;
@@ -377,29 +377,29 @@ MIX_RESULT mix_framemanager_enqueue(MixFrameManager *fm, MixVideoFrame *mvf) {
     }
 #endif
 
-	g_mutex_lock(fm->lock);
+	g_mutex_lock(fm->lock);	
     fm->frame_list = g_slist_append(fm->frame_list, (gpointer)mvf);
 	g_mutex_unlock(fm->lock);
-
+	
     LOG_V("End\n");
 
 	return ret;
 }
 
-void mix_framemanager_update_timestamp(MixFrameManager *fm, MixVideoFrame *mvf)
+void mix_framemanager_update_timestamp(MixFrameManager *fm, MixVideoFrame *mvf) 
 {
     // this function finds the lowest time stamp in the list and assign it to the dequeued video frame,
     // if that timestamp is smaller than the timestamp of dequeued video frame.
     int i;
-    guint64 ts, min_ts;
-    MixVideoFrame *p, *min_p;
+    guint64 ts = 0, min_ts = 0;
+    MixVideoFrame *p = NULL, *min_p = NULL;
     int len = g_slist_length(fm->frame_list);
     if (len == 0)
     {
         // nothing to update
         return;
     }
-
+    
     // find video frame with the smallest timestamp, take rollover into account when
     // comparing timestamp.
     for (i = 0; i < len; i++)
@@ -408,19 +408,19 @@ void mix_framemanager_update_timestamp(MixFrameManager *fm, MixVideoFrame *mvf)
         mix_videoframe_get_timestamp(p, &ts);
         if (i == 0 ||
             (ts < min_ts && min_ts - ts < TS_ROLLOVER_THRESHOLD) ||
-            (ts > min_ts && ts - min_ts > TS_ROLLOVER_THRESHOLD))
+            (ts > min_ts && ts - min_ts > TS_ROLLOVER_THRESHOLD))        
         {
             min_ts = ts;
             min_p = p;
-        }
+        }       
     }
 
     mix_videoframe_get_timestamp(mvf, &ts);
     if ((ts < min_ts && min_ts - ts < TS_ROLLOVER_THRESHOLD) ||
-        (ts > min_ts && ts - min_ts > TS_ROLLOVER_THRESHOLD))
+        (ts > min_ts && ts - min_ts > TS_ROLLOVER_THRESHOLD)) 
     {
         // frame to be updated has smaller time stamp
-    }
+    }  
     else
     {
         // time stamp needs to be monotonically non-decreasing so swap timestamp.
@@ -432,7 +432,7 @@ void mix_framemanager_update_timestamp(MixFrameManager *fm, MixVideoFrame *mvf)
 }
 
 
-MIX_RESULT mix_framemanager_pictype_based_dequeue(MixFrameManager *fm, MixVideoFrame **mvf)
+MIX_RESULT mix_framemanager_pictype_based_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) 
 {
     int i, num_i_or_p;
     MixVideoFrame *p, *first_i_or_p;
@@ -441,7 +441,7 @@ MIX_RESULT mix_framemanager_pictype_based_dequeue(MixFrameManager *fm, MixVideoF
 
     num_i_or_p = 0;
     first_i_or_p = NULL;
-
+    
     for (i = 0; i < len; i++)
     {
         p = (MixVideoFrame*)g_slist_nth_data(fm->frame_list, i);
@@ -455,15 +455,15 @@ MIX_RESULT mix_framemanager_pictype_based_dequeue(MixFrameManager *fm, MixVideoF
             *mvf = p;
             LOG_V("B frame is dequeued.\n");
             return MIX_RESULT_SUCCESS;
-        }
-
+        }  
+        
         if (type != TYPE_I && type != TYPE_P)
         {
-            // this should never happen
+            // this should never happen 
             LOG_E("Frame typs is invalid!!!\n");
             fm->frame_list = g_slist_remove(fm->frame_list, (gconstpointer)p);
             mix_videoframe_unref(p);
-            return MIX_RESULT_FRAME_NOTAVAIL;
+            return MIX_RESULT_FRAME_NOTAVAIL;                       
         }
         num_i_or_p++;
         if (first_i_or_p == NULL)
@@ -472,7 +472,7 @@ MIX_RESULT mix_framemanager_pictype_based_dequeue(MixFrameManager *fm, MixVideoF
         }
     }
 
-    // if there are more than one reference frame in the list, the first one is dequeued.
+    // if there are more than one reference frame in the list, the first one is dequeued. 
     if (num_i_or_p > 1 || fm->eos)
     {
         if (first_i_or_p == NULL)
@@ -493,40 +493,40 @@ MIX_RESULT mix_framemanager_pictype_based_dequeue(MixFrameManager *fm, MixVideoF
         else
         {
             LOG_V("P frame is dequeued.\n");
-        }
+        }                    
 #endif
-        return MIX_RESULT_SUCCESS;
+        return MIX_RESULT_SUCCESS;            
     }
-
-    return MIX_RESULT_FRAME_NOTAVAIL;
+    
+    return MIX_RESULT_FRAME_NOTAVAIL;   
 }
 
-MIX_RESULT mix_framemanager_timestamp_based_dequeue(MixFrameManager *fm, MixVideoFrame **mvf)
+MIX_RESULT mix_framemanager_timestamp_based_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) 
 {
     int i, len;
     MixVideoFrame *p, *p_out_of_dated;
     guint64 ts, ts_next_pending, ts_out_of_dated;
     guint64 tolerance = fm->frame_timestamp_delta/4;
 
-retry:
+retry:    
     // len may be changed during retry!
     len = g_slist_length(fm->frame_list);
-    ts_next_pending = (guint64)-1;
+    ts_next_pending = (guint64)-1; 
     ts_out_of_dated = 0;
     p_out_of_dated = NULL;
-
-
+    
+    
     for (i = 0; i < len; i++)
     {
         p = (MixVideoFrame*)g_slist_nth_data(fm->frame_list, i);
         mix_videoframe_get_timestamp(p, &ts);
-        if (ts >= fm->last_frame_timestamp &&
+        if (ts >= fm->last_frame_timestamp && 
             ts <= fm->next_frame_timestamp + tolerance)
         {
             fm->frame_list = g_slist_remove(fm->frame_list, (gconstpointer)p);
             *mvf = p;
             mix_videoframe_get_timestamp(p, &(fm->last_frame_timestamp));
-            fm->next_frame_timestamp = fm->last_frame_timestamp + fm->frame_timestamp_delta;
+            fm->next_frame_timestamp = fm->last_frame_timestamp + fm->frame_timestamp_delta;            
             LOG_V("frame is dequeud, ts = %"G_GINT64_FORMAT".\n", ts);
             return MIX_RESULT_SUCCESS;
         }
@@ -536,7 +536,7 @@ retry:
         {
             ts_next_pending = ts;
         }
-        if (ts < fm->last_frame_timestamp &&
+        if (ts < fm->last_frame_timestamp && 
             ts >= ts_out_of_dated)
         {
             // video frame that is most recently out-of-dated.
@@ -544,10 +544,10 @@ retry:
             // the "next frame" criteria, and the one with larger timestamp is dequeued first.
             ts_out_of_dated = ts;
             p_out_of_dated = p;
-        }
+        }        
     }
 
-    if (p_out_of_dated &&
+    if (p_out_of_dated && 
         fm->last_frame_timestamp - ts_out_of_dated < TS_ROLLOVER_THRESHOLD)
     {
         fm->frame_list = g_slist_remove(fm->frame_list, (gconstpointer)p_out_of_dated);
@@ -556,10 +556,10 @@ retry:
             ts_out_of_dated, fm->last_frame_timestamp);
         return MIX_RESULT_FRAME_NOTAVAIL;
     }
-
+    
     if (len <= fm->max_enqueue_size && fm->eos == FALSE)
     {
-        LOG_V("no frame is dequeued, expected ts = %"G_GINT64_FORMAT", next pending ts = %"G_GINT64_FORMAT".(List size = %d)\n",
+        LOG_V("no frame is dequeued, expected ts = %"G_GINT64_FORMAT", next pending ts = %"G_GINT64_FORMAT".(List size = %d)\n", 
             fm->next_frame_timestamp, ts_next_pending, len);
         return MIX_RESULT_FRAME_NOTAVAIL;
     }
@@ -569,13 +569,13 @@ retry:
     {
         LOG_V("timestamp has gap, jumping from %"G_GINT64_FORMAT" to %"G_GINT64_FORMAT".\n",
                 fm->next_frame_timestamp, ts_next_pending);
-
+                
         fm->next_frame_timestamp = ts_next_pending;
         goto retry;
     }
 
     // time stamp roll-over
-    LOG_V("time stamp is rolled over, resetting next frame timestamp from %"G_GINT64_FORMAT" to 0.\n",
+    LOG_V("time stamp is rolled over, resetting next frame timestamp from %"G_GINT64_FORMAT" to 0.\n", 
         fm->next_frame_timestamp);
 
     fm->next_frame_timestamp = 0;
@@ -587,7 +587,7 @@ retry:
     return MIX_RESULT_FAIL;
 }
 
-MIX_RESULT mix_framemanager_picnumber_based_dequeue(MixFrameManager *fm, MixVideoFrame **mvf)
+MIX_RESULT mix_framemanager_picnumber_based_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) 
 {
     int i, len;
     MixVideoFrame* p;
@@ -596,9 +596,9 @@ MIX_RESULT mix_framemanager_picnumber_based_dequeue(MixFrameManager *fm, MixVide
 
     len = g_slist_length(fm->frame_list);
 
-retry:
+retry:    
     next_picnum_pending = (guint32)-1;
-
+    
     for (i = 0; i < len; i++)
     {
         p = (MixVideoFrame*)g_slist_nth_data(fm->frame_list, i);
@@ -607,11 +607,11 @@ retry:
         {
             fm->frame_list = g_slist_remove(fm->frame_list, (gconstpointer)p);
             mix_framemanager_update_timestamp(fm, p);
-            *mvf = p;
+            *mvf = p;           
             LOG_V("frame is dequeued, poc = %d.\n", fm->next_frame_picnumber);
             fm->next_frame_picnumber++;
             //if (fm->next_frame_picnumber == fm->max_picture_number)
-            //    fm->next_frame_picnumber = 0;
+            //    fm->next_frame_picnumber = 0;            
             return MIX_RESULT_SUCCESS;
         }
 
@@ -624,7 +624,7 @@ retry:
         if (picnum < fm->next_frame_picnumber &&
             fm->next_frame_picnumber - picnum < 8)
         {
-            // the smallest value of "max_pic_order_cnt_lsb_minus4" is 16. If the distance of "next frame pic number"
+            // the smallest value of "max_pic_order_cnt_lsb_minus4" is 16. If the distance of "next frame pic number"  
             // to the pic number  in the list is less than half of 16, it is safe to assume that pic number
             // is reset when a new IDR is encoded. (where pic numbfer of top or bottom field must be 0, subclause 8.2.1).
             LOG_V("picture number is reset to %d, next pic number is %d, next pending number is %d.\n",
@@ -632,10 +632,10 @@ retry:
             break;
         }
     }
-
+    
     if (len <= fm->max_enqueue_size && fm->eos == FALSE)
     {
-        LOG_V("No frame is dequeued. Expected POC = %d, next pending POC = %d. (List size = %d)\n",
+        LOG_V("No frame is dequeued. Expected POC = %d, next pending POC = %d. (List size = %d)\n", 
                 fm->next_frame_picnumber, next_picnum_pending, len);
         return MIX_RESULT_FRAME_NOTAVAIL;
     }
@@ -645,13 +645,13 @@ retry:
     {
         LOG_V("picture number has gap, jumping from %d to %d.\n",
                 fm->next_frame_picnumber, next_picnum_pending);
-
+                
         fm->next_frame_picnumber = next_picnum_pending;
         goto retry;
     }
 
     // picture number roll-over
-    LOG_V("picture number is rolled over, resetting next picnum from %d to 0.\n",
+    LOG_V("picture number is rolled over, resetting next picnum from %d to 0.\n", 
         fm->next_frame_picnumber);
 
     fm->next_frame_picnumber = 0;
@@ -693,29 +693,29 @@ MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) {
         {
             LOG_V("No frame is dequeued as queue is empty!\n");
             ret = MIX_RESULT_FRAME_NOTAVAIL;
-        }
+        }            
 	}
 	else if (fm->is_first_frame)
 	{
 	    // dequeue the first entry in the list. Not need to update the time stamp as
 	    // the list should contain only one frame.
-#ifdef MIX_LOG_ENABLE
+#ifdef MIX_LOG_ENABLE	    
     	if (g_slist_length(fm->frame_list) != 1)
     	{
-    	    LOG_W("length of list is not equal to 1 for the first frame.\n");
+    	    LOG_W("length of list is not equal to 1 for the first frame.\n");    	    
     	}
-#endif
+#endif    	
         *mvf = (MixVideoFrame*) g_slist_nth_data(fm->frame_list, 0);
         fm->frame_list = g_slist_remove(fm->frame_list, (gconstpointer)(*mvf));
 
         if (fm->mode == MIX_DISPLAY_ORDER_TIMESTAMP)
-        {
-            mix_videoframe_get_timestamp(*mvf, &(fm->last_frame_timestamp));
+        {            
+            mix_videoframe_get_timestamp(*mvf, &(fm->last_frame_timestamp));             
             fm->next_frame_timestamp = fm->last_frame_timestamp + fm->frame_timestamp_delta;
             LOG_V("The first frame is dequeued, ts = %"G_GINT64_FORMAT"\n", fm->last_frame_timestamp);
         }
         else if (fm->mode == MIX_DISPLAY_ORDER_PICNUMBER)
-        {
+        {            
             mix_videoframe_get_displayorder(*mvf, &(fm->next_frame_picnumber));
             LOG_V("The first frame is dequeued, POC = %d\n", fm->next_frame_picnumber);
             fm->next_frame_picnumber++;
@@ -724,15 +724,15 @@ MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) {
         }
         else
         {
-#ifdef MIX_LOG_ENABLE
+#ifdef MIX_LOG_ENABLE     
             MixFrameType type;
             mix_videoframe_get_frame_type(*mvf, &type);
             LOG_V("The first frame is dequeud, frame type is %d.\n", type);
-#endif
+#endif            
         }
 	    fm->is_first_frame = FALSE;
-
-        ret = MIX_RESULT_SUCCESS;
+	    
+        ret = MIX_RESULT_SUCCESS;	       
 	}
 	else
 	{
@@ -751,14 +751,14 @@ MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf) {
             ret = mix_framemanager_pictype_based_dequeue(fm, mvf);
             break;
 
-        case MIX_DISPLAY_ORDER_FIFO:
+        case MIX_DISPLAY_ORDER_FIFO:        
             *mvf = (MixVideoFrame*) g_slist_nth_data(fm->frame_list, 0);
             fm->frame_list = g_slist_remove(fm->frame_list, (gconstpointer)(*mvf));
-            ret = MIX_RESULT_SUCCESS;
+            ret = MIX_RESULT_SUCCESS;          
             LOG_V("One frame is dequeued.\n");
             break;
-
-        default:
+            
+        default:         
             LOG_E("Invalid frame order mode\n");
             ret = MIX_RESULT_FAIL;
             break;
@@ -784,7 +784,7 @@ MIX_RESULT mix_framemanager_eos(MixFrameManager *fm) {
 		return MIX_RESULT_NOT_INIT;
 	}
 
-	g_mutex_lock(fm->lock);
+	g_mutex_lock(fm->lock);		
 	fm->eos = TRUE;
 	LOG_V("EOS is received.\n");
 	g_mutex_unlock(fm->lock);

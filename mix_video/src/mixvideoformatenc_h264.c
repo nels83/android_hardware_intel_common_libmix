@@ -40,6 +40,7 @@ static void mix_videoformatenc_h264_init(MixVideoFormatEnc_H264 * self) {
 
     /* member initialization */
     self->encoded_frames = 0;
+    self->frame_num = 0;
     self->pic_skipped = FALSE;
     self->is_intra = TRUE;
     self->cur_frame = NULL;
@@ -227,6 +228,24 @@ MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
         goto cleanup;
     }
 
+    ret = mix_videoconfigparamsenc_h264_get_I_slice_num (config_params_enc_h264,
+            &self->I_slice_num);
+
+    if (ret != MIX_RESULT_SUCCESS) {
+        LOG_E(
+                "Failed to mix_videoconfigparamsenc_h264_get_I_slice_num\n");
+        goto cleanup;
+    }
+
+    ret = mix_videoconfigparamsenc_h264_get_P_slice_num (config_params_enc_h264,
+            &self->P_slice_num);
+
+    if (ret != MIX_RESULT_SUCCESS) {
+        LOG_E(
+                "Failed to mix_videoconfigparamsenc_h264_get_P_slice_num\n");
+        goto cleanup;
+    }
+
     ret = mix_videoconfigparamsenc_h264_get_delimiter_type (config_params_enc_h264,
             &self->delimiter_type);
 
@@ -254,6 +273,10 @@ MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
             self->disable_deblocking_filter_idc);
     LOG_I( "self->slice_num = %d\n",
             self->slice_num);
+    LOG_I( "self->I_slice_num = %d\n",
+            self->I_slice_num);
+    LOG_I( "self->P_slice_num = %d\n",
+            self->P_slice_num);
     LOG_I ("self->delimiter_type = %d\n",
             self->delimiter_type);
     LOG_I ("self->idr_interval = %d\n",
@@ -422,6 +445,19 @@ MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
         ret = MIX_RESULT_FAIL;
         goto cleanup;
     }
+
+
+    if (parent->va_rcmode == VA_RC_VCM) {
+
+	/*
+	* Following three features are only enabled in VCM mode
+	*/
+	parent->render_mss_required = TRUE;
+	parent->render_AIR_required = TRUE;
+	parent->render_bitrate_required = TRUE;
+	self->slice_num = (parent->picture_height + 15) / 16; //if we are in VCM, we will set slice num to max value
+    }
+
 
     /*TODO: compute the surface number*/
     int numSurfaces;
@@ -802,6 +838,7 @@ MIX_RESULT mix_videofmtenc_h264_flush(MixVideoFormatEnc *mix) {
 #endif
     /*reset the properities*/
     self->encoded_frames = 0;
+    self->frame_num = 0;
     self->pic_skipped = FALSE;
     self->is_intra = TRUE;
 
@@ -1103,6 +1140,8 @@ MIX_RESULT mix_videofmtenc_h264_send_slice_parameter (MixVideoFormatEnc_H264 *mi
     guint slice_height;
     guint slice_index;
     guint slice_height_in_mb;
+    guint max_slice_num;
+    guint min_slice_num;
 
     if (mix == NULL) {
         LOG_E("mix == NULL\n");
@@ -1119,25 +1158,32 @@ MIX_RESULT mix_videofmtenc_h264_send_slice_parameter (MixVideoFormatEnc_H264 *mi
 
     parent = MIX_VIDEOFORMATENC(&(mix->parent));
 
-    slice_num = mix->slice_num;
+    max_slice_num = (parent->picture_height + 15) / 16;
+    min_slice_num = 1;
+
+    if (mix->is_intra) {
+        slice_num = mix->I_slice_num;
+    }
+    else {
+        slice_num = mix->P_slice_num;
+    }
+
+    if (slice_num < min_slice_num) {
+        LOG_W ("Slice Number is too small");
+        slice_num = min_slice_num;
+    }
+
+    if (slice_num > max_slice_num) {
+        LOG_W ("Slice Number is too big");
+        slice_num = max_slice_num;
+    }
+
     slice_height = parent->picture_height / slice_num;
 
     slice_height += 15;
     slice_height &= (~15);
 
     slice_num = mix->slice_num = (parent->picture_height + 15) / slice_height;
-
-#if 0
-    if (!mix->is_intra){
-	slice_num = 9;
-
-	slice_height = parent->picture_height / slice_num;
-
-	slice_height += 15;
-	slice_height &= (~15);
-
-    }
-#endif
 
 #if 1
     va_status = vaCreateBuffer (parent->va_display, parent->va_context,
@@ -1285,13 +1331,20 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
 
     LOG_I( "encoded_frames = %d\n",
             mix->encoded_frames);
+    LOG_I( "frame_num = %d\n",
+            mix->frame_num);
     LOG_I( "is_intra = %d\n",
             mix->is_intra);
     LOG_I( "ci_frame_id = 0x%08x\n",
             (guint) parent->ci_frame_id);
 
+    if (parent->new_header_required) {
+        mix->frame_num = 0;
+    }
+
     /* determine the picture type*/
-    if ((mix->encoded_frames % parent->intra_period) == 0) {
+    //if ((mix->encoded_frames % parent->intra_period) == 0) {
+    if ((mix->frame_num % parent->intra_period) == 0) {
         mix->is_intra = TRUE;
     } else {
         mix->is_intra = FALSE;
@@ -1648,6 +1701,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
 
     if (mix->encoded_frames == 0) {
         mix->encoded_frames ++;
+        mix->frame_num ++;
         mix->last_coded_buf = mix->coded_buf[mix->coded_buf_index];
         mix->coded_buf_index ++;
         mix->coded_buf_index %=2;
@@ -1656,7 +1710,8 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
 
 
         /* determine the picture type*/
-        if ((mix->encoded_frames % parent->intra_period) == 0) {
+        //if ((mix->encoded_frames % parent->intra_period) == 0) {
+        if ((mix->frame_num % parent->intra_period) == 0) {
             mix->is_intra = TRUE;
         } else {
             mix->is_intra = FALSE;
@@ -1697,12 +1752,21 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
     int num_seg = 0;
     guint total_size = 0;
     guint size = 0;
+    guint status = 0;
+    gboolean slice_size_overflow = FALSE;
 
     coded_seg = (VACodedBufferSegment *)buf;
     num_seg = 1;
 
     while (1) {
         total_size += coded_seg->size;
+
+        status = coded_seg->status;
+
+        if (!slice_size_overflow) {
+
+		slice_size_overflow = status & VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
+        }
 
         if (coded_seg->next == NULL)
             break;
@@ -1887,10 +1951,10 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
 
     }
 
-    VASurfaceStatus status;
+    VASurfaceStatus va_surface_status;
 
     /*query the status of current surface*/
-    va_status = vaQuerySurfaceStatus(va_display, surface,  &status);
+    va_status = vaQuerySurfaceStatus(va_display, surface,  &va_surface_status);
     if (va_status != VA_STATUS_SUCCESS)
     {
         LOG_E(
@@ -1898,7 +1962,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
         ret = MIX_RESULT_FAIL;
         goto cleanup;
     }
-    mix->pic_skipped = status & VASurfaceSkipped;
+    mix->pic_skipped = va_surface_status & VASurfaceSkipped;
 
     if (parent->need_display) {
 		ret = mix_videoframe_set_sync_flag(mix->cur_frame, TRUE);
@@ -1933,6 +1997,7 @@ MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix,
 #endif
 
     mix->encoded_frames ++;
+    mix->frame_num ++;
     mix->last_coded_buf = mix->coded_buf[mix->coded_buf_index];
     mix->coded_buf_index ++;
     mix->coded_buf_index %=2;
@@ -1964,6 +2029,14 @@ cleanup:
     }
 
     LOG_V( "end\n");
+
+    /*
+    * The error level of MIX_RESULT_VIDEO_ENC_SLICESIZE_OVERFLOW
+    * is lower than other errors, so if any other errors happen, we won't
+    * return slice size overflow
+    */
+    if (ret == MIX_RESULT_SUCCESS && slice_size_overflow)
+        ret = MIX_RESULT_VIDEO_ENC_SLICESIZE_OVERFLOW;
 
     return ret;
 }
@@ -2170,7 +2243,8 @@ MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix
     if (!MIX_IS_VIDEOFORMATENC_H264(mix))
         return MIX_RESULT_INVALID_PARAM;
 
-    if (mix->encoded_frames == 0 || parent->new_header_required) {
+    //if (mix->encoded_frames == 0 || parent->new_header_required) {
+    if (mix->frame_num == 0 || parent->new_header_required) {
         ret = mix_videofmtenc_h264_send_seq_params (mix);
         if (ret != MIX_RESULT_SUCCESS)
         {
@@ -2180,6 +2254,58 @@ MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix
         }
 
 	 parent->new_header_required = FALSE; //Set to require new header filed to FALSE
+    }
+
+    if (parent->render_mss_required && parent->max_slice_size != 0) {
+        ret = mix_videofmtenc_h264_send_max_slice_size(mix);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_E(
+                    "Failed mix_videofmtenc_h264_send_max_slice_size\n");
+            return MIX_RESULT_FAIL;
+        }
+
+        parent->render_mss_required = FALSE;
+    }
+
+    if (parent->render_bitrate_required) {
+        ret = mix_videofmtenc_h264_send_dynamic_bitrate(mix);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_E(
+                    "Failed mix_videofmtenc_h264_send_dynamic_bitrate\n");
+            return MIX_RESULT_FAIL;
+        }
+
+        parent->render_bitrate_required = FALSE;
+    }
+
+    if (parent->render_AIR_required &&
+       (parent->refresh_type == MIX_VIDEO_AIR || parent->refresh_type == MIX_VIDEO_BOTH))
+    {
+
+        ret = mix_videofmtenc_h264_send_AIR (mix);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_E(
+                    "Failed mix_videofmtenc_h264_send_AIR\n");
+            return MIX_RESULT_FAIL;
+        }
+
+        parent->render_AIR_required = FALSE;
+    }
+
+    if (parent->render_framerate_required) {
+
+        ret = mix_videofmtenc_h264_send_dynamic_framerate (mix);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_E(
+                    "Failed mix_videofmtenc_h264_send_dynamic_framerate\n");
+            return MIX_RESULT_FAIL;
+        }
+
+        parent->render_framerate_required = FALSE;
     }
 
     ret = mix_videofmtenc_h264_send_picture_parameter (mix);
@@ -2234,21 +2360,61 @@ MIX_RESULT mix_videofmtenc_h264_set_dynamic_enc_config (MixVideoFormatEnc * mix,
 	}
 
 	/*
-	* For case params_type == MIX_ENC_PARAMS_SLICE_SIZE
+	* For case params_type == MIX_ENC_PARAMS_SLICE_NUM
 	* we don't need to chain up to parent method, as we will handle
 	* dynamic slice height change inside this method, and other dynamic
 	* controls will be handled in parent method.
 	*/
-	if (params_type == MIX_ENC_PARAMS_SLICE_SIZE) {
+	if (params_type == MIX_ENC_PARAMS_SLICE_NUM) {
 
 		g_mutex_lock(parent->objectlock);
 
 		ret = mix_videoconfigparamsenc_h264_get_slice_num (config_params_enc_h264,
 			&self->slice_num);
 
+		self->I_slice_num = self->P_slice_num = self->slice_num;
+
 		if (ret != MIX_RESULT_SUCCESS) {
 			LOG_E(
 				"Failed to mix_videoconfigparamsenc_h264_get_slice_num\n");
+
+			g_mutex_unlock(parent->objectlock);
+
+			return ret;
+		}
+
+		g_mutex_unlock(parent->objectlock);
+
+	}
+	else if (params_type == MIX_ENC_PARAMS_I_SLICE_NUM) {
+
+		g_mutex_lock(parent->objectlock);
+
+		ret = mix_videoconfigparamsenc_h264_get_I_slice_num (config_params_enc_h264,
+			&self->I_slice_num);
+
+		if (ret != MIX_RESULT_SUCCESS) {
+			LOG_E(
+				"Failed to mix_videoconfigparamsenc_h264_get_I_slice_num\n");
+
+			g_mutex_unlock(parent->objectlock);
+
+			return ret;
+		}
+
+		g_mutex_unlock(parent->objectlock);
+
+	}
+	else if (params_type == MIX_ENC_PARAMS_P_SLICE_NUM) {
+
+		g_mutex_lock(parent->objectlock);
+
+		ret = mix_videoconfigparamsenc_h264_get_P_slice_num (config_params_enc_h264,
+			&self->P_slice_num);
+
+		if (ret != MIX_RESULT_SUCCESS) {
+			LOG_E(
+				"Failed to mix_videoconfigparamsenc_h264_get_P_slice_num\n");
 
 			g_mutex_unlock(parent->objectlock);
 
@@ -2297,6 +2463,322 @@ MIX_RESULT mix_videofmtenc_h264_set_dynamic_enc_config (MixVideoFormatEnc * mix,
 	LOG_V( "End\n");
 
 	return MIX_RESULT_SUCCESS;
+
+}
+
+MIX_RESULT mix_videofmtenc_h264_send_dynamic_bitrate (MixVideoFormatEnc_H264 *mix)
+{
+    VAStatus va_status;
+
+    if (mix == NULL) {
+        LOG_E("mix == NULL\n");
+        return MIX_RESULT_NULL_PTR;
+    }
+
+    LOG_V( "Begin\n\n");
+
+    MixVideoFormatEnc *parent = NULL;
+
+    if (!MIX_IS_VIDEOFORMATENC_H264(mix))
+        return MIX_RESULT_INVALID_PARAM;
+
+    parent = MIX_VIDEOFORMATENC(&(mix->parent));
+
+    if (parent->va_rcmode != MIX_RATE_CONTROL_VCM) {
+
+	LOG_W ("Not in VCM mode, but call mix_videofmtenc_h264_send_dynamic_bitrate\n");
+	return VA_STATUS_SUCCESS;
+    }
+
+    VAEncMiscParameterBuffer *  misc_enc_param_buf;
+    VAEncMiscParameterRateControl * bitrate_control_param;
+    VABufferID misc_param_buffer_id;
+
+    va_status = vaCreateBuffer(parent->va_display, parent->va_context,
+            VAEncMiscParameterBufferType,
+            sizeof(VAEncMiscParameterBuffer) + sizeof (VAEncMiscParameterRateControl),
+            1, NULL,
+            &misc_param_buffer_id);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    va_status = vaMapBuffer (parent->va_display, misc_param_buffer_id, (void **)&misc_enc_param_buf);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    misc_enc_param_buf->type = VAEncMiscParameterTypeRateControl;
+    bitrate_control_param = (VAEncMiscParameterRateControl *)misc_enc_param_buf->data;
+
+    bitrate_control_param->bits_per_second = parent->bitrate;
+    bitrate_control_param->initial_qp = parent->initial_qp;
+    bitrate_control_param->min_qp = parent->min_qp;
+    bitrate_control_param->target_percentage = parent->target_percentage;
+    bitrate_control_param->window_size = parent->window_size;
+
+    va_status = vaUnmapBuffer(parent->va_display, misc_param_buffer_id);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaUnmapBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+
+    va_status = vaRenderPicture(parent->va_display, parent->va_context,
+            &misc_param_buffer_id, 1);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaRenderPicture\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    return MIX_RESULT_SUCCESS;
+
+}
+
+MIX_RESULT mix_videofmtenc_h264_send_max_slice_size (MixVideoFormatEnc_H264 *mix)
+{
+    VAStatus va_status;
+
+    if (mix == NULL) {
+        LOG_E("mix == NULL\n");
+        return MIX_RESULT_NULL_PTR;
+    }
+
+    LOG_V( "Begin\n\n");
+
+    MixVideoFormatEnc *parent = NULL;
+
+    if (!MIX_IS_VIDEOFORMATENC_H264(mix))
+        return MIX_RESULT_INVALID_PARAM;
+
+    parent = MIX_VIDEOFORMATENC(&(mix->parent));
+
+    if (parent->va_rcmode != MIX_RATE_CONTROL_VCM) {
+
+	LOG_W ("Not in VCM mode, but call mix_videofmtenc_h264_send_max_slice_size\n");
+	return VA_STATUS_SUCCESS;
+    }
+
+    VAEncMiscParameterBuffer *  misc_enc_param_buf;
+    VAEncMiscParameterMaxSliceSize * max_slice_size_param;
+    VABufferID misc_param_buffer_id;
+
+    va_status = vaCreateBuffer(parent->va_display, parent->va_context,
+            VAEncMiscParameterBufferType,
+            sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterMaxSliceSize),
+            1, NULL,
+            &misc_param_buffer_id);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+
+    va_status = vaMapBuffer (parent->va_display, misc_param_buffer_id, (void **)&misc_enc_param_buf);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    misc_enc_param_buf->type = VAEncMiscParameterTypeMaxSliceSize;
+    max_slice_size_param = (VAEncMiscParameterMaxSliceSize *)misc_enc_param_buf->data;
+
+    max_slice_size_param->max_slice_size = parent->max_slice_size;
+
+    va_status = vaUnmapBuffer(parent->va_display, misc_param_buffer_id);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaUnmapBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    LOG_I( "max slice size = %d\n",
+            max_slice_size_param->max_slice_size);
+
+    va_status = vaRenderPicture(parent->va_display, parent->va_context,
+            &misc_param_buffer_id, 1);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaRenderPicture\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    return MIX_RESULT_SUCCESS;
+}
+
+
+MIX_RESULT mix_videofmtenc_h264_send_AIR (MixVideoFormatEnc_H264 *mix)
+{
+    VAStatus va_status;
+
+    if (mix == NULL) {
+        LOG_E("mix == NULL\n");
+        return MIX_RESULT_NULL_PTR;
+    }
+
+    LOG_V( "Begin\n\n");
+
+    MixVideoFormatEnc *parent = NULL;
+
+    if (!MIX_IS_VIDEOFORMATENC_H264(mix))
+        return MIX_RESULT_INVALID_PARAM;
+
+    parent = MIX_VIDEOFORMATENC(&(mix->parent));
+
+
+    if (parent->va_rcmode != MIX_RATE_CONTROL_VCM) {
+
+	LOG_W ("Not in VCM mode, but call mix_videofmtenc_h264_send_AIR\n");
+	return VA_STATUS_SUCCESS;
+    }
+
+    VAEncMiscParameterBuffer *  misc_enc_param_buf;
+    VAEncMiscParameterAIR * air_param;
+    VABufferID misc_param_buffer_id;
+
+    va_status = vaCreateBuffer(parent->va_display, parent->va_context,
+            VAEncMiscParameterBufferType,
+            sizeof(misc_enc_param_buf) + sizeof(VAEncMiscParameterAIR),
+            1, NULL,
+            &misc_param_buffer_id);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    va_status = vaMapBuffer (parent->va_display, misc_param_buffer_id, (void **)&misc_enc_param_buf);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    misc_enc_param_buf->type = VAEncMiscParameterTypeAIR;
+    air_param = (VAEncMiscParameterAIR *)misc_enc_param_buf->data;
+
+    air_param->air_auto = parent->air_params.air_auto;
+    air_param->air_num_mbs = parent->air_params.air_MBs;
+    air_param->air_threshold = parent->air_params.air_threshold;
+
+    va_status = vaUnmapBuffer(parent->va_display, misc_param_buffer_id);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaUnmapBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    va_status = vaRenderPicture(parent->va_display, parent->va_context,
+            &misc_param_buffer_id, 1);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaRenderPicture\n");
+        return MIX_RESULT_FAIL;
+    }
+
+
+    LOG_I( "air_threshold = %d\n",
+            air_param->air_threshold);
+
+    return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videofmtenc_h264_send_dynamic_framerate (MixVideoFormatEnc_H264 *mix)
+{
+    VAStatus va_status;
+
+    if (mix == NULL) {
+        LOG_E("mix == NULL\n");
+        return MIX_RESULT_NULL_PTR;
+    }
+
+    LOG_V( "Begin\n\n");
+
+
+    MixVideoFormatEnc *parent = NULL;
+
+    if (!MIX_IS_VIDEOFORMATENC_H264(mix))
+        return MIX_RESULT_INVALID_PARAM;
+
+    parent = MIX_VIDEOFORMATENC(&(mix->parent));
+
+    if (parent->va_rcmode != MIX_RATE_CONTROL_VCM) {
+
+	LOG_W ("Not in VCM mode, but call mix_videofmtenc_h264_send_dynamic_framerate\n");
+	return VA_STATUS_SUCCESS;
+    }
+
+    VAEncMiscParameterBuffer *  misc_enc_param_buf;
+    VAEncMiscParameterFrameRate * framerate_param;
+    VABufferID misc_param_buffer_id;
+
+    va_status = vaCreateBuffer(parent->va_display, parent->va_context,
+            VAEncMiscParameterBufferType,
+            sizeof(misc_enc_param_buf) + sizeof(VAEncMiscParameterFrameRate),
+            1, NULL,
+            &misc_param_buffer_id);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    va_status = vaMapBuffer (parent->va_display, misc_param_buffer_id, (void **)&misc_enc_param_buf);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    misc_enc_param_buf->type = VAEncMiscParameterTypeFrameRate;
+    framerate_param = (VAEncMiscParameterFrameRate *)misc_enc_param_buf->data;
+    framerate_param->framerate =
+		(unsigned int) (parent->frame_rate_num + parent->frame_rate_denom /2 ) / parent->frame_rate_denom;
+
+    va_status = vaUnmapBuffer(parent->va_display, misc_param_buffer_id);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaUnmapBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    va_status = vaRenderPicture(parent->va_display, parent->va_context,
+            &misc_param_buffer_id, 1);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+                "Failed to vaRenderPicture\n");
+        return MIX_RESULT_FAIL;
+    }
+
+
+    LOG_I( "frame rate = %d\n",
+            framerate_param->framerate);
+
+    return MIX_RESULT_SUCCESS;
 
 }
 

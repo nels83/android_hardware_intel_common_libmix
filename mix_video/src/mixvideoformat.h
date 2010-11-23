@@ -88,6 +88,7 @@ struct _MixVideoFormat {
     gboolean end_picture_pending;
     MixVideoFrame* video_frame;    
     guint extra_surfaces;
+    MixVideoConfigParamsDec * config_params;
 };
 
 /**

@@ -34,6 +34,28 @@ static uint32 b_fraction_table[][9] = {
 };
 
 
+static uint8 vc1_aspect_ratio_table[][2] = 
+{
+    {0, 0},
+    {1, 1},
+    {12, 11},
+    {10, 11},
+    {16, 11},
+    {40, 33},
+    {24, 11},
+    {20, 11},
+    {32, 11},
+    {80, 33},
+    {18, 11},
+    {15, 11},
+    {64, 33},
+    {160, 99},
+    
+    // reserved
+    {0, 0}
+};
+
+
 
 /**
  * set parser entry points
@@ -678,6 +700,46 @@ uint32 vbp_populate_query_data_vc1(vbp_context *pcontext)
 	se_data->TFCNTRFLAG = seqLayerHeader->TFCNTRFLAG;
 	se_data->FINTERPFLAG = seqLayerHeader->FINTERPFLAG;
 	se_data->PSF = seqLayerHeader->PSF;
+
+    // color matrix
+    if (seqLayerHeader->COLOR_FORMAT_FLAG)
+    {
+    	se_data->MATRIX_COEF = seqLayerHeader->MATRIX_COEF;
+    }    	
+    else
+    {
+        //ITU-R BT. 601-5.
+        se_data->MATRIX_COEF = 6;
+    }
+
+    // aspect ratio
+    if (seqLayerHeader->ASPECT_RATIO_FLAG == 1)
+    {
+        se_data->ASPECT_RATIO = seqLayerHeader->ASPECT_RATIO;
+        if (se_data->ASPECT_RATIO < 14)
+        {
+            se_data->ASPECT_HORIZ_SIZE = vc1_aspect_ratio_table[se_data->ASPECT_RATIO][0];
+            se_data->ASPECT_VERT_SIZE = vc1_aspect_ratio_table[se_data->ASPECT_RATIO][1];            
+        }
+        else if (se_data->ASPECT_RATIO == 15)
+        {
+            se_data->ASPECT_HORIZ_SIZE = seqLayerHeader->ASPECT_HORIZ_SIZE;
+            se_data->ASPECT_VERT_SIZE = seqLayerHeader->ASPECT_VERT_SIZE;
+        }
+        else  // se_data->ASPECT_RATIO == 14
+        { 
+            se_data->ASPECT_HORIZ_SIZE = 0;
+            se_data->ASPECT_VERT_SIZE = 0;
+        }
+    }
+    else
+    {
+        // unspecified
+        se_data->ASPECT_RATIO = 0;
+        se_data->ASPECT_HORIZ_SIZE = 0;
+        se_data->ASPECT_VERT_SIZE = 0;
+    }
+	
 	se_data->BROKEN_LINK = seqLayerHeader->BROKEN_LINK;
 	se_data->CLOSED_ENTRY = seqLayerHeader->CLOSED_ENTRY;
 	se_data->PANSCAN_FLAG = seqLayerHeader->PANSCAN_FLAG;
@@ -739,9 +801,16 @@ static void vbp_pack_picture_params_vc1(
 	pic_parms->inloop_decoded_picture = VA_INVALID_SURFACE;
 
 	pic_parms->sequence_fields.value = 0;
+	pic_parms->sequence_fields.bits.pulldown = seqLayerHeader->PULLDOWN;
 	pic_parms->sequence_fields.bits.interlace = seqLayerHeader->INTERLACE;
+	pic_parms->sequence_fields.bits.tfcntrflag =  seqLayerHeader->TFCNTRFLAG;
+    pic_parms->sequence_fields.bits.finterpflag = seqLayerHeader->FINTERPFLAG;
+    pic_parms->sequence_fields.bits.psf = seqLayerHeader->PSF;
+    pic_parms->sequence_fields.bits.multires = seqLayerHeader->MULTIRES;
+    pic_parms->sequence_fields.bits.overlap = seqLayerHeader->OVERLAP;
 	pic_parms->sequence_fields.bits.syncmarker = seqLayerHeader->SYNCMARKER;
-	pic_parms->sequence_fields.bits.overlap = seqLayerHeader->OVERLAP;
+    pic_parms->sequence_fields.bits.rangered = seqLayerHeader->RANGERED;
+    pic_parms->sequence_fields.bits.max_b_frames = seqLayerHeader->MAXBFRAMES;
 
 	pic_parms->coded_width = (seqLayerHeader->width + 1) << 1;
 	pic_parms->coded_height = (seqLayerHeader->height + 1) << 1;
@@ -750,6 +819,7 @@ static void vbp_pack_picture_params_vc1(
 	pic_parms->entrypoint_fields.bits.closed_entry = seqLayerHeader->CLOSED_ENTRY;
 	pic_parms->entrypoint_fields.bits.broken_link = seqLayerHeader->BROKEN_LINK;
 	pic_parms->entrypoint_fields.bits.loopfilter = seqLayerHeader->LOOPFILTER;
+	pic_parms->entrypoint_fields.bits.panscan_flag = seqLayerHeader->PANSCAN_FLAG;
 
 	pic_parms->conditional_overlap_flag = picLayerHeader->CONDOVER;
 	pic_parms->fast_uvmc_flag = seqLayerHeader->FASTUVMC;
@@ -939,8 +1009,8 @@ static void vbp_pack_slice_data_vc1(
 	/*uint32 data_offset = byte - cxt->list.data[index].stpos;*/
 
 	slc_data->buffer_addr = cxt->parse_cubby.buf + cxt->list.data[index].stpos;
-	slc_data->slice_size = slice_size - byte;
-	slc_data->slice_offset = byte;
+	slc_data->slice_size = slice_size;
+	slc_data->slice_offset = 0;
 
 	slc_parms->slice_data_size = slc_data->slice_size;
 	slc_parms->slice_data_offset = 0;
@@ -948,7 +1018,7 @@ static void vbp_pack_slice_data_vc1(
 	/* fix this.  we need to be able to handle partial slices. */
 	slc_parms->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
 
-	slc_parms->macroblock_offset = bit;
+	slc_parms->macroblock_offset = bit + byte * 8;
 
 	/* fix this.  we need o get the slice_vertical_position from the code */
 	slc_parms->slice_vertical_position = pic_data->num_slices;

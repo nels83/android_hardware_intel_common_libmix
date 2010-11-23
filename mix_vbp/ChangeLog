@@ -1,5 +1,14 @@
+2010-11-10 Andy Qiu <junhai.qiu@intel.com>
+	* Parse color matrix, video range and aspect ratio
+	* Changed version number to 0.1.20
+
+2010-10-25 Andy Qiu <junhai.qiu@intel.com>
+	* MPEG-4/H.263 partial frame support
+	* Changed VC1 slice parsing output to contain pic/slice header
+	* Changed version number to 0.1.19
+
 2010-09-29 Andy Qiu <junhai.qiu@intel.com>
-	* Enhanced H.264 bitstream parsing
+	* Enhanced H.264 bitstream parsing 
 	* Changed version number to 0.1.18
 
 2010-09-15 Tao Tao  <tao.q.tao@intel.com>

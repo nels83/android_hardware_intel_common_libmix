@@ -178,7 +178,7 @@ MIX_RESULT mix_videofmt_vc1_update_seq_header(
 	guint height = 0;
 
 	guint i = 0;
-	guchar* p = header->data;
+	guchar* p = NULL;
 	MIX_RESULT res = MIX_RESULT_SUCCESS;
 
 	if (!config_params || !header)
@@ -186,6 +186,8 @@ MIX_RESULT mix_videofmt_vc1_update_seq_header(
 		LOG_E( "NUll pointer passed in\n");
 		return (MIX_RESULT_NULL_PTR);
 	}
+
+    p = header->data;
 
 	res = mix_videoconfigparamsdec_get_picture_res(
 		config_params,
@@ -237,6 +239,57 @@ MIX_RESULT mix_videofmt_vc1_update_seq_header(
 	header->data_size = header->data_size + 9;
 
 	return MIX_RESULT_SUCCESS;
+}
+
+
+MIX_RESULT mix_videofmt_vc1_update_config_params(
+    MixVideoFormat *mix,
+    vbp_data_vc1 *data)
+{
+    MixVideoFormat *parent = MIX_VIDEOFORMAT(mix);
+
+    if (parent->picture_width == 0 || parent->picture_height == 0)
+    {
+        parent->picture_width = data->se_data->CODED_WIDTH;
+        parent->picture_height = data->se_data->CODED_HEIGHT;
+
+        mix_videoconfigparamsdec_set_picture_res(
+            mix->config_params, 
+            parent->picture_width, 
+            parent->picture_height);        
+    }
+    
+
+    // scaling has been performed on the decoded image.
+    mix_videoconfigparamsdec_set_video_range(mix->config_params, 1);
+
+    uint8 color_matrix;
+    
+    switch (data->se_data->MATRIX_COEF)
+    {
+        case 1:
+            color_matrix = VA_SRC_BT709;
+            break;
+
+        // ITU-R BT.1700, ITU-R BT.601-5, and SMPTE 293M-1996.
+        case 6:
+            color_matrix = VA_SRC_BT601;
+            break;
+
+        default:
+            // unknown color matrix, set to 0 so color space flag will not be set.
+            color_matrix = 0;
+            break;        
+    }   
+    mix_videoconfigparamsdec_set_color_matrix(mix->config_params, color_matrix);
+
+    mix_videoconfigparamsdec_set_pixel_aspect_ratio(
+        mix->config_params,
+        data->se_data->ASPECT_HORIZ_SIZE,
+        data->se_data->ASPECT_VERT_SIZE);
+
+    return MIX_RESULT_SUCCESS;
+    
 }
 
 
@@ -367,6 +420,8 @@ MIX_RESULT mix_videofmt_vc1_initialize(MixVideoFormat *mix,
 	}
 
 	LOG_V( "Queried parser for header data\n");
+
+    mix_videofmt_vc1_update_config_params(parent, data);
 
         //Time for libva initialization
 

@@ -396,7 +396,7 @@ MIX_RESULT mix_surfacepool_get(MixSurfacePool * obj, MixVideoFrame ** frame) {
 
 		LOG_E( "out of surfaces\n");
 
-		return MIX_RESULT_NO_MEMORY;
+		return MIX_RESULT_OUTOFSURFACES;
 	}
 
 	//Remove a frame from the free pool
@@ -482,7 +482,7 @@ MIX_RESULT mix_surfacepool_get_frame_with_ci_frameidx (MixSurfacePool * obj, Mix
 
 		LOG_E( "out of surfaces\n");
 
-		return MIX_RESULT_NO_MEMORY;
+		return MIX_RESULT_OUTOFSURFACES;
 	}
 
 	//Remove a frame from the free pool

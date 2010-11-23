@@ -40,8 +40,13 @@ struct _MixVideoFormat_MP42 {
 	MixVideoFrame * reference_frames[2];
 	MixVideoFrame * last_frame;
 	gint last_vop_coding_type;
+	guint last_vop_time_increment;
 
-	GQueue *packed_stream_queue;
+    /* indicate if future n-vop is a placeholder of a packed frame */
+    gboolean next_nvop_for_PB_frame;
+    
+    /* indicate if iq_matrix_buffer is sent to driver */
+    gboolean iq_matrix_buf_sent;
 };
 
 /**

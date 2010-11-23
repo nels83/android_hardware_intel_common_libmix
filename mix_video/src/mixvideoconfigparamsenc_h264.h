@@ -1,6 +1,6 @@
-/* 
+/*
 INTEL CONFIDENTIAL
-Copyright 2009 Intel Corporation All Rights Reserved. 
+Copyright 2009 Intel Corporation All Rights Reserved.
 The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
 
 No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
@@ -16,7 +16,7 @@ G_BEGIN_DECLS
 
 /**
 * MIX_TYPE_VIDEOCONFIGPARAMSENC_H264:
-* 
+*
 * Get type of class.
 */
 #define MIX_TYPE_VIDEOCONFIGPARAMSENC_H264 (mix_videoconfigparamsenc_h264_get_type ())
@@ -30,7 +30,7 @@ G_BEGIN_DECLS
 /**
 * MIX_IS_VIDEOCONFIGPARAMSENC_H264:
 * @obj: an object.
-* 
+*
 * Checks if the given object is an instance of #MixVideoConfigParamsEncH264
 */
 #define MIX_IS_VIDEOCONFIGPARAMSENC_H264(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_H264))
@@ -44,7 +44,7 @@ G_BEGIN_DECLS
 /**
 * MIX_IS_VIDEOCONFIGPARAMSENC_H264_CLASS:
 * @klass: a class.
-* 
+*
 * Checks if the given class is #MixVideoConfigParamsEncH264Class
 */
 #define MIX_IS_VIDEOCONFIGPARAMSENC_H264_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC_H264))
@@ -52,7 +52,7 @@ G_BEGIN_DECLS
 /**
 * MIX_VIDEOCONFIGPARAMSENC_H264_GET_CLASS:
 * @obj: a #MixParams object.
-* 
+*
 * Get the class instance of the object.
 */
 #define MIX_VIDEOCONFIGPARAMSENC_H264_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_H264, MixVideoConfigParamsEncH264Class))
@@ -73,37 +73,43 @@ struct _MixVideoConfigParamsEncH264
   /*< public > */
 
   /* TODO: Add H.264 configuration paramters */
-  
-  /* The basic unit size used by rate control */  
+
+  /* The basic unit size used by rate control */
   guint basic_unit_size;
-  
+
   /* Number of slices in one frame */
   guint slice_num;
-  
+
+  /* Number of slices in one I frame */
+  guint I_slice_num;
+
+  /* Number of slices in one P frame */
+  guint P_slice_num;
+
   /* enable/disable deblocking */
-  guint8 disable_deblocking_filter_idc;	
+  guint8 disable_deblocking_filter_idc;
 
   /* delimiter_type */
   MixDelimiterType delimiter_type;
 
   guint idr_interval;
-  
-  /* Reserved for future use */  
+
+  /* Reserved for future use */
   void *reserved1;
-  
-  /* Reserved for future use */  
+
+  /* Reserved for future use */
   void *reserved2;
-  
-  /* Reserved for future use */  
+
+  /* Reserved for future use */
   void *reserved3;
-  
-  /* Reserved for future use */  
+
+  /* Reserved for future use */
   void *reserved4;
 };
 
 /**
 * MixVideoConfigParamsEncH264Class:
-* 
+*
 * MI-X VideoConfig object class
 */
 struct _MixVideoConfigParamsEncH264Class
@@ -117,7 +123,7 @@ struct _MixVideoConfigParamsEncH264Class
 /**
 * mix_videoconfigparamsenc_h264_get_type:
 * @returns: type
-* 
+*
 * Get the type of object.
 */
 GType mix_videoconfigparamsenc_h264_get_type (void);
@@ -125,7 +131,7 @@ GType mix_videoconfigparamsenc_h264_get_type (void);
 /**
 * mix_videoconfigparamsenc_h264_new:
 * @returns: A newly allocated instance of #MixVideoConfigParamsEncH264
-* 
+*
 * Use this method to create new instance of #MixVideoConfigParamsEncH264
 */
 MixVideoConfigParamsEncH264 *mix_videoconfigparamsenc_h264_new (void);
@@ -133,7 +139,7 @@ MixVideoConfigParamsEncH264 *mix_videoconfigparamsenc_h264_new (void);
 * mix_videoconfigparamsenc_h264_ref:
 * @mix: object to add reference
 * @returns: the #MixVideoConfigParamsEncH264 instance where reference count has been increased.
-* 
+*
 * Add reference count.
 */
 MixVideoConfigParamsEncH264
@@ -142,7 +148,7 @@ MixVideoConfigParamsEncH264
 /**
 * mix_videoconfigparamsenc_h264_unref:
 * @obj: object to unref.
-* 
+*
 * Decrement reference count of the object.
 */
 #define mix_videoconfigparamsenc_h264_unref(obj) mix_params_unref(MIX_PARAMS(obj))
@@ -155,7 +161,7 @@ MixVideoConfigParamsEncH264
 /**
  * mix_videoconfigparamsenc_h264_set_bus:
  * @obj: #MixVideoConfigParamsEncH264 object
- * @basic_unit_size: The basic unit size used by rate control  
+ * @basic_unit_size: The basic unit size used by rate control
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set The basic unit size used by rate control
@@ -166,7 +172,7 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_bus (MixVideoConfigParamsEncH264 * 
 /**
  * mix_videoconfigparamsenc_h264_get_bus:
  * @obj: #MixVideoConfigParamsEncH264 object
- * @basic_unit_size: The basic unit size to be returned  
+ * @basic_unit_size: The basic unit size to be returned
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Get The basic unit size used by rate control
@@ -217,6 +223,51 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_slice_num(MixVideoConfigParamsEncH2
  */
 MIX_RESULT mix_videoconfigparamsenc_h264_get_slice_num(MixVideoConfigParamsEncH264 * obj,
 		guint * slice_num);
+
+
+/**
+ * mix_videoconfigparamsenc_h264_set_I_slice_num:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @I_slice_num: Number of slices in one I frame
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set the Number of slices in one I frame
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_set_I_slice_num(MixVideoConfigParamsEncH264 * obj,
+		guint I_slice_num);
+
+/**
+ * mix_videoconfigparamsenc_h264_get_I_slice_num:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @I_slice_num: Number of slices in one I frame to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get the Number of slices in one I frame
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_get_I_slice_num(MixVideoConfigParamsEncH264 * obj,
+		guint * I_slice_num);
+
+/**
+ * mix_videoconfigparamsenc_h264_set_P_slice_num:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @P_slice_num: Number of slices in one P frame
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set the Number of slices in one P frame
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_set_P_slice_num(MixVideoConfigParamsEncH264 * obj,
+		guint P_slice_num);
+
+/**
+ * mix_videoconfigparamsenc_h264_get_P_slice_num:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @P_slice_num: Number of slices in one P frame to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get the Number of slices in one P frame
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_get_P_slice_num(MixVideoConfigParamsEncH264 * obj,
+		guint * P_slice_num);
 
 /**
  * mix_videoconfigparamsenc_h264_set_delimiter_type:

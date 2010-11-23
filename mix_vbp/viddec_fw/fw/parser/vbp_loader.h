@@ -39,32 +39,57 @@ typedef void *Handle;
 typedef struct _vbp_codec_data_mp42 
 {
     uint8  profile_and_level_indication;
+    uint32 video_object_layer_width;
+    uint32 video_object_layer_height;
+
+    // 0 for unspecified, PAL/NTSC/SECAM
+    uint8  video_format;
+
+    // 0 short range, 1 full range
+    uint8  video_range;
+    
+    // default 2 (unspecified), 1 for BT709.
+    uint8  matrix_coefficients;
+    
+    uint8  short_video_header;
+
+    // always exist for mpeg-4, 
+    uint8   aspect_ratio_info;
+    uint8   par_width;
+    uint8   par_height;
+
 } vbp_codec_data_mp42;
 
 typedef struct _vbp_slice_data_mp42 
-{
+{   
 	uint8* buffer_addr;
 	uint32 slice_offset;
 	uint32 slice_size;
 	VASliceParameterBufferMPEG4 slice_param;
 } vbp_slice_data_mp42;
 
-typedef struct _vbp_picture_data_mp42 
+typedef struct _vbp_picture_data_mp42 vbp_picture_data_mp42;
+
+struct _vbp_picture_data_mp42
 {
 	uint8 vop_coded;
+	uint16 vop_time_increment;
+	/* indicates if current buffer contains parameter for the first slice of the picture */
+	uint8 new_picture_flag;
 	VAPictureParameterBufferMPEG4 picture_param;
-	VAIQMatrixBufferMPEG4 iq_matrix_buffer;
+	vbp_slice_data_mp42 slice_data;
 
-	uint32 number_slices;
-	vbp_slice_data_mp42 *slice_data;
-
-} vbp_picture_data_mp42;
+	vbp_picture_data_mp42* next_picture_data;
+};
 
 typedef struct _vbp_data_mp42 
 {
 	vbp_codec_data_mp42 codec_data;
+	VAIQMatrixBufferMPEG4 iq_matrix_buffer;
 
+	uint32 number_picture_data;
 	uint32 number_pictures;
+
 	vbp_picture_data_mp42 *picture_data;
 
 } vbp_data_mp42;
@@ -91,25 +116,26 @@ typedef struct _vbp_codec_data_h264
 	int			frame_width;
 	int			frame_height;
 		                   
-	uint8	 	frame_cropping_flag;                     
-	int 		frame_crop_rect_left_offset;
-	int			frame_crop_rect_right_offset;                 
-	int 		frame_crop_rect_top_offset;                
-	int 		frame_crop_rect_bottom_offset; 
-
 	uint8	 	vui_parameters_present_flag;
+
 	/* aspect ratio */
-	uint8  		aspect_ratio_info_present_flag;
 	uint8  		aspect_ratio_idc;   
 	uint16		sar_width;                                    
 	uint16		sar_height;
 	
 	/* video fromat */
-	uint8   	video_signal_type_present_flag; 	
+
+	// default 5 unspecified
 	uint8  		video_format;  
+    uint8       video_full_range_flag;
+
+    // default 2 unspecified
+    uint8       matrix_coefficients;
 
     uint8       pic_order_cnt_type;
     int         log2_max_pic_order_cnt_lsb_minus4;
+
+    int         bit_rate;
 		
 } vbp_codec_data_h264;
 
@@ -150,6 +176,10 @@ typedef struct _vbp_data_h264
     /* if PPS has been received */
     uint8  has_pps;
 
+    uint8  new_sps;
+
+    uint8  new_pps;
+    
     vbp_picture_data_h264* pic_data;
 
     /** 
@@ -177,6 +207,9 @@ typedef struct _vbp_codec_data_vc1
 	uint8  FINTERPFLAG;
 	uint8  PSF;
 
+    // default 2: unspecified
+    uint8  MATRIX_COEF;
+    
 	/* Entry point layer. */
 	uint8  BROKEN_LINK;
 	uint8  CLOSED_ENTRY;
@@ -210,6 +243,15 @@ typedef struct _vbp_codec_data_vc1
 	uint8  INTCOMPFIELD;
 	uint8  LUMSCALE2;
 	uint8  LUMSHIFT2;
+
+	// aspect ratio
+
+	// default unspecified
+	uint8 ASPECT_RATIO;
+	
+	uint8 ASPECT_HORIZ_SIZE;
+	uint8 ASPECT_VERT_SIZE;
+	
 } vbp_codec_data_vc1;
 
 typedef struct _vbp_slice_data_vc1 
@@ -255,15 +297,12 @@ enum _vbp_parser_error
 	VBP_OK,
 	VBP_TYPE,
 	VBP_LOAD,
-	VBP_UNLOAD,
 	VBP_INIT,
 	VBP_DATA,
 	VBP_DONE,
-	VBP_GLIB,
 	VBP_MEM,
 	VBP_PARM,
-	VBP_CXT,
-	VBP_IMPL
+	VBP_PARTIAL	
 };
 
 enum _vbp_parser_type

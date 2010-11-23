@@ -1,3 +1,37 @@
+2010-11-18 Andy Qiu <junhai.qiu@intel.com>
+		* Changed version number to 0.1.24
+
+2010-11-17 Weian Chen <weian.chen@intel.com>
+		* Support dynamic frame rate change in MI-X
+
+2010-11-16 Weian Chen <weian.chen@intel.com>
+		* Change to use one API to set AIR parameters
+		* Support to set AIP dynamically
+
+2010-11-15 Weian Chen <weian.chen@intel.com>
+		* Support to set slice number for I and P frame seperately
+
+2010-11-12 Tao Tao <tao.q.tao@intel.com>
+		* Added new error codes to MI-X video and changed some return values in mixvideoformat_h264.c
+
+2010-11-12 Andy Qiu <junhai.qiu@intel.com>
+		* Changed version number to 0.1.23
+
+2010-11-11 Weian Chen <weian.chen@intel.com>
+		* Add new feature (VCM, MTU, etc)
+
+2010-11-10 Andy Qiu <junhai.qiu@intel.com>
+		* Support color matrix, video range, aspect ratio.
+		* Support h264 dynamic stream detection
+		* Support H264 RTSP streaming
+		* Changed version number to 0.1.22
+
+2010-10-25 Andy Qiu <junhai.qiu@intel.com>
+		* H.264 error robust improvement
+		* MPEG-4/H.263 partial frame support
+		* MPEG-4/H.263 RTSP stream support
+		* Changed version number to 0.1.21
+
 2010-09-29 Andy Qiu <junhai.qiu@intel.com>
 		* Supported FLV playback
 		* Re-factored frame manager

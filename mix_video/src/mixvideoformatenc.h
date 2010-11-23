@@ -54,8 +54,8 @@ typedef MIX_RESULT (*MixVideoFmtEncFlushFunc)(MixVideoFormatEnc *mix);
 typedef MIX_RESULT (*MixVideoFmtEncEndOfStreamFunc)(MixVideoFormatEnc *mix);
 typedef MIX_RESULT (*MixVideoFmtEncDeinitializeFunc)(MixVideoFormatEnc *mix);
 typedef MIX_RESULT (*MixVideoFmtEncGetMaxEncodedBufSizeFunc) (MixVideoFormatEnc *mix, guint *max_size);
-typedef MIX_RESULT (*MixVideoFmtEncSetDynamicEncConfigFunc) (MixVideoFormatEnc * mix, 
-	MixVideoConfigParamsEnc * config_params, 
+typedef MIX_RESULT (*MixVideoFmtEncSetDynamicEncConfigFunc) (MixVideoFormatEnc * mix,
+	MixVideoConfigParamsEnc * config_params,
 	MixEncParamsType params_type);
 
 struct _MixVideoFormatEnc {
@@ -73,35 +73,54 @@ struct _MixVideoFormatEnc {
     VAContextID va_context;
     VAConfigID va_config;
     GString *mime_type;
-    
+
     guint frame_rate_num;
     guint frame_rate_denom;
     guint picture_width;
     guint picture_height;
-    
+
+    guint intra_period;
+
+    /*
+    * Following is for bitrate control
+    */
     guint initial_qp;
     guint min_qp;
-    guint intra_period;
     guint bitrate;
-    
-    gboolean share_buf_mode;	
+    guint target_percentage;
+    guint window_size;
+
+    gboolean share_buf_mode;
     gulong *	ci_frame_id;
-    guint	ci_frame_num;	
+    guint	ci_frame_num;
 
     gboolean force_key_frame;
     gboolean new_header_required;
-    guint 	CIR_frame_cnt;	
-    
+
+    MixVideoIntraRefreshType refresh_type;
+
+    guint 	CIR_frame_cnt;
+
+    MixAIRParams air_params;
+
+    guint	max_slice_size;
+
+    gboolean render_mss_required;
+    gboolean render_QP_required;
+    gboolean render_AIR_required;
+    gboolean render_framerate_required;
+    gboolean render_bitrate_required;
+
     gulong    drawable;
-    gboolean need_display;	
+    gboolean need_display;
 
     VAProfile va_profile;
     VAEntrypoint va_entrypoint;
     guint va_format;
-    guint va_rcmode; 	
-    guint8 level;	
-	
-    
+    guint va_rcmode;
+    guint8 level;
+
+
     MixBufferPool *inputbufpool;
     GQueue *inputbufqueue;
 };
@@ -124,7 +143,7 @@ struct _MixVideoFormatEncClass {
 	MixVideoFmtEncFlushFunc flush;
 	MixVideoFmtEncEndOfStreamFunc eos;
 	MixVideoFmtEncDeinitializeFunc deinitialize;
-	MixVideoFmtEncGetMaxEncodedBufSizeFunc getmaxencodedbufsize;	
+	MixVideoFmtEncGetMaxEncodedBufSizeFunc getmaxencodedbufsize;
 	MixVideoFmtEncSetDynamicEncConfigFunc set_dynamic_config;
 };
 
@@ -166,7 +185,7 @@ MixVideoFormatEnc *mix_videoformatenc_ref(MixVideoFormatEnc * mix);
 /* TODO: change method parameter list */
 MIX_RESULT mix_videofmtenc_getcaps(MixVideoFormatEnc *mix, GString *msg);
 
-MIX_RESULT mix_videofmtenc_initialize(MixVideoFormatEnc *mix, 
+MIX_RESULT mix_videofmtenc_initialize(MixVideoFormatEnc *mix,
         MixVideoConfigParamsEnc * enc_config_params,
         MixFrameManager * frame_mgr,
         MixBufferPool * input_buf_pool,
@@ -183,11 +202,11 @@ MIX_RESULT mix_videofmtenc_eos(MixVideoFormatEnc *mix);
 
 MIX_RESULT mix_videofmtenc_deinitialize(MixVideoFormatEnc *mix);
 
-MIX_RESULT mix_videofmtenc_get_max_coded_buffer_size(MixVideoFormatEnc *mix, 
+MIX_RESULT mix_videofmtenc_get_max_coded_buffer_size(MixVideoFormatEnc *mix,
 	guint *max_size);
 
-MIX_RESULT mix_videofmtenc_set_dynamic_enc_config (MixVideoFormatEnc * mix, 
-	MixVideoConfigParamsEnc * config_params, 
+MIX_RESULT mix_videofmtenc_set_dynamic_enc_config (MixVideoFormatEnc * mix,
+	MixVideoConfigParamsEnc * config_params,
 	MixEncParamsType params_type);
 
 G_END_DECLS

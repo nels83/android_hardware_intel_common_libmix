@@ -10,16 +10,16 @@
  * SECTION:mixvideo
  * @short_description: Object to support a single stream decoding or encoding using hardware accelerated decoder/encoder.
  * @include: mixvideo.h
- * 
+ *
  * #MixVideo objects are created by the MMF/App and utilized for main MI-X API functionality for video.
- * 
+ *
  * The MixVideo object handles any of the video formats internally.
  * The App/MMF will pass a MixVideoConfigParamsDecH264/MixVideoConfigParamsDecVC1/
  * MixVideoConfigParamsEncH264/etc object to MixVideo in the mix_video_configure()
  * call. MixVideoInitParams, MixVideoDecodeParams, MixVideoEncodeParams, and
  * MixVideoRenderParams objects will be passed in the mix_video_initialize(),
  * mix_video_decode(), mix_video_encode() and mix_video_render() calls respectively.
- * 
+ *
  * The application can take the following steps to decode video:
  * <itemizedlist>
  * <listitem>Create a mix_video object using mix_video_new()</listitem>
@@ -30,19 +30,19 @@
  * <listitem>At the presentation time, using the timestamp provided with the decoded frame, render the frame to an X11 Window using mix_video_render(). The frame can be retained for redrawing until the next frame is retrieved.</listitem>
  * <listitem>When the frame is no longer needed for redrawing, release the frame using mix_video_release_frame().</listitem>
  * </itemizedlist>
- * 
+ *
  * For encoding, the application can take the following steps to encode video:
  * <itemizedlist>
  * <listitem>Create a mix_video object using mix_video_new()</listitem>
  * <listitem>Initialize the object using mix_video_initialize()</listitem>
  * <listitem>Configure the stream using mix_video_configure()</listitem>
  * <listitem>Encode frames using mix_video_encode()</listitem>
- * <listitem>Use the encoded data buffers as desired; for example, forward to a muxing component for saving to a file.</listitem> 
+ * <listitem>Use the encoded data buffers as desired; for example, forward to a muxing component for saving to a file.</listitem>
  * <listitem>Retrieve the uncompressed frames for display using mix_video_get_frame().</listitem>
  * <listitem>At the presentation time, using the timestamp provided with the decoded frame, render the frame to an X11 Window using mix_video_render(). For encode, the frame should not be retained for redrawing after the initial rendering, due to resource limitations.</listitem>
  * <listitem>Release the frame using mix_video_release_frame().</listitem>
  * </itemizedlist>
- * 
+ *
  */
 
 #include <va/va.h>             /* libVA */
@@ -103,7 +103,7 @@ VADisplay vaGetDisplay (
 #define mix_strcmp g_strcmp0
 #endif
 
-#define USE_OPAQUE_POINTER 
+#define USE_OPAQUE_POINTER
 
 #ifdef USE_OPAQUE_POINTER
 #define MIX_VIDEO_PRIVATE(mix) (MixVideoPrivate *)(mix->context)
@@ -632,20 +632,20 @@ MIX_RESULT mix_video_configure_decode(MixVideo * mix,
 
 	if (frame_order_mode == MIX_FRAMEORDER_MODE_DECODEORDER)
 	{
-    	display_order_mode = MIX_DISPLAY_ORDER_FIFO;	
+        display_order_mode = MIX_DISPLAY_ORDER_FIFO;
     }
-	else if (mix_strcmp(mime_type, "video/x-wmv")  == 0 || 
+	else if (mix_strcmp(mime_type, "video/x-wmv")  == 0 ||
             mix_strcmp(mime_type, "video/mpeg")   == 0 ||
-            mix_strcmp(mime_type, "video/x-divx") == 0 || 
+            mix_strcmp(mime_type, "video/x-divx") == 0 ||
             mix_strcmp(mime_type, "video/x-h263") == 0 ||
-            mix_strcmp(mime_type, "video/x-xvid") == 0 ) 
+            mix_strcmp(mime_type, "video/x-xvid") == 0 )
     {
-        display_order_mode = MIX_DISPLAY_ORDER_PICTYPE;           
-	} 
-	else 
+        display_order_mode = MIX_DISPLAY_ORDER_PICTYPE;
+	}
+	else
 	{
-        //display_order_mode = MIX_DISPLAY_ORDER_TIMESTAMP;           
-        display_order_mode = MIX_DISPLAY_ORDER_PICNUMBER;           
+        //display_order_mode = MIX_DISPLAY_ORDER_TIMESTAMP;
+        display_order_mode = MIX_DISPLAY_ORDER_PICNUMBER;
 	}
 
 	/* initialize frame manager */
@@ -702,15 +702,16 @@ MIX_RESULT mix_video_configure_decode(MixVideo * mix,
 
 		priv->video_format = MIX_VIDEOFORMAT(video_format);
 
-	} else if (mix_strcmp(mime_type, "video/mpeg")   == 0 || 
-                   mix_strcmp(mime_type, "video/x-divx") == 0 || 
+	} else if (mix_strcmp(mime_type, "video/mpeg")   == 0 ||
+                   mix_strcmp(mime_type, "video/x-divx") == 0 ||
                    mix_strcmp(mime_type, "video/x-h263") == 0 ||
-                   mix_strcmp(mime_type, "video/x-xvid") == 0) {
+                   mix_strcmp(mime_type, "video/x-xvid") == 0 ||
+                   mix_strcmp(mime_type, "video/x-dx50") == 0) {
 
 		guint version = 0;
 
 		/* Is this mpeg4:2 ? */
-		if (mix_strcmp(mime_type, "video/mpeg") == 0 || 
+		if (mix_strcmp(mime_type, "video/mpeg") == 0 ||
                     mix_strcmp(mime_type, "video/x-h263") == 0 ) {
 
 			/*
@@ -962,7 +963,7 @@ MIX_RESULT mix_video_configure_encode(MixVideo * mix,
 		priv->video_format_enc = MIX_VIDEOFORMATENC(video_format_enc);
 
 	}
-        
+
         else if (encode_format == MIX_ENCODE_TARGET_FORMAT_H263
             && MIX_IS_VIDEOCONFIGPARAMSENC_H263(priv_config_params_enc)) {
 
@@ -978,7 +979,7 @@ MIX_RESULT mix_video_configure_encode(MixVideo * mix,
 		priv->video_format_enc = MIX_VIDEOFORMATENC(video_format_enc);
 
 	}
-  
+
         else if (encode_format == MIX_ENCODE_TARGET_FORMAT_PREVIEW
             && MIX_IS_VIDEOCONFIGPARAMSENC_PREVIEW(priv_config_params_enc)) {
 
@@ -1044,7 +1045,7 @@ MIX_RESULT mix_video_configure_default(MixVideo * mix,
 	MixVideoPrivate *priv = NULL;
 
 	LOG_V( "Begin\n");
-	
+
 	CHECK_INIT(mix, priv);
 	if(!config_params) {
 		LOG_E("!config_params\n");
@@ -1113,6 +1114,9 @@ MIX_RESULT mix_video_decode_default(MixVideo * mix, MixBuffer * bufin[],
 		return MIX_RESULT_NULL_PTR;
 	}
 
+    // reset new sequence flag
+    decode_params->new_sequence = FALSE;
+
 	//First check that we have surfaces available for decode
 	ret = mix_surfacepool_check_available(priv->surface_pool);
 
@@ -1138,7 +1142,7 @@ MIX_RESULT mix_video_get_frame_default(MixVideo * mix, MixVideoFrame ** frame) {
 
 	MIX_RESULT ret = MIX_RESULT_FAIL;
 	MixVideoPrivate *priv = NULL;
-	
+
 	CHECK_INIT_CONFIG(mix, priv);
 
 	if (!frame) {
@@ -1205,7 +1209,7 @@ MIX_RESULT mix_video_release_frame_default(MixVideo * mix,
 
 MIX_RESULT mix_video_render_default(MixVideo * mix,
                 MixVideoRenderParams * render_params, MixVideoFrame *frame) {
-	
+
 	return MIX_RESULT_NOTIMPL;
 }
 
@@ -1395,6 +1399,15 @@ MIX_RESULT mix_video_encode_default(MixVideo * mix, MixBuffer * bufin[],
 		return MIX_RESULT_NULL_PTR;
 	}
 
+	//First check that we have surfaces available for decode
+	ret = mix_surfacepool_check_available(priv->surface_pool);
+
+	if (ret == MIX_RESULT_POOLEMPTY) {
+		LOG_I( "Out of surface\n");
+		return MIX_RESULT_OUTOFSURFACES;
+	}
+
+
 	g_mutex_lock(priv->objlock);
 
 	ret = mix_videofmtenc_encode(priv->video_format_enc, bufin, bufincnt,
@@ -1447,7 +1460,7 @@ MIX_RESULT mix_video_eos_default(MixVideo * mix) {
 	MixVideoPrivate *priv = NULL;
 
 	LOG_V( "Begin\n");
-	
+
 	CHECK_INIT_CONFIG(mix, priv);
 
 	/* ---------------------- begin lock --------------------- */
@@ -1456,11 +1469,11 @@ MIX_RESULT mix_video_eos_default(MixVideo * mix) {
 	if (priv->codec_mode == MIX_CODEC_MODE_DECODE && priv->video_format != NULL) {
 		ret = mix_videofmt_eos(priv->video_format);
 
-		/* We should not call mix_framemanager_eos() here. 
-		 * MixVideoFormat* is responsible to call this function. 
+		/* We should not call mix_framemanager_eos() here.
+		 * MixVideoFormat* is responsible to call this function.
 		 * Commnet the function call here!
-		 */	
-		/* frame manager will set EOS flag to be TRUE */		
+		 */
+		/* frame manager will set EOS flag to be TRUE */
 		/* ret = mix_framemanager_eos(priv->frame_manager); */
 	} else if (priv->codec_mode == MIX_CODEC_MODE_ENCODE
 			&& priv->video_format_enc != NULL) {
@@ -1581,7 +1594,7 @@ MIX_RESULT mix_video_get_max_coded_buffer_size_default (MixVideo * mix, guint *m
 }
 
 
-MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,  
+MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 	MixEncParamsType params_type, MixEncDynamicParams * dynamic_params)
 {
 	MIX_RESULT ret = MIX_RESULT_FAIL;
@@ -1608,7 +1621,7 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 	else {
 		LOG_E(
 			"priv->config_params is invalid\n");
-		return MIX_RESULT_FAIL;		
+		return MIX_RESULT_FAIL;
 	}
 
 	g_mutex_lock(priv->objlock);
@@ -1620,38 +1633,120 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed mix_videoconfigparamsenc_set_bit_rate\n");
 				goto cleanup;
-			}				
+			}
 		}
 			break;
-		case MIX_ENC_PARAMS_SLICE_SIZE:
+
+		case MIX_ENC_PARAMS_INIT_QP:
+		{
+			ret = mix_videoconfigparamsenc_set_init_qp (priv_config_params_enc, dynamic_params->init_QP);
+			if (ret != MIX_RESULT_SUCCESS) {
+				LOG_E("Failed mix_videoconfigparamsenc_set_init_qp\n");
+				goto cleanup;
+			}
+		}
+			break;
+
+		case MIX_ENC_PARAMS_MIN_QP:
+		{
+			ret = mix_videoconfigparamsenc_set_min_qp (priv_config_params_enc, dynamic_params->min_QP);
+			if (ret != MIX_RESULT_SUCCESS) {
+				LOG_E("Failed mix_videoconfigparamsenc_set_min_qp\n");
+				goto cleanup;
+			}
+		}
+			break;
+
+		case MIX_ENC_PARAMS_WINDOW_SIZE:
+		{
+			ret = mix_videoconfigparamsenc_set_window_size (priv_config_params_enc, dynamic_params->window_size);
+			if (ret != MIX_RESULT_SUCCESS) {
+				LOG_E("Failed mix_videoconfigparamsenc_set_window_size\n");
+				goto cleanup;
+			}
+		}
+			break;
+
+		case MIX_ENC_PARAMS_TARGET_PERCENTAGE:
+		{
+			ret = mix_videoconfigparamsenc_set_target_percentage (priv_config_params_enc, dynamic_params->target_percentage);
+			if (ret != MIX_RESULT_SUCCESS) {
+				LOG_E("Failed mix_videoconfigparamsenc_set_target_percentage\n");
+				goto cleanup;
+			}
+		}
+			break;
+
+
+		case MIX_ENC_PARAMS_MTU_SLICE_SIZE:
+		{
+			ret = mix_videoconfigparamsenc_set_max_slice_size(priv_config_params_enc, dynamic_params->max_slice_size);
+			if (ret != MIX_RESULT_SUCCESS) {
+				LOG_E("Failed mix_videoconfigparamsenc_set_max_slice_size\n");
+				goto cleanup;
+			}
+		}
+			break;
+
+		case MIX_ENC_PARAMS_SLICE_NUM:
 		{
 			/*
 			*/
-			MixVideoConfigParamsEncH264 * config_params_enc_h264 = 
+			MixVideoConfigParamsEncH264 * config_params_enc_h264 =
 				MIX_VIDEOCONFIGPARAMSENC_H264 (priv->config_params);
 
 			ret = mix_videoconfigparamsenc_h264_set_slice_num (config_params_enc_h264, dynamic_params->slice_num);
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed mix_videoconfigparamsenc_h264_set_slice_num\n");
 				goto cleanup;
-			}				
+			}
 		}
 			break;
-			
+
+		case MIX_ENC_PARAMS_I_SLICE_NUM:
+		{
+			/*
+			*/
+			MixVideoConfigParamsEncH264 * config_params_enc_h264 =
+				MIX_VIDEOCONFIGPARAMSENC_H264 (priv->config_params);
+
+			ret = mix_videoconfigparamsenc_h264_set_I_slice_num (config_params_enc_h264, dynamic_params->I_slice_num);
+			if (ret != MIX_RESULT_SUCCESS) {
+				LOG_E("Failed mix_videoconfigparamsenc_h264_set_I_slice_num\n");
+				goto cleanup;
+			}
+		}
+			break;
+
+		case MIX_ENC_PARAMS_P_SLICE_NUM:
+		{
+			/*
+			*/
+			MixVideoConfigParamsEncH264 * config_params_enc_h264 =
+				MIX_VIDEOCONFIGPARAMSENC_H264 (priv->config_params);
+
+			ret = mix_videoconfigparamsenc_h264_set_P_slice_num (config_params_enc_h264, dynamic_params->P_slice_num);
+			if (ret != MIX_RESULT_SUCCESS) {
+				LOG_E("Failed mix_videoconfigparamsenc_h264_set_P_slice_num\n");
+				goto cleanup;
+			}
+		}
+			break;
+
 		case MIX_ENC_PARAMS_IDR_INTERVAL:
 		{
-			MixVideoConfigParamsEncH264 * config_params_enc_h264 = 
+			MixVideoConfigParamsEncH264 * config_params_enc_h264 =
 				MIX_VIDEOCONFIGPARAMSENC_H264 (priv->config_params);
 
 			ret = mix_videoconfigparamsenc_h264_set_IDR_interval(config_params_enc_h264, dynamic_params->idr_interval);
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed mix_videoconfigparamsenc_h264_set_IDR_interval\n");
 				goto cleanup;
-			}				
+			}
 		}
 			break;
 
-		case MIX_ENC_PARAMS_RC_MODE:			
+		case MIX_ENC_PARAMS_RC_MODE:
 		case MIX_ENC_PARAMS_RESOLUTION:
 		{
 			/*
@@ -1660,8 +1755,8 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 			if (priv->video_format_enc) {
 				mix_videofmtenc_deinitialize(priv->video_format_enc);
 			}
-			
-			MIXUNREF(priv->video_format_enc, mix_videoformatenc_unref)	
+
+			MIXUNREF(priv->video_format_enc, mix_videoformatenc_unref)
 
 			//priv->alloc_surface_cnt = 0; //Surfaces are also released, we need to set alloc_surface_cnt to 0
 
@@ -1671,30 +1766,30 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 
 			/*
 			 * Step 2: Change configuration parameters (frame size)
-			 */			
+			 */
 
 			if (params_type == MIX_ENC_PARAMS_RESOLUTION) {
 				ret = mix_videoconfigparamsenc_set_picture_res (priv_config_params_enc, dynamic_params->width, dynamic_params->height);
 				if (ret != MIX_RESULT_SUCCESS) {
 					LOG_E("Failed mix_videoconfigparamsenc_set_picture_res\n");
 					goto cleanup;
-				}			
+				}
 			}
 			else if (params_type == MIX_ENC_PARAMS_RC_MODE) {
 				ret = mix_videoconfigparamsenc_set_rate_control(priv_config_params_enc, dynamic_params->rc_mode);
 				if (ret != MIX_RESULT_SUCCESS) {
 					LOG_E("Failed mix_videoconfigparamsenc_set_rate_control\n");
 					goto cleanup;
-				}					
+				}
 			}
 
 
 			/*
 			 * Step 3: Renew mixvideofmtenc object
-			 */	
+			 */
 
 			MixEncodeTargetFormat encode_format = MIX_ENCODE_TARGET_FORMAT_H264;
-			
+
 			ret = mix_videoconfigparamsenc_get_encode_format(priv_config_params_enc,
 				&encode_format);
 			if (ret != MIX_RESULT_SUCCESS) {
@@ -1734,7 +1829,7 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 				priv->video_format_enc = MIX_VIDEOFORMATENC(video_format_enc);
 
 			}
-        
+
         		else if (encode_format == MIX_ENCODE_TARGET_FORMAT_H263
 				&& MIX_IS_VIDEOCONFIGPARAMSENC_H263(priv_config_params_enc)) {
 
@@ -1775,10 +1870,10 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 
 			/*
 			 * Step 4: Re-initialize and start a new encode session, of course with new resolution value
-			 */				
+			 */
 
-			/* 
-			  * Initialize MixVideoEncFormat 
+			/*
+			  * Initialize MixVideoEncFormat
 			  */
 
 			/*
@@ -1800,11 +1895,11 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed initialize video format\n");
 				goto cleanup;
-			}				
+			}
 
 			mix_surfacepool_ref(priv->surface_pool);
-			
-			
+
+
 		}
 			break;
 		case MIX_ENC_PARAMS_GOP_SIZE:
@@ -1813,7 +1908,7 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed mix_videoconfigparamsenc_set_intra_period\n");
 				goto cleanup;
-			}						
+			}
 
 		}
 			break;
@@ -1823,7 +1918,7 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed mix_videoconfigparamsenc_set_frame_rate\n");
 				goto cleanup;
-			}				
+			}
 		}
 			break;
 		case MIX_ENC_PARAMS_FORCE_KEY_FRAME:
@@ -1833,39 +1928,51 @@ MIX_RESULT mix_video_set_dynamic_enc_config_default (MixVideo * mix,
 			 */
 		}
 			break;
-		case MIX_ENC_PARAMS_QP:
+
+		case MIX_ENC_PARAMS_REFRESH_TYPE:
 		{
-			ret = mix_videoconfigparamsenc_set_init_qp (priv_config_params_enc, dynamic_params->QP);
+			ret = mix_videoconfigparamsenc_set_refresh_type(priv_config_params_enc, dynamic_params->refresh_type);
 			if (ret != MIX_RESULT_SUCCESS) {
-				LOG_E("Failed mix_videoconfigparamsenc_set_init_qp\n");
+				LOG_E("Failed mix_videoconfigparamsenc_set_refresh_type\n");
 				goto cleanup;
-			}				
+			}
 		}
 			break;
+
+		case MIX_ENC_PARAMS_AIR:
+		{
+			ret = mix_videoconfigparamsenc_set_AIR_params(priv_config_params_enc, dynamic_params->air_params);
+			if (ret != MIX_RESULT_SUCCESS) {
+				LOG_E("Failed mix_videoconfigparamsenc_set_AIR_params\n");
+				goto cleanup;
+			}
+		}
+			break;
+
 		case MIX_ENC_PARAMS_CIR_FRAME_CNT:
 		{
 			ret = mix_videoconfigparamsenc_set_CIR_frame_cnt (priv_config_params_enc, dynamic_params->CIR_frame_cnt);
 			if (ret != MIX_RESULT_SUCCESS) {
 				LOG_E("Failed mix_videoconfigparamsenc_set_CIR_frame_cnt\n");
 				goto cleanup;
-			}				
-			
+			}
+
 		}
 			break;
-			
+
 		default:
 			break;
 	}
 
 	ret = mix_videofmtenc_set_dynamic_enc_config (priv->video_format_enc, priv_config_params_enc, params_type);
 
-cleanup:	
+cleanup:
 
 	g_mutex_unlock(priv->objlock);
 
 	LOG_V( "End ret = 0x%x\n", ret);
 
-	return ret;	
+	return ret;
 }
 /*
  * API functions
@@ -1951,7 +2058,7 @@ MIX_RESULT mix_video_decode(MixVideo * mix, MixBuffer * bufin[], gint bufincnt,
 	CHECK_AND_GET_MIX_CLASS(mix, klass);
 
 	if (klass->decode_func) {
-		return klass->decode_func(mix, bufin, bufincnt, 
+		return klass->decode_func(mix, bufin, bufincnt,
 				decode_params);
 	}
 	return MIX_RESULT_NOTIMPL;
@@ -2074,13 +2181,13 @@ MIX_RESULT mix_video_get_max_coded_buffer_size(MixVideo * mix, guint *bufsize) {
 	return MIX_RESULT_NOTIMPL;
 }
 
-MIX_RESULT mix_video_set_dynamic_enc_config (MixVideo * mix, 
+MIX_RESULT mix_video_set_dynamic_enc_config (MixVideo * mix,
 	MixEncParamsType params_type, MixEncDynamicParams * dynamic_params)
 {
        MixVideoClass *klass = MIX_VIDEO_GET_CLASS(mix);
 	if (klass->set_dynamic_enc_config_func) {
 		return klass->set_dynamic_enc_config_func(mix, params_type, dynamic_params);
-	}	   
-	return MIX_RESULT_NOTIMPL;	
+	}
+	return MIX_RESULT_NOTIMPL;
 
 }

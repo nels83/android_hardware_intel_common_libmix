@@ -36,6 +36,7 @@ static void mix_videodecodeparams_init(MixVideoDecodeParams * self) {
 
 	self->timestamp = 0;
 	self->discontinuity = FALSE;
+	self->new_sequence = FALSE;
 	self->reserved1 = NULL;
 	self->reserved2 = NULL;
 	self->reserved3 = NULL;
@@ -200,6 +201,20 @@ MIX_RESULT mix_videodecodeparams_get_discontinuity(MixVideoDecodeParams * obj,
 		gboolean *discontinuity) {
 	MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, discontinuity);
 	*discontinuity = obj->discontinuity;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videodecodeparams_set_new_sequence(MixVideoDecodeParams * obj,
+		gboolean new_sequence) {
+	MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT (obj);
+	obj->new_sequence = new_sequence;
+	return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videodecodeparams_get_new_sequence(MixVideoDecodeParams * obj,
+		gboolean *new_sequence) {
+	MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, new_sequence);
+	*new_sequence = obj->new_sequence;
 	return MIX_RESULT_SUCCESS;
 }
 

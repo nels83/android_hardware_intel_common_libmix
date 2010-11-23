@@ -166,6 +166,9 @@ h264_Status h264_Parse_Vui_Parameters(void *parent, h264_Info* pInfo, seq_param_
 
 			viddec_pm_get_bits(parent, &code, 1);
 			pVUI_Seq_Not_Used->video_full_range_flag = (uint8_t)code;
+#ifdef VBP
+            SPS->sps_disp.vui_seq_parameters.video_full_range_flag = (uint8_t)code;
+#endif
 
 			viddec_pm_get_bits(parent, &code, 1);
 			SPS->sps_disp.vui_seq_parameters.colour_description_present_flag = (uint8_t)code;
@@ -180,6 +183,9 @@ h264_Status h264_Parse_Vui_Parameters(void *parent, h264_Info* pInfo, seq_param_
 
 				viddec_pm_get_bits(parent, &code, 8);
 				pVUI_Seq_Not_Used->matrix_coefficients = (uint8_t)code;
+#ifdef VBP				
+                SPS->sps_disp.vui_seq_parameters.matrix_coefficients = (uint8_t)code;
+#endif
 			}
 		}	
 

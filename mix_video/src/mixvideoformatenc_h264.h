@@ -40,14 +40,14 @@ struct _MixVideoFormatEnc_H264 {
     VABufferID      last_coded_buf;
     VABufferID      seq_param_buf;
     VABufferID      pic_param_buf;
-    VABufferID      slice_param_buf;	
+    VABufferID      slice_param_buf;
     VASurfaceID *   ci_shared_surfaces;
     VASurfaceID *   surfaces;
-    guint           surface_num;	
+    guint           surface_num;
 
-    MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
+    MixVideoFrame  *cur_frame;	//current input frame to be encoded;
     MixVideoFrame  *ref_frame;  //reference frame
-    MixVideoFrame  *rec_frame;	//reconstructed frame;	
+    MixVideoFrame  *rec_frame;	//reconstructed frame;
     MixVideoFrame  *last_frame;	//last frame;
     MixVideoFrame  *lookup_frame;
 #ifdef ANDROID
@@ -59,9 +59,12 @@ struct _MixVideoFormatEnc_H264 {
     MixDelimiterType delimiter_type;
     guint idr_interval;
     guint slice_num;
-    guint va_rcmode; 
+    guint I_slice_num;
+    guint P_slice_num;
+    guint va_rcmode;
 
     guint       encoded_frames;
+    guint       frame_num;
     gboolean    pic_skipped;
 
     gboolean    is_intra;
@@ -123,7 +126,7 @@ MixVideoFormatEnc_H264 *mix_videoformatenc_h264_ref(MixVideoFormatEnc_H264 * mix
 
 /* H.264 vmethods */
 MIX_RESULT mix_videofmtenc_h264_getcaps(MixVideoFormatEnc *mix, GString *msg);
-MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix, 
+MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
         MixVideoConfigParamsEnc * config_params_enc,
         MixFrameManager * frame_mgr,
         MixBufferPool * input_buf_pool,
@@ -135,19 +138,24 @@ MIX_RESULT mix_videofmtenc_h264_encode(MixVideoFormatEnc *mix, MixBuffer * bufin
 MIX_RESULT mix_videofmtenc_h264_flush(MixVideoFormatEnc *mix);
 MIX_RESULT mix_videofmtenc_h264_eos(MixVideoFormatEnc *mix);
 MIX_RESULT mix_videofmtenc_h264_deinitialize(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_h264_set_dynamic_enc_config (MixVideoFormatEnc * mix, 
-	MixVideoConfigParamsEnc * config_params_enc, 
+MIX_RESULT mix_videofmtenc_h264_set_dynamic_enc_config (MixVideoFormatEnc * mix,
+	MixVideoConfigParamsEnc * config_params_enc,
 	MixEncParamsType params_type);
 
 /* Local Methods */
 
 MIX_RESULT mix_videofmtenc_h264_get_max_encoded_buf_size (MixVideoFormatEnc *mix, guint *max_size);
-MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix, MixBuffer * bufin, 
+MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix, MixBuffer * bufin,
         MixIOVec * iovout);
 MIX_RESULT mix_videofmtenc_h264_AnnexB_to_length_prefixed (
         guint8 * bufin, guint bufin_len, guint8* bufout, guint *bufout_len);
 
 MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix);
+
+MIX_RESULT mix_videofmtenc_h264_send_dynamic_bitrate (MixVideoFormatEnc_H264 *mix);
+MIX_RESULT mix_videofmtenc_h264_send_max_slice_size (MixVideoFormatEnc_H264 *mix);
+MIX_RESULT mix_videofmtenc_h264_send_dynamic_framerate (MixVideoFormatEnc_H264 *mix);
+MIX_RESULT mix_videofmtenc_h264_send_AIR (MixVideoFormatEnc_H264 *mix);
 
 G_END_DECLS
 

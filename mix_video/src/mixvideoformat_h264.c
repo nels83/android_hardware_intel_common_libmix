@@ -157,6 +157,94 @@ MIX_RESULT mix_videofmt_h264_getcaps(MixVideoFormat *mix, GString *msg) {
 	return ret;
 }
 
+MIX_RESULT mix_video_h264_update_config_params(
+    MixVideoFormat *mix,
+    vbp_data_h264 *data)
+{
+    MixVideoFormat *parent = MIX_VIDEOFORMAT(mix);
+
+    if (parent->picture_width == 0 ||
+        parent->picture_height == 0 ||
+        data->new_sps)
+    {
+        parent->picture_width = (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16;
+        parent->picture_height = (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16;
+
+        mix_videoconfigparamsdec_set_picture_res(
+            mix->config_params,
+            parent->picture_width,
+            parent->picture_height);
+    }
+
+
+    // video_range has default value of 0.
+    mix_videoconfigparamsdec_set_video_range(
+        mix->config_params,
+        data->codec_data->video_full_range_flag);
+
+
+    uint8 color_matrix;
+
+
+
+    switch (data->codec_data->matrix_coefficients)
+    {
+        case 1:
+            color_matrix = VA_SRC_BT709;
+            break;
+
+        // ITU-R Recommendation BT.470-6 System B, G (MP4), same as
+        // SMPTE 170M/BT601
+        case 5:
+        case 6:
+            color_matrix = VA_SRC_BT601;
+            break;
+
+        default:
+            // unknown color matrix, set to 0 so color space flag will not be set.
+            color_matrix = 0;
+            break;
+    }
+    mix_videoconfigparamsdec_set_color_matrix(mix->config_params, color_matrix);
+
+    mix_videoconfigparamsdec_set_pixel_aspect_ratio(
+        mix->config_params,
+        data->codec_data->sar_width,
+        data->codec_data->sar_height);
+
+    mix_videoconfigparamsdec_set_bit_rate(
+        mix->config_params,
+         data->codec_data->bit_rate);
+
+    return MIX_RESULT_SUCCESS;
+}
+
+
+MIX_RESULT mix_video_h264_handle_new_sequence(
+    MixVideoFormat *mix,
+    vbp_data_h264 *data)
+{
+    MIX_RESULT ret = MIX_RESULT_SUCCESS;
+    LOG_V("new sequence is received.\n");
+
+    // original picture resolution
+    int width = mix->picture_width;
+    int height = mix->picture_height;
+
+    mix_video_h264_update_config_params(mix, data);
+
+    if (width != mix->picture_width || height != mix->picture_height)
+    {
+        // flush frame manager only if resolution is changed.
+        ret = mix_framemanager_flush(mix->framemgr);
+    }
+
+    // TO DO:  re-initialize VA
+
+    return ret;
+}
+
+
 MIX_RESULT mix_videofmt_h264_initialize_va(
     MixVideoFormat *mix,
     vbp_data_h264 *data)
@@ -166,7 +254,7 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
     VAConfigAttrib attrib;
 
     MixVideoFormat *parent = MIX_VIDEOFORMAT(mix);
-    MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);
+    //MixVideoFormat_H264 *self = MIX_VIDEOFORMAT_H264(mix);
 
     if (parent->va_initialized)
     {
@@ -193,7 +281,7 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
 
     if (vret != VA_STATUS_SUCCESS)
     {
-        ret = MIX_RESULT_FAIL;
+        ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
         LOG_E("vaCreateConfig failed\n");
         goto cleanup;
     }
@@ -215,7 +303,7 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
     parent->va_surfaces = g_malloc(sizeof(VASurfaceID)*parent->va_num_surfaces);
     if (parent->va_surfaces == NULL)
     {
-        ret = MIX_RESULT_FAIL;
+        ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
         LOG_E( "parent->va_surfaces == NULL. \n");
         goto cleanup;
     }
@@ -227,15 +315,15 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
 
     vret = vaCreateSurfaces(
         parent->va_display,
-        (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16,
-        (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16,
+        parent->picture_width,
+        parent->picture_height,
         VA_RT_FORMAT_YUV420,
         parent->va_num_surfaces,
         parent->va_surfaces);
 
     if (vret != VA_STATUS_SUCCESS)
     {
-        ret = MIX_RESULT_FAIL;
+        ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
         LOG_E( "Error allocating surfaces\n");
         goto cleanup;
     }
@@ -281,7 +369,7 @@ MIX_RESULT mix_videofmt_h264_initialize_va(
 
     if (vret != VA_STATUS_SUCCESS)
     {
-        ret = MIX_RESULT_FAIL;
+        ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
         LOG_E( "Error initializing video driver\n");
         goto cleanup;
     }
@@ -507,7 +595,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
 
         if (vret != VA_STATUS_SUCCESS)
         {
-            ret = MIX_RESULT_FAIL;
+            ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
             LOG_E( "Video driver returned error from vaCreateBuffer\n");
             goto cleanup;
         }
@@ -529,7 +617,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
 
         if (vret != VA_STATUS_SUCCESS)
         {
-            ret = MIX_RESULT_FAIL;
+            ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
             LOG_E( "Video driver returned error from vaCreateBuffer\n");
             goto cleanup;
         }
@@ -567,7 +655,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
 
     if (vret != VA_STATUS_SUCCESS)
     {
-        ret = MIX_RESULT_FAIL;
+        ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
         LOG_E( "Video driver returned error from vaCreateBuffer\n");
         goto cleanup;
     }
@@ -598,7 +686,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_slice(
 
     if (vret != VA_STATUS_SUCCESS)
     {
-        ret = MIX_RESULT_FAIL;
+        ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
         LOG_E( "Video driver returned error from vaCreateBuffer\n");
         goto cleanup;
     }
@@ -909,7 +997,8 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
     MixVideoFormat *mix,
     MixBuffer * bufin,
     guint64 ts,
-    gboolean discontinuity)
+    gboolean discontinuity,
+    MixVideoDecodeParams * decode_params)
 {
     uint32 pret = 0;
     MixVideoFormat *parent = NULL;
@@ -929,7 +1018,7 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
     LOG_V( "Called parse for current frame\n");
     if ((pret != VBP_DONE) &&(pret != VBP_OK))
     {
-        ret = MIX_RESULT_DROPFRAME;
+        ret = MIX_RESULT_ERROR_PROCESS_STREAM; // MIX_RESULT_DROPFRAME;
         LOG_E( "vbp_parse failed.\n");
         goto cleanup;
     }
@@ -948,13 +1037,27 @@ MIX_RESULT mix_videofmt_h264_decode_a_buffer(
 
     if (data->has_sps == 0 || data->has_pps == 0)
     {
-        ret = MIX_RESULT_SUCCESS;
+        ret = MIX_RESULT_MISSING_CONFIG; // MIX_RESULT_SUCCESS;
         LOG_V("SPS or PPS is not available.\n");
         goto cleanup;
     }
 
+    if (data->new_sps)
+    {
+        decode_params->new_sequence = data->new_sps;
+
+        ret = mix_video_h264_handle_new_sequence(parent, data);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_V("mix_video_h264_handle_new_sequence failed.\n");
+            goto cleanup;
+        }
+    }
+
     if (parent->va_initialized == FALSE)
     {
+        mix_video_h264_update_config_params(parent, data);
+
         LOG_V("try initializing VA...\n");
         ret = mix_videofmt_h264_initialize_va(parent, data);
         if (ret != MIX_RESULT_SUCCESS)
@@ -1029,8 +1132,6 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
     vbp_data_h264 *data = NULL;
     MixVideoFormat *parent = NULL;
     MixIOVec *header = NULL;
-    guint pic_width_in_codec_data = 0;
-    guint pic_height_in_codec_data = 0;
 
     if (mix == NULL || config_params == NULL || frame_mgr == NULL || input_buf_pool == NULL || va_display == NULL)
     {
@@ -1152,17 +1253,7 @@ MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix,
 
     LOG_V( "Queried parser for header data\n");
 
-    // Update the pic size according to the parsed codec_data
-    pic_width_in_codec_data  = (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16;
-    pic_height_in_codec_data = (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16;
-    mix_videoconfigparamsdec_set_picture_res (config_params, pic_width_in_codec_data, pic_height_in_codec_data);
-
-    if (parent->picture_width == 0 || parent->picture_height == 0)
-    {
-        // Update picture resolution only if it is not set. The derived picture res from mbs may not be accurate.
-        parent->picture_width  = pic_width_in_codec_data;
-        parent->picture_height = pic_height_in_codec_data;
-    }
+    mix_video_h264_update_config_params(mix, data);
 
     ret = mix_videofmt_h264_initialize_va(mix, data);
     if (ret != MIX_RESULT_SUCCESS)
@@ -1246,6 +1337,8 @@ MIX_RESULT mix_videofmt_h264_decode(
         return MIX_RESULT_FAIL;
     }
 
+    decode_params->new_sequence = FALSE;
+
     //From now on, we exit this function through cleanup:
 
     LOG_V( "Locking\n");
@@ -1262,7 +1355,8 @@ MIX_RESULT mix_videofmt_h264_decode(
             mix,
             bufin[i],
             ts,
-            discontinuity);
+            discontinuity,
+            decode_params);
 
         if (ret != MIX_RESULT_SUCCESS)
         {
@@ -1470,7 +1564,7 @@ static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
 
 						pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id =
 							((MixVideoFrame *)self->last_decoded_frame)->frame_id;
-						LOG_V( "Reference frame not found, substituting %d\n", pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id);
+        					LOG_V( "Reference frame not found, substituting %d\n", pic_params->ReferenceFrames[pic_params->num_ref_frames].picture_id);
 
 					}
 					else

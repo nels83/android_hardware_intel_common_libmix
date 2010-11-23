@@ -6,7 +6,7 @@
 
 Summary: MIX Video Bitstream Parser
 Name: mixvbp
-Version: 0.1.18
+Version: 0.1.20
 Release: 1
 Source0: %{name}-%{version}.tar.bz2
 NoSource: 0

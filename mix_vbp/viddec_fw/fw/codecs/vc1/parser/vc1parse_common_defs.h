@@ -207,7 +207,14 @@ typedef struct
     uint16_t heightMB;
 
 #ifdef VBP
+    uint8_t COLOR_FORMAT_FLAG;
+    uint8_t MATRIX_COEF;
     uint8_t SYNCMARKER;
+    uint8_t ASPECT_RATIO_FLAG;
+    uint8_t ASPECT_RATIO;
+    uint8_t ASPECT_HORIZ_SIZE;
+    uint8_t ASPECT_VERT_SIZE;
+    
 #endif
     
 } vc1_metadata_t;
