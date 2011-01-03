@@ -28,5 +28,6 @@ LOCAL_COPY_HEADERS :=		\
 	mixdrmparams.h
 
 LOCAL_MODULE := libmixcommon
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)

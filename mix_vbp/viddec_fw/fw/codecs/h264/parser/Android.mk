@@ -27,6 +27,7 @@ LOCAL_C_INCLUDES :=							   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/h264/include
 
 LOCAL_MODULE := libmixvbp_h264
+LOCAL_MODULE_TAGS := optional
 
 LOCAL_SHARED_LIBRARIES :=		\
 	libglib-2.0			\

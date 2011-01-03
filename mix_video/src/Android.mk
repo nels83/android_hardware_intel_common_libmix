@@ -115,5 +115,6 @@ LOCAL_COPY_HEADERS :=			\
 	mixvideorenderparams_internal.h
 
 LOCAL_MODULE := libmixvideo
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)

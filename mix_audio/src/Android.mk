@@ -48,5 +48,6 @@ LOCAL_COPY_HEADERS :=		\
 #	pvt.h			\
 
 LOCAL_MODULE := libmixaudio
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
