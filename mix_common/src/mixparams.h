@@ -11,65 +11,8 @@
 
 #include <glib-object.h>
 
-G_BEGIN_DECLS
-
-#define MIX_TYPE_PARAMS          (mix_params_get_type())
-#define MIX_IS_PARAMS(obj)       (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_PARAMS))
-#define MIX_IS_PARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_PARAMS))
-#define MIX_PARAMS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_PARAMS, MixParamsClass))
-#define MIX_PARAMS(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_PARAMS, MixParams))
-#define MIX_PARAMS_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_PARAMS, MixParamsClass))
+#define MIX_PARAMS(obj)          (reinterpret_cast<MixParams*> ((obj)))
 #define MIX_PARAMS_CAST(obj)     ((MixParams*)(obj))
-
-typedef struct _MixParams MixParams;
-typedef struct _MixParamsClass MixParamsClass;
-
-/**
- * MixParamsDupFunction:
- * @obj: Params to duplicate
- * @returns: reference to cloned instance. 
- *
- * Virtual function prototype for methods to create duplicate of instance.
- *
- */
-typedef MixParams * (*MixParamsDupFunction) (const MixParams *obj);
-
-/**
- * MixParamsCopyFunction:
- * @target: target of the copy
- * @src: source of the copy
- * @returns: boolean indicates if copy is successful.
- *
- * Virtual function prototype for methods to create copies of instance.
- *
- */
-typedef gboolean (*MixParamsCopyFunction) (MixParams* target, const MixParams *src);
-
-/**
- * MixParamsFinalizeFunction:
- * @obj: Params to finalize
- *
- * Virtual function prototype for methods to free ressources used by
- * object.
- */
-typedef void (*MixParamsFinalizeFunction) (MixParams *obj);
-
-/**
- * MixParamsEqualsFunction:
- * @first: first object in the comparison
- * @second: second object in the comparison
- *
- * Virtual function prototype for methods to compare 2 objects and check if they are equal.
- */
-typedef gboolean (*MixParamsEqualFunction) (MixParams *first, MixParams *second);
-
-/**
- * MIX_VALUE_HOLDS_PARAMS:
- * @value: the #GValue to check
- *
- * Checks if the given #GValue contains a #MIX_TYPE_PARAM value.
- */
-#define MIX_VALUE_HOLDS_PARAMS(value)  (G_VALUE_HOLDS(value, MIX_TYPE_PARAMS))
 
 /**
  * MIX_PARAMS_REFCOUNT:
@@ -77,14 +20,7 @@ typedef gboolean (*MixParamsEqualFunction) (MixParams *first, MixParams *second)
  *
  * Get access to the reference count field of the object.
  */
-#define MIX_PARAMS_REFCOUNT(obj)           ((MIX_PARAMS_CAST(obj))->refcount)
-/**
- * MIX_PARAMS_REFCOUNT_VALUE:
- * @obj: a #MixParams
- *
- * Get the reference count value of the object
- */
-#define MIX_PARAMS_REFCOUNT_VALUE(obj)     (g_atomic_int_get (&(MIX_PARAMS_CAST(obj))->refcount))
+#define MIX_PARAMS_REFCOUNT(obj)           ((MIX_PARAMS_CAST(obj))->ref_count)
 
 /**
  * MixParams:
@@ -93,34 +29,62 @@ typedef gboolean (*MixParamsEqualFunction) (MixParams *first, MixParams *second)
  *
  * Base class for a refcounted parameter objects.
  */
-struct _MixParams {
-  GTypeInstance instance;
-  /*< public >*/
-  gint refcount;
+class MixParams {
 
-  /*< private >*/
-  gpointer _reserved;
-};
+public:
+	MixParams();
+	virtual ~MixParams();
+	MixParams* Ref();
+	void Unref();
+	gint GetRefCount() { return ref_count;}
+  
+public:
+	/**
+	* MixParamsDupFunction:
+	* @obj: Params to duplicate
+	* @returns: reference to cloned instance. 
+	*
+	* Virtual function prototype for methods to create duplicate of instance.
+	*
+	*/
+	virtual MixParams * dup () const;
 
-/**
- * MixParamsClass:
- * @dup: method to duplicate the object.
- * @copy: method to copy details in one object to the other.
- * @finalize: destructor
- * @equal: method to check if the content of two objects are equal.
- * 
- * #MixParams class strcut.
- */
-struct _MixParamsClass {
-  GTypeClass type_class;
+	/**
+	* MixParamsCopyFunction:
+	* @target: target of the copy
+	* @src: source of the copy
+	* @returns: boolean indicates if copy is successful.
+	*
+	* Virtual function prototype for methods to create copies of instance.
+	*
+	*/
+	virtual gboolean copy(MixParams* target) const;
 
-  MixParamsDupFunction dup;
-  MixParamsCopyFunction copy;
-  MixParamsFinalizeFunction finalize;
-  MixParamsEqualFunction equal;
+	/**
+	* MixParamsFinalizeFunction:
+	* @obj: Params to finalize
+	*
+	* Virtual function prototype for methods to free ressources used by
+	* object.
+	*/
+	virtual void finalize ();
 
-  /*< private >*/
-  gpointer _mix_reserved;
+	/**
+	* MixParamsEqualsFunction:
+	* @first: first object in the comparison
+	* @second: second object in the comparison
+	*
+	* Virtual function prototype for methods to compare 2 objects and check if they are equal.
+	*/
+	virtual gboolean equal (MixParams *obj) const;
+
+public:
+	/*< public >*/
+	gint ref_count;
+
+	/*< private >*/
+	gpointer _reserved; 
+
 };
 
 /**
@@ -129,7 +93,7 @@ struct _MixParamsClass {
  * 
  * Get type.
  */
-GType mix_params_get_type(void);
+//GType mix_params_get_type(void);
 
 /**
  * mix_params_new:
@@ -170,10 +134,12 @@ void mix_params_unref  (MixParams *obj);
 
 /**
  * mix_params_replace:
- * @olddata:
- * @newdata:
- * 
- * Replace a pointer of the object with the new one.
+ * @olddata: pointer to a pointer to a object to be replaced
+ * @newdata: pointer to new object
+ *
+ * Modifies a pointer to point to a new object.  The modification
+ * is done atomically, and the reference counts are updated correctly.
+ * Either @newdata and the value pointed to by @olddata may be NULL.
  */
 void mix_params_replace(MixParams **olddata, MixParams *newdata);
 
@@ -195,8 +161,5 @@ MixParams *mix_params_dup(const MixParams *obj);
  * Note that the parameter comparison compares the values that are hold inside the object, not for checking if the 2 pointers are of the same instance.
  */
 gboolean mix_params_equal(MixParams *first, MixParams *second);
-
-G_END_DECLS
-
 #endif
 

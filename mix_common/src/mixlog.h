@@ -39,6 +39,7 @@ void mix_log_func(const gchar* comp, gint level, const gchar *file,
 
 #include <utils/Log.h>
 
+
 #undef MIX_LOG_LEVEL_ERROR
 #undef MIX_LOG_LEVEL_WARNING
 #undef MIX_LOG_LEVEL_INFO

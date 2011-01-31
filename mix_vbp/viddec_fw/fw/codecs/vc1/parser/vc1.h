@@ -26,7 +26,7 @@
       WARNING,
       INFO,
       DEBUG,
-   } log_level;
+   } ;
 
    #define vc1_log_level DEBUG
 

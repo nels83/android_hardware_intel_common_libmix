@@ -11,6 +11,9 @@
 
 #include <va/va.h>
 
+
+
+
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -359,5 +362,7 @@ uint32 vbp_query(Handle hcontext, void **data);
  * 
  */
 uint32 vbp_flush(Handle hcontent);
+
+
 
 #endif /* VBP_LOADER_H */

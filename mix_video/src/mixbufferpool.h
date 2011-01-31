@@ -12,23 +12,16 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include <mixparams.h>
 #include "mixvideodef.h"
 #include "mixbuffer.h"
-
+#include "mixvideothread.h"
 #include <va/va.h>
 
-G_BEGIN_DECLS
-
-/**
-* MIX_TYPE_BUFFERPOOL:
-* 
-* Get type of class.
-*/
-#define MIX_TYPE_BUFFERPOOL (mix_bufferpool_get_type ())
+class MixBuffer;
 
 /**
 * MIX_BUFFERPOOL:
 * @obj: object to be type-casted.
 */
-#define MIX_BUFFERPOOL(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_BUFFERPOOL, MixBufferPool))
+#define MIX_BUFFERPOOL(obj) (reinterpret_cast<MixBufferPool*>(obj))
 
 /**
 * MIX_IS_BUFFERPOOL:
@@ -36,43 +29,25 @@ G_BEGIN_DECLS
 * 
 * Checks if the given object is an instance of #MixBufferPool
 */
-#define MIX_IS_BUFFERPOOL(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_BUFFERPOOL))
-
-/**
-* MIX_BUFFERPOOL_CLASS:
-* @klass: class to be type-casted.
-*/
-#define MIX_BUFFERPOOL_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_BUFFERPOOL, MixBufferPoolClass))
-
-/**
-* MIX_IS_BUFFERPOOL_CLASS:
-* @klass: a class.
-* 
-* Checks if the given class is #MixBufferPoolClass
-*/
-#define MIX_IS_BUFFERPOOL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_BUFFERPOOL))
-
-/**
-* MIX_BUFFERPOOL_GET_CLASS:
-* @obj: a #MixBufferPool object.
-* 
-* Get the class instance of the object.
-*/
-#define MIX_BUFFERPOOL_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_BUFFERPOOL, MixBufferPoolClass))
-
-typedef struct _MixBufferPool MixBufferPool;
-typedef struct _MixBufferPoolClass MixBufferPoolClass;
+#define MIX_IS_BUFFERPOOL(obj) (NULL != MIX_BUFFERPOOL(obj))
 
 /**
 * MixBufferPool:
 *
 * MI-X Video Buffer Pool object
 */
-struct _MixBufferPool
+class MixBufferPool : public MixParams
 {
-  /*< public > */
-  MixParams parent;
+public:
+    MixBufferPool();
+    virtual ~MixBufferPool();
+    virtual gboolean copy(MixParams* target) const;
+    virtual MixParams* dup() const;
+    virtual gboolean equal(MixParams* obj) const;
 
+    void Lock() {mLock.lock();}
+    void Unlock() {mLock.unlock();}
+public:
   /*< public > */
   GSList *free_list;		/* list of free buffers */
   GSList *in_use_list;		/* list of buffers in use */
@@ -85,30 +60,10 @@ struct _MixBufferPool
   void *reserved4;
 
   /*< private > */
-  GMutex *objectlock;
-
+  MixVideoMutex mLock;
 };
 
-/**
-* MixBufferPoolClass:
-* 
-* MI-X Video Buffer Pool object class
-*/
-struct _MixBufferPoolClass
-{
-  /*< public > */
-  MixParamsClass parent_class;
 
-  /* class members */
-};
-
-/**
-* mix_bufferpool_get_type:
-* @returns: type
-* 
-* Get the type of object.
-*/
-GType mix_bufferpool_get_type (void);
 
 /**
 * mix_bufferpool_new:
@@ -135,16 +90,9 @@ MixBufferPool *mix_bufferpool_ref (MixBufferPool * mix);
 #define mix_bufferpool_unref(obj) mix_params_unref(MIX_PARAMS(obj))
 
 /* Class Methods */
-
-MIX_RESULT mix_bufferpool_initialize (MixBufferPool * obj, 
-				guint num_buffers);
-MIX_RESULT mix_bufferpool_put (MixBufferPool * obj,
-				MixBuffer * buffer);
-
-MIX_RESULT mix_bufferpool_get (MixBufferPool * obj,
-				MixBuffer ** buffer);
+MIX_RESULT mix_bufferpool_initialize (MixBufferPool * obj, guint num_buffers);
+MIX_RESULT mix_bufferpool_put (MixBufferPool * obj, MixBuffer * buffer);
+MIX_RESULT mix_bufferpool_get (MixBufferPool * obj, MixBuffer ** buffer);
 MIX_RESULT mix_bufferpool_deinitialize (MixBufferPool * obj);
-
-G_END_DECLS
 
 #endif /* __MIX_BUFFERPOOL_H__ */

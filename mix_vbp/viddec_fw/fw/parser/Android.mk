@@ -41,8 +41,8 @@ LOCAL_COPY_HEADERS_TO := libmixvbp
 LOCAL_COPY_HEADERS :=	\
 	vbp_loader.h
 
-LOCAL_MODULE := libmixvbp
 LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libmixvbp
 
 LOCAL_SHARED_LIBRARIES :=		\
 	libdl				\

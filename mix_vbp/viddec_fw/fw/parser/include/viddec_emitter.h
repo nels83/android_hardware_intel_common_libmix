@@ -67,7 +67,7 @@ static inline void viddec_emit_time(viddec_emitter *cxt, uint32_t time)
 
 static inline void viddec_emit_set_codec(viddec_emitter *emit, uint32_t codec_type)
 {
-    emit->cur.data->codec = codec_type;
+    emit->cur.data->codec = (viddec_stream_format)(codec_type);
 }
 
 static inline void viddec_emit_set_codec_errors(viddec_emitter *emit, uint32_t codec_error)
@@ -91,7 +91,7 @@ static inline void viddec_emit_set_inband_tag(viddec_emitter *emit, uint32_t typ
     viddec_emitter_wkld *cur_wkld;
     viddec_workload_item_t item;
     cur_wkld = (using_next == false)? &(emit->cur):&(emit->next);
-    item.vwi_type = type;
+    item.vwi_type = (workload_item_type)(type);
     item.vwi_payload[0] = item.vwi_payload[1] = item.vwi_payload[2] = 0;
     viddec_emit_append(cur_wkld, &item);
 }

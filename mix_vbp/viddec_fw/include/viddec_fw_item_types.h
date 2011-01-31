@@ -79,7 +79,7 @@
 
 /* Workload items type. Each item here represents data that Parser detected ex:slice data which
  is used either by host or decoder.*/
-enum workload_item_type
+typedef enum workload_item_type
 {
     VIDDEC_WORKLOAD_INVALID                               =0x0,/* Unknown type */
     VIDDEC_WORKLOAD_PIXEL_ES                              =0x100,/* Slice data tag */
@@ -132,7 +132,7 @@ enum workload_item_type
 
     VIDDEC_WORKLOAD_DECODER_SPECIFIC                      =0x100000,/* pvt info for decoder tags */
     VIDDEC_WORKLOAD_MAX,
-};
+}workload_item_type;
 
 struct h264_witem_sps_mvc_id
 {

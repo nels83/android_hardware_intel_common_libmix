@@ -16,7 +16,7 @@
 // ---------------------------------------------------------------------------
 void* h264_memset( void* buf, uint32_t c, uint32_t num )
 {
-	uint32_t* buf32 = buf;
+	uint32_t* buf32 = (uint32_t*)buf;
 	uint32_t  size32 = ( num >> 2 );
 	uint32_t  i;
 
@@ -31,8 +31,8 @@ void* h264_memset( void* buf, uint32_t c, uint32_t num )
 
 void* h264_memcpy( void* dest, void* src, uint32_t num )
 {
-	int32_t*	dest32 = dest;
-	int32_t*    src32 = src;
+	int32_t*	dest32 = (int32_t*)dest;
+	int32_t*    src32 = (int32_t*)src;
 	uint32_t	size32 = ( num >> 2 );
 	uint32_t	i;
 

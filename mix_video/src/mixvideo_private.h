@@ -9,14 +9,16 @@
 #ifndef __MIX_VIDEO_PRIVATE_H__
 #define __MIX_VIDEO_PRIVATE_H__
 
-G_BEGIN_DECLS
+#include "mixvideothread.h"
 
+class MixFrameManager;
+class MixVideoFormat;
 typedef struct _MixVideoPrivate MixVideoPrivate;
 
 struct _MixVideoPrivate {
 	/*< private > */
 
-	GMutex *objlock;
+	MixVideoMutex objlock;
 	gboolean initialized;
 	gboolean configured;
 
@@ -34,26 +36,18 @@ struct _MixVideoPrivate {
 
 	MixFrameManager 	*frame_manager;
 	MixVideoFormat 		*video_format;
+#if MIXVIDEO_ENCODE_ENABLE
 	MixVideoFormatEnc       *video_format_enc;
+#endif
 
 	MixSurfacePool		*surface_pool;
 	MixBufferPool		*buffer_pool;
 
 };
 
-/**
- * MIX_VIDEO_PRIVATE:
- *
- * Get private structure of this class.
- * @obj: class object for which to get private data.
- */
-#define MIX_VIDEO_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), MIX_TYPE_VIDEO, MixVideoPrivate))
-
 /* Private functions */
 void mix_video_private_initialize(MixVideoPrivate* priv);
 void mix_video_private_cleanup(MixVideoPrivate* priv);
 
-G_END_DECLS
-
+#define MIX_VIDEO_GET_PRIVATE(mix) (MixVideoPrivate*)(mix->context)
 #endif /* __MIX_VIDEO_PRIVATE_H__ */

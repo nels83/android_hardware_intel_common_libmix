@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "viddec_fw_debug.h"
 #include "viddec_parser_ops.h"
 #include "viddec_mp4_parse.h"

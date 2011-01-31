@@ -14,58 +14,64 @@
 
 #define DECODER_ROBUSTNESS
 
-G_BEGIN_DECLS
 
-#define MIX_VIDEO_H264_SURFACE_NUM       20
+#define MIX_VIDEO_H264_SURFACE_NUM		20
 
-/*
- * Type macros.
- */
-#define MIX_TYPE_VIDEOFORMAT_H264                  (mix_videoformat_h264_get_type ())
-#define MIX_VIDEOFORMAT_H264(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOFORMAT_H264, MixVideoFormat_H264))
-#define MIX_IS_VIDEOFORMAT_H264(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOFORMAT_H264))
-#define MIX_VIDEOFORMAT_H264_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOFORMAT_H264, MixVideoFormat_H264Class))
-#define MIX_IS_VIDEOFORMAT_H264_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOFORMAT_H264))
-#define MIX_VIDEOFORMAT_H264_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOFORMAT_H264, MixVideoFormat_H264Class))
 
-typedef struct _MixVideoFormat_H264 MixVideoFormat_H264;
-typedef struct _MixVideoFormat_H264Class MixVideoFormat_H264Class;
+#define MIX_VIDEOFORMAT_H264(obj)		(reinterpret_cast<MixVideoFormat_H264*>(obj))
+#define MIX_IS_VIDEOFORMAT_H264(obj)	(NULL != MIX_VIDEOFORMAT_H264(obj))
 
-struct _MixVideoFormat_H264 {
+
+
+class MixVideoFormat_H264 : public MixVideoFormat {
+public:
+	MixVideoFormat_H264();
+	virtual ~MixVideoFormat_H264();
+	
+	virtual MIX_RESULT Initialize(
+		MixVideoConfigParamsDec * config_params,
+		MixFrameManager * frame_mgr,
+		MixBufferPool * input_buf_pool,
+		MixSurfacePool ** surface_pool,
+		VADisplay va_display);
+	virtual MIX_RESULT Decode(
+		MixBuffer * bufin[], gint bufincnt, 
+		MixVideoDecodeParams * decode_params);
+	virtual MIX_RESULT Flush();
+	virtual MIX_RESULT EndOfStream();
+
+private:
+	// Local Help Func
+	MIX_RESULT _update_config_params(vbp_data_h264 *data);
+	MIX_RESULT _initialize_va(vbp_data_h264 *data);
+	MIX_RESULT _decode_a_buffer(MixBuffer * bufin, guint64 ts,
+	gboolean discontinuity, MixVideoDecodeParams * decode_params);
+	MIX_RESULT _decode_end(gboolean drop_picture);
+	MIX_RESULT _handle_new_sequence(vbp_data_h264 *data);
+	MIX_RESULT _decode_begin(vbp_data_h264 *data);
+	MIX_RESULT _decode_continue(vbp_data_h264 *data);
+	MIX_RESULT _set_frame_type(vbp_data_h264 *data);
+	MIX_RESULT _set_frame_structure(vbp_data_h264 *data);
+	MIX_RESULT _update_ref_pic_list(VAPictureParameterBufferH264* picture_params,
+		VASliceParameterBufferH264* slice_params);
+	MIX_RESULT _decode_a_slice(vbp_data_h264 *data,
+		int picture_index, int slice_index);
+	MIX_RESULT _cleanup_ref_frame(
+		VAPictureParameterBufferH264* pic_params, MixVideoFrame * current_frame);
+	MIX_RESULT _handle_ref_frames(
+		VAPictureParameterBufferH264* pic_params,
+		MixVideoFrame * current_frame);
+
+public:
 	/*< public > */
-	MixVideoFormat parent;
-
-	/*< public > */
-
 	/*< private > */
 	GHashTable *dpb_surface_table;
 #ifdef DECODER_ROBUSTNESS
 	//Can improve which frame is used for this at a later time
-    	MixVideoFrame  *last_decoded_frame;  //last surface decoded, to be used as reference frame when reference frames are missing
+	MixVideoFrame  *last_decoded_frame;  //last surface decoded, to be used as reference frame when reference frames are missing
 #endif
 };
 
-/**
- * MixVideoFormat_H264Class:
- *
- * MI-X Video object class
- */
-struct _MixVideoFormat_H264Class {
-	/*< public > */
-	MixVideoFormatClass parent_class;
-
-	/* class members */
-
-	/*< public > */
-};
-
-/**
- * mix_videoformat_h264_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoformat_h264_get_type(void);
 
 /**
  * mix_videoformat_h264_new:
@@ -90,39 +96,7 @@ MixVideoFormat_H264 *mix_videoformat_h264_ref(MixVideoFormat_H264 * mix);
  *
  * Decrement reference count of the object.
  */
-#define mix_videoformat_h264_unref(obj) g_object_unref (G_OBJECT(obj))
-
-/* Class Methods */
-
-/* H.264 vmethods */
-MIX_RESULT mix_videofmt_h264_getcaps(MixVideoFormat *mix, GString *msg);
-MIX_RESULT mix_videofmt_h264_initialize(MixVideoFormat *mix, 
-				  MixVideoConfigParamsDec * config_params,
-				  MixFrameManager * frame_mgr,
-				  MixBufferPool * input_buf_pool,
-				  MixSurfacePool ** surface_pool,
-				  VADisplay va_display);
-MIX_RESULT mix_videofmt_h264_decode(MixVideoFormat *mix, MixBuffer * bufin[],
-                gint bufincnt, MixVideoDecodeParams * decode_params);
-MIX_RESULT mix_videofmt_h264_flush(MixVideoFormat *mix);
-MIX_RESULT mix_videofmt_h264_eos(MixVideoFormat *mix);
-MIX_RESULT mix_videofmt_h264_deinitialize(MixVideoFormat *mix);
-
-/* Local Methods */
-
-MIX_RESULT mix_videofmt_h264_handle_ref_frames(MixVideoFormat *mix,
-                                        VAPictureParameterBufferH264* pic_params,
-                                        MixVideoFrame * current_frame);
-
-
-MIX_RESULT mix_videofmt_h264_process_decode(MixVideoFormat *mix,
-                                        vbp_data_h264 *data, 
-					guint64 timestamp,
-					gboolean discontinuity);
-
-
-MIX_RESULT mix_videofmt_h264_release_input_buffers(MixVideoFormat *mix, 
-					guint64 timestamp);
+MixVideoFormat_H264* mix_videoformat_h264_unref(MixVideoFormat_H264 *mix);
 
 
 /* Helper functions to manage the DPB table */
@@ -130,8 +104,5 @@ gboolean mix_videofmt_h264_check_in_DPB(gpointer key, gpointer value, gpointer u
 void mix_videofmt_h264_destroy_DPB_key(gpointer data);
 void mix_videofmt_h264_destroy_DPB_value(gpointer data);
 guint mix_videofmt_h264_get_poc(VAPictureH264 *pic);
-
-G_END_DECLS
-
 
 #endif /* __MIX_VIDEOFORMAT_H264_H__ */

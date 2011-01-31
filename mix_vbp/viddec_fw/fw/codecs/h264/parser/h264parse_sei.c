@@ -881,7 +881,7 @@ h264_Status h264_sei_stereo_video_info(void *parent,h264_Info* pInfo)
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
-h264_Status h264_sei_reserved_sei_message(void *parent, h264_Info* pInfo, uint32_t payload_size)
+uint32_t h264_sei_reserved_sei_message(void *parent, h264_Info* pInfo, uint32_t payload_size)
 {
 	int32_t k, byte_index, user_data_byte_index;
    uint32_t i;
@@ -949,7 +949,7 @@ h264_Status h264_sei_reserved_sei_message(void *parent, h264_Info* pInfo, uint32
 	
 	return user_data_byte_index;
 	
-	return H264_STATUS_OK;
+//	return H264_STATUS_OK;
 }
 
 ////// TODO
@@ -1033,7 +1033,7 @@ h264_Status h264_SEI_payload(void *parent, h264_Info* pInfo, h264_sei_payloadtyp
 			status = h264_sei_stereo_video_info(parent, pInfo);
 			break;
 		default:
-			status = h264_sei_reserved_sei_message(parent, pInfo, payloadSize);
+			status = (h264_Status)h264_sei_reserved_sei_message(parent, pInfo, payloadSize);
 			break;
 	}
 
@@ -1102,7 +1102,7 @@ h264_Status h264_Parse_Supplemental_Enhancement_Information_Message(void *parent
 		/////////////////////////////////
 		// Parse SEI payloads
 		/////////////////////////////////		
-		status = h264_SEI_payload(parent, pInfo, payload_type, payload_size);
+		status = h264_SEI_payload(parent, pInfo, (h264_sei_payloadtype)payload_type, payload_size);
 		if(status != H264_STATUS_OK)
 			break;
 

@@ -1029,6 +1029,10 @@ struct h264_viddec_parser
    h264_Info    info;
 };
 
+#ifdef __cplusplus
+}
+#endif
+
 
 
 

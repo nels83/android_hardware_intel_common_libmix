@@ -152,7 +152,7 @@ enum viddec_fw_decoder_int_status
 };
 
 /** Hardware Accelerated stream formats */
-enum viddec_stream_format
+typedef enum viddec_stream_format
 {
    MFD_STREAM_FORMAT_MPEG=1,
    MFD_STREAM_FORMAT_H264,
@@ -161,7 +161,7 @@ enum viddec_stream_format
 
    MFD_STREAM_FORMAT_MAX,   /* must be last  */
    MFD_STREAM_FORMAT_INVALID
-};
+}viddec_stream_format;
 
 /* Workload specific error codes */
 enum viddec_fw_workload_error_codes
@@ -211,8 +211,10 @@ enum viddec_fw_mpeg2_error_codes
 #define false 0
 #endif
 
+#ifndef __cplusplus
 #ifndef bool
 typedef int bool;
+#endif
 #endif
 
 #endif 

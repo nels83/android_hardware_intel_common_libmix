@@ -12,6 +12,9 @@
 // The following part is only for Parser Debug
 ///////////////////////////////////////////////////////////////////
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 enum h264_debug_point_id
@@ -113,14 +116,6 @@ extern h264_Status h264_Parse_Dec_Ref_Pic_Marking(void *parent,h264_Info* pInfo,
 
 
 
-////////////////////////////////////////////////////////////////////
-///////////////////////////// utils functions
-////////////////////////////////////////////////////////////////////
-extern int32_t h264_is_new_picture_start(h264_Info* pInfo, h264_Slice_Header_t cur_slice, h264_Slice_Header_t old_slice);
-extern int32_t h264_is_second_field(h264_Info * pInfo);
-///// Math functions
-uint32_t ldiv_mod_u(uint32_t a, uint32_t b, uint32_t * mod);
-uint32_t mult_u(uint32_t var1, uint32_t var2);
 ///// Mem functions
 extern void* h264_memset( void* buf, uint32_t c, uint32_t num );
 extern void* h264_memcpy( void* dest, void* src, uint32_t num );
@@ -147,6 +142,18 @@ extern void h264_parse_emit_current_pic( void *parent, h264_Info *pInfo );
 
 extern void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo );
 extern void h264_parse_emit_eos( void *parent, h264_Info *pInfo );
+#ifdef __cplusplus
+}
+#endif
+
+////////////////////////////////////////////////////////////////////
+///////////////////////////// utils functions
+////////////////////////////////////////////////////////////////////
+extern int32_t h264_is_new_picture_start(h264_Info* pInfo, h264_Slice_Header_t cur_slice, h264_Slice_Header_t old_slice);
+extern int32_t h264_is_second_field(h264_Info * pInfo);
+///// Math functions
+uint32_t ldiv_mod_u(uint32_t a, uint32_t b, uint32_t * mod);
+uint32_t mult_u(uint32_t var1, uint32_t var2);
 
 
 

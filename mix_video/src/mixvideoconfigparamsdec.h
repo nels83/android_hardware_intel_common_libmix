@@ -12,20 +12,12 @@
 #include <mixvideoconfigparams.h>
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEOCONFIGPARAMSDEC:
- *
- * Get type of class.
- */
-#define MIX_TYPE_VIDEOCONFIGPARAMSDEC (mix_videoconfigparamsdec_get_type ())
 
 /**
  * MIX_VIDEOCONFIGPARAMSDEC:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEOCONFIGPARAMSDEC(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC, MixVideoConfigParamsDec))
+#define MIX_VIDEOCONFIGPARAMSDEC(obj) (reinterpret_cast<MixVideoConfigParamsDec*>(obj))
 
 /**
  * MIX_IS_VIDEOCONFIGPARAMSDEC:
@@ -33,41 +25,23 @@ G_BEGIN_DECLS
  *
  * Checks if the given object is an instance of #MixParams
  */
-#define MIX_IS_VIDEOCONFIGPARAMSDEC(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC))
-
-/**
- * MIX_VIDEOCONFIGPARAMSDEC_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_VIDEOCONFIGPARAMSDEC_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSDEC, MixVideoConfigParamsDecClass))
-
-/**
- * MIX_IS_VIDEOCONFIGPARAMSDEC_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixParamsClass
- */
-#define MIX_IS_VIDEOCONFIGPARAMSDEC_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSDEC))
-
-/**
- * MIX_VIDEOCONFIGPARAMSDEC_GET_CLASS:
- * @obj: a #MixParams object.
- *
- * Get the class instance of the object.
- */
-#define MIX_VIDEOCONFIGPARAMSDEC_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC, MixVideoConfigParamsDecClass))
-
-typedef struct _MixVideoConfigParamsDec MixVideoConfigParamsDec;
-typedef struct _MixVideoConfigParamsDecClass MixVideoConfigParamsDecClass;
+#define MIX_IS_VIDEOCONFIGPARAMSDEC(obj) ((NULL != MIX_VIDEOCONFIGPARAMSDEC(obj)) ? TRUE : FALSE)
 
 /**
  * MixVideoConfigParamsDec:
  *
  * MI-X VideoConfig Parameter object
  */
-struct _MixVideoConfigParamsDec {
+class MixVideoConfigParamsDec : public MixVideoConfigParams {
+public:
+    MixVideoConfigParamsDec();
+    ~MixVideoConfigParamsDec();
+    virtual gboolean copy(MixParams *target) const;
+    virtual gboolean equal(MixParams* obj) const;
+    virtual MixParams* dup() const;
+public:
 	/*< public > */
-	MixVideoConfigParams parent;
+	//MixVideoConfigParams parent;
 
 	/*< public > */
 	
@@ -140,24 +114,12 @@ struct _MixVideoConfigParamsDec {
 };
 
 /**
- * MixVideoConfigParamsDecClass:
- *
- * MI-X VideoConfig object class
- */
-struct _MixVideoConfigParamsDecClass {
-	/*< public > */
-	MixVideoConfigParamsClass parent_class;
-
-	/* class members */
-};
-
-/**
  * mix_videoconfigparamsdec_get_type:
  * @returns: type
  *
  * Get the type of object.
  */
-GType mix_videoconfigparamsdec_get_type(void);
+//GType mix_videoconfigparamsdec_get_type(void);
 
 /**
  * mix_videoconfigparamsdec_new:
@@ -492,7 +454,5 @@ MIX_RESULT mix_videoconfigparamsdec_get_pixel_aspect_ratio(MixVideoConfigParamsD
 		
 
 /* TODO: Add getters and setters for other properties */
-
-G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSDEC_H__ */

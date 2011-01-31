@@ -12,20 +12,21 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsenc.h"
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
+
 
 /**
 * MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4:
 * 
 * Get type of class.
 */
-#define MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4 (mix_videoconfigparamsenc_mpeg4_get_type ())
+//#define MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4 (mix_videoconfigparamsenc_mpeg4_get_type ())
 
 /**
 * MIX_VIDEOCONFIGPARAMSENC_MPEG4:
 * @obj: object to be type-casted.
 */
-#define MIX_VIDEOCONFIGPARAMSENC_MPEG4(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4, MixVideoConfigParamsEncMPEG4))
+//#define MIX_VIDEOCONFIGPARAMSENC_MPEG4(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4, MixVideoConfigParamsEncMPEG4))
+#define MIX_VIDEOCONFIGPARAMSENC_MPEG4(obj) (reinterpret_cast<MixVideoConfigParamsEncMPEG4*>(obj))
 
 /**
 * MIX_IS_VIDEOCONFIGPARAMSENC_MPEG4:
@@ -33,13 +34,13 @@ G_BEGIN_DECLS
 * 
 * Checks if the given object is an instance of #MixVideoConfigParamsEncMPEG4
 */
-#define MIX_IS_VIDEOCONFIGPARAMSENC_MPEG4(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4))
+//#define MIX_IS_VIDEOCONFIGPARAMSENC_MPEG4(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4))
 
 /**
 * MIX_VIDEOCONFIGPARAMSENC_MPEG4_CLASS:
 * @klass: class to be type-casted.
 */
-#define MIX_VIDEOCONFIGPARAMSENC_MPEG4_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4, MixVideoConfigParamsEncMPEG4Class))
+//#define MIX_VIDEOCONFIGPARAMSENC_MPEG4_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4, MixVideoConfigParamsEncMPEG4Class))
 
 /**
 * MIX_IS_VIDEOCONFIGPARAMSENC_MPEG4_CLASS:
@@ -47,7 +48,7 @@ G_BEGIN_DECLS
 * 
 * Checks if the given class is #MixVideoConfigParamsEncMPEG4Class
 */
-#define MIX_IS_VIDEOCONFIGPARAMSENC_MPEG4_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4))
+//#define MIX_IS_VIDEOCONFIGPARAMSENC_MPEG4_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4))
 
 /**
 * MIX_VIDEOCONFIGPARAMSENC_MPEG4_GET_CLASS:
@@ -55,21 +56,19 @@ G_BEGIN_DECLS
 * 
 * Get the class instance of the object.
 */
-#define MIX_VIDEOCONFIGPARAMSENC_MPEG4_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4, MixVideoConfigParamsEncMPEG4Class))
+//#define MIX_VIDEOCONFIGPARAMSENC_MPEG4_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_MPEG4, MixVideoConfigParamsEncMPEG4Class))
 
-typedef struct _MixVideoConfigParamsEncMPEG4 MixVideoConfigParamsEncMPEG4;
-typedef struct _MixVideoConfigParamsEncMPEG4Class MixVideoConfigParamsEncMPEG4Class;
+
+//typedef struct _MixVideoConfigParamsEncMPEG4Class MixVideoConfigParamsEncMPEG4Class;
 
 /**
 * MixVideoConfigParamsEncMPEG4:
 *
 * MI-X VideoConfig Parameter object
 */
-struct _MixVideoConfigParamsEncMPEG4
+class MixVideoConfigParamsEncMPEG4 : public MixVideoConfigParamsEnc
 {
-  /*< public > */
-  MixVideoConfigParamsEnc parent;
-
+public:
   /*< public > */
 
   /* TODO: Add MPEG-4 configuration paramters */
@@ -102,26 +101,6 @@ struct _MixVideoConfigParamsEncMPEG4
   void *reserved4;
 };
 
-/**
-* MixVideoConfigParamsEncMPEG4Class:
-* 
-* MI-X VideoConfig object class
-*/
-struct _MixVideoConfigParamsEncMPEG4Class
-{
-  /*< public > */
-  MixVideoConfigParamsEncClass parent_class;
-
-  /* class members */
-};
-
-/**
-* mix_videoconfigparamsenc_mpeg4_get_type:
-* @returns: type
-* 
-* Get the type of object.
-*/
-GType mix_videoconfigparamsenc_mpeg4_get_type (void);
 
 /**
 * mix_videoconfigparamsenc_mpeg4_new:
@@ -222,6 +201,6 @@ MIX_RESULT mix_videoconfigparamsenc_mpeg4_set_fixed_vti (MixVideoConfigParamsEnc
 MIX_RESULT mix_videoconfigparamsenc_mpeg4_get_fixed_vti (MixVideoConfigParamsEncMPEG4 * obj,
 		guint * fixed_vop_time_increment);
 
-G_END_DECLS
+
 
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_MPEG4_H__ */

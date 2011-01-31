@@ -12,20 +12,11 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsdec.h"
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
-* MIX_TYPE_VIDEOCONFIGPARAMSDEC_H264:
-* 
-* Get type of class.
-*/
-#define MIX_TYPE_VIDEOCONFIGPARAMSDEC_H264 (mix_videoconfigparamsdec_h264_get_type ())
-
 /**
 * MIX_VIDEOCONFIGPARAMSDEC_H264:
 * @obj: object to be type-casted.
 */
-#define MIX_VIDEOCONFIGPARAMSDEC_H264(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_H264, MixVideoConfigParamsDecH264))
+#define MIX_VIDEOCONFIGPARAMSDEC_H264(obj) (reinterpret_cast<MixVideoConfigParamsDecH264*>(obj))
 
 /**
 * MIX_IS_VIDEOCONFIGPARAMSDEC_H264:
@@ -33,43 +24,23 @@ G_BEGIN_DECLS
 * 
 * Checks if the given object is an instance of #MixVideoConfigParamsDecH264
 */
-#define MIX_IS_VIDEOCONFIGPARAMSDEC_H264(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_H264))
+#define MIX_IS_VIDEOCONFIGPARAMSDEC_H264(obj) ((NULL != MIX_VIDEOCONFIGPARAMSDEC_H264(obj)) ? TRUE : FALSE)
 
-/**
-* MIX_VIDEOCONFIGPARAMSDEC_H264_CLASS:
-* @klass: class to be type-casted.
-*/
-#define MIX_VIDEOCONFIGPARAMSDEC_H264_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSDEC_H264, MixVideoConfigParamsDecH264Class))
-
-/**
-* MIX_IS_VIDEOCONFIGPARAMSDEC_H264_CLASS:
-* @klass: a class.
-* 
-* Checks if the given class is #MixVideoConfigParamsDecH264Class
-*/
-#define MIX_IS_VIDEOCONFIGPARAMSDEC_H264_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSDEC_H264))
-
-/**
-* MIX_VIDEOCONFIGPARAMSDEC_H264_GET_CLASS:
-* @obj: a #MixParams object.
-* 
-* Get the class instance of the object.
-*/
-#define MIX_VIDEOCONFIGPARAMSDEC_H264_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_H264, MixVideoConfigParamsDecH264Class))
-
-typedef struct _MixVideoConfigParamsDecH264 MixVideoConfigParamsDecH264;
-typedef struct _MixVideoConfigParamsDecH264Class MixVideoConfigParamsDecH264Class;
 
 /**
 * MixVideoConfigParamsDecH264:
 *
 * MI-X VideoConfig Parameter object
 */
-struct _MixVideoConfigParamsDecH264
+class MixVideoConfigParamsDecH264 : public MixVideoConfigParamsDec
 {
-  /*< public > */
-  MixVideoConfigParamsDec parent;
-
+public:
+    MixVideoConfigParamsDecH264();
+    ~MixVideoConfigParamsDecH264();
+    virtual gboolean copy(MixParams *target) const;
+    virtual gboolean equal(MixParams* obj) const;
+    virtual MixParams* dup() const;
+public:
   /*< public > */
 
   /* TODO: Add H.264 configuration paramters */
@@ -87,18 +58,7 @@ struct _MixVideoConfigParamsDecH264
   void *reserved4;
 };
 
-/**
-* MixVideoConfigParamsDecH264Class:
-* 
-* MI-X VideoConfig object class
-*/
-struct _MixVideoConfigParamsDecH264Class
-{
-  /*< public > */
-  MixVideoConfigParamsDecClass parent_class;
 
-  /* class members */
-};
 
 /**
 * mix_videoconfigparamsdec_h264_get_type:
@@ -106,7 +66,7 @@ struct _MixVideoConfigParamsDecH264Class
 * 
 * Get the type of object.
 */
-GType mix_videoconfigparamsdec_h264_get_type (void);
+//GType mix_videoconfigparamsdec_h264_get_type (void);
 
 /**
 * mix_videoconfigparamsdec_h264_new:
@@ -136,7 +96,4 @@ MixVideoConfigParamsDecH264
 /* Class Methods */
 
 /* TODO: Add getters and setters for other properties */
-
-G_END_DECLS
-
 #endif /* __MIX_VIDEOCONFIGPARAMSDEC_H264_H__ */

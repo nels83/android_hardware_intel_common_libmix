@@ -12,20 +12,12 @@
 #include <mixvideoconfigparams.h>
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEOCONFIGPARAMSENC:
- *
- * Get type of class.
- */
-#define MIX_TYPE_VIDEOCONFIGPARAMSENC (mix_videoconfigparamsenc_get_type ())
-
 /**
  * MIX_VIDEOCONFIGPARAMSENC:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEOCONFIGPARAMSENC(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEnc))
+//#define MIX_VIDEOCONFIGPARAMSENC(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEnc))
+#define MIX_VIDEOCONFIGPARAMSENC(obj) (reinterpret_cast<MixVideoConfigParamsEnc*>(obj))
 
 /**
  * MIX_IS_VIDEOCONFIGPARAMSENC:
@@ -33,13 +25,13 @@ G_BEGIN_DECLS
  *
  * Checks if the given object is an instance of #MixParams
  */
-#define MIX_IS_VIDEOCONFIGPARAMSENC(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC))
+//#define MIX_IS_VIDEOCONFIGPARAMSENC(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC))
 
 /**
  * MIX_VIDEOCONFIGPARAMSENC_CLASS:
  * @klass: class to be type-casted.
  */
-#define MIX_VIDEOCONFIGPARAMSENC_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEncClass))
+//#define MIX_VIDEOCONFIGPARAMSENC_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEncClass))
 
 /**
  * MIX_IS_VIDEOCONFIGPARAMSENC_CLASS:
@@ -47,7 +39,7 @@ G_BEGIN_DECLS
  *
  * Checks if the given class is #MixParamsClass
  */
-#define MIX_IS_VIDEOCONFIGPARAMSENC_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC))
+//#define MIX_IS_VIDEOCONFIGPARAMSENC_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC))
 
 /**
  * MIX_VIDEOCONFIGPARAMSENC_GET_CLASS:
@@ -55,25 +47,21 @@ G_BEGIN_DECLS
  *
  * Get the class instance of the object.
  */
-#define MIX_VIDEOCONFIGPARAMSENC_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEncClass))
+//#define MIX_VIDEOCONFIGPARAMSENC_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEncClass))
 
-typedef struct _MixVideoConfigParamsEnc MixVideoConfigParamsEnc;
-typedef struct _MixVideoConfigParamsEncClass MixVideoConfigParamsEncClass;
+
 
 /**
  * MixVideoConfigParamsEnc:
  *
  * MI-X VideoConfig Parameter object
  */
-struct _MixVideoConfigParamsEnc {
-	/*< public > */
-	MixVideoConfigParams parent;
-
+class MixVideoConfigParamsEnc : public MixVideoConfigParams {
 	/*< public > */
 	//MixIOVec header;
 
 	/* the type of the following members will be changed after MIX API doc is ready */
-
+public:
 	/* Encoding profile */
 	MixProfile profile;
 
@@ -169,26 +157,6 @@ struct _MixVideoConfigParamsEnc {
 	/* Reserved for future use */
 	void *reserved4;
 };
-
-/**
- * MixVideoConfigParamsEncClass:
- *
- * MI-X VideoConfig object class
- */
-struct _MixVideoConfigParamsEncClass {
-	/*< public > */
-	MixVideoConfigParamsClass parent_class;
-
-	/* class members */
-};
-
-/**
- * mix_videoconfigparamsenc_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoconfigparamsenc_get_type(void);
 
 /**
  * mix_videoconfigparamsenc_new:
@@ -757,7 +725,6 @@ MIX_RESULT mix_videoconfigparamsenc_get_AIR_params (MixVideoConfigParamsEnc * ob
 
 /* TODO: Add getters and setters for other properties */
 
-G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_H__ */
 

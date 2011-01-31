@@ -219,7 +219,7 @@ h264_Status h264_Parse_Vui_Parameters(void *parent, h264_Info* pInfo, seq_param_
 		if(SPS->sps_disp.vui_seq_parameters.nal_hrd_parameters_present_flag == 1)
 		{
 			nal_hrd = 1;
-			ret |= h264_Parse_HRD_Parameters(parent,pInfo, nal_hrd,SPS, pVUI_Seq_Not_Used);
+			ret = h264_Parse_HRD_Parameters(parent,pInfo, nal_hrd,SPS, pVUI_Seq_Not_Used);
 		}
 
 		viddec_pm_get_bits(parent, &code, 1);
@@ -228,7 +228,7 @@ h264_Status h264_Parse_Vui_Parameters(void *parent, h264_Info* pInfo, seq_param_
 		if(SPS->sps_disp.vui_seq_parameters.vcl_hrd_parameters_present_flag == 1)
 		{
 			nal_hrd = 0;
-			ret |= h264_Parse_HRD_Parameters(parent,pInfo, nal_hrd,SPS, pVUI_Seq_Not_Used);
+			ret = (h264_Status)h264_Parse_HRD_Parameters(parent,pInfo, nal_hrd,SPS, pVUI_Seq_Not_Used);
 		}
 
 		if((SPS->sps_disp.vui_seq_parameters.nal_hrd_parameters_present_flag == 1) || (SPS->sps_disp.vui_seq_parameters.vcl_hrd_parameters_present_flag == 1))

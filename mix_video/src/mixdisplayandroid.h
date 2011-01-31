@@ -17,24 +17,17 @@ No license under any patent, copyright, trade secret or other intellectual prope
 //using namespace android;
 //#endif
 
-//#ifdef __cplusplus
-//extern "C" {
-//#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef ANDROID
-
-/**
-* MIX_TYPE_DISPLAYANDROID:
-* 
-* Get type of class.
-*/
-#define MIX_TYPE_DISPLAYANDROID (mix_displayandroid_get_type ())
 
 /**
 * MIX_DISPLAYANDROID:
 * @obj: object to be type-casted.
 */
-#define MIX_DISPLAYANDROID(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_DISPLAYANDROID, MixDisplayAndroid))
+#define MIX_DISPLAYANDROID(obj) (reinterpret_cast<MixDisplayAndroid*>(obj))
 
 /**
 * MIX_IS_DISPLAYANDROID:
@@ -42,75 +35,41 @@ No license under any patent, copyright, trade secret or other intellectual prope
 * 
 * Checks if the given object is an instance of #MixDisplay
 */
-#define MIX_IS_DISPLAYANDROID(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_DISPLAYANDROID))
+#define MIX_IS_DISPLAYANDROID(obj) (NULL != MIX_DISPLAYANDROID(obj))
 
-/**
-* MIX_DISPLAYANDROID_CLASS:
-* @klass: class to be type-casted.
-*/
-#define MIX_DISPLAYANDROID_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_DISPLAYANDROID, MixDisplayAndroidClass))
-
-/**
-* MIX_IS_DISPLAYANDROID_CLASS:
-* @klass: a class.
-* 
-* Checks if the given class is #MixDisplayClass
-*/
-#define MIX_IS_DISPLAYANDROID_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_DISPLAYANDROID))
-
-/**
-* MIX_DISPLAYANDROID_GET_CLASS:
-* @obj: a #MixDisplay object.
-* 
-* Get the class instance of the object.
-*/
-#define MIX_DISPLAYANDROID_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_DISPLAYANDROID, MixDisplayAndroidClass))
-
-typedef struct _MixDisplayAndroid MixDisplayAndroid;
-typedef struct _MixDisplayAndroidClass MixDisplayAndroidClass;
 
 /**
 * MixDisplayAndroid:
 *
 * MI-X VideoInit Parameter object
 */
-struct _MixDisplayAndroid
-{
-  /*< public > */
-  MixDisplay parent;
+class MixDisplayAndroid : public MixDisplay {
 
-  /*< public > */
+public:
+	~MixDisplayAndroid();
+	virtual MixDisplay* Dup() const;
+	virtual gboolean Copy(MixDisplay* target) const;
+	virtual void Finalize();
+	virtual gboolean Equal(const MixDisplay* obj) const;
 
-  /* Pointer to a Android specific display  */
-  void *display;
-  
-  /* An Android drawable that is a smart pointer  
-   * of ISurface. This field is not used in 
-   * mix_video_initialize().
-   */ 
-  // sp<ISurface> drawable;
+
+
+	friend MixDisplayAndroid *mix_displayandroid_new (void);
+
+protected:
+	MixDisplayAndroid();
+public:
+	/*< public > */
+
+	/* Pointer to a Android specific display  */
+	void *display;
+
+	/* An Android drawable that is a smart pointer  
+	* of ISurface. This field is not used in 
+	* mix_video_initialize().
+	*/ 
+	// sp<ISurface> drawable;
 };
-
-/**
-* MixDisplayAndroidClass:
-* 
-* MI-X VideoInit object class
-*/
-struct _MixDisplayAndroidClass
-{
-  /*< public > */
-  MixDisplayClass parent_class;
-
-  /* class members */
-};
-
-/**
-* mix_displayandroid_get_type:
-* @returns: type
-* 
-* Get the type of object.
-*/
-GType mix_displayandroid_get_type (void);
 
 /**
 * mix_displayandroid_new:
@@ -119,6 +78,8 @@ GType mix_displayandroid_get_type (void);
 * Use this method to create new instance of #MixDisplayAndroid
 */
 MixDisplayAndroid *mix_displayandroid_new (void);
+
+
 /**
 * mix_displayandroid_ref:
 * @mix: object to add reference
@@ -147,8 +108,8 @@ MixDisplayAndroid *mix_displayandroid_ref (MixDisplayAndroid * mix);
  *
  * Set Display 
  */
-MIX_RESULT mix_displayandroid_set_display (MixDisplayAndroid * obj,
-				       void * display);
+MIX_RESULT mix_displayandroid_set_display (
+	MixDisplayAndroid * obj, void * display);
 
 /**
  * mix_displayandroid_get_display:
@@ -158,15 +119,15 @@ MIX_RESULT mix_displayandroid_set_display (MixDisplayAndroid * obj,
  *
  * Get Display 
  */
-MIX_RESULT mix_displayandroid_get_display (MixDisplayAndroid * obj,
-				       void ** dislay);
+MIX_RESULT mix_displayandroid_get_display (
+	MixDisplayAndroid * obj, void ** dislay);
 
 
 #endif /* ANDROID */
 
-//#ifdef __cplusplus
-//}
-//#endif
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __MIX_DISPLAYANDROID_H__ */
 

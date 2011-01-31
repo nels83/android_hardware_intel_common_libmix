@@ -12,20 +12,11 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsdec.h"
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
-* MIX_TYPE_VIDEOCONFIGPARAMSDEC_VC1:
-* 
-* Get type of class.
-*/
-#define MIX_TYPE_VIDEOCONFIGPARAMSDEC_VC1 (mix_videoconfigparamsdec_vc1_get_type ())
-
 /**
 * MIX_VIDEOCONFIGPARAMSDEC_VC1:
 * @obj: object to be type-casted.
 */
-#define MIX_VIDEOCONFIGPARAMSDEC_VC1(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_VC1, MixVideoConfigParamsDecVC1))
+#define MIX_VIDEOCONFIGPARAMSDEC_VC1(obj) (reinterpret_cast<MixVideoConfigParamsDecVC1*>(obj))
 
 /**
 * MIX_IS_VIDEOCONFIGPARAMSDEC_VC1:
@@ -33,43 +24,22 @@ G_BEGIN_DECLS
 * 
 * Checks if the given object is an instance of #MixVideoConfigParamsDecVC1
 */
-#define MIX_IS_VIDEOCONFIGPARAMSDEC_VC1(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_VC1))
-
-/**
-* MIX_VIDEOCONFIGPARAMSDEC_VC1_CLASS:
-* @klass: class to be type-casted.
-*/
-#define MIX_VIDEOCONFIGPARAMSDEC_VC1_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSDEC_VC1, MixVideoConfigParamsDecVC1Class))
-
-/**
-* MIX_IS_VIDEOCONFIGPARAMSDEC_VC1_CLASS:
-* @klass: a class.
-* 
-* Checks if the given class is #MixVideoConfigParamsDecVC1Class
-*/
-#define MIX_IS_VIDEOCONFIGPARAMSDEC_VC1_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSDEC_VC1))
-
-/**
-* MIX_VIDEOCONFIGPARAMSDEC_VC1_GET_CLASS:
-* @obj: a #MixParams object.
-* 
-* Get the class instance of the object.
-*/
-#define MIX_VIDEOCONFIGPARAMSDEC_VC1_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_VC1, MixVideoConfigParamsDecVC1Class))
-
-typedef struct _MixVideoConfigParamsDecVC1 MixVideoConfigParamsDecVC1;
-typedef struct _MixVideoConfigParamsDecVC1Class MixVideoConfigParamsDecVC1Class;
+#define MIX_IS_VIDEOCONFIGPARAMSDEC_VC1(obj) ((NULL != MIX_VIDEOCONFIGPARAMSDEC_VC1(obj)) ? TRUE : FALSE)
 
 /**
 * MixVideoConfigParamsDecVC1:
 *
 * MI-X VideoConfig Parameter object
 */
-struct _MixVideoConfigParamsDecVC1
+class MixVideoConfigParamsDecVC1 : public MixVideoConfigParamsDec
 {
-  /*< public > */
-  MixVideoConfigParamsDec parent;
-
+public:
+    MixVideoConfigParamsDecVC1();
+    ~MixVideoConfigParamsDecVC1();
+    virtual gboolean copy(MixParams *target) const;
+    virtual gboolean equal(MixParams* obj) const;
+    virtual MixParams* dup() const;
+public:
   /*< public > */
 
   /* TODO: Add VC1 configuration paramters */
@@ -93,27 +63,6 @@ struct _MixVideoConfigParamsDecVC1
   /* Reserved for future use */  
   void *reserved4;
 };
-
-/**
-* MixVideoConfigParamsDecVC1Class:
-* 
-* MI-X VideoConfig object class
-*/
-struct _MixVideoConfigParamsDecVC1Class
-{
-  /*< public > */
-  MixVideoConfigParamsDecClass parent_class;
-
-  /* class members */
-};
-
-/**
-* mix_videoconfigparamsdec_vc1_get_type:
-* @returns: type
-* 
-* Get the type of object.
-*/
-GType mix_videoconfigparamsdec_vc1_get_type (void);
 
 /**
 * mix_videoconfigparamsdec_vc1_new:
@@ -143,7 +92,4 @@ MixVideoConfigParamsDecVC1
 /* Class Methods */
 
 /* TODO: Add getters and setters for other properties */
-
-G_END_DECLS
-
 #endif /* __MIX_VIDEOCONFIGPARAMSDECDEC_VC1_H__ */

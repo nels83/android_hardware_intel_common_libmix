@@ -8,11 +8,9 @@ No license under any patent, copyright, trade secret or other intellectual prope
 
 #ifndef __MIX_VIDEOFRAME_PRIVATE_H__
 #define __MIX_VIDEOFRAME_PRIVATE_H__
-
+#if 0
 #include "mixvideoframe.h"
 #include "mixsurfacepool.h"
-
-G_BEGIN_DECLS
 
 typedef enum _MixFrameType
 {
@@ -22,30 +20,23 @@ typedef enum _MixFrameType
   TYPE_INVALID
 } MixFrameType;
 
-typedef struct _MixVideoFramePrivate MixVideoFramePrivate;
-
-struct _MixVideoFramePrivate
+class MixVideoFramePrivate    
 {
-  /*< private > */
-  MixSurfacePool *pool;
-  MixFrameType frame_type;
-  gboolean is_skipped;
-  MixVideoFrame *real_frame;
-  GStaticRecMutex lock;
-  gboolean sync_flag;
-  guint32 frame_structure; // 0: frame, 1: top field, 2: bottom field
-  void *va_display;
-  guint32 displayorder; 
+public:
+    MixVideoFramePrivate() 
+        :pool(NULL)
+        ,is_skipped(FALSE)
+        ,real_frame(NULL)
+        ,sync_flag(FALSE)
+        ,frame_structure(VA_FRAME_PICTURE)
+        ,va_display(NULL)
+    {}
+public:
+    /*< private > */
+
 };
 
-/**
-* MIX_VIDEOFRAME_PRIVATE:
-* 
-* Get private structure of this class.
-* @obj: class object for which to get private data.
-*/
-#define MIX_VIDEOFRAME_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), MIX_TYPE_VIDEOFRAME, MixVideoFramePrivate))
+
 
 
 /* Private functions */
@@ -87,8 +78,6 @@ mix_videoframe_set_displayorder(MixVideoFrame *obj, guint32 displayorder);
 
 MIX_RESULT
 mix_videoframe_get_displayorder(MixVideoFrame *obj, guint32 *displayorder);
-
-
-G_END_DECLS
+#endif
 
 #endif /* __MIX_VIDEOFRAME_PRIVATE_H__ */

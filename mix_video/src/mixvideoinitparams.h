@@ -13,20 +13,11 @@
 #include "mixdisplay.h"
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEOINITPARAMS:
- * 
- * Get type of class.
- */
-#define MIX_TYPE_VIDEOINITPARAMS (mix_videoinitparams_get_type ())
-
 /**
  * MIX_VIDEOINITPARAMS:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEOINITPARAMS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOINITPARAMS, MixVideoInitParams))
+#define MIX_VIDEOINITPARAMS(obj) (reinterpret_cast<MixVideoInitParams*>(obj))
 
 /**
  * MIX_IS_VIDEOINITPARAMS:
@@ -34,82 +25,39 @@ G_BEGIN_DECLS
  * 
  * Checks if the given object is an instance of #MixParams
  */
-#define MIX_IS_VIDEOINITPARAMS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOINITPARAMS))
-
-/**
- * MIX_VIDEOINITPARAMS_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_VIDEOINITPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOINITPARAMS, MixVideoInitParamsClass))
-
-/**
- * MIX_IS_VIDEOINITPARAMS_CLASS:
- * @klass: a class.
- * 
- * Checks if the given class is #MixParamsClass
- */
-#define MIX_IS_VIDEOINITPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOINITPARAMS))
-
-/**
- * MIX_VIDEOINITPARAMS_GET_CLASS:
- * @obj: a #MixParams object.
- * 
- * Get the class instance of the object.
- */
-#define MIX_VIDEOINITPARAMS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOINITPARAMS, MixVideoInitParamsClass))
-
-typedef struct _MixVideoInitParams MixVideoInitParams;
-typedef struct _MixVideoInitParamsClass MixVideoInitParamsClass;
+#define MIX_IS_VIDEOINITPARAMS(obj) ((NULL != MIX_VIDEOINITPARAMS(obj)) ? TRUE : FALSE)
 
 /**
  * MixVideoInitParams:
  *
  * MI-X VideoInit Parameter object
  */
-struct _MixVideoInitParams
-{
-  /*< public > */
-  MixParams parent;
+class MixVideoInitParams : public MixParams {
+public:
+	MixVideoInitParams();
+	~MixVideoInitParams();
+	virtual gboolean copy(MixParams *target) const;
+	virtual gboolean equal(MixParams* obj) const;
+	virtual MixParams* dup() const;
+public:
+	/*< public > */
 
-  /*< public > */
+	/* Pointer to a MixDisplay object 
+	* such as MixDisplayX11 */
+	MixDisplay *display;
 
-  /* Pointer to a MixDisplay object 
-   * such as MixDisplayX11 */
-  MixDisplay *display;
-  
-  /* Reserved for future use */
-  void *reserved1;
-  
-  /* Reserved for future use */  
-  void *reserved2;
-  
-  /* Reserved for future use */  
-  void *reserved3;
-  
-  /* Reserved for future use */  
-  void *reserved4;
+	/* Reserved for future use */
+	void *reserved1;
+
+	/* Reserved for future use */  
+	void *reserved2;
+
+	/* Reserved for future use */  
+	void *reserved3;
+
+	/* Reserved for future use */  
+	void *reserved4;
 };
-
-/**
- * MixVideoInitParamsClass:
- * 
- * MI-X VideoInit object class
- */
-struct _MixVideoInitParamsClass
-{
-  /*< public > */
-  MixParamsClass parent_class;
-
-  /* class members */
-};
-
-/**
- * mix_videoinitparams_get_type:
- * @returns: type
- * 
- * Get the type of object.
- */
-GType mix_videoinitparams_get_type (void);
 
 /**
  * mix_videoinitparams_new:
@@ -146,8 +94,8 @@ MixVideoInitParams *mix_videoinitparams_ref (MixVideoInitParams * mix);
  *
  * Set MixDisplay object 
  */
-MIX_RESULT mix_videoinitparams_set_display (MixVideoInitParams * obj,
-					    MixDisplay * display);
+MIX_RESULT mix_videoinitparams_set_display (
+	MixVideoInitParams * obj, MixDisplay * display);
 
 /**
  * mix_videoinitparams_get_display:
@@ -157,9 +105,9 @@ MIX_RESULT mix_videoinitparams_set_display (MixVideoInitParams * obj,
  *
  * Get MixDisplay object 
  */
-MIX_RESULT mix_videoinitparams_get_display (MixVideoInitParams * obj,
-					    MixDisplay ** dislay);
+MIX_RESULT mix_videoinitparams_get_display (
+	MixVideoInitParams * obj, MixDisplay ** dislay);
 
-G_END_DECLS
+
 
 #endif /* __MIX_VIDEOINITPARAMS_H__ */

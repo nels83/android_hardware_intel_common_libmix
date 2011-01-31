@@ -18,7 +18,6 @@
 #include "vbp_mp42_parser.h"
 
 
-
 /* buffer counter */         
 uint32 buffer_counter = 0;
 
@@ -424,8 +423,8 @@ uint32 vbp_utils_create_context(uint32 parser_type, vbp_context **ppcontext)
 
 	/* invoke the entry point to initialize the parser. */
 	pcontext->parser_ops->init(
-		(void *)pcontext->parser_cxt->codec_data,
-		(void *)pcontext->persist_mem,
+		(uint32_t *)pcontext->parser_cxt->codec_data,
+		(uint32_t *)pcontext->persist_mem,
 		 FALSE);
 
 	viddec_emit_init(&(pcontext->parser_cxt->emitter));

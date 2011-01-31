@@ -17,16 +17,25 @@ typedef struct
     uint32_t persist_size;
 }viddec_parser_memory_sizes_t;
 
+typedef    void  (*fn_init)(void *ctxt, uint32_t *persist, uint32_t preserve);
+typedef    uint32_t (*fn_parse_sc) (void *ctxt, void *pcxt, void *sc_state);
+typedef    uint32_t (*fn_parse_syntax) (void *parent, void *ctxt);
+typedef    void (*fn_get_cxt_size) (viddec_parser_memory_sizes_t *size);
+typedef    uint32_t (*fn_is_wkld_done)(void *parent, void *ctxt, uint32_t next_sc, uint32_t *codec_specific_errors);
+typedef    uint32_t (*fn_is_frame_start)(void *ctxt);
+typedef    uint32_t (*fn_gen_contrib_tags)(void *parent, uint32_t ignore_partial);
+typedef    uint32_t (*fn_gen_assoc_tags)(void *parent);
+
 typedef struct
 {
-    void  (*init)(void *ctxt, uint32_t *persist, uint32_t preserve);
-    uint32_t (*parse_sc) (void *ctxt, void *pcxt, void *sc_state);
-    uint32_t (*parse_syntax) (void *parent, void *ctxt);
-    void (*get_cxt_size) (viddec_parser_memory_sizes_t *size);
-    uint32_t (*is_wkld_done)(void *parent, void *ctxt, uint32_t next_sc, uint32_t *codec_specific_errors);
-    uint32_t (*is_frame_start)(void *ctxt);
-    uint32_t (*gen_contrib_tags)(void *parent, uint32_t ignore_partial);
-    uint32_t (*gen_assoc_tags)(void *parent);
+    fn_init init;
+    fn_parse_sc parse_sc;
+    fn_parse_syntax parse_syntax;
+    fn_get_cxt_size get_cxt_size;
+    fn_is_wkld_done is_wkld_done;
+    fn_is_frame_start is_frame_start;
+    fn_gen_contrib_tags gen_contrib_tags;
+    fn_gen_assoc_tags gen_assoc_tags;
 }viddec_parser_ops_t;
 
 

@@ -12,20 +12,13 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEOFRAME:
- *
- * Get type of class.
- */
-#define MIX_TYPE_VIDEOFRAME (mix_videoframe_get_type ())
+class MixSurfacePool;
 
 /**
  * MIX_VIDEOFRAME:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEOFRAME(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOFRAME, MixVideoFrame))
+#define MIX_VIDEOFRAME(obj) (reinterpret_cast<MixVideoFrame*>(obj))
 
 /**
  * MIX_IS_VIDEOFRAME:
@@ -33,44 +26,32 @@ G_BEGIN_DECLS
  *
  * Checks if the given object is an instance of #MixVideoFrame
  */
-#define MIX_IS_VIDEOFRAME(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOFRAME))
+#define MIX_IS_VIDEOFRAME(obj) ((NULL != MIX_VIDEOFRAME(obj)) ? TRUE : FALSE)
 
-/**
- * MIX_VIDEOFRAME_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_VIDEOFRAME_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOFRAME, MixVideoFrameClass))
 
-/**
- * MIX_IS_VIDEOFRAME_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixVideoFrameClass
- */
-#define MIX_IS_VIDEOFRAME_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOFRAME))
 
-/**
- * MIX_VIDEOFRAME_GET_CLASS:
- * @obj: a #MixVideoFrame object.
- *
- * Get the class instance of the object.
- */
-#define MIX_VIDEOFRAME_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOFRAME, MixVideoFrameClass))
-
-typedef struct _MixVideoFrame MixVideoFrame;
-typedef struct _MixVideoFrameClass MixVideoFrameClass;
+typedef enum _MixFrameType {
+	TYPE_I,
+	TYPE_P,
+	TYPE_B,
+	TYPE_INVALID
+} MixFrameType;
 
 /**
  * MixVideoFrame:
  *
  * MI-X VideoConfig Parameter object
  */
-struct _MixVideoFrame {
-	/*< public > */
-	MixParams parent;
-
-	/*< public > */
-	
+class MixVideoFrame : public MixParams {
+public:
+	MixVideoFrame();
+	~MixVideoFrame();
+	virtual gboolean copy(MixParams *target) const;
+	virtual gboolean equal(MixParams* obj) const;
+	virtual MixParams* dup() const;
+	void Lock();
+	void Unlock();
+public:
 	/* ID associated with the decoded frame */
 	gulong frame_id;
 	
@@ -101,27 +82,20 @@ struct _MixVideoFrame {
 	
 	/* Reserved for future use */ 
 	void *reserved4;
+
+public:
+	// from structure MixVideoFramePrivate
+	MixSurfacePool *pool;
+	MixFrameType frame_type;
+	gboolean is_skipped;
+	MixVideoFrame *real_frame;
+	GStaticRecMutex lock;
+	gboolean sync_flag;
+	guint32 frame_structure; // 0: frame, 1: top field, 2: bottom field
+	void *va_display;
+	guint32 displayorder;
+
 };
-
-/**
- * MixVideoFrameClass:
- *
- * MI-X VideoConfig object class
- */
-struct _MixVideoFrameClass {
-	/*< public > */
-	MixParamsClass parent_class;
-
-	/* class members */
-};
-
-/**
- * mix_videoframe_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoframe_get_type(void);
 
 /**
  * mix_videoframe_new:
@@ -237,6 +211,45 @@ MIX_RESULT mix_videoframe_set_vadisplay(MixVideoFrame * obj, void *va_display);
 MIX_RESULT mix_videoframe_get_vadisplay(MixVideoFrame * obj, void **va_display);
 MIX_RESULT mix_videoframe_get_frame_structure(MixVideoFrame * obj, guint32* frame_structure);
 
-G_END_DECLS
+// from private structure MixVideoFramePrivate
+/* Private functions */
+MIX_RESULT
+mix_videoframe_set_pool (MixVideoFrame *obj, MixSurfacePool *pool);
+
+MIX_RESULT
+mix_videoframe_set_frame_type (MixVideoFrame *obj,  MixFrameType frame_type);
+
+MIX_RESULT
+mix_videoframe_get_frame_type (MixVideoFrame *obj,  MixFrameType *frame_type);
+
+MIX_RESULT
+mix_videoframe_set_is_skipped (MixVideoFrame *obj,  gboolean is_skipped);
+
+MIX_RESULT
+mix_videoframe_get_is_skipped (MixVideoFrame *obj,  gboolean *is_skipped);
+
+MIX_RESULT
+mix_videoframe_set_real_frame (MixVideoFrame *obj,  MixVideoFrame *real);
+
+MIX_RESULT
+mix_videoframe_get_real_frame (MixVideoFrame *obj,  MixVideoFrame **real);
+
+MIX_RESULT
+mix_videoframe_reset(MixVideoFrame *obj);
+
+MIX_RESULT
+mix_videoframe_set_sync_flag(MixVideoFrame *obj, gboolean sync_flag);
+
+MIX_RESULT
+mix_videoframe_get_sync_flag(MixVideoFrame *obj, gboolean *sync_flag);
+
+MIX_RESULT 
+mix_videoframe_set_frame_structure(MixVideoFrame * obj, guint32 frame_structure);
+
+MIX_RESULT
+mix_videoframe_set_displayorder(MixVideoFrame *obj, guint32 displayorder);
+
+MIX_RESULT
+mix_videoframe_get_displayorder(MixVideoFrame *obj, guint32 *displayorder);
 
 #endif /* __MIX_VIDEOFRAME_H__ */

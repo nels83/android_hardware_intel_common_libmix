@@ -13,17 +13,10 @@
 #include "mixparams.h"
 
 /**
- * MIX_TYPE_DRMPARAMS:
- * 
- * Get type of class.
- */
-#define MIX_TYPE_DRMPARAMS (mix_drmparams_get_type ())
-
-/**
  * MIX_DRMPARAMS:
  * @obj: object to be type-casted.
  */
-#define MIX_DRMPARAMS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_DRMPARAMS, MixDrmParams))
+#define MIX_DRMPARAMS(obj) (reinterpret_cast<MixDrmParams*>(obj))
 
 /**
  * MIX_IS_DRMPARAMS:
@@ -31,66 +24,19 @@
  * 
  * Checks if the given object is an instance of #MixParams
  */
-#define MIX_IS_DRMPARAMS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_DRMPARAMS))
-
-/**
- * MIX_DRMPARAMS_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_DRMPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_DRMPARAMS, MixDrmParamsClass))
-
-/**
- * MIX_IS_DRMPARAMS_CLASS:
- * @klass: a class.
- * 
- * Checks if the given class is #MixParamsClass
- */
-#define MIX_IS_DRMPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_DRMPARAMS))
-
-/**
- * MIX_DRMPARAMS_GET_CLASS:
- * @obj: a #MixParams object.
- * 
- * Get the class instance of the object.
- */
-#define MIX_DRMPARAMS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_DRMPARAMS, MixDrmParamsClass))
-
-typedef struct _MixDrmParams        MixDrmParams;
-typedef struct _MixDrmParamsClass   MixDrmParamsClass;
+#define MIX_IS_DRMPARAMS(obj) (NULL != MIX_DRMPARAMS(obj))
 
 /**
  * MixDrmParams:
  *
  * MI-X Drm Parameter object
  */
-struct _MixDrmParams
-{
-  /*< public >*/
-  MixParams parent;
-
-  /*< public >*/
+class MixDrmParams : public MixParams {
+public:
+  MixDrmParams();
+  virtual ~MixDrmParams();
+  virtual MixParams * dup () const;
 };
-
-/**
- * MixDrmParamsClass:
- * 
- * MI-X Drm object class
- */
-struct _MixDrmParamsClass
-{
-  /*< public >*/
-  MixParamsClass parent_class;
-
-  /* class members */
-};
-
-/**
- * mix_drmparams_get_type:
- * @returns: type
- * 
- * Get the type of object.
- */
-GType mix_drmparams_get_type (void);
 
 /**
  * mix_drmparams_new:

@@ -1,41 +1,34 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-#MIXVIDEO_LOG_ENABLE := true
+MIXVIDEO_LOG_ENABLE := true
 
 LOCAL_SRC_FILES := 			\
-	mixbuffer.c			\
-	mixbufferpool.c			\
-	mixdisplay.c			\
-	mixdisplayandroid.c		\
-	mixframemanager.c		\
-	mixsurfacepool.c		\
-	mixvideo.c			\
-	mixvideocaps.c			\
-	mixvideoconfigparams.c		\
-	mixvideoconfigparamsdec.c	\
-	mixvideoconfigparamsdec_h264.c	\
-	mixvideoconfigparamsdec_mp42.c	\
-	mixvideoconfigparamsdec_vc1.c	\
-	mixvideoconfigparamsenc.c	\
-	mixvideoconfigparamsenc_h264.c	\
-	mixvideoconfigparamsenc_h263.c	\
-	mixvideoconfigparamsenc_mpeg4.c	\
-	mixvideoconfigparamsenc_preview.c \
-	mixvideodecodeparams.c		\
-	mixvideoencodeparams.c		\
-	mixvideoformat.c		\
-	mixvideoformat_h264.c		\
-	mixvideoformat_mp42.c		\
-	mixvideoformat_vc1.c		\
-	mixvideoformatenc.c		\
-	mixvideoformatenc_h264.c	\
-	mixvideoformatenc_h263.c	\
-	mixvideoformatenc_mpeg4.c	\
-	mixvideoformatenc_preview.c	\
-	mixvideoframe.c			\
-	mixvideoinitparams.c		\
-	mixvideorenderparams.c
+	mixvideothread.cpp			\
+	mixbuffer.cpp			\
+	mixbufferpool.cpp			\
+	mixdisplay.cpp			\
+	mixdisplayandroid.cpp		\
+	mixframemanager.cpp		\
+	mixsurfacepool.cpp		\
+	mixvideo.cpp			\
+	mixvideocaps.cpp			\
+	mixvideoconfigparams.cpp		\
+	mixvideoconfigparamsdec.cpp	\
+	mixvideoconfigparamsdec_h264.cpp	\
+	mixvideoconfigparamsdec_mp42.cpp	\
+	mixvideoconfigparamsdec_vc1.cpp	\
+	mixvideodecodeparams.cpp		\
+	mixvideoformat.cpp		\
+	mixvideoformat_h264.cpp		\
+	mixvideoformat_mp42.cpp		\
+	mixvideoformat_vc1.cpp		\
+	mixvideoframe.cpp			\
+	mixvideoinitparams.cpp		\
+	mixvideorenderparams.cpp	\
+	mixvideoconfigparamsenc.cpp		\
+	mixvideoconfigparamsenc_h264.cpp	\
+	mixvideoconfigparamsenc_h263.cpp	
 
 LOCAL_CFLAGS :=			\
 	-DMIXVIDEO_AGE=1	\
@@ -49,32 +42,34 @@ LOCAL_C_INCLUDES :=				\
 	$(GLIB_TOP)				\
 	$(GLIB_TOP)/android			\
 	$(GLIB_TOP)/glib			\
-	$(GLIB_TOP)/gobject			\
 	$(TARGET_OUT_HEADERS)/libmixcommon	\
 	$(TARGET_OUT_HEADERS)/libmixvbp		\
 	$(TARGET_OUT_HEADERS)/libva
 
+LOCAL_LDLIBS += -lpthread
+
 LOCAL_SHARED_LIBRARIES :=	\
-	libcutils		\
-	libglib-2.0		\
-	libgobject-2.0		\
-	libgthread-2.0		\
-	libgmodule-2.0		\
+	libcutils			\
+	libglib-2.0			\
 	libmixcommon		\
-	libmixvbp		\
-        libva                   \
-        libva-android	        \
+	libmixvbp			\
+	libva				\
+	libva-android		\
 	libva-tpi
 
-LOCAL_CFLAGS += -DANDROID
+
+LOCAL_CFLAGS += -DANDROID	\
+				-DMIXVIDEO_ENCODE_ENABLE=0
+
 ifeq ($(strip $(MIXVIDEO_LOG_ENABLE)),true)
-LOCAL_CFLAGS += -DMIX_LOG_ENABLE
+LOCAL_CFLAGS +=
 LOCAL_SHARED_LIBRARIES += liblog
 endif
 
 LOCAL_COPY_HEADERS_TO := libmixvideo
 
 LOCAL_COPY_HEADERS :=			\
+	mixvideothread.h			\
 	mixbuffer.h			\
 	mixbuffer_private.h		\
 	mixbufferpool.h			\
@@ -93,7 +88,7 @@ LOCAL_COPY_HEADERS :=			\
 	mixvideoconfigparamsdec_vc1.h	\
 	mixvideoconfigparamsenc.h	\
 	mixvideoconfigparamsenc_h264.h	\
-        mixvideoconfigparamsenc_h263.h  \
+	mixvideoconfigparamsenc_h263.h  \
 	mixvideoconfigparamsenc_mpeg4.h	\
 	mixvideoconfigparamsenc_preview.h \
 	mixvideodecodeparams.h		\
@@ -114,7 +109,7 @@ LOCAL_COPY_HEADERS :=			\
 	mixvideorenderparams.h		\
 	mixvideorenderparams_internal.h
 
-LOCAL_MODULE := libmixvideo
 LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libmixvideo
 
 include $(BUILD_SHARED_LIBRARY)

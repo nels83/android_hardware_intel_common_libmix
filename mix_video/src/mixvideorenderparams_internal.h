@@ -9,33 +9,14 @@
 #ifndef __MIX_VIDEORENDERPARAMS_PRIVATE_H__
 #define __MIX_VIDEORENDERPARAMS_PRIVATE_H__
 
-G_BEGIN_DECLS
-
-
-typedef struct _MixVideoRenderParamsPrivate MixVideoRenderParamsPrivate;
-
-struct _MixVideoRenderParamsPrivate {
-	/*< private > */
-
-	VARectangle *va_cliprects;
-};
-
-/**
- * MIX_VIDEO_PRIVATE:
- *
- * Get private structure of this class.
- * @obj: class object for which to get private data.
- */
-#define MIX_VIDEORENDERPARAMS_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), MIX_TYPE_VIDEORENDERPARAMS, MixVideoRenderParamsPrivate))
+#include <va/va.h>
 
 /* Internal function */
-
 MIX_RESULT mix_videorenderparams_get_cliprects_internal(
 		MixVideoRenderParams * obj,
 		VARectangle ** va_cliprects,
 		guint* number_of_cliprects);
 
-G_END_DECLS
+
 
 #endif /* __MIX_VIDEORENDERPARAMS_PRIVATE_H__ */

@@ -12,7 +12,7 @@
 
 
 
-//#define VBP_TRACE
+#define VBP_TRACE
 
 
 #ifdef VBP_TRACE /* if VBP_TRACE is defined*/

@@ -181,7 +181,7 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
 	///////////////////////////////////// Slice Data ////////////////////////////////
   // h264_fill_slice_data(pInfo, &slice_data);
 
-   wi.vwi_type = VIDDEC_WORKLOAD_H264_SLICE_REG;
+   wi.vwi_type = (workload_item_type)(VIDDEC_WORKLOAD_H264_SLICE_REG);
 
    wi.data.data_offset = slice_data.h264_bsd_slice_start;
    wi.data.data_payload[0] = slice_data.h264_bsd_slice_p1;
@@ -200,7 +200,7 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
    ///////////////////////////predict weight table item and data if have///////////////////////////
    if(pInfo->h264_pwt_enabled)
    {
-      wi.vwi_type = VIDDEC_WORKLOAD_H264_PWT_BITS_OFFSET;      
+      wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_H264_PWT_BITS_OFFSET;      
       wi.data.data_offset = pInfo->h264_pwt_end_byte_offset- pInfo->h264_pwt_start_byte_offset+1;
       wi.data.data_payload[0] = pInfo->h264_pwt_start_bit_offset;
       wi.data.data_payload[1] = pInfo->h264_pwt_end_bit_offset;     
@@ -209,7 +209,7 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
       {            
         // viddec_pm_append_workitem( parent , &wi);
 
-         wi.vwi_type = VIDDEC_WORKLOAD_H264_PWT_ES_BYTES;
+         wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_H264_PWT_ES_BYTES;
          wi.es.es_flags = 0;
         // viddec_pm_append_misc_tags(parent, pInfo->h264_pwt_start_byte_offset, pInfo->h264_pwt_end_byte_offset,&wi,1);
       }
@@ -217,7 +217,7 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
       {
        //  viddec_pm_append_workitem_next( parent , &wi);
 
-         wi.vwi_type = VIDDEC_WORKLOAD_H264_PWT_ES_BYTES;
+         wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_H264_PWT_ES_BYTES;
          wi.es.es_flags = 0;
        //  viddec_pm_append_misc_tags(parent, pInfo->h264_pwt_start_byte_offset, pInfo->h264_pwt_end_byte_offset,&wi,0);          
       }    
@@ -241,7 +241,7 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
 	else
    {
       if(0!=bits_offset)  {
-         wi.vwi_type = VIDDEC_WORKLOAD_H264_SH_BITS_OFFSET;
+         wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_H264_SH_BITS_OFFSET;
          wi.data.data_offset = bits_offset;
          wi.data.data_payload[0]=0;
          wi.data.data_payload[1]=0;
@@ -293,7 +293,7 @@ void h264_parse_emit_current_pic( void *parent, h264_Info *pInfo )
    // Dump slice data to an array of workitems,  to do pl access non valid mem
    for( i = 0; i < nitems; i++ )
    {
-      wi.vwi_type           = VIDDEC_WORKLOAD_H264_PIC_REG;
+      wi.vwi_type           = (workload_item_type)VIDDEC_WORKLOAD_H264_PIC_REG;
       wi.data.data_offset   = (unsigned int)pl - (unsigned int)&pic_data; // offset within struct
       wi.data.data_payload[0] = pl[0];
       wi.data.data_payload[1] = pl[1];
@@ -349,7 +349,7 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 
 	for(i=0; i<nitems; i++)
 	{      
-		wi.vwi_type = VIDDEC_WORKLOAD_REF_FRAME_DISPLAY_0 + pInfo->dpb.frame_id_need_to_be_displayed[i];
+		wi.vwi_type = (workload_item_type)(VIDDEC_WORKLOAD_REF_FRAME_DISPLAY_0 + pInfo->dpb.frame_id_need_to_be_displayed[i]);
 		wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_displayed[i];
 		wi.ref_frame.luma_phys_addr = 0;
 		wi.ref_frame.chroma_phys_addr = 0;
@@ -371,7 +371,7 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 
 	for(i=0; i<nitems; i++)
 	{      
-	   wi.vwi_type = VIDDEC_WORKLOAD_REF_FRAME_RELEASE_0 + pInfo->dpb.frame_id_need_to_be_removed[i];
+	   wi.vwi_type = (workload_item_type)(VIDDEC_WORKLOAD_REF_FRAME_RELEASE_0 + pInfo->dpb.frame_id_need_to_be_removed[i]);
 	   wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_removed[i];
 	   wi.ref_frame.luma_phys_addr = 0;
 	   wi.ref_frame.chroma_phys_addr = 0;
@@ -393,7 +393,7 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 
 	for(i=0; i<nitems; i++)
 	{      
-	   wi.vwi_type = VIDDEC_WORKLOAD_REF_FRAME_DROPOUT_0 + pInfo->dpb.frame_id_need_to_be_dropped[i];
+	   wi.vwi_type = (workload_item_type)(VIDDEC_WORKLOAD_REF_FRAME_DROPOUT_0 + pInfo->dpb.frame_id_need_to_be_dropped[i]);
 	   wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_dropped[i];
 	   wi.ref_frame.luma_phys_addr = 0;
 	   wi.ref_frame.chroma_phys_addr = 0;
@@ -418,7 +418,7 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 
 	   if(viddec_h264_get_is_non_existent(&(pInfo->dpb.fs[fs_id])) == 0)
 	   {   
-	      wi.vwi_type = VIDDEC_WORKLOAD_DPB_ACTIVE_FRAME_0+fs_id;
+	      wi.vwi_type = (workload_item_type)(VIDDEC_WORKLOAD_DPB_ACTIVE_FRAME_0+fs_id);
 	      wi.ref_frame.reference_id = fs_id;
 	      wi.ref_frame.luma_phys_addr = 0;
 	      wi.ref_frame.chroma_phys_addr = 0;
@@ -443,7 +443,7 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 
 	   if(viddec_h264_get_is_non_existent(&(pInfo->dpb.fs[fs_id])) == 0)
 	   {
-	      wi.vwi_type = VIDDEC_WORKLOAD_H264_DPB_FRAME_POC;
+	      wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_H264_DPB_FRAME_POC;
 	      wi.data.data_offset = fs_id;	      
 	      //printf("is_used = %d, tpoc = %d, bpoc = %d\n", pInfo->dpb.fs[fs_id].is_used, pInfo->dpb.fs[fs_id].top_field.poc, pInfo->dpb.fs[fs_id].bottom_field.poc);
 
@@ -530,7 +530,7 @@ void h264_parse_emit_eos( void *parent, h264_Info *pInfo )
 
 	for(i=0; i<nitems; i++)
 	{      
-		wi.vwi_type = VIDDEC_WORKLOAD_EOS_DISPLAY_FRAME_0 + pInfo->dpb.frame_id_need_to_be_displayed[i];
+		wi.vwi_type = (workload_item_type)(VIDDEC_WORKLOAD_EOS_DISPLAY_FRAME_0 + pInfo->dpb.frame_id_need_to_be_displayed[i]);
 		wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_displayed[i];
 		wi.ref_frame.luma_phys_addr = 0;
 		wi.ref_frame.chroma_phys_addr = 0;
@@ -552,7 +552,7 @@ void h264_parse_emit_eos( void *parent, h264_Info *pInfo )
 
 	for(i=0; i<nitems; i++)
 	{      
-	   wi.vwi_type = VIDDEC_WORKLOAD_EOS_RELEASE_FRAME_0 + pInfo->dpb.frame_id_need_to_be_removed[i];
+	   wi.vwi_type = (workload_item_type)(VIDDEC_WORKLOAD_EOS_RELEASE_FRAME_0 + pInfo->dpb.frame_id_need_to_be_removed[i]);
 	   wi.ref_frame.reference_id = pInfo->dpb.frame_id_need_to_be_removed[i];
 	   wi.ref_frame.luma_phys_addr = 0;
 	   wi.ref_frame.chroma_phys_addr = 0;

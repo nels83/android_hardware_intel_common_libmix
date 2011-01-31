@@ -12,64 +12,60 @@
 #include "mixvideoformat.h"
 #include "mixvideoframe_private.h"
 
-G_BEGIN_DECLS
-
 //Note: this is only a max limit.  Real number of surfaces allocated is calculated in mix_videoformat_mp42_initialize()
 #define MIX_VIDEO_MP42_SURFACE_NUM	8
 
 /*
  * Type macros.
  */
-#define MIX_TYPE_VIDEOFORMAT_MP42                  (mix_videoformat_mp42_get_type ())
-#define MIX_VIDEOFORMAT_MP42(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOFORMAT_MP42, MixVideoFormat_MP42))
-#define MIX_IS_VIDEOFORMAT_MP42(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOFORMAT_MP42))
-#define MIX_VIDEOFORMAT_MP42_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOFORMAT_MP42, MixVideoFormat_MP42Class))
-#define MIX_IS_VIDEOFORMAT_MP42_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOFORMAT_MP42))
-#define MIX_VIDEOFORMAT_MP42_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOFORMAT_MP42, MixVideoFormat_MP42Class))
+#define MIX_VIDEOFORMAT_MP42(obj)		(reinterpret_cast<MixVideoFormat_MP42*>(obj))
+#define MIX_IS_VIDEOFORMAT_MP42(obj)	(NULL != MIX_VIDEOFORMAT_MP42(obj))
 
-typedef struct _MixVideoFormat_MP42 MixVideoFormat_MP42;
-typedef struct _MixVideoFormat_MP42Class MixVideoFormat_MP42Class;
+class MixVideoFormat_MP42 : public MixVideoFormat {
+public:
+	MixVideoFormat_MP42();
+	virtual ~MixVideoFormat_MP42();
 
-struct _MixVideoFormat_MP42 {
+	virtual MIX_RESULT Initialize(
+		MixVideoConfigParamsDec * config_params,
+		MixFrameManager * frame_mgr,
+		MixBufferPool * input_buf_pool,
+		MixSurfacePool ** surface_pool,
+		VADisplay va_display);
+	virtual MIX_RESULT Decode(
+		MixBuffer * bufin[], gint bufincnt, 
+		MixVideoDecodeParams * decode_params);
+	virtual MIX_RESULT Flush();
+	virtual MIX_RESULT EndOfStream();
+
+private:
+	MIX_RESULT _handle_ref_frames(
+		enum _picture_type frame_type, MixVideoFrame * current_frame);
+	MIX_RESULT _release_input_buffers(guint64 timestamp);
+	MIX_RESULT _update_config_params(vbp_data_mp42 *data);
+	MIX_RESULT _initialize_va(vbp_data_mp42 *data);
+	MIX_RESULT _decode_a_slice(
+		vbp_data_mp42* data, vbp_picture_data_mp42* pic_data);
+	MIX_RESULT _decode_end(gboolean drop_picture);
+	MIX_RESULT _decode_continue(vbp_data_mp42 *data);
+	MIX_RESULT _decode_begin(vbp_data_mp42* data);
+	MIX_RESULT _decode_a_buffer(
+		MixBuffer * bufin, guint64 ts, gboolean discontinuity);
+
+public:
 	/*< public > */
-	MixVideoFormat parent;
-
-	/*< public > */
-
-	/*< private > */
 	MixVideoFrame * reference_frames[2];
 	MixVideoFrame * last_frame;
 	gint last_vop_coding_type;
 	guint last_vop_time_increment;
 
-    /* indicate if future n-vop is a placeholder of a packed frame */
-    gboolean next_nvop_for_PB_frame;
-    
-    /* indicate if iq_matrix_buffer is sent to driver */
-    gboolean iq_matrix_buf_sent;
+	/* indicate if future n-vop is a placeholder of a packed frame */
+	gboolean next_nvop_for_PB_frame;
+
+	/* indicate if iq_matrix_buffer is sent to driver */
+	gboolean iq_matrix_buf_sent;
 };
 
-/**
- * MixVideoFormat_MP42Class:
- *
- * MI-X Video object class
- */
-struct _MixVideoFormat_MP42Class {
-	/*< public > */
-	MixVideoFormatClass parent_class;
-
-/* class members */
-
-/*< public > */
-};
-
-/**
- * mix_videoformat_mp42_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoformat_mp42_get_type(void);
 
 /**
  * mix_videoformat_mp42_new:
@@ -94,33 +90,6 @@ MixVideoFormat_MP42 *mix_videoformat_mp42_ref(MixVideoFormat_MP42 * mix);
  *
  * Decrement reference count of the object.
  */
-#define mix_videoformat_mp42_unref(obj) g_object_unref (G_OBJECT(obj))
-
-/* Class Methods */
-
-/* MP42 vmethods */
-MIX_RESULT mix_videofmt_mp42_getcaps(MixVideoFormat *mix, GString *msg);
-MIX_RESULT mix_videofmt_mp42_initialize(MixVideoFormat *mix,
-		MixVideoConfigParamsDec * config_params, MixFrameManager * frame_mgr,
-		MixBufferPool * input_buf_pool, MixSurfacePool ** surface_pool,
-		VADisplay va_display);
-MIX_RESULT mix_videofmt_mp42_decode(MixVideoFormat *mix, MixBuffer * bufin[],
-		gint bufincnt, MixVideoDecodeParams * decode_params);
-MIX_RESULT mix_videofmt_mp42_flush(MixVideoFormat *mix);
-MIX_RESULT mix_videofmt_mp42_eos(MixVideoFormat *mix);
-MIX_RESULT mix_videofmt_mp42_deinitialize(MixVideoFormat *mix);
-
-/* Local Methods */
-
-MIX_RESULT mix_videofmt_mp42_handle_ref_frames(MixVideoFormat *mix,
-		enum _picture_type frame_type, MixVideoFrame * current_frame);
-
-MIX_RESULT mix_videofmt_mp42_process_decode(MixVideoFormat *mix,
-		vbp_data_mp42 *data, guint64 timestamp, gboolean discontinuity);
-
-MIX_RESULT mix_videofmt_mp42_release_input_buffers(MixVideoFormat *mix,
-		guint64 timestamp);
-
-G_END_DECLS
+MixVideoFormat_MP42 *mix_videoformat_mp42_unref(MixVideoFormat_MP42 * mix);
 
 #endif /* __MIX_VIDEOFORMAT_MP42_H__ */

@@ -12,90 +12,36 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEOCONFIGPARAMS:
- *
- * Get type of class.
- */
-#define MIX_TYPE_VIDEOCONFIGPARAMS (mix_videoconfigparams_get_type ())
-
 /**
  * MIX_VIDEOCONFIGPARAMS:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEOCONFIGPARAMS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMS, MixVideoConfigParams))
+#define MIX_VIDEOCONFIGPARAMS(obj) (reinterpret_cast<MixVideoConfigParams*>(obj))
 
-/**
- * MIX_IS_VIDEOCONFIGPARAMS:
- * @obj: an object.
- *
- * Checks if the given object is an instance of #MixParams
- */
-#define MIX_IS_VIDEOCONFIGPARAMS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMS))
-
-/**
- * MIX_VIDEOCONFIGPARAMS_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_VIDEOCONFIGPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMS, MixVideoConfigParamsClass))
-
-/**
- * MIX_IS_VIDEOCONFIGPARAMS_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixParamsClass
- */
-#define MIX_IS_VIDEOCONFIGPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMS))
-
-/**
- * MIX_VIDEOCONFIGPARAMS_GET_CLASS:
- * @obj: a #MixParams object.
- *
- * Get the class instance of the object.
- */
-#define MIX_VIDEOCONFIGPARAMS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMS, MixVideoConfigParamsClass))
-
-typedef struct _MixVideoConfigParams MixVideoConfigParams;
-typedef struct _MixVideoConfigParamsClass MixVideoConfigParamsClass;
 
 /**
  * MixVideoConfigParams:
  *
  * MI-X VideoConfig Parameter object
  */
-struct _MixVideoConfigParams {
+class MixVideoConfigParams : public MixParams {
+public:
+    MixVideoConfigParams();
+    virtual ~MixVideoConfigParams();
+    virtual gboolean copy(MixParams *target) const;
+    virtual gboolean equal(MixParams* obj) const;
+    virtual MixParams* dup() const;
 	/*< public > */
-	MixParams parent;
+	//MixParams parent;
 
 	/*< private > */
-
+protected:
 	void *reserved1;
 	void *reserved2;
 	void *reserved3;
 	void *reserved4;
 };
 
-/**
- * MixVideoConfigParamsClass:
- *
- * MI-X VideoConfig object class
- */
-struct _MixVideoConfigParamsClass {
-	/*< public > */
-	MixParamsClass parent_class;
-
-/* class members */
-};
-
-/**
- * mix_videoconfigparams_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoconfigparams_get_type(void);
 
 /**
  * mix_videoconfigparams_new:
@@ -126,6 +72,5 @@ MixVideoConfigParams *mix_videoconfigparams_ref(MixVideoConfigParams * mix);
 
 /* TODO: Add getters and setters for other properties */
 
-G_END_DECLS
 
 #endif /* __MIX_VIDEOCONFIGPARAMS_H__ */

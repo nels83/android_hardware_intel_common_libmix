@@ -340,7 +340,7 @@ mp4_Status_t mp4_Parse_VideoObject_svh(void *parent, viddec_mp4_parser_t *parser
 
         viddec_fw_mp4_vpsh_set_source_format(&wi.mp4_vpsh, svh->source_format);
 
-        ret = viddec_pm_append_workitem(parent, &wi, false);
+        ret = (mp4_Status_t)viddec_pm_append_workitem(parent, &wi, false);
         if(ret == 1)
             ret = MP4_STATUS_OK;
     }

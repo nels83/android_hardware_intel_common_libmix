@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "viddec_fw_workload.h"
 #include "viddec_parser_ops.h"
 #include "viddec_fw_mp4.h"
@@ -70,7 +72,7 @@ uint32_t viddec_fw_mp4_insert_vol_workitem(void *parent, viddec_mp4_parser_t *pa
     viddec_fw_mp4_set_vop_time_increment_resolution(&vol_info, vol->vop_time_increment_resolution);
 
 
-    wi.vwi_type = VIDDEC_WORKLOAD_MP4_VOL_INFO;
+    wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_VOL_INFO;
     wi.vwi_payload[0] = vol_info.vol_flags;
     wi.vwi_payload[1] = vol_info.vol_size;
     wi.vwi_payload[2] = vol_info.vol_item;
@@ -119,7 +121,7 @@ uint32_t viddec_fw_mp4_insert_vop_workitem(void *parent, viddec_mp4_parser_t *pa
     // Get vol_item
     result = viddec_pm_get_au_pos(parent, &vop_info.bit_offset, &byte, &is_emul);
 
-    wi.vwi_type = VIDDEC_WORKLOAD_MP4_VOP_INFO;
+    wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_VOP_INFO;
     wi.vwi_payload[0] = vop_info.frame_info;
     wi.vwi_payload[1] = vop_info.vop_data;
     wi.vwi_payload[2] = vop_info.bit_offset;
@@ -144,7 +146,7 @@ uint32_t viddec_fw_mp4_insert_vpsh_workitem(void *parent, viddec_mp4_parser_t *p
     viddec_fw_mp4_set_num_gobs_in_vop(&svh_info, svh->num_gobs_in_vop);
     viddec_fw_mp4_set_num_rows_in_gob(&svh_info, svh->num_rows_in_gob);
 
-    wi.vwi_type = VIDDEC_WORKLOAD_MP4_SVH;
+    wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_SVH;
     wi.vwi_payload[0] = svh_info.svh_data;
     wi.vwi_payload[1] = svh_info.pad1;
     wi.vwi_payload[2] = svh_info.pad2;
@@ -190,7 +192,7 @@ uint32_t viddec_fw_mp4_insert_sprite_workitem(void *parent, viddec_mp4_parser_t 
             warp_index++;
         }
 
-        wi.vwi_type = VIDDEC_WORKLOAD_MP4_SPRT_TRAJ;
+        wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_SPRT_TRAJ;
         wi.vwi_payload[0] = sprite_info.warping_mv_code[0];
         wi.vwi_payload[1] = sprite_info.warping_mv_code[1];
         wi.vwi_payload[2] = sprite_info.warping_mv_code[2];
@@ -207,7 +209,7 @@ uint32_t viddec_fw_mp4_insert_bvop_workitem(void *parent, viddec_mp4_parser_t *p
     viddec_workload_item_t wi;
     mp4_VideoObjectLayer_t *vol = &(parser->info.VisualObject.VideoObject);
 
-    wi.vwi_type = VIDDEC_WORKLOAD_MP4_BVOP_INFO;
+    wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_BVOP_INFO;
     wi.vwi_payload[0] = vol->Tframe;
     wi.vwi_payload[1] = vol->TRD;
     wi.vwi_payload[2] = vol->TRB;
@@ -231,9 +233,9 @@ uint32_t viddec_fw_mp4_insert_qmat(void *parent, uint8_t intra_quant_flag, uint3
         memset(&wi, 0, sizeof(viddec_workload_item_t));
 
         if(intra_quant_flag)
-            wi.vwi_type = VIDDEC_WORKLOAD_MP4_IQUANT;
+            wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_IQUANT;
         else
-            wi.vwi_type = VIDDEC_WORKLOAD_MP4_NIQUANT;
+            wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_NIQUANT;
 
         if(i == 6)
         {
@@ -278,7 +280,7 @@ uint32_t viddec_fw_mp4_insert_past_frame_workitem(void *parent)
     uint32_t result = MP4_STATUS_OK;
     viddec_workload_item_t wi;
 
-    wi.vwi_type = VIDDEC_WORKLOAD_MP4_PAST_FRAME;
+    wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_PAST_FRAME;
     wi.ref_frame.reference_id = 0;
     wi.ref_frame.luma_phys_addr = 0;
     wi.ref_frame.chroma_phys_addr = 0;
@@ -292,7 +294,7 @@ uint32_t viddec_fw_mp4_insert_future_frame_workitem(void *parent)
     uint32_t result = MP4_STATUS_OK;
     viddec_workload_item_t wi;
 
-    wi.vwi_type = VIDDEC_WORKLOAD_MP4_FUTURE_FRAME;
+    wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_FUTURE_FRAME;
     wi.ref_frame.reference_id = 0;
     wi.ref_frame.luma_phys_addr = 0;
     wi.ref_frame.chroma_phys_addr = 0;

@@ -11,18 +11,13 @@ No license under any patent, copyright, trade secret or other intellectual prope
 
 #include "mixbuffer.h"
 
-G_BEGIN_DECLS
-
 typedef struct _MixInputBufferEntry MixInputBufferEntry;
 
 struct _MixInputBufferEntry
 {
-  /*< private > */
-  MixBuffer *buf;
-  guint64 timestamp;
-
+	/*< private > */
+	MixBuffer *buf;
+	guint64 timestamp;
 };
-
-G_END_DECLS
 
 #endif /* __MIX_VIDEOFORMATQUEUE_H__ */

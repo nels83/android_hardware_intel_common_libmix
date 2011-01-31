@@ -12,20 +12,11 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include <mixparams.h>
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
-* MIX_TYPE_VIDEOCAPS:
-* 
-* Get type of class.
-*/
-#define MIX_TYPE_VIDEOCAPS (mix_videocaps_get_type ())
-
 /**
 * MIX_VIDEOCAPS:
 * @obj: object to be type-casted.
 */
-#define MIX_VIDEOCAPS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCAPS, MixVideoCaps))
+#define MIX_VIDEOCAPS(obj) (reinterpret_cast<MixVideoCaps*>(obj))
 
 /**
 * MIX_IS_VIDEOCAPS:
@@ -33,42 +24,27 @@ G_BEGIN_DECLS
 * 
 * Checks if the given object is an instance of #MixParams
 */
-#define MIX_IS_VIDEOCAPS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCAPS))
+#define MIX_IS_VIDEOCAPS(obj) ((NULL != MIX_VIDEOCAPS(obj)) ? TRUE : FALSE)
 
-/**
-* MIX_VIDEOCAPS_CLASS:
-* @klass: class to be type-casted.
-*/
-#define MIX_VIDEOCAPS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCAPS, MixVideoCapsClass))
-
-/**
-* MIX_IS_VIDEOCAPS_CLASS:
-* @klass: a class.
-* 
-* Checks if the given class is #MixParamsClass
-*/
-#define MIX_IS_VIDEOCAPS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCAPS))
-
-/**
-* MIX_VIDEOCAPS_GET_CLASS:
-* @obj: a #MixParams object.
-* 
-* Get the class instance of the object.
-*/
-#define MIX_VIDEOCAPS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCAPS, MixVideoCapsClass))
-
-typedef struct _MixVideoCaps MixVideoCaps;
-typedef struct _MixVideoCapsClass MixVideoCapsClass;
 
 /**
 * MixVideoCaps:
 *
 * MI-X VideoConfig Parameter object
 */
-struct _MixVideoCaps
+class MixVideoCaps : public MixParams
 {
+public:
+  MixVideoCaps();
+  virtual ~MixVideoCaps();
+
+  virtual gboolean copy(MixParams* target) const;
+  virtual MixParams *dup() const;
+  virtual gboolean equal(MixParams* obj) const;
+
+public:
   /*< public > */
-  MixParams parent;
+  //MixParams parent;
 
   /*< public > */
   gchar *mix_caps;
@@ -79,27 +55,6 @@ struct _MixVideoCaps
   void *reserved3;
   void *reserved4;
 };
-
-/**
-* MixVideoCapsClass:
-* 
-* MI-X VideoConfig object class
-*/
-struct _MixVideoCapsClass
-{
-  /*< public > */
-  MixParamsClass parent_class;
-
-  /* class members */
-};
-
-/**
-* mix_videocaps_get_type:
-* @returns: type
-* 
-* Get the type of object.
-*/
-GType mix_videocaps_get_type (void);
 
 /**
 * mix_videocaps_new:
@@ -136,6 +91,5 @@ MIX_RESULT mix_videocaps_set_video_hw_caps (MixVideoCaps * obj,
 MIX_RESULT mix_videocaps_get_video_hw_caps (MixVideoCaps * obj,
 					    gchar ** video_hw_caps);
 
-G_END_DECLS
 
 #endif /* __MIX_VIDEOCAPS_H__ */

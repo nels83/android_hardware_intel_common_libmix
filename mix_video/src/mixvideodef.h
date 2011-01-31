@@ -32,7 +32,7 @@
 
 #include <mixresult.h>
 
-G_BEGIN_DECLS
+
 
 /*
  * MI-X video error code
@@ -200,6 +200,6 @@ typedef struct _MixEncDynamicParams {
 	MixAIRParams air_params;
 } MixEncDynamicParams;
 
-G_END_DECLS
+
 
 #endif /*  __MIX_VIDEO_DEF_H__ */

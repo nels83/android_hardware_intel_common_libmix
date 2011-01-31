@@ -213,8 +213,9 @@ mp4_Status_t mp4_Parse_VisualObject(void *parent, viddec_mp4_parser_t *parser)
             }
         }
 
-        ret = viddec_pm_append_workitem(parent, &wi, false);
-        if(ret == 1)
+        int ret_val;
+        ret_val = viddec_pm_append_workitem(parent, &wi, false);
+        if(ret_val == 1)
             ret = MP4_STATUS_OK;
     }
     
@@ -262,7 +263,8 @@ mp4_Status_t mp4_Parse_UserData(void *parent, viddec_mp4_parser_t *parser)
         if (wi.user_data.size >= 11)
         {
             viddec_pm_setup_userdata(&wi);
-            ret = viddec_pm_append_workitem(parent, &wi, false);
+            
+            ret = (mp4_Status_t)viddec_pm_append_workitem(parent, &wi, false);
             wi.user_data.size = 0;
         }
     }
@@ -275,7 +277,7 @@ mp4_Status_t mp4_Parse_UserData(void *parent, viddec_mp4_parser_t *parser)
             wi.user_data.data_payload[i] = 0;
         }
         viddec_pm_setup_userdata(&wi);
-        ret = viddec_pm_append_workitem(parent, &wi, false);
+        ret = (mp4_Status_t)viddec_pm_append_workitem(parent, &wi, false);
         wi.user_data.size = 0;
     }
 

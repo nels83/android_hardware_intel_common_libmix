@@ -45,8 +45,7 @@ uint32 vbp_get_sc_pos_mp42(
     uint32 length,
     uint32 *sc_end_pos, 
     uint8 *is_normal_sc, 
-    uint8* resync_marker,
-    const bool svh_search);
+    uint8* resync_marker);
 
 void vbp_on_vop_mp42(vbp_context *pcontext, int list_index);
 void vbp_on_vop_svh_mp42(vbp_context *pcontext, int list_index);
@@ -98,7 +97,7 @@ uint32 vbp_init_parser_entries_mp42( vbp_context *pcontext)
 		return VBP_LOAD;
 	}
 
-	pcontext->parser_ops->get_cxt_size = dlsym(pcontext->fd_parser, "viddec_mp4_get_context_size");
+	pcontext->parser_ops->get_cxt_size =dlsym(pcontext->fd_parser, "viddec_mp4_get_context_size");
 	if (pcontext->parser_ops->get_cxt_size == NULL)
 	{
 		ETRACE ("Failed to set entry point." );
@@ -250,7 +249,11 @@ uint32 vbp_parse_start_code_mp42(vbp_context *pcontext)
 	while (1) 
 	{
 		found_sc = vbp_get_sc_pos_mp42(buf + bytes_parsed, size- bytes_parsed, 
-		        &sc_end_pos, &is_normal_sc, &resync_marker, short_video_header);
+		        &sc_end_pos, &is_normal_sc, &resync_marker);
+		
+		VTRACE("buf=%x, bytes_parsed=%d, unparsed=%d", (uint32)buf, bytes_parsed, size- bytes_parsed);
+		VTRACE("found_sc=%d, cxt->list.num_items=%d, resync_marker=%d, ",
+			found_sc, cxt->list.num_items, resync_marker);
 
 		if (found_sc)
 		{
@@ -629,8 +632,7 @@ uint32 vbp_get_sc_pos_mp42(
 	uint32 length,
 	uint32 *sc_end_pos,
 	uint8 *is_normal_sc,
-	uint8 *resync_marker,
-        const bool svh_search)
+	uint8 *resync_marker) 
 {
 	uint8 *ptr = buf;
 	uint32 size;
@@ -711,10 +713,8 @@ uint32 vbp_get_sc_pos_mp42(
 				if (phase == 2) 
 				{
 					normal_sc = (*ptr == THIRD_STARTCODE_BYTE);
-					if (svh_search)
-                                        {
-                                            short_sc = (SHORT_THIRD_STARTCODE_BYTE == (*ptr & 0xFC));
-                                        }
+					short_sc = (SHORT_THIRD_STARTCODE_BYTE == (*ptr & 0xFC));
+
 					*is_normal_sc = normal_sc;
 
 					// at least 16-bit 0, may be GOB start code or

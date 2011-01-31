@@ -12,20 +12,7 @@
 #include <glib-object.h>
 #include "mixvideodef.h"
 #include "mixvideoframe.h"
-
-G_BEGIN_DECLS
-/*
- * Type macros.
- */
-#define MIX_TYPE_FRAMEMANAGER                  (mix_framemanager_get_type ())
-#define MIX_FRAMEMANAGER(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_FRAMEMANAGER, MixFrameManager))
-#define MIX_IS_FRAMEMANAGER(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_FRAMEMANAGER))
-#define MIX_FRAMEMANAGER_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_FRAMEMANAGER, MixFrameManagerClass))
-#define MIX_IS_FRAMEMANAGER_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_FRAMEMANAGER))
-#define MIX_FRAMEMANAGER_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_FRAMEMANAGER, MixFrameManagerClass))
-
-typedef struct _MixFrameManager MixFrameManager;
-typedef struct _MixFrameManagerClass MixFrameManagerClass;
+#include "mixvideothread.h"
 
 /* 
 * MIX_FRAMEORDER_MODE_DECODEORDER is here interpreted as 
@@ -42,18 +29,14 @@ typedef enum
 } MixDisplayOrderMode;
 
 
-struct _MixFrameManager {
-	/*< public > */
-	GObject parent;
-
-	/*< public > */
-
+class MixFrameManager {
 	/*< private > */
+public:
 	gboolean initialized;
 	gboolean flushing;
 	gboolean eos;
 
-	GMutex *lock;
+	MixVideoMutex mLock;
 	GSList* frame_list;
 
 	gint framerate_numerator;
@@ -68,29 +51,13 @@ struct _MixFrameManager {
 	guint32 next_frame_picnumber;
 	gint    max_enqueue_size;
 	guint32 max_picture_number;
+
+	guint32 ref_count;
+public:
+	MixFrameManager();
+	~MixFrameManager();
 };
 
-/**
- * MixFrameManagerClass:
- *
- * MI-X Video object class
- */
-struct _MixFrameManagerClass {
-	/*< public > */
-	GObjectClass parent_class;
-
-/* class members */
-
-/*< public > */
-};
-
-/**
- * mix_framemanager_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_framemanager_get_type(void);
 
 /**
  * mix_framemanager_new:
@@ -115,7 +82,7 @@ MixFrameManager *mix_framemanager_ref(MixFrameManager * mix);
  *
  * Decrement reference count of the object.
  */
-#define mix_framemanager_unref(obj) g_object_unref (G_OBJECT(obj))
+MixFrameManager* mix_framemanager_unref(MixFrameManager* fm);
 
 /* Class Methods */
 
@@ -182,5 +149,4 @@ MIX_RESULT mix_framemanager_dequeue(MixFrameManager *fm, MixVideoFrame **mvf);
  */
 MIX_RESULT mix_framemanager_eos(MixFrameManager *fm);
 
-G_END_DECLS
 #endif /* __MIX_FRAMEMANAGER_H__ */

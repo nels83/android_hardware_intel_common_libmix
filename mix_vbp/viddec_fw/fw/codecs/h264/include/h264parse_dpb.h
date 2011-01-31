@@ -101,6 +101,10 @@ extern void h264_dpb_frame_output(h264_Info * pInfo,int32_t fs_idc, int32_t dire
 extern frame_store *active_fs;
 
 
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif  //_H264_DPB_CTL_H_
 

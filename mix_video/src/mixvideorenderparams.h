@@ -13,21 +13,13 @@
 #include "mixvideodef.h"
 #include "mixdisplay.h"
 #include "mixvideoframe.h"
-
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEORENDERPARAMS:
- *
- * Get type of class.
- */
-#define MIX_TYPE_VIDEORENDERPARAMS (mix_videorenderparams_get_type ())
+#include <va/va.h>
 
 /**
  * MIX_VIDEORENDERPARAMS:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEORENDERPARAMS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEORENDERPARAMS, MixVideoRenderParams))
+#define MIX_VIDEORENDERPARAMS(obj) (reinterpret_cast<MixVideoRenderParams*>(obj))
 
 /**
  * MIX_IS_VIDEORENDERPARAMS:
@@ -35,44 +27,31 @@ G_BEGIN_DECLS
  *
  * Checks if the given object is an instance of #MixParams
  */
-#define MIX_IS_VIDEORENDERPARAMS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEORENDERPARAMS))
+#define MIX_IS_VIDEORENDERPARAMS(obj) ((NULL != MIX_VIDEORENDERPARAMS(obj)) ? TRUE : FALSE)
 
-/**
- * MIX_VIDEORENDERPARAMS_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_VIDEORENDERPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEORENDERPARAMS, MixVideoRenderParamsClass))
-
-/**
- * MIX_IS_VIDEORENDERPARAMS_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixParamsClass
- */
-#define MIX_IS_VIDEORENDERPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEORENDERPARAMS))
-
-/**
- * MIX_VIDEORENDERPARAMS_GET_CLASS:
- * @obj: a #MixParams object.
- *
- * Get the class instance of the object.
- */
-#define MIX_VIDEORENDERPARAMS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEORENDERPARAMS, MixVideoRenderParamsClass))
-
-typedef struct _MixVideoRenderParams MixVideoRenderParams;
-typedef struct _MixVideoRenderParamsClass MixVideoRenderParamsClass;
 
 /**
  * MixVideoRenderParams:
  *
  * MI-X VideoRender Parameter object
  */
-struct _MixVideoRenderParams {
-	/*< public > */
-	MixParams parent;
+class MixVideoRenderParams : public MixParams {
+public:
+	MixVideoRenderParams();
+	virtual ~MixVideoRenderParams();
+	virtual gboolean copy(MixParams *target) const;
+	virtual gboolean equal(MixParams*) const;
+	virtual MixParams* dup() const;
 
-	/*< public > */
-	
+	MIX_RESULT set_clipping_rects(MixRect* clipping_rects, 
+		guint number_of_clipping_rects);
+	MIX_RESULT get_clipping_rects(MixRect ** clipping_rects, 
+		guint* number_of_clipping_rects);
+	MIX_RESULT get_va_cliprects(VARectangle ** va_cliprects,
+		guint* number_of_cliprects);
+
+public:
+	/*< public > */	
 	/* Pointer to a MixDisplay object 
 	 * such as MixDisplayX11 */
 	MixDisplay *display;
@@ -111,27 +90,12 @@ struct _MixVideoRenderParams {
 	
 	/* Reserved for future use */	
 	gpointer reserved4;
+
+private:
+	VARectangle *mVa_cliprects;
+
 };
 
-/**
- * MixVideoRenderParamsClass:
- *
- * MI-X VideoRender object class
- */
-struct _MixVideoRenderParamsClass {
-	/*< public > */
-	MixParamsClass parent_class;
-
-	/* class members */
-};
-
-/**
- * mix_videorenderparams_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videorenderparams_get_type(void);
 
 /**
  * mix_videorenderparams_new:
@@ -139,6 +103,7 @@ GType mix_videorenderparams_get_type(void);
  *
  * Use this method to create new instance of #MixVideoRenderParams
  */
+
 MixVideoRenderParams *mix_videorenderparams_new(void);
 /**
  * mix_videorenderparams_ref:
@@ -147,6 +112,7 @@ MixVideoRenderParams *mix_videorenderparams_new(void);
  *
  * Add reference count.
  */
+
 MixVideoRenderParams *mix_videorenderparams_ref(MixVideoRenderParams * mix);
 
 /**
@@ -167,8 +133,8 @@ MixVideoRenderParams *mix_videorenderparams_ref(MixVideoRenderParams * mix);
  *
  * Set MixDisplay Object 
  */
-MIX_RESULT mix_videorenderparams_set_display(MixVideoRenderParams * obj,
-		MixDisplay * display);
+MIX_RESULT mix_videorenderparams_set_display(
+	MixVideoRenderParams * obj, MixDisplay * display);
 
 /**
  * mix_videorenderparams_get_display:
@@ -178,8 +144,8 @@ MIX_RESULT mix_videorenderparams_set_display(MixVideoRenderParams * obj,
  *
  * Get MixDisplay Object 
  */
-MIX_RESULT mix_videorenderparams_get_display(MixVideoRenderParams * obj,
-		MixDisplay ** display);
+MIX_RESULT mix_videorenderparams_get_display(
+	MixVideoRenderParams * obj, MixDisplay ** display);
 
 /**
  * mix_videorenderparams_set_src_rect:
@@ -189,8 +155,8 @@ MIX_RESULT mix_videorenderparams_get_display(MixVideoRenderParams * obj,
  *
  * Set source rectangle 
  */
-MIX_RESULT mix_videorenderparams_set_src_rect(MixVideoRenderParams * obj,
-		MixRect src_rect);
+MIX_RESULT mix_videorenderparams_set_src_rect(
+	MixVideoRenderParams * obj, MixRect src_rect);
 
 /**
  * mix_videorenderparams_get_src_rect:
@@ -200,8 +166,8 @@ MIX_RESULT mix_videorenderparams_set_src_rect(MixVideoRenderParams * obj,
  *
  * Get source rectangle 
  */
-MIX_RESULT mix_videorenderparams_get_src_rect(MixVideoRenderParams * obj,
-		MixRect * src_rect);
+MIX_RESULT mix_videorenderparams_get_src_rect(
+	MixVideoRenderParams * obj, MixRect * src_rect);
 
 /**
  * mix_videorenderparams_set_dest_rect:
@@ -211,8 +177,8 @@ MIX_RESULT mix_videorenderparams_get_src_rect(MixVideoRenderParams * obj,
  *
  * Set destination rectangle 
  */
-MIX_RESULT mix_videorenderparams_set_dest_rect(MixVideoRenderParams * obj,
-		MixRect dst_rect);
+MIX_RESULT mix_videorenderparams_set_dest_rect(
+	MixVideoRenderParams * obj, MixRect dst_rect);
 
 /**
  * mix_videorenderparams_set_dest_rect:
@@ -222,8 +188,8 @@ MIX_RESULT mix_videorenderparams_set_dest_rect(MixVideoRenderParams * obj,
  *
  * Get destination rectangle 
  */
-MIX_RESULT mix_videorenderparams_get_dest_rect(MixVideoRenderParams * obj,
-		MixRect * dst_rect);
+MIX_RESULT mix_videorenderparams_get_dest_rect(
+	MixVideoRenderParams * obj, MixRect * dst_rect);
 
 /**
  * mix_videorenderparams_set_clipping_rects:
@@ -234,8 +200,8 @@ MIX_RESULT mix_videorenderparams_get_dest_rect(MixVideoRenderParams * obj,
  *
  * Set clipping rectangles 
  */
-MIX_RESULT mix_videorenderparams_set_clipping_rects(MixVideoRenderParams * obj,
-		MixRect* clipping_rects, guint number_of_clipping_rects);
+MIX_RESULT mix_videorenderparams_set_clipping_rects(
+	MixVideoRenderParams * obj, MixRect* clipping_rects, guint number_of_clipping_rects);
 
 /**
  * mix_videorenderparams_get_clipping_rects:
@@ -250,11 +216,11 @@ MIX_RESULT mix_videorenderparams_set_clipping_rects(MixVideoRenderParams * obj,
  * DO NOT free clipping_rects!
  * </note> 
  */
-MIX_RESULT mix_videorenderparams_get_clipping_rects(MixVideoRenderParams * obj,
-		MixRect ** clipping_rects, guint* number_of_clipping_rects);
+MIX_RESULT mix_videorenderparams_get_clipping_rects(
+	MixVideoRenderParams * obj, MixRect ** clipping_rects, guint* number_of_clipping_rects);
 
 /* TODO: Add getters and setters for other properties */
 
-G_END_DECLS
+
 
 #endif /* __MIX_VIDEORENDERPARAMS_H__ */

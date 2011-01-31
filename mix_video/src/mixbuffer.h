@@ -12,20 +12,11 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_BUFFER:
- *
- * Get type of class.
- */
-#define MIX_TYPE_BUFFER (mix_buffer_get_type ())
-
 /**
  * MIX_BUFFER:
  * @obj: object to be type-casted.
  */
-#define MIX_BUFFER(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_BUFFER, MixBuffer))
+#define MIX_BUFFER(obj) (reinterpret_cast<MixBuffer*>(obj))
 
 /**
  * MIX_IS_BUFFER:
@@ -33,46 +24,25 @@ G_BEGIN_DECLS
  *
  * Checks if the given object is an instance of #MixParams
  */
-#define MIX_IS_BUFFER(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_BUFFER))
-
-/**
- * MIX_BUFFER_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_BUFFER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_BUFFER, MixBufferClass))
-
-/**
- * MIX_IS_BUFFER_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixParamsClass
- */
-#define MIX_IS_BUFFER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_BUFFER))
-
-/**
- * MIX_BUFFER_GET_CLASS:
- * @obj: a #MixParams object.
- *
- * Get the class instance of the object.
- */
-#define MIX_BUFFER_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_BUFFER, MixBufferClass))
+#define MIX_IS_BUFFER(obj) (NULL != MIX_BUFFER(obj))
 
 typedef void (*MixBufferCallback)(gulong token, guchar *data);
 
-typedef struct _MixBuffer MixBuffer;
-typedef struct _MixBufferClass MixBufferClass;
+class MixBufferPool;
 
 /**
  * MixBuffer:
  *
  * MI-X Buffer Parameter object
  */
-struct _MixBuffer {
-	/*< public > */
-	MixParams parent;
-
-	/*< public > */
-	
+class MixBuffer : public MixParams {
+public:
+	MixBuffer();
+	virtual ~MixBuffer();
+    virtual gboolean copy(MixParams* target) const;
+	virtual MixParams* dup() const;
+	virtual gboolean equal(MixParams* obj) const;
+public:
 	/* Pointer to coded data buffer */
 	guchar *data;
 	
@@ -92,29 +62,8 @@ struct _MixBuffer {
 	MixBufferCallback callback;
 
 	/* < private > */
-	/* reserved */
-	gpointer reserved;
+	MixBufferPool *pool;
 };
-
-/**
- * MixBufferClass:
- *
- * MI-X VideoConfig object class
- */
-struct _MixBufferClass {
-	/*< public > */
-	MixParamsClass parent_class;
-
-	/* class members */
-};
-
-/**
- * mix_buffer_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_buffer_get_type(void);
 
 /**
  * mix_buffer_new:
@@ -155,7 +104,5 @@ void mix_buffer_unref(MixBuffer * mix);
  */
 MIX_RESULT mix_buffer_set_data(MixBuffer * obj, guchar *data, guint size,
 		gulong token, MixBufferCallback callback);
-
-G_END_DECLS
 
 #endif /* __MIX_BUFFER_H__ */

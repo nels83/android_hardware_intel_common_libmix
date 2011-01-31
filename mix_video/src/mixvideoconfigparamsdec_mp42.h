@@ -12,20 +12,11 @@
 #include "mixvideoconfigparamsdec.h"
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEOCONFIGPARAMSDEC_MP42:
- *
- * Get type of class.
- */
-#define MIX_TYPE_VIDEOCONFIGPARAMSDEC_MP42 (mix_videoconfigparamsdec_mp42_get_type ())
-
 /**
  * MIX_VIDEOCONFIGPARAMSDEC_MP42:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEOCONFIGPARAMSDEC_MP42(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_MP42, MixVideoConfigParamsDecMP42))
+#define MIX_VIDEOCONFIGPARAMSDEC_MP42(obj) (reinterpret_cast<MixVideoConfigParamsDecMP42*>(obj))
 
 /**
  * MIX_IS_VIDEOCONFIGPARAMSDEC_MP42:
@@ -33,42 +24,22 @@ G_BEGIN_DECLS
  *
  * Checks if the given object is an instance of #MixVideoConfigParamsDecMP42
  */
-#define MIX_IS_VIDEOCONFIGPARAMSDEC_MP42(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_MP42))
+#define MIX_IS_VIDEOCONFIGPARAMSDEC_MP42(obj) ((NULL != MIX_VIDEOCONFIGPARAMSDEC_MP42(obj)) ? TRUE : FALSE)
 
-/**
- * MIX_VIDEOCONFIGPARAMSDEC_MP42_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_VIDEOCONFIGPARAMSDEC_MP42_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSDEC_MP42, MixVideoConfigParamsDecMP42Class))
-
-/**
- * MIX_IS_VIDEOCONFIGPARAMSDEC_MP42_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixVideoConfigParamsDecMP42Class
- */
-#define MIX_IS_VIDEOCONFIGPARAMSDEC_MP42_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSDEC_MP42))
-
-/**
- * MIX_VIDEOCONFIGPARAMSDEC_MP42_GET_CLASS:
- * @obj: a #MixParams object.
- *
- * Get the class instance of the object.
- */
-#define MIX_VIDEOCONFIGPARAMSDEC_MP42_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSDEC_MP42, MixVideoConfigParamsDecMP42Class))
-
-typedef struct _MixVideoConfigParamsDecMP42 MixVideoConfigParamsDecMP42;
-typedef struct _MixVideoConfigParamsDecMP42Class MixVideoConfigParamsDecMP42Class;
 
 /**
  * MixVideoConfigParamsDecMP42:
  *
  * MI-X VideoConfig Parameter object
  */
-struct _MixVideoConfigParamsDecMP42 {
-	/*< public > */
-	MixVideoConfigParamsDec parent;
-
+class MixVideoConfigParamsDecMP42 : public MixVideoConfigParamsDec {
+public:
+    MixVideoConfigParamsDecMP42();
+    ~MixVideoConfigParamsDecMP42();
+    virtual gboolean copy(MixParams *target) const;
+    virtual gboolean equal(MixParams* obj) const;
+    virtual MixParams* dup() const;
+public:
 	/*< public > */
 
 	/* MPEG version */
@@ -91,24 +62,12 @@ struct _MixVideoConfigParamsDecMP42 {
 };
 
 /**
- * MixVideoConfigParamsDecMP42Class:
- *
- * MI-X VideoConfig object class
- */
-struct _MixVideoConfigParamsDecMP42Class {
-	/*< public > */
-	MixVideoConfigParamsDecClass parent_class;
-
-/* class members */
-};
-
-/**
  * mix_videoconfigparamsdec_mp42_get_type:
  * @returns: type
  *
  * Get the type of object.
  */
-GType mix_videoconfigparamsdec_mp42_get_type(void);
+//GType mix_videoconfigparamsdec_mp42_get_type(void);
 
 /**
  * mix_videoconfigparamsdec_mp42_new:
@@ -184,6 +143,6 @@ MIX_RESULT mix_videoconfigparamsdec_mp42_set_divxversion(
 MIX_RESULT mix_videoconfigparamsdec_mp42_get_divxversion(
 		MixVideoConfigParamsDecMP42 *obj, guint *version);
 
-G_END_DECLS
+
 
 #endif /* __MIX_VIDEOCONFIGPARAMSDEC_MP42_H__ */

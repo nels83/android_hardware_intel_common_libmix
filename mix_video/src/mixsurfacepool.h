@@ -12,67 +12,23 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include <mixparams.h>
 #include "mixvideodef.h"
 #include "mixvideoframe.h"
-
+#include "mixvideothread.h"
 #include <va/va.h>
-
-G_BEGIN_DECLS
-
-/**
-* MIX_TYPE_SURFACEPOOL:
-* 
-* Get type of class.
-*/
-#define MIX_TYPE_SURFACEPOOL (mix_surfacepool_get_type ())
 
 /**
 * MIX_SURFACEPOOL:
 * @obj: object to be type-casted.
 */
-#define MIX_SURFACEPOOL(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_SURFACEPOOL, MixSurfacePool))
-
-/**
-* MIX_IS_SURFACEPOOL:
-* @obj: an object.
-* 
-* Checks if the given object is an instance of #MixSurfacePool
-*/
-#define MIX_IS_SURFACEPOOL(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_SURFACEPOOL))
-
-/**
-* MIX_SURFACEPOOL_CLASS:
-* @klass: class to be type-casted.
-*/
-#define MIX_SURFACEPOOL_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_SURFACEPOOL, MixSurfacePoolClass))
-
-/**
-* MIX_IS_SURFACEPOOL_CLASS:
-* @klass: a class.
-* 
-* Checks if the given class is #MixSurfacePoolClass
-*/
-#define MIX_IS_SURFACEPOOL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_SURFACEPOOL))
-
-/**
-* MIX_SURFACEPOOL_GET_CLASS:
-* @obj: a #MixSurfacePool object.
-* 
-* Get the class instance of the object.
-*/
-#define MIX_SURFACEPOOL_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_SURFACEPOOL, MixSurfacePoolClass))
-
-typedef struct _MixSurfacePool MixSurfacePool;
-typedef struct _MixSurfacePoolClass MixSurfacePoolClass;
+#define MIX_SURFACEPOOL(obj) (reinterpret_cast<MixSurfacePool*>(obj))
 
 /**
 * MixSurfacePool:
 *
 * MI-X Video Surface Pool object
 */
-struct _MixSurfacePool
+class MixSurfacePool : public MixParams
 {
-  /*< public > */
-  MixParams parent;
-
+public:
   /*< public > */
   GSList *free_list;		/* list of free surfaces */
   GSList *in_use_list;		/* list of surfaces in use */
@@ -88,30 +44,14 @@ struct _MixSurfacePool
   void *reserved4;
 
   /*< private > */
-  GMutex *objectlock;
-
+  mutable MixVideoMutex mLock;
+public:
+  MixSurfacePool();
+  virtual ~MixSurfacePool();
+  virtual gboolean copy(MixParams *target) const;
+  virtual gboolean equal(MixParams* obj) const;
+  virtual MixParams* dup() const;
 };
-
-/**
-* MixSurfacePoolClass:
-* 
-* MI-X Video Surface Pool object class
-*/
-struct _MixSurfacePoolClass
-{
-  /*< public > */
-  MixParamsClass parent_class;
-
-  /* class members */
-};
-
-/**
-* mix_surfacepool_get_type:
-* @returns: type
-* 
-* Get the type of object.
-*/
-GType mix_surfacepool_get_type (void);
 
 /**
 * mix_surfacepool_new:
@@ -153,7 +93,5 @@ MIX_RESULT mix_surfacepool_get_frame_with_ci_frameidx (MixSurfacePool * obj,
 MIX_RESULT mix_surfacepool_check_available (MixSurfacePool * obj);
 
 MIX_RESULT mix_surfacepool_deinitialize (MixSurfacePool * obj);
-
-G_END_DECLS
 
 #endif /* __MIX_SURFACEPOOL_H__ */

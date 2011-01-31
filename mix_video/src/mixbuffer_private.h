@@ -12,8 +12,11 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixbuffer.h"
 #include "mixbufferpool.h"
 
-G_BEGIN_DECLS
 
+class MixBuffer;
+class MixBufferPool;
+
+#if 0
 typedef struct _MixBufferPrivate MixBufferPrivate;
 
 struct _MixBufferPrivate
@@ -22,21 +25,10 @@ struct _MixBufferPrivate
   MixBufferPool *pool;
 
 };
-
-/**
-* MIX_BUFFER_PRIVATE:
-* 
-* Get private structure of this class.
-* @obj: class object for which to get private data.
-*/
-#define MIX_BUFFER_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), MIX_TYPE_BUFFER, MixBufferPrivate))
-
+#endif
 
 /* Private functions */
 MIX_RESULT
 mix_buffer_set_pool (MixBuffer *obj, MixBufferPool *pool);
-
-G_END_DECLS
 
 #endif /* __MIX_BUFFER_PRIVATE_H__ */

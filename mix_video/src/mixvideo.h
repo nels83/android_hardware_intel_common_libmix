@@ -14,28 +14,18 @@
 #include <mixdrmparams.h>
 #include "mixvideoinitparams.h"
 #include "mixvideoconfigparamsdec.h"
-#include "mixvideoconfigparamsenc.h"
 #include "mixvideodecodeparams.h"
+#if MIXVIDEO_ENCODE_ENABLE
+#include "mixvideoconfigparamsenc.h"
 #include "mixvideoencodeparams.h"
+#endif
 #include "mixvideorenderparams.h"
 #include "mixvideocaps.h"
 #include "mixbuffer.h"
+#include "mixvideo_private.h"
 
-G_BEGIN_DECLS
 
-/*
- * Type macros.
- */
-#define MIX_TYPE_VIDEO                  (mix_video_get_type ())
-#define MIX_VIDEO(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEO, MixVideo))
-#define MIX_IS_VIDEO(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEO))
-#define MIX_VIDEO_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEO, MixVideoClass))
-#define MIX_IS_VIDEO_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEO))
-#define MIX_VIDEO_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEO, MixVideoClass))
-
-typedef struct _MixVideo MixVideo;
-typedef struct _MixVideoClass MixVideoClass;
-
+class MixVideo;
 /*
  * Virtual methods typedef
  */
@@ -67,9 +57,11 @@ typedef MIX_RESULT (*MixVideoReleaseFrameFunc)(MixVideo * mix,
 typedef MIX_RESULT (*MixVideoRenderFunc)(MixVideo * mix,
 		MixVideoRenderParams * render_params, MixVideoFrame *frame);
 
+#if MIXVIDEO_ENCODE_ENABLE
 typedef MIX_RESULT (*MixVideoEncodeFunc)(MixVideo * mix, MixBuffer * bufin[],
 		gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
 		MixVideoEncodeParams * encode_params);
+#endif
 
 typedef MIX_RESULT (*MixVideoFlushFunc)(MixVideo * mix);
 
@@ -85,32 +77,28 @@ typedef MIX_RESULT (*MixVideoReleaseMixBufferFunc)(MixVideo * mix,
 typedef MIX_RESULT (*MixVideoGetMaxCodedBufferSizeFunc) (MixVideo * mix,
 	      guint *max_size);
 
-
+#if MIXVIDEO_ENCODE_ENABLE
 typedef MIX_RESULT (*MixVideoSetDynamicEncConfigFunc) (MixVideo * mix,
 	      MixEncParamsType params_type, MixEncDynamicParams * dynamic_params);
+#endif
 /**
  * MixVideo:
  * @parent: Parent object.
  *
  * MI-X Video object
  */
-struct _MixVideo {
-	/*< public > */
-	GObject parent;
-
+class MixVideo {
+public:
+	MixVideo();
+	~MixVideo();
+    
+public:
 	/*< private > */
 	gpointer context;
-};
+	guint ref_count;
+    MixVideoPrivate mPriv;
 
-/**
- * MixVideoClass:
- *
- * MI-X Video object class
- */
-struct _MixVideoClass {
-	/*< public > */
-	GObjectClass parent_class;
-
+public:
 	/*< virtual public >*/
 	MixVideoGetVersionFunc get_version_func;
 	MixVideoInitializeFunc initialize_func;
@@ -121,23 +109,19 @@ struct _MixVideoClass {
 	MixVideoGetFrameFunc get_frame_func;
 	MixVideoReleaseFrameFunc release_frame_func;
 	MixVideoRenderFunc render_func;
+#if MIXVIDEO_ENCODE_ENABLE
 	MixVideoEncodeFunc encode_func;
+#endif
 	MixVideoFlushFunc flush_func;
 	MixVideoEOSFunc eos_func;
 	MixVideoGetStateFunc get_state_func;
 	MixVideoGetMixBufferFunc get_mix_buffer_func;
 	MixVideoReleaseMixBufferFunc release_mix_buffer_func;
+#if MIXVIDEO_ENCODE_ENABLE
 	MixVideoGetMaxCodedBufferSizeFunc get_max_coded_buffer_size_func;
 	MixVideoSetDynamicEncConfigFunc set_dynamic_enc_config_func;
+#endif
 };
-
-/**
- * mix_video_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_video_get_type(void);
 
 /**
  * mix_video_new:
@@ -162,7 +146,8 @@ MixVideo *mix_video_ref(MixVideo * mix);
  *
  * Decrement reference count of the object.
  */
-#define mix_video_unref(obj) g_object_unref (G_OBJECT(obj))
+MixVideo *
+mix_video_unref(MixVideo * mix) ;
 
 /* Class Methods */
 
@@ -453,10 +438,15 @@ MIX_RESULT mix_video_render(MixVideo * mix,
  * </para>
  *
  */
+#if MIXVIDEO_ENCODE_ENABLE
 MIX_RESULT mix_video_encode(MixVideo * mix, MixBuffer * bufin[], gint bufincnt,
 		MixIOVec * iovout[], gint iovoutcnt,
 		MixVideoEncodeParams * encode_params);
-
+#else
+MIX_RESULT mix_video_encode(MixVideo * mix, MixBuffer * bufin[], gint bufincnt,
+		MixIOVec * iovout[], gint iovoutcnt,
+		MixParams * encode_params);
+#endif
 /**
  * mix_video_flush:
  * @mix: #MixVideo object.
@@ -563,9 +553,9 @@ MIX_RESULT mix_video_get_max_coded_buffer_size(MixVideo * mix, guint *bufsize);
  * Usually this function is after the encoding session is started.
  * </para>
  */
+
 MIX_RESULT mix_video_set_dynamic_enc_config (MixVideo * mix,
 	MixEncParamsType params_type, MixEncDynamicParams * dynamic_params);
 
-G_END_DECLS
 
 #endif /* __MIX_VIDEO_H__ */

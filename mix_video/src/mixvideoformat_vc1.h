@@ -12,7 +12,6 @@
 #include "mixvideoformat.h"
 #include "mixvideoframe_private.h"
 
-G_BEGIN_DECLS
 
 //Note: this is only a max limit.  Actual number of surfaces allocated is calculated in mix_videoformat_vc1_initialize()
 #define MIX_VIDEO_VC1_SURFACE_NUM	8
@@ -20,20 +19,43 @@ G_BEGIN_DECLS
 /*
  * Type macros.
  */
-#define MIX_TYPE_VIDEOFORMAT_VC1                  (mix_videoformat_vc1_get_type ())
-#define MIX_VIDEOFORMAT_VC1(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOFORMAT_VC1, MixVideoFormat_VC1))
-#define MIX_IS_VIDEOFORMAT_VC1(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOFORMAT_VC1))
-#define MIX_VIDEOFORMAT_VC1_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOFORMAT_VC1, MixVideoFormat_VC1Class))
-#define MIX_IS_VIDEOFORMAT_VC1_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOFORMAT_VC1))
-#define MIX_VIDEOFORMAT_VC1_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOFORMAT_VC1, MixVideoFormat_VC1Class))
+#define MIX_VIDEOFORMAT_VC1(obj)		(reinterpret_cast<MixVideoFormat_VC1*>(obj))
+#define MIX_IS_VIDEOFORMAT_VC1(obj)		(NULL != MIX_VIDEOFORMAT_VC1(obj))
 
-typedef struct _MixVideoFormat_VC1 MixVideoFormat_VC1;
-typedef struct _MixVideoFormat_VC1Class MixVideoFormat_VC1Class;
+class MixVideoFormat_VC1 : public MixVideoFormat {
+public:
+	MixVideoFormat_VC1();
+	virtual ~MixVideoFormat_VC1();
 
-struct _MixVideoFormat_VC1 {
-	/*< public > */
-	MixVideoFormat parent;
+	virtual MIX_RESULT Initialize(
+		MixVideoConfigParamsDec * config_params,
+		MixFrameManager * frame_mgr,
+		MixBufferPool * input_buf_pool,
+		MixSurfacePool ** surface_pool,
+		VADisplay va_display);
+	virtual MIX_RESULT Decode(
+		MixBuffer * bufin[], gint bufincnt, 
+		MixVideoDecodeParams * decode_params);
+	virtual MIX_RESULT Flush();
+	virtual MIX_RESULT EndOfStream();
 
+private:
+	MIX_RESULT _handle_ref_frames(
+		enum _picture_type frame_type, MixVideoFrame * current_frame);
+	MIX_RESULT _process_decode(
+		vbp_data_vc1 *data, guint64 timestamp, gboolean discontinuity);
+	MIX_RESULT _release_input_buffers(guint64 timestamp);
+	MIX_RESULT _update_seq_header(
+		MixVideoConfigParamsDec* config_params, MixIOVec *header);
+	MIX_RESULT _update_config_params(vbp_data_vc1 *data);
+	MIX_RESULT _decode_a_picture(
+	vbp_data_vc1 *data, int pic_index, MixVideoFrame *frame);
+#ifdef YUVDUMP
+	MIX_RESULT _get_Img_from_surface (MixVideoFrame * frame);
+#endif
+
+
+public:
 	/*< public > */
 
 	/*< private > */
@@ -42,28 +64,6 @@ struct _MixVideoFormat_VC1 {
 	gboolean loopFilter;
 	MixVideoFrame * lastFrame;
 };
-
-/**
- * MixVideoFormat_VC1Class:
- *
- * MI-X Video object class
- */
-struct _MixVideoFormat_VC1Class {
-	/*< public > */
-	MixVideoFormatClass parent_class;
-
-	/* class members */
-
-	/*< public > */
-};
-
-/**
- * mix_videoformat_vc1_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoformat_vc1_get_type(void);
 
 /**
  * mix_videoformat_vc1_new:
@@ -88,40 +88,7 @@ MixVideoFormat_VC1 *mix_videoformat_vc1_ref(MixVideoFormat_VC1 * mix);
  *
  * Decrement reference count of the object.
  */
-#define mix_videoformat_vc1_unref(obj) g_object_unref (G_OBJECT(obj))
+MixVideoFormat_VC1 *mix_videoformat_vc1_unref(MixVideoFormat_VC1 * mix);
 
-/* Class Methods */
-
-/* VC1 vmethods */
-MIX_RESULT mix_videofmt_vc1_getcaps(MixVideoFormat *mix, GString *msg);
-MIX_RESULT mix_videofmt_vc1_initialize(MixVideoFormat *mix,
-                                  MixVideoConfigParamsDec * config_params,
-                                  MixFrameManager * frame_mgr,
-				  MixBufferPool * input_buf_pool,
-				  MixSurfacePool ** surface_pool,
-				  VADisplay va_display);
-MIX_RESULT mix_videofmt_vc1_decode(MixVideoFormat *mix, MixBuffer * bufin[],
-                gint bufincnt, MixVideoDecodeParams * decode_params);
-MIX_RESULT mix_videofmt_vc1_flush(MixVideoFormat *mix);
-MIX_RESULT mix_videofmt_vc1_eos(MixVideoFormat *mix);
-MIX_RESULT mix_videofmt_vc1_deinitialize(MixVideoFormat *mix);
-
-/* Local Methods */
-
-MIX_RESULT mix_videofmt_vc1_handle_ref_frames(MixVideoFormat *mix,
-                                        enum _picture_type frame_type,
-                                        MixVideoFrame * current_frame);
-
-
-MIX_RESULT mix_videofmt_vc1_process_decode(MixVideoFormat *mix,
-                                        vbp_data_vc1 *data, 
-					guint64 timestamp,
-					gboolean discontinuity);
-
-
-MIX_RESULT mix_videofmt_vc1_release_input_buffers(MixVideoFormat *mix, 
-					guint64 timestamp);
-
-G_END_DECLS
 
 #endif /* __MIX_VIDEOFORMAT_VC1_H__ */

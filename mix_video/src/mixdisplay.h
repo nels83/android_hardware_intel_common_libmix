@@ -11,80 +11,7 @@ No license under any patent, copyright, trade secret or other intellectual prope
 
 #include <glib-object.h>
 
-G_BEGIN_DECLS
-#define MIX_TYPE_DISPLAY          (mix_display_get_type())
-#define MIX_IS_DISPLAY(obj)       (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_DISPLAY))
-#define MIX_IS_DISPLAY_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_DISPLAY))
-#define MIX_DISPLAY_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_DISPLAY, MixDisplayClass))
-#define MIX_DISPLAY(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_DISPLAY, MixDisplay))
-#define MIX_DISPLAY_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_DISPLAY, MixDisplayClass))
-#define MIX_DISPLAY_CAST(obj)     ((MixDisplay*)(obj))
-typedef struct _MixDisplay MixDisplay;
-typedef struct _MixDisplayClass MixDisplayClass;
-
-/**
-* MixDisplayDupFunction:
-* @obj: Display to duplicate
-* @returns: reference to cloned instance. 
-*
-* Virtual function prototype for methods to create duplicate of instance.
-*
-*/
-typedef MixDisplay *(*MixDisplayDupFunction) (const MixDisplay * obj);
-
-/**
-* MixDisplayCopyFunction:
-* @target: target of the copy
-* @src: source of the copy
-* @returns: boolean indicates if copy is successful.
-*
-* Virtual function prototype for methods to create copies of instance.
-*
-*/
-typedef gboolean (*MixDisplayCopyFunction) (MixDisplay * target,
-					    const MixDisplay * src);
-
-/**
-* MixDisplayFinalizeFunction:
-* @obj: Display to finalize
-*
-* Virtual function prototype for methods to free ressources used by
-* object.
-*/
-typedef void (*MixDisplayFinalizeFunction) (MixDisplay * obj);
-
-/**
-* MixDisplayEqualsFunction:
-* @first: first object in the comparison
-* @second: second object in the comparison
-*
-* Virtual function prototype for methods to compare 2 objects and check if they are equal.
-*/
-typedef gboolean (*MixDisplayEqualFunction) (MixDisplay * first,
-					     MixDisplay * second);
-
-/**
-* MIX_VALUE_HOLDS_DISPLAY:
-* @value: the #GValue to check
-*
-* Checks if the given #GValue contains a #MIX_TYPE_PARAM value.
-*/
-#define MIX_VALUE_HOLDS_DISPLAY(value)  (G_VALUE_HOLDS(value, MIX_TYPE_DISPLAY))
-
-/**
-* MIX_DISPLAY_REFCOUNT:
-* @obj: a #MixDisplay
-*
-* Get access to the reference count field of the object.
-*/
-#define MIX_DISPLAY_REFCOUNT(obj)           ((MIX_DISPLAY_CAST(obj))->refcount)
-/**
-* MIX_DISPLAY_REFCOUNT_VALUE:
-* @obj: a #MixDisplay
-*
-* Get the reference count value of the object
-*/
-#define MIX_DISPLAY_REFCOUNT_VALUE(obj)     (g_atomic_int_get (&(MIX_DISPLAY_CAST(obj))->refcount))
+#define MIX_DISPLAY(obj)	(reinterpret_cast<MixDisplay*>(obj))
 
 /**
 * MixDisplay:
@@ -93,45 +20,29 @@ typedef gboolean (*MixDisplayEqualFunction) (MixDisplay * first,
 *
 * Base class for a refcounted parameter objects.
 */
-struct _MixDisplay
-{
-  GTypeInstance instance;
-  /*< public > */
-  gint refcount;
+class MixDisplay {
+public:
+	virtual ~MixDisplay();
 
-  /*< private > */
-  gpointer _reserved;
+	virtual MixDisplay* Dup() const;
+	virtual gboolean Copy(MixDisplay* target) const;
+	virtual void Finalize();
+	virtual gboolean Equal(const MixDisplay* obj) const;
+
+	MixDisplay * Ref();
+	void Unref ();
+
+	friend MixDisplay *mix_display_new (void);
+	
+protected:
+	MixDisplay();
+public:
+	/*< public > */
+	gint refcount;
+	/*< private > */
+	gpointer _reserved;
 };
 
-/**
-* MixDisplayClass:
-* @dup: method to duplicate the object.
-* @copy: method to copy details in one object to the other.
-* @finalize: destructor
-* @equal: method to check if the content of two objects are equal.
-* 
-* #MixDisplay class strcut.
-*/
-struct _MixDisplayClass
-{
-  GTypeClass type_class;
-
-  MixDisplayDupFunction dup;
-  MixDisplayCopyFunction copy;
-  MixDisplayFinalizeFunction finalize;
-  MixDisplayEqualFunction equal;
-
-  /*< private > */
-  gpointer _mix_reserved;
-};
-
-/**
-* mix_display_get_type:
-* @returns: type of this object.
-* 
-* Get type.
-*/
-GType mix_display_get_type (void);
 
 /**
 * mix_display_new:
@@ -139,7 +50,9 @@ GType mix_display_get_type (void);
 * 
 * Create new instance of the object.
 */
-MixDisplay *mix_display_new ();
+MixDisplay *mix_display_new (void);
+
+
 
 /**
 * mix_display_copy:
@@ -196,38 +109,5 @@ MixDisplay *mix_display_dup (const MixDisplay * obj);
 */
 gboolean mix_display_equal (MixDisplay * first, MixDisplay * second);
 
-/* GParamSpec */
 
-#define MIX_TYPE_PARAM_DISPLAY (mix_param_spec_display_get_type())
-#define MIX_IS_PARAM_SPEC_DISPLAY(pspec) (G_TYPE_CHECK_INSTANCE_TYPE ((pspec), MIX_TYPE_PARAM_DISPLAY))
-#define MIX_PARAM_SPEC_DISPLAY(pspec) (G_TYPE_CHECK_INSTANCE_CAST ((pspec), MIX_TYPE_PARAM_DISPLAY, MixParamSpecDisplay))
-
-typedef struct _MixParamSpecDisplay MixParamSpecDisplay;
-
-/**
-* MixParamSpecDisplay:
-* @parent: #GParamSpec portion
-* 
-* A #GParamSpec derived structure that contains the meta data
-* for #MixDisplay properties.
-*/
-struct _MixParamSpecDisplay
-{
-  GParamSpec parent;
-};
-
-GType mix_param_spec_display_get_type (void);
-
-GParamSpec *mix_param_spec_display (const char *name, const char *nick,
-				    const char *blurb, GType object_type,
-				    GParamFlags flags);
-
-/* GValue methods */
-
-void mix_value_set_display (GValue * value, MixDisplay * obj);
-void mix_value_take_display (GValue * value, MixDisplay * obj);
-MixDisplay *mix_value_get_display (const GValue * value);
-MixDisplay *mix_value_dup_display (const GValue * value);
-
-G_END_DECLS
 #endif

@@ -12,20 +12,11 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEODECODEPARAMS:
- *
- * Get type of class.
- */
-#define MIX_TYPE_VIDEODECODEPARAMS (mix_videodecodeparams_get_type ())
-
 /**
  * MIX_VIDEODECODEPARAMS:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEODECODEPARAMS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEODECODEPARAMS, MixVideoDecodeParams))
+#define MIX_VIDEODECODEPARAMS(obj) (reinterpret_cast<MixVideoDecodeParams*>(obj))
 
 /**
  * MIX_IS_VIDEODECODEPARAMS:
@@ -33,44 +24,23 @@ G_BEGIN_DECLS
  *
  * Checks if the given object is an instance of #MixParams
  */
-#define MIX_IS_VIDEODECODEPARAMS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEODECODEPARAMS))
+#define MIX_IS_VIDEODECODEPARAMS(obj) ((NULL != MIX_VIDEODECODEPARAMS(obj)) ? TRUE : FALSE)
 
-/**
- * MIX_VIDEODECODEPARAMS_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_VIDEODECODEPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEODECODEPARAMS, MixVideoDecodeParamsClass))
-
-/**
- * MIX_IS_VIDEODECODEPARAMS_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixParamsClass
- */
-#define MIX_IS_VIDEODECODEPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEODECODEPARAMS))
-
-/**
- * MIX_VIDEODECODEPARAMS_GET_CLASS:
- * @obj: a #MixParams object.
- *
- * Get the class instance of the object.
- */
-#define MIX_VIDEODECODEPARAMS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEODECODEPARAMS, MixVideoDecodeParamsClass))
-
-typedef struct _MixVideoDecodeParams MixVideoDecodeParams;
-typedef struct _MixVideoDecodeParamsClass MixVideoDecodeParamsClass;
 
 /**
  * MixVideoDecodeParams:
  *
  * MI-X VideoDecode Parameter object
  */
-struct _MixVideoDecodeParams {
+class MixVideoDecodeParams : public MixParams {
+public:
+    MixVideoDecodeParams();
+    ~MixVideoDecodeParams();
+    virtual gboolean copy(MixParams *target) const;
+    virtual gboolean equal(MixParams* obj) const;
+    virtual MixParams* dup() const;
+public:
 	/*< public > */
-	MixParams parent;
-
-	/*< public > */
-
 	/* TODO: Add properties */
 	
 	/* Presentation timestamp for the video 
@@ -95,26 +65,6 @@ struct _MixVideoDecodeParams {
 	/* Reserved for future use */	
 	void *reserved4;
 };
-
-/**
- * MixVideoDecodeParamsClass:
- *
- * MI-X VideoDecode object class
- */
-struct _MixVideoDecodeParamsClass {
-	/*< public > */
-	MixParamsClass parent_class;
-
-	/* class members */
-};
-
-/**
- * mix_videodecodeparams_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videodecodeparams_get_type(void);
 
 /**
  * mix_videodecodeparams_new:
@@ -213,8 +163,6 @@ MIX_RESULT mix_videodecodeparams_set_new_sequence(MixVideoDecodeParams * obj,
  */
 MIX_RESULT mix_videodecodeparams_get_new_sequence(MixVideoDecodeParams * obj,
 		gboolean *new_sequence);
-		
 
-G_END_DECLS
 
 #endif /* __MIX_VIDEODECODEPARAMS_H__ */

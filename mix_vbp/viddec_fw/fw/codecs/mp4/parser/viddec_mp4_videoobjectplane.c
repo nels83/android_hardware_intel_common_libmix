@@ -54,7 +54,7 @@ mp4_Status_t mp4_Parse_GroupOfVideoObjectPlane(void *parent, viddec_mp4_parser_t
         viddec_fw_mp4_gvop_set_closed_gov(&wi.mp4_gvop, data->closed_gov);
         viddec_fw_mp4_gvop_set_time_code(&wi.mp4_gvop, time_code);
 
-        ret = viddec_pm_append_workitem(parent, &wi, false);
+        ret = (mp4_Status_t)viddec_pm_append_workitem(parent, &wi, false);
         if(ret == 1)
             ret = MP4_STATUS_OK;
     }
@@ -147,7 +147,7 @@ mp4_Sprite_Trajectory(void *parent, mp4_VideoObjectLayer_t *vidObjLay, mp4_Video
     mp4_Status_t ret = MP4_STATUS_OK;
     for(i=0; i < (uint32_t)vidObjLay->sprite_info.no_of_sprite_warping_points; i++ )
     {
-        ret = mp4_Sprite_dmv_length(parent, &dmv_length);
+        ret = (mp4_Status_t)mp4_Sprite_dmv_length(parent, &dmv_length);
         if(ret != MP4_STATUS_OK)
         {
             break;
@@ -175,7 +175,7 @@ mp4_Sprite_Trajectory(void *parent, mp4_VideoObjectLayer_t *vidObjLay, mp4_Video
         }
         vidObjPlane->warping_mv_code_du[i] = dmv_code;
         /* TODO: create another inline function to avoid code duplication */
-        ret = mp4_Sprite_dmv_length(parent, &dmv_length);
+        ret = (mp4_Status_t)mp4_Sprite_dmv_length(parent, &dmv_length);
         if(ret != MP4_STATUS_OK)
         {
             break;
