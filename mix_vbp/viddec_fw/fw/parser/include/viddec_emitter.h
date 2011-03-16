@@ -20,13 +20,13 @@ typedef struct
     uint32_t  max_items;
     uint32_t  num_items;
     uint32_t result;
-}viddec_emitter_wkld;
+} viddec_emitter_wkld;
 
 typedef struct
 {
     viddec_emitter_wkld cur;
     viddec_emitter_wkld next;
-}viddec_emitter;
+} viddec_emitter;
 
 /*
   whats this for? Emitting current tag for ES buffer

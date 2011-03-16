@@ -12,20 +12,12 @@
 #include <mixparams.h>
 #include "mixvideodef.h"
 
-G_BEGIN_DECLS
-
-/**
- * MIX_TYPE_VIDEOENCODEPARAMS:
- *
- * Get type of class.
- */
-#define MIX_TYPE_VIDEOENCODEPARAMS (mix_videoencodeparams_get_type ())
 
 /**
  * MIX_VIDEOENCODEPARAMS:
  * @obj: object to be type-casted.
  */
-#define MIX_VIDEOENCODEPARAMS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOENCODEPARAMS, MixVideoEncodeParams))
+#define MIX_VIDEOENCODEPARAMS(obj) (reinterpret_cast<MixVideoEncodeParams*>(obj))
 
 /**
  * MIX_IS_VIDEOENCODEPARAMS:
@@ -33,84 +25,43 @@ G_BEGIN_DECLS
  *
  * Checks if the given object is an instance of #MixParams
  */
-#define MIX_IS_VIDEOENCODEPARAMS(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOENCODEPARAMS))
+#define MIX_IS_VIDEOENCODEPARAMS(obj) ((NULL !=MIX_VIDEOENCODEPARAMS(obj)) ? TRUE : FALSE)
 
-/**
- * MIX_VIDEOENCODEPARAMS_CLASS:
- * @klass: class to be type-casted.
- */
-#define MIX_VIDEOENCODEPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOENCODEPARAMS, MixVideoEncodeParamsClass))
-
-/**
- * MIX_IS_VIDEOENCODEPARAMS_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixParamsClass
- */
-#define MIX_IS_VIDEOENCODEPARAMS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOENCODEPARAMS))
-
-/**
- * MIX_VIDEOENCODEPARAMS_GET_CLASS:
- * @obj: a #MixParams object.
- *
- * Get the class instance of the object.
- */
-#define MIX_VIDEOENCODEPARAMS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOENCODEPARAMS, MixVideoEncodeParamsClass))
-
-typedef struct _MixVideoEncodeParams MixVideoEncodeParams;
-typedef struct _MixVideoEncodeParamsClass MixVideoEncodeParamsClass;
 
 /**
  * MixVideoEncodeParams:
  *
  * MI-X VideoDecode Parameter object
  */
-struct _MixVideoEncodeParams {
-	/*< public > */
-	MixParams parent;
+class MixVideoEncodeParams :public MixParams {
+public:
+    MixVideoEncodeParams();
+    virtual ~MixVideoEncodeParams();
+    virtual bool copy(MixParams * target) const;
+    virtual MixParams *dup() const;
+    virtual bool equal(MixParams *  obj) const;
 
-	/*< public > */
+public:
+    /* TODO: Add properties */
+    /* < private > */
+    uint64 timestamp;
+    bool discontinuity;
 
-	/* TODO: Add properties */
-	
-	/* < private > */
-	guint64 timestamp;
-	gboolean discontinuity;
+    /* < public > */
 
-	/* < public > */
-	
-	/* Reserved for future use */ 
-	void *reserved1;
-	
-	/* Reserved for future use */	
-	void *reserved2;
-	
-	/* Reserved for future use */	
-	void *reserved3;
-	
-	/* Reserved for future use */	
-	void *reserved4;
+    /* Reserved for future use */
+    void *reserved1;
+
+    /* Reserved for future use */
+    void *reserved2;
+
+    /* Reserved for future use */
+    void *reserved3;
+
+    /* Reserved for future use */
+    void *reserved4;
 };
 
-/**
- * MixVideoEncodeParamsClass:
- *
- * MI-X VideoDecode object class
- */
-struct _MixVideoEncodeParamsClass {
-	/*< public > */
-	MixParamsClass parent_class;
-
-	/* class members */
-};
-
-/**
- * mix_videoencodeparams_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoencodeparams_get_type(void);
 
 /**
  * mix_videoencodeparams_new:
@@ -139,17 +90,14 @@ MixVideoEncodeParams *mix_videoencodeparams_ref(MixVideoEncodeParams * mix);
 /* Class Methods */
 
 /* TODO: Add getters and setters for properties */
-MIX_RESULT mix_videoencodeparams_set_timestamp(MixVideoEncodeParams * obj,
-		guint64 timestamp);
-MIX_RESULT mix_videoencodeparams_get_timestamp(MixVideoEncodeParams * obj,
-		guint64 * timestamp);
-
-MIX_RESULT mix_videoencodeparams_set_discontinuity(MixVideoEncodeParams * obj,
-		gboolean discontinuity);
-MIX_RESULT mix_videoencodeparams_get_discontinuity(MixVideoEncodeParams * obj,
-		gboolean *discontinuity);
-
-G_END_DECLS
+MIX_RESULT mix_videoencodeparams_set_timestamp(
+    MixVideoEncodeParams * obj, uint64 timestamp);
+MIX_RESULT mix_videoencodeparams_get_timestamp(
+    MixVideoEncodeParams * obj, uint64 * timestamp);
+MIX_RESULT mix_videoencodeparams_set_discontinuity(
+    MixVideoEncodeParams * obj, bool discontinuity);
+MIX_RESULT mix_videoencodeparams_get_discontinuity(
+    MixVideoEncodeParams * obj, bool *discontinuity);
 
 #endif /* __MIX_VIDEOENCODEPARAMS_H__ */
 

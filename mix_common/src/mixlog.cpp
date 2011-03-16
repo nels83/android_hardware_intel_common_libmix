@@ -10,7 +10,9 @@
 #include "mixlog.h"
 
 #ifndef ANDROID
-#include <glib.h>
+#ifdef MIX_LOG_USE_HT
+#include "j_hashtable.h"
+#endif
 #endif
 
 #define MIX_DELOG_COMPS "MIX_DELOG_COMPS"
@@ -26,234 +28,239 @@
 static GStaticMutex g_mutex = G_STATIC_MUTEX_INIT;
 
 #ifdef MIX_LOG_USE_HT
-static GHashTable *g_defile_ht = NULL, *g_defunc_ht = NULL, *g_decom_ht = NULL;
-static gint g_mix_log_level = MIX_LOG_LEVEL_VERBOSE;
-static gint g_refcount = 0;
+static JHashTable *g_defile_ht = NULL, *g_defunc_ht = NULL, *g_decom_ht = NULL;
+static int g_mix_log_level = MIX_LOG_LEVEL_VERBOSE;
+static int g_refcount = 0;
 
-#define mix_log_destroy_ht(ht) if(ht) { g_hash_table_destroy(ht); ht = NULL; }
+#define mix_log_destroy_ht(ht) if(ht) { \
+	if (ht == NULL || ht->ref_count <= 0) return; \
+	j_hash_table_remove_all (ht); \
+	j_hash_table_unref (ht); \
+	ht = NULL; }
 
-void mix_log_get_ht(GHashTable **ht, const gchar *var) {
+void mix_log_get_ht(JHashTable **ht, const char *var) {
 
-	const char *delog_list = NULL;
-	char *item = NULL;
-	if (!ht || !var) {
-		return;
-	}
+    const char *delog_list = NULL;
+    char *item = NULL;
+    if (!ht || !var) {
+        return;
+    }
 
-	delog_list = g_getenv(var);
-	if (!delog_list) {
-		return;
-	}
+    delog_list = g_getenv(var);
+    if (!delog_list) {
+        return;
+    }
 
-	if (*ht == NULL) {
-		*ht = g_hash_table_new(g_str_hash, g_str_equal);
-		if (*ht == NULL) {
-			return;
-		}
-	}
+    if (*ht == NULL) {
+        *ht = j_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
+        if (*ht == NULL) {
+            return;
+        }
+    }
 
-	item = strtok((char *) delog_list, MIX_DELOG_DELIMITERS);
-	while (item != NULL) {
-		g_hash_table_insert(*ht, item, "true");
-		item = strtok(NULL, MIX_DELOG_DELIMITERS);
-	}
+    item = strtok((char *) delog_list, MIX_DELOG_DELIMITERS);
+    while (item != NULL) {
+        j_hash_table_insert(*ht, item, "true");
+        item = strtok(NULL, MIX_DELOG_DELIMITERS);
+    }
 }
 
 void mix_log_initialize_func() {
 
-	const gchar *mix_log_level = NULL;
-	g_static_mutex_lock(&g_mutex);
+    const char *mix_log_level = NULL;
+    g_static_mutex_lock(&g_mutex);
 
-	if (g_refcount == 0) {
+    if (g_refcount == 0) {
 
-		mix_log_level = g_getenv(MIX_LOG_LEVEL);
-		if (mix_log_level) {
-			g_mix_log_level = atoi(mix_log_level);
-		}
+        mix_log_level = g_getenv(MIX_LOG_LEVEL);
+        if (mix_log_level) {
+            g_mix_log_level = atoi(mix_log_level);
+        }
 
-		mix_log_get_ht(&g_decom_ht, MIX_DELOG_COMPS);
-		mix_log_get_ht(&g_defile_ht, MIX_DELOG_FILES);
-		mix_log_get_ht(&g_defunc_ht, MIX_DELOG_FUNCS);
-	}
+        mix_log_get_ht(&g_decom_ht, MIX_DELOG_COMPS);
+        mix_log_get_ht(&g_defile_ht, MIX_DELOG_FILES);
+        mix_log_get_ht(&g_defunc_ht, MIX_DELOG_FUNCS);
+    }
 
-	g_refcount++;
+    g_refcount++;
 
-	g_static_mutex_unlock(&g_mutex);
+    g_static_mutex_unlock(&g_mutex);
 }
 
 void mix_log_finalize_func() {
 
-	g_static_mutex_lock(&g_mutex);
+    g_static_mutex_lock(&g_mutex);
 
-	g_refcount--;
+    g_refcount--;
 
-	if (g_refcount == 0) {
-		mix_log_destroy_ht(g_decom_ht);
-		mix_log_destroy_ht(g_defile_ht);
-		mix_log_destroy_ht(g_defunc_ht);
+    if (g_refcount == 0) {
+        mix_log_destroy_ht(g_decom_ht);
+        mix_log_destroy_ht(g_defile_ht);
+        mix_log_destroy_ht(g_defunc_ht);
 
-		g_mix_log_level = MIX_LOG_LEVEL_VERBOSE;
-	}
+        g_mix_log_level = MIX_LOG_LEVEL_VERBOSE;
+    }
 
-	if (g_refcount < 0) {
-		g_refcount = 0;
-	}
+    if (g_refcount < 0) {
+        g_refcount = 0;
+    }
 
-	g_static_mutex_unlock(&g_mutex);
+    g_static_mutex_unlock(&g_mutex);
 }
 
-void mix_log_func(const gchar* comp, gint level, const gchar *file,
-		const gchar *func, gint line, const gchar *format, ...) {
+void mix_log_func(const char* comp, int level, const char *file,
+                  const char *func, int line, const char *format, ...) {
 
-	va_list args;
-	static gchar* loglevel[4] = {"**ERROR", "*WARNING", "INFO", "VERBOSE"};
+    va_list args;
+    static char* loglevel[4] = {"**ERROR", "*WARNING", "INFO", "VERBOSE"};
 
-	if (!format) {
-		return;
-	}
+    if (!format) {
+        return;
+    }
 
-	g_static_mutex_lock(&g_mutex);
+    g_static_mutex_lock(&g_mutex);
 
-	if (level > g_mix_log_level) {
-		goto exit;
-	}
+    if (level > g_mix_log_level) {
+        goto exit;
+    }
 
-	if (g_decom_ht) {
-		if (g_hash_table_lookup(g_decom_ht, comp)) {
-			goto exit;
-		}
-	}
+    if (g_decom_ht) {
+        if (j_hash_table_lookup(g_decom_ht, comp)) {
+            goto exit;
+        }
+    }
 
-	if (g_defile_ht) {
-		if (g_hash_table_lookup(g_defile_ht, file)) {
-			goto exit;
-		}
-	}
+    if (g_defile_ht) {
+        if (j_hash_table_lookup(g_defile_ht, file)) {
+            goto exit;
+        }
+    }
 
-	if (g_defunc_ht) {
-		if (g_hash_table_lookup(g_defunc_ht, func)) {
-			goto exit;
-		}
-	}
+    if (g_defunc_ht) {
+        if (j_hash_table_lookup(g_defunc_ht, func)) {
+            goto exit;
+        }
+    }
 
-	if(level > MIX_LOG_LEVEL_VERBOSE) {
-		level = MIX_LOG_LEVEL_VERBOSE;
-	}
-	if(level < MIX_LOG_LEVEL_ERROR) {
-		level = MIX_LOG_LEVEL_ERROR;
-	}
+    if (level > MIX_LOG_LEVEL_VERBOSE) {
+        level = MIX_LOG_LEVEL_VERBOSE;
+    }
+    if (level < MIX_LOG_LEVEL_ERROR) {
+        level = MIX_LOG_LEVEL_ERROR;
+    }
 
-	g_print("%s : %s : %s : ", loglevel[level - 1], file, func);
+    g_print("%s : %s : %s : ", loglevel[level - 1], file, func);
 
-	va_start(args, format);
-	g_vprintf(format, args);
-	va_end(args);
+    va_start(args, format);
+    g_vprintf(format, args);
+    va_end(args);
 
-	exit: g_static_mutex_unlock(&g_mutex);
+exit:
+    g_static_mutex_unlock(&g_mutex);
 }
 
 #else /* MIX_LOG_USE_HT */
 
-gboolean mix_shall_delog(const gchar *name, const gchar *var) {
+bool mix_shall_delog(const char *name, const char *var) {
 
-	const char *delog_list = NULL;
-	char *item = NULL;
-	gboolean delog = FALSE;
+    const char *delog_list = NULL;
+    char *item = NULL;
+    bool delog = FALSE;
 
-	if (!name || !var) {
-		return delog;
-	}
+    if (!name || !var) {
+        return delog;
+    }
 
-	delog_list = g_getenv(var);
-	if (!delog_list) {
-		return delog;
-	}
+    delog_list = g_getenv(var);
+    if (!delog_list) {
+        return delog;
+    }
 
-	item = strtok((char *) delog_list, MIX_DELOG_DELIMITERS);
-	while (item != NULL) {
-		if (strcmp(item, name) == 0) {
-			delog = TRUE;
-			break;
-		}
-		item = strtok(NULL, MIX_DELOG_DELIMITERS);
-	}
+    item = strtok((char *) delog_list, MIX_DELOG_DELIMITERS);
+    while (item != NULL) {
+        if (strcmp(item, name) == 0) {
+            delog = TRUE;
+            break;
+        }
+        item = strtok(NULL, MIX_DELOG_DELIMITERS);
+    }
 
-	return delog;
+    return delog;
 }
 
-gboolean mix_log_enabled() {
+bool mix_log_enabled() {
 
-	const char *value = NULL;
-	value = g_getenv(MIX_LOG_ENABLE);
-	if(!value) {
-		return FALSE;
-	}
-	
-	if(value[0] == '0') {
-		return FALSE;
-	}
-	return TRUE;
+    const char *value = NULL;
+    value = g_getenv(MIX_LOG_ENABLE);
+    if (!value) {
+        return FALSE;
+    }
+
+    if (value[0] == '0') {
+        return FALSE;
+    }
+    return TRUE;
 }
 
-void mix_log_func(const gchar* comp, gint level, const gchar *file,
-		const gchar *func, gint line, const gchar *format, ...) {
+void mix_log_func(const char* comp, int level, const char *file,
+                  const char *func, int line, const char *format, ...) {
 
-	va_list args;
-	static gchar* loglevel[4] = { "**ERROR", "*WARNING", "INFO", "VERBOSE" };
+    va_list args;
+    static char* loglevel[4] = { "**ERROR", "*WARNING", "INFO", "VERBOSE" };
 
-	const gchar *env_mix_log_level = NULL;
-	gint mix_log_level_threhold = MIX_LOG_LEVEL_VERBOSE;
+    const char *env_mix_log_level = NULL;
+    int mix_log_level_threhold = MIX_LOG_LEVEL_VERBOSE;
 
-	if(!mix_log_enabled()) {
-		return;
-	}
+    if (!mix_log_enabled()) {
+        return;
+    }
 
-	if (!format) {
-		return;
-	}
+    if (!format) {
+        return;
+    }
 
-	g_static_mutex_lock(&g_mutex);
+    g_static_mutex_lock(&g_mutex);
 
-	/* log level */
-	env_mix_log_level = g_getenv(MIX_LOG_LEVEL);
-	if (env_mix_log_level) {
-		mix_log_level_threhold = atoi(env_mix_log_level);
-	}
+    /* log level */
+    env_mix_log_level = g_getenv(MIX_LOG_LEVEL);
+    if (env_mix_log_level) {
+        mix_log_level_threhold = atoi(env_mix_log_level);
+    }
 
-	if (level > mix_log_level_threhold) {
-		goto exit;
-	}
+    if (level > mix_log_level_threhold) {
+        goto exit;
+    }
 
-	/* component */
-	if (mix_shall_delog(comp, MIX_DELOG_COMPS)) {
-		goto exit;
-	}
+    /* component */
+    if (mix_shall_delog(comp, MIX_DELOG_COMPS)) {
+        goto exit;
+    }
 
-	/* files */
-	if (mix_shall_delog(file, MIX_DELOG_FILES)) {
-		goto exit;
-	}
+    /* files */
+    if (mix_shall_delog(file, MIX_DELOG_FILES)) {
+        goto exit;
+    }
 
-	/* functions */
-	if (mix_shall_delog(func, MIX_DELOG_FUNCS)) {
-		goto exit;
-	}
+    /* functions */
+    if (mix_shall_delog(func, MIX_DELOG_FUNCS)) {
+        goto exit;
+    }
 
-	if (level > MIX_LOG_LEVEL_VERBOSE) {
-		level = MIX_LOG_LEVEL_VERBOSE;
-	}
-	if (level < MIX_LOG_LEVEL_ERROR) {
-		level = MIX_LOG_LEVEL_ERROR;
-	}
+    if (level > MIX_LOG_LEVEL_VERBOSE) {
+        level = MIX_LOG_LEVEL_VERBOSE;
+    }
+    if (level < MIX_LOG_LEVEL_ERROR) {
+        level = MIX_LOG_LEVEL_ERROR;
+    }
 
-	g_print("%s : %s : %s : ", loglevel[level - 1], file, func);
+    g_print("%s : %s : %s : ", loglevel[level - 1], file, func);
 
-	va_start(args, format);
-	g_vprintf(format, args);
-	va_end(args);
+    va_start(args, format);
+    g_vprintf(format, args);
+    va_end(args);
 
 exit:
-	g_static_mutex_unlock(&g_mutex);
+    g_static_mutex_unlock(&g_mutex);
 }
 
 

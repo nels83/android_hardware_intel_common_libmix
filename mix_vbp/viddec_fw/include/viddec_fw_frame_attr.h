@@ -1,57 +1,57 @@
-/*  
-    This file is provided under a dual BSD/GPLv2 license.  When using or 
+/*
+    This file is provided under a dual BSD/GPLv2 license.  When using or
     redistributing this file, you may do so under either license.
-    
+
     GPL LICENSE SUMMARY
-    
+
     Copyright(c) 2007-2009 Intel Corporation. All rights reserved.
-    
-    This program is free software; you can redistribute it and/or modify 
+
+    This program is free software; you can redistribute it and/or modify
     it under the terms of version 2 of the GNU General Public License as
     published by the Free Software Foundation.
 
-    This program is distributed in the hope that it will be useful, but 
-    WITHOUT ANY WARRANTY; without even the implied warranty of 
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
 
-    You should have received a copy of the GNU General Public License 
-    along with this program; if not, write to the Free Software 
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-    The full GNU General Public License is included in this distribution 
+    The full GNU General Public License is included in this distribution
     in the file called LICENSE.GPL.
 
     Contact Information:
 
-    BSD LICENSE 
+    BSD LICENSE
 
     Copyright(c) 2007-2009 Intel Corporation. All rights reserved.
     All rights reserved.
 
-    Redistribution and use in source and binary forms, with or without 
-    modification, are permitted provided that the following conditions 
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
     are met:
 
-    * Redistributions of source code must retain the above copyright 
+    * Redistributions of source code must retain the above copyright
     notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright 
-    notice, this list of conditions and the following disclaimer in 
-    the documentation and/or other materials provided with the 
+    * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
     distribution.
-    * Neither the name of Intel Corporation nor the names of its 
-    contributors may be used to endorse or promote products derived 
+    * Neither the name of Intel Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
     from this software without specific prior written permission.
 
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR 
-    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
-    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
@@ -67,7 +67,7 @@
 This enumeration lists all the frame types defined by the MPEG, VC1 and H264 specifications.
 Frame types applicable to a single codec are specified in the comments.
 */
-typedef enum 
+typedef enum
 {
     VIDDEC_FRAME_TYPE_INVALID=0,   /** Unknown type - default value */
     VIDDEC_FRAME_TYPE_IDR=0x1,       /** IDR frame - h264 only */
@@ -88,7 +88,7 @@ typedef struct viddec_rect_size
 {
     unsigned int width;
     unsigned int height;
-}viddec_rect_size_t;
+} viddec_rect_size_t;
 
 /**
 This structure contains MPEG2 specific pan scan offsets extracted from the stream.
@@ -97,7 +97,7 @@ typedef struct viddec_mpeg2_frame_center_offset
 {
     int horz;
     int vert;
-}viddec_mpeg2_frame_center_offset_t;
+} viddec_mpeg2_frame_center_offset_t;
 
 /**
 This structure contains the MPEG2 specific frame attributes.
@@ -143,7 +143,7 @@ typedef struct viddec_mpeg2_frame_attributes
     unsigned int repeat_first_field;
 
 
-}viddec_mpeg2_frame_attributes_t;
+} viddec_mpeg2_frame_attributes_t;
 
 /**
 This structure contains MPEG2 specific pan scan offsets extracted from the stream.
@@ -154,7 +154,7 @@ typedef struct viddec_vc1_pan_scan_window
     unsigned int voffset;
     unsigned int width;
     unsigned int height;
-}viddec_vc1_pan_scan_window_t;
+} viddec_vc1_pan_scan_window_t;
 
 /**
 This structure contains the VC1 specific frame attributes.
@@ -169,7 +169,7 @@ typedef struct viddec_vc1_frame_attributes
 
     /**
     Frame/field repeat information in the bitstream.
-    Refer to "RPTFRM", "TFF", "BFF" in the picture layer 
+    Refer to "RPTFRM", "TFF", "BFF" in the picture layer
     of the SMPTE VC1 Specification.
     */
     unsigned int rptfrm;
@@ -178,7 +178,7 @@ typedef struct viddec_vc1_frame_attributes
 
     /**
     Pan-scan information in the bitstream.
-    Refer to "PANSCAN_FLAG" in the entrypoint layer, "PS_PRESENT", "PS_HOFFSET", "PS_VOFFSET", 
+    Refer to "PANSCAN_FLAG" in the entrypoint layer, "PS_PRESENT", "PS_HOFFSET", "PS_VOFFSET",
     "PS_WIDTH" and "PS_HEIGHT" in the picture layer of the SMPTE VC1 Specification.
     */
     unsigned int panscan_flag;
@@ -186,7 +186,7 @@ typedef struct viddec_vc1_frame_attributes
     unsigned int num_of_pan_scan_windows;
     viddec_vc1_pan_scan_window_t pan_scan_window[VIDDEC_PANSCAN_MAX_OFFSETS];
 
-}viddec_vc1_frame_attributes_t;
+} viddec_vc1_frame_attributes_t;
 
 /**
 This structure contains the H264 specific frame attributes.
@@ -207,7 +207,7 @@ typedef struct viddec_h264_frame_attributes
     int bottom_field_poc;
 
     /**
-       Display size, which is cropped from content size. 
+       Display size, which is cropped from content size.
        Currently, the cont_size is cropped, so this paramter is redundant, but in future, cont_size may be changed
     */
     viddec_rect_size_t cropped_size;
@@ -216,7 +216,7 @@ typedef struct viddec_h264_frame_attributes
        top_field_first: 0 means bottom_field_POC is smaller than top_field_POC, else 1
     */
     unsigned int top_field_first;
-    
+
     /**
        field_frame_flag: 0 means all slice of this frame are frame-base encoded, else 1
     */
@@ -236,7 +236,7 @@ typedef struct viddec_h264_frame_attributes
 #define viddec_fw_h264_mvc_get_is_base_view(x)         viddec_fw_bitfields_extract( (x)->view_spcific_info, 16, 0x1)
 #define viddec_fw_h264_mvc_set_is_base_view(x, val)    viddec_fw_bitfields_insert( (x)->view_spcific_info, val, 16, 0x1)
     unsigned int view_spcific_info;
-}viddec_h264_frame_attributes_t;
+} viddec_h264_frame_attributes_t;
 
 /**
 This structure contains the MPEG4 specific frame attributes.
@@ -249,7 +249,7 @@ typedef struct viddec_mpeg4_frame_attributes
     */
     unsigned int top_field_first;
 
-}viddec_mpeg4_frame_attributes_t;
+} viddec_mpeg4_frame_attributes_t;
 
 /**
 This structure groups all the frame attributes that are exported by the firmware.
@@ -262,9 +262,9 @@ typedef struct viddec_frame_attributes
     Content size specified in the stream.
     For MPEG2, refer to "horizontal_size_value, vertical_size_value" of the sequence header and
     "horizontal_size_extension, vertical_size_extension" of the sequence extension in ITU-T H.262 Specification.
-    For H264, refer to "pic_width_in_mbs_minus1" and "pic_height_in_map_units_minus1" of the 
+    For H264, refer to "pic_width_in_mbs_minus1" and "pic_height_in_map_units_minus1" of the
     sequence parameter set in ITU-T H.264 Specification.
-    For VC1, refer to "MAX_CODED_WIDTH" and "MAX_CODED_HEIGHT" in the sequence layer, 
+    For VC1, refer to "MAX_CODED_WIDTH" and "MAX_CODED_HEIGHT" in the sequence layer,
     "CODED_SIZE_FLAG", "CODED_WIDTH" and "CODED_HEIGHT" in the entrypoint layer of the SMPTE VC1 Specification.
     */
     viddec_rect_size_t cont_size;
@@ -289,6 +289,6 @@ typedef struct viddec_frame_attributes
         viddec_mpeg4_frame_attributes_t  mpeg4;
     };
 
-}viddec_frame_attributes_t;
+} viddec_frame_attributes_t;
 
 #endif /* VIDDEC_FRAME_ATTR_H */

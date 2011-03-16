@@ -28,8 +28,8 @@ vc1_Status vc1_ParsePictureHeader_ProgressiveIpicture_Adv(void* ctxt, vc1_Info *
     vc1_metadata_t *md = &pInfo->metadata;
     vc1_PictureLayerHeader *picLayerHeader = &pInfo->picLayerHeader;
 
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-        md->widthMB, md->heightMB, BPP_ACPRED)) != VC1_STATUS_OK)
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, md->heightMB, BPP_ACPRED)) != VC1_STATUS_OK)
     {
         return status;
     }
@@ -46,8 +46,8 @@ vc1_Status vc1_ParsePictureHeader_ProgressiveIpicture_Adv(void* ctxt, vc1_Info *
             {
                 picLayerHeader->CONDOVER = VC1_CONDOVER_FLAG_SOME;
                 if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-                    md->widthMB,
-                    md->heightMB, BPP_OVERFLAGS)) != VC1_STATUS_OK)
+                                                 md->widthMB,
+                                                 md->heightMB, BPP_OVERFLAGS)) != VC1_STATUS_OK)
                 {
                     return status;
                 }
@@ -96,13 +96,13 @@ vc1_Status vc1_ParsePictureHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pI
     vc1_PictureLayerHeader *picLayerHeader = &pInfo->picLayerHeader;
 
     if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-        md->widthMB, md->heightMB, BPP_FIELDTX)) != VC1_STATUS_OK)
+                                     md->widthMB, md->heightMB, BPP_FIELDTX)) != VC1_STATUS_OK)
     {
         return status;
     }
 
     if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-        md->widthMB, md->heightMB, BPP_ACPRED)) != VC1_STATUS_OK)
+                                     md->widthMB, md->heightMB, BPP_ACPRED)) != VC1_STATUS_OK)
     {
         return status;
     }
@@ -119,8 +119,8 @@ vc1_Status vc1_ParsePictureHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pI
             {
                 picLayerHeader->CONDOVER = VC1_CONDOVER_FLAG_SOME;
                 if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-                    md->widthMB,
-                    md->heightMB, BPP_OVERFLAGS)) != VC1_STATUS_OK)
+                                                 md->widthMB,
+                                                 md->heightMB, BPP_OVERFLAGS)) != VC1_STATUS_OK)
                 {
                     return status;
                 }
@@ -173,13 +173,13 @@ vc1_Status vc1_ParseFieldHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pInf
     // to avoid carrying forward the mvmode values from previous field
     // especially the intensity compensation value
     picLayerHeader->MVMODE = 0;
-    
+
     VC1_GET_BITS9(5, picLayerHeader->PQINDEX);
     if ((status = vc1_CalculatePQuant(pInfo)) != VC1_STATUS_OK) {
         DEB("Error parsing I field \n");
         return status;
     }
-  
+
     if (picLayerHeader->PQINDEX <= 8)
     {
         VC1_GET_BITS9(1, picLayerHeader->HALFQP);
@@ -194,14 +194,14 @@ vc1_Status vc1_ParseFieldHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pInf
 
     if (md->POSTPROCFLAG == 1)
         VC1_GET_BITS9(2, tempValue); /* POSTPROC. */
-    
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-    md->widthMB, (md->heightMB+1)/2, BPP_ACPRED)) !=
-    VC1_STATUS_OK)
+
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, (md->heightMB+1)/2, BPP_ACPRED)) !=
+            VC1_STATUS_OK)
     {
         DEB("Error parsing I field \n");
         return status;
-    }  
+    }
 
     if ((md->OVERLAP == 1) && (picLayerHeader->PQUANT <= 8))
     {
@@ -214,15 +214,15 @@ vc1_Status vc1_ParseFieldHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pInf
             else
             {
                 picLayerHeader->CONDOVER = VC1_CONDOVER_FLAG_SOME;
-                
-		if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-		    md->widthMB,
-		    (md->heightMB+1)/2, BPP_OVERFLAGS)) !=
-		    VC1_STATUS_OK)
-		{
-		    DEB("Error parsing I field \n");
-		    return status;
-		}
+
+                if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                                 md->widthMB,
+                                                 (md->heightMB+1)/2, BPP_OVERFLAGS)) !=
+                        VC1_STATUS_OK)
+                {
+                    DEB("Error parsing I field \n");
+                    return status;
+                }
             }
         }
         else

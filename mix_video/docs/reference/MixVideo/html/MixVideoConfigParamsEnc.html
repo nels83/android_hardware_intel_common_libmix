@@ -49,26 +49,26 @@
 #define             <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-unref" title="mix_videoconfigparamsenc_unref()">mix_videoconfigparamsenc_unref</a>      (obj)
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-mime-type" title="mix_videoconfigparamsenc_set_mime_type ()">mix_videoconfigparamsenc_set_mime_type</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         const gchar *mime_type);
+                                                         const char *mime_type);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-mime-type" title="mix_videoconfigparamsenc_get_mime_type ()">mix_videoconfigparamsenc_get_mime_type</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gchar **mime_type);
+                                                         char **mime_type);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-frame-rate" title="mix_videoconfigparamsenc_set_frame_rate ()">mix_videoconfigparamsenc_set_frame_rate</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint frame_rate_num,
-                                                         guint frame_rate_denom);
+                                                         uint frame_rate_num,
+                                                         uint frame_rate_denom);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-frame-rate" title="mix_videoconfigparamsenc_get_frame_rate ()">mix_videoconfigparamsenc_get_frame_rate</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *frame_rate_num,
-                                                         guint *frame_rate_denom);
+                                                         uint *frame_rate_num,
+                                                         uint *frame_rate_denom);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-picture-res" title="mix_videoconfigparamsenc_set_picture_res ()">mix_videoconfigparamsenc_set_picture_res</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint picture_width,
-                                                         guint picture_height);
+                                                         uint picture_width,
+                                                         uint picture_height);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-picture-res" title="mix_videoconfigparamsenc_get_picture_res ()">mix_videoconfigparamsenc_get_picture_res</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *picture_width,
-                                                         guint *picture_height);
+                                                         uint *picture_width,
+                                                         uint *picture_height);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-encode-format" title="mix_videoconfigparamsenc_set_encode_format ()">mix_videoconfigparamsenc_set_encode_format</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixEncodeTargetFormat" title="enum MixEncodeTargetFormat">MixEncodeTargetFormat</a> encode_format);
@@ -77,58 +77,58 @@ MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-video
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixEncodeTargetFormat" title="enum MixEncodeTargetFormat">MixEncodeTargetFormat</a> *encode_format);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-bit-rate" title="mix_videoconfigparamsenc_set_bit_rate ()">mix_videoconfigparamsenc_set_bit_rate</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint bps);
+                                                         uint bps);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-bit-rate" title="mix_videoconfigparamsenc_get_bit_rate ()">mix_videoconfigparamsenc_get_bit_rate</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *bps);
+                                                         uint *bps);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-init-qp" title="mix_videoconfigparamsenc_set_init_qp ()">mix_videoconfigparamsenc_set_init_qp</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint initial_qp);
+                                                         uint initial_qp);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-init-qp" title="mix_videoconfigparamsenc_get_init_qp ()">mix_videoconfigparamsenc_get_init_qp</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *initial_qp);
+                                                         uint *initial_qp);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-min-qp" title="mix_videoconfigparamsenc_set_min_qp ()">mix_videoconfigparamsenc_set_min_qp</a> (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint min_qp);
+                                                         uint min_qp);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-min-qp" title="mix_videoconfigparamsenc_get_min_qp ()">mix_videoconfigparamsenc_get_min_qp</a> (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *min_qp);
+                                                         uint *min_qp);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-intra-period" title="mix_videoconfigparamsenc_set_intra_period ()">mix_videoconfigparamsenc_set_intra_period</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint intra_period);
+                                                         uint intra_period);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-intra-period" title="mix_videoconfigparamsenc_get_intra_period ()">mix_videoconfigparamsenc_get_intra_period</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *intra_period);
+                                                         uint *intra_period);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-buffer-pool-size" title="mix_videoconfigparamsenc_set_buffer_pool_size ()">mix_videoconfigparamsenc_set_buffer_pool_size</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint bufpoolsize);
+                                                         uint bufpoolsize);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-buffer-pool-size" title="mix_videoconfigparamsenc_get_buffer_pool_size ()">mix_videoconfigparamsenc_get_buffer_pool_size</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *bufpoolsize);
+                                                         uint *bufpoolsize);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-share-buf-mode" title="mix_videoconfigparamsenc_set_share_buf_mode ()">mix_videoconfigparamsenc_set_share_buf_mode</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gboolean share_buf_mod);
+                                                         bool share_buf_mod);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-share-buf-mode" title="mix_videoconfigparamsenc_get_share_buf_mode ()">mix_videoconfigparamsenc_get_share_buf_mode</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gboolean *share_buf_mod);
+                                                         bool *share_buf_mod);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-ci-frame-info" title="mix_videoconfigparamsenc_set_ci_frame_info ()">mix_videoconfigparamsenc_set_ci_frame_info</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gulong *ci_frame_id,
-                                                         guint ci_frame_num);
+                                                         ulong *ci_frame_id,
+                                                         uint ci_frame_num);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-ci-frame-info" title="mix_videoconfigparamsenc_get_ci_frame_info ()">mix_videoconfigparamsenc_get_ci_frame_info</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gulong * *ci_frame_id,
-                                                         guint *ci_frame_num);
+                                                         ulong * *ci_frame_id,
+                                                         uint *ci_frame_num);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-drawable" title="mix_videoconfigparamsenc_set_drawable ()">mix_videoconfigparamsenc_set_drawable</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gulong draw);
+                                                         ulong draw);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-drawable" title="mix_videoconfigparamsenc_get_drawable ()">mix_videoconfigparamsenc_get_drawable</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gulong *draw);
+                                                         ulong *draw);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-need-display" title="mix_videoconfigparamsenc_set_need_display ()">mix_videoconfigparamsenc_set_need_display</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gboolean need_display);
+                                                         bool need_display);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-get-need-display" title="mix_videoconfigparamsenc_get_need_display ()">mix_videoconfigparamsenc_get_need_display</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gboolean *need_display);
+                                                         bool *need_display);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEnc.html#mix-videoconfigparamsenc-set-rate-control" title="mix_videoconfigparamsenc_set_rate_control ()">mix_videoconfigparamsenc_set_rate_control</a>
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixRateControl" title="enum MixRateControl">MixRateControl</a> rcmode);
@@ -185,28 +185,28 @@ A base object of MI-X video encode configuration parameter objects.</p>
 	MixRateControl rate_control;  	
 
 	/* Bitrate when rate control is used */
-	guint bitrate;
+	uint bitrate;
 	
 	/* Numerator of frame rate */
-	guint frame_rate_num;
+	uint frame_rate_num;
 	
 	/* Denominator of frame rate */
-	guint frame_rate_denom;
+	uint frame_rate_denom;
 	
 	/* The initial QP value */
-	guint initial_qp;
+	uint initial_qp;
 	
 	/* The minimum QP value */
-	guint min_qp;
+	uint min_qp;
 	
 	/* Number of frames between key frames (GOP size) */
-	guint intra_period;
+	uint intra_period;
 	
 	/* Width of video frame */
-	guint16 picture_width;
+	uint16 picture_width;
 	
 	/* Height of the video frame */
-	guint16 picture_height;	
+	uint16 picture_height;	
 
 	/* Mime type, reserved */
 	GString * mime_type;
@@ -215,21 +215,21 @@ A base object of MI-X video encode configuration parameter objects.</p>
 	MixEncodeTargetFormat encode_format;
 
 	/* Size of the pool of MixBuffer objects */
-	guint mixbuffer_pool_size;
+	uint mixbuffer_pool_size;
 
 	/* Are buffers shared between capture and encoding drivers */
-	gboolean share_buf_mode;	
+	bool share_buf_mode;	
 
 	/* Array of frame IDs created by capture library */
-	gulong *	ci_frame_id;
+	ulong *	ci_frame_id;
 	
 	/* Size of the array ci_frame_id */
-	guint	ci_frame_num;
+	uint	ci_frame_num;
 	
 	
 	/* Indicates whether MixVideoFrames suitable for displaying 
 	 * need to be enqueued for retrieval using mix_video_get_frame() */
-	gboolean need_display;
+	bool need_display;
 	
 	/* Reserved for future use */
 	void *reserved1;
@@ -305,7 +305,7 @@ Decrement reference count of the object.</p>
 <a name="mix-videoconfigparamsenc-set-mime-type"></a><h3>mix_videoconfigparamsenc_set_mime_type ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_mime_type
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         const gchar *mime_type);</pre>
+                                                         const char *mime_type);</pre>
 <p>
 Set mime type</p>
 <div class="variablelist"><table border="0">
@@ -334,7 +334,7 @@ Set mime type</p>
 <a name="mix-videoconfigparamsenc-get-mime-type"></a><h3>mix_videoconfigparamsenc_get_mime_type ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_mime_type
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gchar **mime_type);</pre>
+                                                         char **mime_type);</pre>
 <p>
 Get mime type
 </p>
@@ -342,7 +342,7 @@ Get mime type
 </p>
 <div class="note" title="Note" style="margin-left: 0.5in; margin-right: 0.5in;">
 <h3 class="title">Note</h3>
-Caller is responsible to g_free *mime_type
+Caller is responsible to free *mime_type
 </div>
 <div class="variablelist"><table border="0">
 <col align="left" valign="top">
@@ -370,8 +370,8 @@ Caller is responsible to g_free *mime_type
 <a name="mix-videoconfigparamsenc-set-frame-rate"></a><h3>mix_videoconfigparamsenc_set_frame_rate ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_frame_rate
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint frame_rate_num,
-                                                         guint frame_rate_denom);</pre>
+                                                         uint frame_rate_num,
+                                                         uint frame_rate_denom);</pre>
 <p>
 Set frame rate</p>
 <div class="variablelist"><table border="0">
@@ -405,8 +405,8 @@ Set frame rate</p>
 <a name="mix-videoconfigparamsenc-get-frame-rate"></a><h3>mix_videoconfigparamsenc_get_frame_rate ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_frame_rate
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *frame_rate_num,
-                                                         guint *frame_rate_denom);</pre>
+                                                         uint *frame_rate_num,
+                                                         uint *frame_rate_denom);</pre>
 <p>
 Get frame rate</p>
 <div class="variablelist"><table border="0">
@@ -440,8 +440,8 @@ Get frame rate</p>
 <a name="mix-videoconfigparamsenc-set-picture-res"></a><h3>mix_videoconfigparamsenc_set_picture_res ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_picture_res
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint picture_width,
-                                                         guint picture_height);</pre>
+                                                         uint picture_width,
+                                                         uint picture_height);</pre>
 <p>
 Set width and height of video frame</p>
 <div class="variablelist"><table border="0">
@@ -475,8 +475,8 @@ Set width and height of video frame</p>
 <a name="mix-videoconfigparamsenc-get-picture-res"></a><h3>mix_videoconfigparamsenc_get_picture_res ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_picture_res
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *picture_width,
-                                                         guint *picture_height);</pre>
+                                                         uint *picture_width,
+                                                         uint *picture_height);</pre>
 <p>
 Get width and height of video frame</p>
 <div class="variablelist"><table border="0">
@@ -568,7 +568,7 @@ Get Encode target format</p>
 <a name="mix-videoconfigparamsenc-set-bit-rate"></a><h3>mix_videoconfigparamsenc_set_bit_rate ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_bit_rate
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint bps);</pre>
+                                                         uint bps);</pre>
 <p>
 Set bitrate</p>
 <div class="variablelist"><table border="0">
@@ -597,7 +597,7 @@ Set bitrate</p>
 <a name="mix-videoconfigparamsenc-get-bit-rate"></a><h3>mix_videoconfigparamsenc_get_bit_rate ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_bit_rate
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *bps);</pre>
+                                                         uint *bps);</pre>
 <p>
 Get bitrate</p>
 <div class="variablelist"><table border="0">
@@ -626,7 +626,7 @@ Get bitrate</p>
 <a name="mix-videoconfigparamsenc-set-init-qp"></a><h3>mix_videoconfigparamsenc_set_init_qp ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_init_qp
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint initial_qp);</pre>
+                                                         uint initial_qp);</pre>
 <p>
 Set The initial QP value</p>
 <div class="variablelist"><table border="0">
@@ -655,7 +655,7 @@ Set The initial QP value</p>
 <a name="mix-videoconfigparamsenc-get-init-qp"></a><h3>mix_videoconfigparamsenc_get_init_qp ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_init_qp
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *initial_qp);</pre>
+                                                         uint *initial_qp);</pre>
 <p>
 Get The initial QP value</p>
 <div class="variablelist"><table border="0">
@@ -683,7 +683,7 @@ Get The initial QP value</p>
 <div class="refsect2" title="mix_videoconfigparamsenc_set_min_qp ()">
 <a name="mix-videoconfigparamsenc-set-min-qp"></a><h3>mix_videoconfigparamsenc_set_min_qp ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_min_qp (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint min_qp);</pre>
+                                                         uint min_qp);</pre>
 <p>
 Set The minimum QP value</p>
 <div class="variablelist"><table border="0">
@@ -711,7 +711,7 @@ Set The minimum QP value</p>
 <div class="refsect2" title="mix_videoconfigparamsenc_get_min_qp ()">
 <a name="mix-videoconfigparamsenc-get-min-qp"></a><h3>mix_videoconfigparamsenc_get_min_qp ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_min_qp (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *min_qp);</pre>
+                                                         uint *min_qp);</pre>
 <p>
 Get The minimum QP value</p>
 <div class="variablelist"><table border="0">
@@ -740,7 +740,7 @@ Get The minimum QP value</p>
 <a name="mix-videoconfigparamsenc-set-intra-period"></a><h3>mix_videoconfigparamsenc_set_intra_period ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_intra_period
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint intra_period);</pre>
+                                                         uint intra_period);</pre>
 <p>
 Set Number of frames between key frames (GOP size)</p>
 <div class="variablelist"><table border="0">
@@ -769,7 +769,7 @@ Set Number of frames between key frames (GOP size)</p>
 <a name="mix-videoconfigparamsenc-get-intra-period"></a><h3>mix_videoconfigparamsenc_get_intra_period ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_intra_period
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *intra_period);</pre>
+                                                         uint *intra_period);</pre>
 <p>
 Get Number of frames between key frames (GOP size)</p>
 <div class="variablelist"><table border="0">
@@ -798,7 +798,7 @@ Get Number of frames between key frames (GOP size)</p>
 <a name="mix-videoconfigparamsenc-set-buffer-pool-size"></a><h3>mix_videoconfigparamsenc_set_buffer_pool_size ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_buffer_pool_size
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint bufpoolsize);</pre>
+                                                         uint bufpoolsize);</pre>
 <p>
 Get Size of the pool of <a class="link" href="MixBuffer.html" title="MixBuffer"><span class="type">MixBuffer</span></a> objects</p>
 <div class="variablelist"><table border="0">
@@ -827,14 +827,14 @@ Get Size of the pool of <a class="link" href="MixBuffer.html" title="MixBuffer">
 <a name="mix-videoconfigparamsenc-get-buffer-pool-size"></a><h3>mix_videoconfigparamsenc_get_buffer_pool_size ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_buffer_pool_size
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         guint *bufpoolsize);</pre>
+                                                         uint *bufpoolsize);</pre>
 </div>
 <hr>
 <div class="refsect2" title="mix_videoconfigparamsenc_set_share_buf_mode ()">
 <a name="mix-videoconfigparamsenc-set-share-buf-mode"></a><h3>mix_videoconfigparamsenc_set_share_buf_mode ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_share_buf_mode
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gboolean share_buf_mod);</pre>
+                                                         bool share_buf_mod);</pre>
 <p>
 Set the flag that indicates whether buffers are shared between capture and encoding drivers or not</p>
 <div class="variablelist"><table border="0">
@@ -864,7 +864,7 @@ Set the flag that indicates whether buffers are shared between capture and encod
 <a name="mix-videoconfigparamsenc-get-share-buf-mode"></a><h3>mix_videoconfigparamsenc_get_share_buf_mode ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_share_buf_mode
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gboolean *share_buf_mod);</pre>
+                                                         bool *share_buf_mod);</pre>
 <p>
 Get the flag that indicates whether buffers are shared between capture and encoding drivers or not</p>
 <div class="variablelist"><table border="0">
@@ -894,8 +894,8 @@ Get the flag that indicates whether buffers are shared between capture and encod
 <a name="mix-videoconfigparamsenc-set-ci-frame-info"></a><h3>mix_videoconfigparamsenc_set_ci_frame_info ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_ci_frame_info
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gulong *ci_frame_id,
-                                                         guint ci_frame_num);</pre>
+                                                         ulong *ci_frame_id,
+                                                         uint ci_frame_num);</pre>
 <p>
 Set CI frame information</p>
 <div class="variablelist"><table border="0">
@@ -929,14 +929,14 @@ Set CI frame information</p>
 <a name="mix-videoconfigparamsenc-get-ci-frame-info"></a><h3>mix_videoconfigparamsenc_get_ci_frame_info ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_ci_frame_info
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gulong * *ci_frame_id,
-                                                         guint *ci_frame_num);</pre>
+                                                         ulong * *ci_frame_id,
+                                                         uint *ci_frame_num);</pre>
 <p>
 Get CI frame information
 </p>
 <div class="note" title="Note" style="margin-left: 0.5in; margin-right: 0.5in;">
 <h3 class="title">Note</h3>
-Caller is responsible to g_free *ci_frame_id
+Caller is responsible to free *ci_frame_id
 </div>
 <div class="variablelist"><table border="0">
 <col align="left" valign="top">
@@ -969,7 +969,7 @@ Caller is responsible to g_free *ci_frame_id
 <a name="mix-videoconfigparamsenc-set-drawable"></a><h3>mix_videoconfigparamsenc_set_drawable ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_drawable
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gulong draw);</pre>
+                                                         ulong draw);</pre>
 <p>
 Set drawable</p>
 <div class="variablelist"><table border="0">
@@ -998,7 +998,7 @@ Set drawable</p>
 <a name="mix-videoconfigparamsenc-get-drawable"></a><h3>mix_videoconfigparamsenc_get_drawable ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_drawable
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gulong *draw);</pre>
+                                                         ulong *draw);</pre>
 <p>
 Get drawable</p>
 <div class="variablelist"><table border="0">
@@ -1027,7 +1027,7 @@ Get drawable</p>
 <a name="mix-videoconfigparamsenc-set-need-display"></a><h3>mix_videoconfigparamsenc_set_need_display ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_set_need_display
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gboolean need_display);</pre>
+                                                         bool need_display);</pre>
 <p>
 Set the flag used to indicate whether MixVideoFrames suitable for displaying 
 need to be enqueued for retrieval using <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a></p>
@@ -1058,7 +1058,7 @@ need to be enqueued for retrieval using <a class="link" href="MixVideo.html#mix-
 <a name="mix-videoconfigparamsenc-get-need-display"></a><h3>mix_videoconfigparamsenc_get_need_display ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_get_need_display
                                                         (<a class="link" href="MixVideoConfigParamsEnc.html" title="MixVideoConfigParamsEnc">MixVideoConfigParamsEnc</a> *obj,
-                                                         gboolean *need_display);</pre>
+                                                         bool *need_display);</pre>
 <p>
 Get the flag used to indicate whether MixVideoFrames suitable for displaying 
 need to be enqueued for retrieval using <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()"><code class="function">mix_video_get_frame()</code></a></p>

@@ -36,81 +36,81 @@ class MixVideoConfigParamsDec : public MixVideoConfigParams {
 public:
     MixVideoConfigParamsDec();
     ~MixVideoConfigParamsDec();
-    virtual gboolean copy(MixParams *target) const;
-    virtual gboolean equal(MixParams* obj) const;
+    virtual bool copy(MixParams *target) const;
+    virtual bool equal(MixParams* obj) const;
     virtual MixParams* dup() const;
 public:
-	/*< public > */
-	//MixVideoConfigParams parent;
+    /*< public > */
+    //MixVideoConfigParams parent;
 
-	/*< public > */
-	
-	/* Frame re-ordering mode */
-	MixFrameOrderMode frame_order_mode;
-	
-	/* Stream header information, such as 
-	 * codec_data in GStreamer pipelines */ 
-	MixIOVec header;
+    /*< public > */
 
-	/* Mime type */
-	GString * mime_type;
-	
-	/* Frame rate numerator value */
-	guint frame_rate_num;
-	
-	/* Frame rate denominator value */	
-	guint frame_rate_denom;
-	
-	/* Picture width */
-	gulong picture_width;
-	
-	/* Picture height */
-	gulong picture_height;
-	
-	/* Render target format */
-	guint raw_format;
-	
-	/* Rate control: CBR, VBR, none. Only valid for encoding.
-	 * This should be set to none for decoding. */ 
-	guint rate_control;
+    /* Frame re-ordering mode */
+    MixFrameOrderMode frame_order_mode;
 
-	/* Size of pool of MixBuffers to allocate */
-	guint mixbuffer_pool_size;
-	
-	/* Extra surfaces for MixVideoFrame objects to be allocated */
-	guint extra_surface_allocation;
+    /* Stream header information, such as
+     * codec_data in GStreamer pipelines */
+    MixIOVec header;
+
+    /* Mime type */
+    char * mime_type;
+
+    /* Frame rate numerator value */
+    uint frame_rate_num;
+
+    /* Frame rate denominator value */
+    uint frame_rate_denom;
+
+    /* Picture width */
+    ulong picture_width;
+
+    /* Picture height */
+    ulong picture_height;
+
+    /* Render target format */
+    uint raw_format;
+
+    /* Rate control: CBR, VBR, none. Only valid for encoding.
+     * This should be set to none for decoding. */
+    uint rate_control;
+
+    /* Size of pool of MixBuffers to allocate */
+    uint mixbuffer_pool_size;
+
+    /* Extra surfaces for MixVideoFrame objects to be allocated */
+    uint extra_surface_allocation;
 
     /* video range, 0 for short range and 1 for full range, output only */
-	guint8 video_range;
+    uint8 video_range;
 
-    /* 
+    /*
         color matrix, output only. Possible values defined in va.h
         #define VA_SRC_BT601            0x00000010
         #define VA_SRC_BT709            0x00000020
         #define VA_SRC_SMPTE_240     0x00000040
       */
-    guint8  color_matrix;
+    uint8  color_matrix;
 
     /* bit rate in bps, output only */
-    guint8 bit_rate;
+    uint8 bit_rate;
 
-	/* Pixel aspect ratio numerator value */
-	guint par_num;
-	
-	/* Pixel aspect ratio  denominator value */	
-	guint par_denom;
-	
-	/* Reserved for future use */
-	void *reserved1;
-	
-	/* Reserved for future use */
-	void *reserved2;
-	
-	/* Reserved for future use */
-	void *reserved3;
-	
-	/* Reserved for future use */
-	void *reserved4;
+    /* Pixel aspect ratio numerator value */
+    uint par_num;
+
+    /* Pixel aspect ratio  denominator value */
+    uint par_denom;
+
+    /* Reserved for future use */
+    void *reserved1;
+
+    /* Reserved for future use */
+    void *reserved2;
+
+    /* Reserved for future use */
+    void *reserved3;
+
+    /* Reserved for future use */
+    void *reserved4;
 };
 
 /**
@@ -157,7 +157,7 @@ MixVideoConfigParamsDec *mix_videoconfigparamsdec_ref(MixVideoConfigParamsDec * 
  * Set frame order mode.
  */
 MIX_RESULT mix_videoconfigparamsdec_set_frame_order_mode(
-		MixVideoConfigParamsDec * obj, MixFrameOrderMode frame_order_mode);
+    MixVideoConfigParamsDec * obj, MixFrameOrderMode frame_order_mode);
 
 /**
  * mix_videoconfigparamsdec_get_frame_order_mode:
@@ -168,7 +168,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_frame_order_mode(
  * Get frame order mode.
  */
 MIX_RESULT mix_videoconfigparamsdec_get_frame_order_mode(
-		MixVideoConfigParamsDec * obj, MixFrameOrderMode * frame_order_mode);
+    MixVideoConfigParamsDec * obj, MixFrameOrderMode * frame_order_mode);
 
 /**
  * mix_videoconfigparamsdec_set_header:
@@ -179,7 +179,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_frame_order_mode(
  * Set stream header information.
  */
 MIX_RESULT mix_videoconfigparamsdec_set_header(MixVideoConfigParamsDec * obj,
-		MixIOVec *header);
+        MixIOVec *header);
 
 /**
  * mix_videoconfigparamsdec_get_header:
@@ -193,7 +193,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_header(MixVideoConfigParamsDec * obj,
  * </note>
  */
 MIX_RESULT mix_videoconfigparamsdec_get_header(MixVideoConfigParamsDec * obj,
-		MixIOVec ** header);
+        MixIOVec ** header);
 
 /**
  * mix_videoconfigparamsdec_set_mime_type:
@@ -204,7 +204,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_header(MixVideoConfigParamsDec * obj,
  * Set stream mime type
  */
 MIX_RESULT mix_videoconfigparamsdec_set_mime_type(MixVideoConfigParamsDec * obj,
-		const gchar * mime_type);
+        const char * mime_type);
 
 /**
  * mix_videoconfigparamsdec_get_mime_type:
@@ -215,46 +215,46 @@ MIX_RESULT mix_videoconfigparamsdec_set_mime_type(MixVideoConfigParamsDec * obj,
  * Get mime type
  * <note>
  * Caller is responsible to g_free *mime_type
- * </note> 
+ * </note>
  */
 MIX_RESULT mix_videoconfigparamsdec_get_mime_type(MixVideoConfigParamsDec * obj,
-		gchar ** mime_type);
+        char ** mime_type);
 
 /**
  * mix_videoconfigparamsdec_set_frame_rate:
  * @obj: #MixVideoConfigParamsDec object
  * @frame_rate_num: Frame rate numerator value
- * @frame_rate_denom: Frame rate denominator value *  
+ * @frame_rate_denom: Frame rate denominator value *
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set frame rate
  */
 MIX_RESULT mix_videoconfigparamsdec_set_frame_rate(MixVideoConfigParamsDec * obj,
-		guint frame_rate_num, guint frame_rate_denom);
+        uint frame_rate_num, uint frame_rate_denom);
 
 /**
  * mix_videoconfigparamsdec_get_frame_rate:
  * @obj: #MixVideoConfigParamsDec object
- * @frame_rate_num: Frame rate numerator value to be returned 
+ * @frame_rate_num: Frame rate numerator value to be returned
  * @frame_rate_denom: Frame rate denominator value to be returned
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Get frame rate
  */
 MIX_RESULT mix_videoconfigparamsdec_get_frame_rate(MixVideoConfigParamsDec * obj,
-		guint * frame_rate_num, guint * frame_rate_denom);
+        uint * frame_rate_num, uint * frame_rate_denom);
 
 /**
  * mix_videoconfigparamsdec_set_picture_res:
  * @obj: #MixVideoConfigParamsDec object
- * @picture_width: Picture width 
+ * @picture_width: Picture width
  * @picture_height: Picture height
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set video resolution
  */
 MIX_RESULT mix_videoconfigparamsdec_set_picture_res(MixVideoConfigParamsDec * obj,
-		guint picture_width, guint picture_height);
+        uint picture_width, uint picture_height);
 
 /**
  * mix_videoconfigparamsdec_get_picture_res:
@@ -266,7 +266,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_picture_res(MixVideoConfigParamsDec * ob
  * Get video resolution
  */
 MIX_RESULT mix_videoconfigparamsdec_get_picture_res(MixVideoConfigParamsDec * obj,
-		guint * picture_width, guint * picture_height);
+        uint * picture_width, uint * picture_height);
 
 /**
  * mix_videoconfigparamsdec_set_raw_format:
@@ -277,7 +277,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_picture_res(MixVideoConfigParamsDec * ob
  * Set Render target format
  */
 MIX_RESULT mix_videoconfigparamsdec_set_raw_format(MixVideoConfigParamsDec * obj,
-		guint raw_format);
+        uint raw_format);
 
 /**
  * mix_videoconfigparamsdec_get_raw_format:
@@ -288,19 +288,19 @@ MIX_RESULT mix_videoconfigparamsdec_set_raw_format(MixVideoConfigParamsDec * obj
  * Get Render target format
  */
 MIX_RESULT mix_videoconfigparamsdec_get_raw_format(MixVideoConfigParamsDec * obj,
-		guint *raw_format);
+        uint *raw_format);
 
 /**
  * mix_videoconfigparamsdec_set_rate_control:
  * @obj: #MixVideoConfigParamsDec object
- * @rate_control: Rate control: CBR, VBR, none. Only valid for encoding. 
+ * @rate_control: Rate control: CBR, VBR, none. Only valid for encoding.
  *                This should be set to none for decoding.
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set rate control
  */
 MIX_RESULT mix_videoconfigparamsdec_set_rate_control(MixVideoConfigParamsDec * obj,
-		guint rate_control);
+        uint rate_control);
 
 /**
  * mix_videoconfigparamsdec_get_rate_control:
@@ -311,7 +311,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_rate_control(MixVideoConfigParamsDec * o
  * Get rate control
  */
 MIX_RESULT mix_videoconfigparamsdec_get_rate_control(MixVideoConfigParamsDec * obj,
-		guint *rate_control);
+        uint *rate_control);
 
 /**
  * mix_videoconfigparamsdec_set_buffer_pool_size:
@@ -322,7 +322,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_rate_control(MixVideoConfigParamsDec * o
  * Set buffer pool size
  */
 MIX_RESULT mix_videoconfigparamsdec_set_buffer_pool_size(MixVideoConfigParamsDec * obj,
-		guint bufpoolsize);
+        uint bufpoolsize);
 
 /**
  * mix_videoconfigparamsdec_get_buffer_pool_size:
@@ -333,7 +333,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_buffer_pool_size(MixVideoConfigParamsDec
  * Get buffer pool size
  */
 MIX_RESULT mix_videoconfigparamsdec_get_buffer_pool_size(MixVideoConfigParamsDec * obj,
-		guint *bufpoolsize);
+        uint *bufpoolsize);
 
 /**
  * mix_videoconfigparamsdec_set_extra_surface_allocation:
@@ -344,7 +344,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_buffer_pool_size(MixVideoConfigParamsDec
  * Set extra surface allocation
  */
 MIX_RESULT mix_videoconfigparamsdec_set_extra_surface_allocation(MixVideoConfigParamsDec * obj,
-		guint extra_surface_allocation);
+        uint extra_surface_allocation);
 
 /**
  * mix_videoconfigparamsdec_get_extra_surface_allocation:
@@ -355,7 +355,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_extra_surface_allocation(MixVideoConfigP
  * Get extra surface allocation
  */
 MIX_RESULT mix_videoconfigparamsdec_get_extra_surface_allocation(MixVideoConfigParamsDec * obj,
-		guint *extra_surface_allocation);
+        uint *extra_surface_allocation);
 
 
 /**
@@ -367,7 +367,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_extra_surface_allocation(MixVideoConfigP
  * Set video range
  */
 MIX_RESULT mix_videoconfigparamsdec_set_video_range(MixVideoConfigParamsDec * obj,
-		guint8 video_range);
+        uint8 video_range);
 
 /**
  * mix_videoconfigparamsdec_get_video_range:
@@ -378,7 +378,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_video_range(MixVideoConfigParamsDec * ob
  * Get video range
  */
 MIX_RESULT mix_videoconfigparamsdec_get_video_range(MixVideoConfigParamsDec * obj,
-		guint8 *video_range);
+        uint8 *video_range);
 
 
 /**
@@ -390,7 +390,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_video_range(MixVideoConfigParamsDec * ob
  * Set color matrix
  */
 MIX_RESULT mix_videoconfigparamsdec_set_color_matrix(MixVideoConfigParamsDec * obj,
-		guint8 color_matrix);
+        uint8 color_matrix);
 
 /**
  * mix_videoconfigparamsdec_get_color_matrix:
@@ -401,7 +401,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_color_matrix(MixVideoConfigParamsDec * o
  * Get color matrix
  */
 MIX_RESULT mix_videoconfigparamsdec_get_color_matrix(MixVideoConfigParamsDec * obj,
-		guint8 *color_matrix);
+        uint8 *color_matrix);
 
 
 /**
@@ -413,7 +413,7 @@ MIX_RESULT mix_videoconfigparamsdec_get_color_matrix(MixVideoConfigParamsDec * o
  * Set bit rate
  */
 MIX_RESULT mix_videoconfigparamsdec_set_bit_rate(MixVideoConfigParamsDec * obj,
-		guint bit_rate);
+        uint bit_rate);
 
 /**
  * mix_videoconfigparamsdec_get_bit_rate:
@@ -424,7 +424,7 @@ MIX_RESULT mix_videoconfigparamsdec_set_bit_rate(MixVideoConfigParamsDec * obj,
  * Get bit rate
  */
 MIX_RESULT mix_videoconfigparamsdec_get_bit_rate(MixVideoConfigParamsDec * obj,
-		guint *bit_rate);		
+        uint *bit_rate);
 
 
 
@@ -432,26 +432,26 @@ MIX_RESULT mix_videoconfigparamsdec_get_bit_rate(MixVideoConfigParamsDec * obj,
  * mix_videoconfigparamsdec_set_pixel_aspect_ratio:
  * @obj: #MixVideoConfigParamsDec object
  * @par_num: Pixel aspect ratio numerator value
- * @par_denom: Pixel aspect ratio denominator value *  
+ * @par_denom: Pixel aspect ratio denominator value *
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set pixel aspect ratio
  */
 MIX_RESULT mix_videoconfigparamsdec_set_pixel_aspect_ratio(MixVideoConfigParamsDec * obj,
-		guint par_num, guint par_denom);
+        uint par_num, uint par_denom);
 
 /**
  * mix_videoconfigparamsdec_get_pixel_aspect_ratio:
  * @obj: #MixVideoConfigParamsDec object
- * @par_num: Pixel aspect ratio  numerator value to be returned 
+ * @par_num: Pixel aspect ratio  numerator value to be returned
  * @par_denom: Pixel aspect ratio denominator value to be returned
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Get pixel aspect ratio
  */
 MIX_RESULT mix_videoconfigparamsdec_get_pixel_aspect_ratio(MixVideoConfigParamsDec * obj,
-		guint * par_num, guint * par_denom);
-		
+        uint * par_num, uint * par_denom);
+
 
 /* TODO: Add getters and setters for other properties */
 

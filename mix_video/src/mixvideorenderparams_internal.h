@@ -13,9 +13,9 @@
 
 /* Internal function */
 MIX_RESULT mix_videorenderparams_get_cliprects_internal(
-		MixVideoRenderParams * obj,
-		VARectangle ** va_cliprects,
-		guint* number_of_cliprects);
+    MixVideoRenderParams * obj,
+    VARectangle ** va_cliprects,
+    uint* number_of_cliprects);
 
 
 

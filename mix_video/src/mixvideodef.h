@@ -33,57 +33,59 @@
 #include <mixresult.h>
 
 
+#define MAX_ENC_SURFACE_COUNT 20
+#define MIX_STRING_TO_FOURCC(format)               ((uint32)(((format)[0])|((format)[1]<<8)|((format)[2]<<16)|((format)[3]<<24)))
 
 /*
  * MI-X video error code
  */
 typedef enum {
-	MIX_RESULT_FRAME_NOTAVAIL = MIX_RESULT_ERROR_VIDEO_START + 1,
-	MIX_RESULT_EOS,
-	MIX_RESULT_POOLEMPTY,
-	MIX_RESULT_OUTOFSURFACES,
-	MIX_RESULT_DROPFRAME,
-	MIX_RESULT_NOTIMPL,
-	MIX_RESULT_VIDEO_ENC_SLICESIZE_OVERFLOW,
-	MIX_RESULT_NOT_PERMITTED,
-	MIX_RESULT_ERROR_PROCESS_STREAM,
-	MIX_RESULT_MISSING_CONFIG,
-	MIX_RESULT_VIDEO_LAST
+    MIX_RESULT_FRAME_NOTAVAIL = MIX_RESULT_ERROR_VIDEO_START + 1,
+    MIX_RESULT_EOS,
+    MIX_RESULT_POOLEMPTY,
+    MIX_RESULT_OUTOFSURFACES,
+    MIX_RESULT_DROPFRAME,
+    MIX_RESULT_NOTIMPL,
+    MIX_RESULT_VIDEO_ENC_SLICESIZE_OVERFLOW,
+    MIX_RESULT_NOT_PERMITTED,
+    MIX_RESULT_ERROR_PROCESS_STREAM,
+    MIX_RESULT_MISSING_CONFIG,
+    MIX_RESULT_VIDEO_LAST
 } MIX_VIDEO_ERROR_CODE;
 
 /*
  MixCodecMode
  */
 typedef enum {
-	MIX_CODEC_MODE_ENCODE = 0,
-	MIX_CODEC_MODE_DECODE,
-	MIX_CODEC_MODE_LAST
+    MIX_CODEC_MODE_ENCODE = 0,
+    MIX_CODEC_MODE_DECODE,
+    MIX_CODEC_MODE_LAST
 } MixCodecMode;
 
 typedef enum {
-	MIX_FRAMEORDER_MODE_DISPLAYORDER = 0,
-	MIX_FRAMEORDER_MODE_DECODEORDER,
-	MIX_FRAMEORDER_MODE_LAST
+    MIX_FRAMEORDER_MODE_DISPLAYORDER = 0,
+    MIX_FRAMEORDER_MODE_DECODEORDER,
+    MIX_FRAMEORDER_MODE_LAST
 } MixFrameOrderMode;
 
 typedef struct _MixIOVec {
-	guchar *data;
-	gint buffer_size;
-    gint data_size;
+    uchar *data;
+    int buffer_size;
+    int data_size;
 } MixIOVec;
 
 typedef struct _MixRect {
-	gshort x;
-	gshort y;
-	gushort width;
-	gushort height;
+    short x;
+    short y;
+    ushort width;
+    ushort height;
 } MixRect;
 
 typedef enum {
-	MIX_STATE_UNINITIALIZED = 0,
-	MIX_STATE_INITIALIZED,
-	MIX_STATE_CONFIGURED,
-	MIX_STATE_LAST
+    MIX_STATE_UNINITIALIZED = 0,
+    MIX_STATE_INITIALIZED,
+    MIX_STATE_CONFIGURED,
+    MIX_STATE_LAST
 } MixState;
 
 
@@ -93,6 +95,7 @@ typedef enum
     MIX_RAW_TARGET_FORMAT_YUV420 = 1,
     MIX_RAW_TARGET_FORMAT_YUV422 = 2,
     MIX_RAW_TARGET_FORMAT_YUV444 = 4,
+    MIX_RAW_TARGET_FORMAT_NV12 = 8,
     MIX_RAW_TARGET_FORMAT_PROTECTED = 0x80000000,
     MIX_RAW_TARGET_FORMAT_LAST
 } MixRawTargetFormat;
@@ -149,57 +152,106 @@ typedef enum {
 
 typedef struct _MixAIRParams
 {
-	guint air_MBs;
-	guint air_threshold;
-	guint air_auto;
+    uint air_MBs;
+    uint air_threshold;
+    uint air_auto;
 } MixAIRParams;
 
 typedef enum {
-	MIX_ENC_PARAMS_START_UNUSED = 0x01000000,
-	MIX_ENC_PARAMS_BITRATE,
-	MIX_ENC_PARAMS_INIT_QP,
-	MIX_ENC_PARAMS_MIN_QP,
-	MIX_ENC_PARAMS_WINDOW_SIZE,
-	MIX_ENC_PARAMS_TARGET_PERCENTAGE,
-	MIX_ENC_PARAMS_SLICE_NUM,
-	MIX_ENC_PARAMS_I_SLICE_NUM,
-	MIX_ENC_PARAMS_P_SLICE_NUM,
-	MIX_ENC_PARAMS_RESOLUTION,
-	MIX_ENC_PARAMS_GOP_SIZE,
-	MIX_ENC_PARAMS_FRAME_RATE,
-	MIX_ENC_PARAMS_FORCE_KEY_FRAME,
-	MIX_ENC_PARAMS_IDR_INTERVAL,
-	MIX_ENC_PARAMS_RC_MODE,
-	MIX_ENC_PARAMS_MTU_SLICE_SIZE,
-	MIX_ENC_PARAMS_REFRESH_TYPE,
-	MIX_ENC_PARAMS_AIR,
-	MIX_ENC_PARAMS_CIR_FRAME_CNT,
-	MIX_ENC_PARAMS_LAST
+    MIX_ENC_PARAMS_START_UNUSED = 0x01000000,
+    MIX_ENC_PARAMS_BITRATE,
+    MIX_ENC_PARAMS_INIT_QP,
+    MIX_ENC_PARAMS_MIN_QP,
+    MIX_ENC_PARAMS_WINDOW_SIZE,
+    MIX_ENC_PARAMS_TARGET_PERCENTAGE,
+    MIX_ENC_PARAMS_SLICE_NUM,
+    MIX_ENC_PARAMS_I_SLICE_NUM,
+    MIX_ENC_PARAMS_P_SLICE_NUM,
+    MIX_ENC_PARAMS_RESOLUTION,
+    MIX_ENC_PARAMS_GOP_SIZE,
+    MIX_ENC_PARAMS_FRAME_RATE,
+    MIX_ENC_PARAMS_FORCE_KEY_FRAME,
+    MIX_ENC_PARAMS_IDR_INTERVAL,
+    MIX_ENC_PARAMS_RC_MODE,
+    MIX_ENC_PARAMS_MTU_SLICE_SIZE,
+    MIX_ENC_PARAMS_REFRESH_TYPE,
+    MIX_ENC_PARAMS_AIR,
+    MIX_ENC_PARAMS_CIR_FRAME_CNT,
+    MIX_ENC_PARAMS_LAST
 } MixEncParamsType;
 
 typedef struct _MixEncDynamicParams {
-	guint bitrate;
-	guint init_QP;
-	guint min_QP;
-	guint window_size;
-	guint target_percentage;
-	guint slice_num;
-	guint I_slice_num;
-	guint P_slice_num;
-	guint width;
-	guint height;
-	guint frame_rate_num;
-	guint frame_rate_denom;
-	guint intra_period;
-	guint idr_interval;
-	guint CIR_frame_cnt;
-	guint max_slice_size;
-	gboolean force_idr;
-	MixRateControl rc_mode;
-	MixVideoIntraRefreshType refresh_type;
-	MixAIRParams air_params;
+    uint bitrate;
+    uint init_QP;
+    uint min_QP;
+    uint window_size;
+    uint target_percentage;
+    uint slice_num;
+    uint I_slice_num;
+    uint P_slice_num;
+    uint width;
+    uint height;
+    uint frame_rate_num;
+    uint frame_rate_denom;
+    uint intra_period;
+    uint idr_interval;
+    uint CIR_frame_cnt;
+    uint max_slice_size;
+    bool force_idr;
+    MixRateControl rc_mode;
+    MixVideoIntraRefreshType refresh_type;
+    MixAIRParams air_params;
 } MixEncDynamicParams;
 
 
 
+typedef enum
+{
+    MIX_BUFFER_ALLOC_NORMAL = 1, //Means non shared buffer mode
+    MIX_BUFFER_UPSTREAM_ALLOC_CI = 2,
+    MIX_BUFFER_UPSTREAM_ALLOC_V4L2 = 4,
+    MIX_BUFFER_UPSTREAM_ALLOC_SURFACE = 8,
+    MIX_BUFFER_SELF_ALLOC_SURFACE = 16,
+    MIX_BUFFER_LAST
+} MixBufferAllocationMode;
+
+typedef enum
+{
+    MIX_OUTPUT_BUFFER_NORMAL = 0,  //Output whatever driver generates
+    MIX_OUTPUT_BUFFER_SEPARATED_HEADER = 1, //Applications need to pass at least two buffers, one for header and the other for data. And once this output mode is used, we will generate a new header
+    MIX_OUTPUT_BUFFER_LAST
+} MixOutputEncBufferMode;
+
+typedef struct _MixCISharedBufferInfo {
+    uint ci_frame_cnt;
+    ulong *	ci_frame_id;
+} MixCISharedBufferInfo ;
+
+typedef struct _MixV4l2SharedBufferInfo {
+    int v4l2_fd;
+    uint v4l2_buf_cnt;
+    void * v4l2_fmt;
+    void ** v4l2_buf;
+} MixV4l2SharedBufferInfo;
+
+typedef struct _MixSurfaceSharedBufferInfo {
+    uint surface_cnt;
+    ulong *surface;
+} MixSurfaceSharedBufferInfo;
+
+/*
+ * This union is defined for upstreamer buffer info Set/Get
+ */
+typedef union _MixSharedBufferInfo {
+    MixCISharedBufferInfo ci_buffer_info;
+    MixV4l2SharedBufferInfo v4l2_buffer_info;
+    MixSurfaceSharedBufferInfo surface_buffer_info;
+} MixSharedBufferInfo;
+
+
+typedef struct _MixUserReqSurfacesInfo {
+    uint surface_allocated[MAX_ENC_SURFACE_COUNT];
+    uint8 * usrptr[MAX_ENC_SURFACE_COUNT];
+    uint surface_cnt;
+} MixUsrReqSurfacesInfo;
 #endif /*  __MIX_VIDEO_DEF_H__ */

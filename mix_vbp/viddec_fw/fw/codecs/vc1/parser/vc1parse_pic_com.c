@@ -32,14 +32,14 @@ vc1_Status vc1_ParsePictureHeader(void* ctxt, vc1_Info *pInfo)
 
     if (md->PROFILE != VC1_PROFILE_ADVANCED)
     {
-        // As per spec, for main/simple profile, if the size of the coded picture is <= 1B, 
+        // As per spec, for main/simple profile, if the size of the coded picture is <= 1B,
         // it shall be treated as a skipped frame.
         // In content with skipped frames, the data is "00".
         // rcv to vc1 conversion process adds an additional byte (0x80) to the picture, hence
         // the data looks like "00 80"
         // Hence if data is <= 2B, we will consider it skipped (check for 16+1b, if it fails, the frame is skipped).
         result = viddec_pm_peek_bits(ctxt, &tempValue, 17);
-        if(result == -1)
+        if (result == -1)
         {
             picLayerHeader->PTYPE = VC1_SKIPPED_FRAME;
             return status;
@@ -86,7 +86,7 @@ vc1_Status vc1_ParsePictureHeader(void* ctxt, vc1_Info *pInfo)
     }
 
     if (picLayerHeader->PTYPE == VC1_I_FRAME ||
-        picLayerHeader->PTYPE == VC1_BI_FRAME)
+            picLayerHeader->PTYPE == VC1_BI_FRAME)
     {
         status = vc1_ParsePictureHeader_ProgressiveIpicture(ctxt, pInfo);
     }

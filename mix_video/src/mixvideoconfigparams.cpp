@@ -13,7 +13,7 @@
  *
  * <para>
  * A base object of MI-X video configuration parameter objects.
- * </para> 
+ * </para>
  * <para>
  * The derived MixVideoConfigParams object is created by the MMF/App
  * and provided in the MixVideo mix_video_configure() function. The get and set
@@ -21,7 +21,7 @@
  * configuration time. It will also be created by MixVideo and returned from the
  * mix_video_get_config() function, whereupon the MMF/App can get the get methods to
  * obtain current configuration information.
- * </para> 
+ * </para>
  * <para>
  * There are decode mode objects (for example, MixVideoConfigParamsDec) and encode
  * mode objects (for example, MixVideoConfigParamsEnc). Each of these types is refined
@@ -29,7 +29,7 @@
  * object to match the media format of the stream to be handled, e.g. if the media
  * format of the stream to be decoded is H.264, the application would create a
  * MixVideoConfigParamsDecH264 object for the mix_video_configure() call.
- * </para> 
+ * </para>
  */
 
 #include <string.h>
@@ -37,50 +37,50 @@
 #include "mixvideoconfigparams.h"
 
 MixVideoConfigParams::MixVideoConfigParams()
-	:reserved1(NULL)
-	,reserved2(NULL)
-	,reserved3(NULL)
-	,reserved4(NULL) {
+        :reserved1(NULL)
+        ,reserved2(NULL)
+        ,reserved3(NULL)
+        ,reserved4(NULL) {
 }
 MixVideoConfigParams::~MixVideoConfigParams() {
 }
-gboolean MixVideoConfigParams::copy(MixParams *target) const {
-	gboolean ret = FALSE;
-	MixVideoConfigParams * this_target = MIX_VIDEOCONFIGPARAMS(target);
-	if (NULL != this_target)
-		ret = MixParams::copy(target);
-	return ret;
+bool MixVideoConfigParams::copy(MixParams *target) const {
+    bool ret = FALSE;
+    MixVideoConfigParams * this_target = MIX_VIDEOCONFIGPARAMS(target);
+    if (NULL != this_target)
+        ret = MixParams::copy(target);
+    return ret;
 }
 
-gboolean MixVideoConfigParams::equal(MixParams* obj) const {
-	gboolean ret = FALSE;
-	MixVideoConfigParams * this_obj = MIX_VIDEOCONFIGPARAMS(obj);
-	if (NULL != this_obj)
-		ret = MixParams::equal(this_obj);
-	return ret;
+bool MixVideoConfigParams::equal(MixParams* obj) const {
+    bool ret = FALSE;
+    MixVideoConfigParams * this_obj = MIX_VIDEOCONFIGPARAMS(obj);
+    if (NULL != this_obj)
+        ret = MixParams::equal(this_obj);
+    return ret;
 }
 
 MixParams* MixVideoConfigParams::dup() const {
-	MixParams *ret = new MixVideoConfigParams();
-	if (NULL != ret) {
-		if (FALSE == copy(ret)) {
-			ret->Unref();
-			ret = NULL;
-		}
-	}
-	return ret;
+    MixParams *ret = new MixVideoConfigParams();
+    if (NULL != ret) {
+        if (FALSE == copy(ret)) {
+            ret->Unref();
+            ret = NULL;
+        }
+    }
+    return ret;
 }
 
 
 MixVideoConfigParams *
 mix_videoconfigparams_new(void) {
-	return new MixVideoConfigParams();
+    return new MixVideoConfigParams();
 }
 MixVideoConfigParams *
 mix_videoconfigparams_ref(MixVideoConfigParams * mix) {
-	if (NULL != mix)
-		mix->Ref();
-	return mix;
+    if (NULL != mix)
+        mix->Ref();
+    return mix;
 }
 
 

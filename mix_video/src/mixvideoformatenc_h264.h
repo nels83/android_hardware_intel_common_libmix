@@ -12,8 +12,6 @@
 #include "mixvideoformatenc.h"
 #include "mixvideoframe_private.h"
 
-G_BEGIN_DECLS
-
 #define MIX_VIDEO_ENC_H264_SURFACE_NUM       20
 
 #define min(X,Y) (((X) < (Y)) ? (X) : (Y))
@@ -22,80 +20,98 @@ G_BEGIN_DECLS
 /*
  * Type macros.
  */
-#define MIX_TYPE_VIDEOFORMATENC_H264                  (mix_videoformatenc_h264_get_type ())
-#define MIX_VIDEOFORMATENC_H264(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOFORMATENC_H264, MixVideoFormatEnc_H264))
-#define MIX_IS_VIDEOFORMATENC_H264(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOFORMATENC_H264))
-#define MIX_VIDEOFORMATENC_H264_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOFORMATENC_H264, MixVideoFormatEnc_H264Class))
-#define MIX_IS_VIDEOFORMATENC_H264_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOFORMATENC_H264))
-#define MIX_VIDEOFORMATENC_H264_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOFORMATENC_H264, MixVideoFormatEnc_H264Class))
+#define MIX_VIDEOFORMATENC_H264(obj)                  (reinterpret_cast<MixVideoFormatEnc_H264*>(obj))
+#define MIX_IS_VIDEOFORMATENC_H264(obj)            ((NULL !=MIX_VIDEOFORMATENC_H264(obj)) ? TRUE : FALSE)
 
-typedef struct _MixVideoFormatEnc_H264 MixVideoFormatEnc_H264;
-typedef struct _MixVideoFormatEnc_H264Class MixVideoFormatEnc_H264Class;
+class MixVideoFormatEnc_H264 : public MixVideoFormatEnc {
 
-struct _MixVideoFormatEnc_H264 {
-	/*< public > */
-    MixVideoFormatEnc parent;
+public:
+    MixVideoFormatEnc_H264();
+    ~MixVideoFormatEnc_H264();
 
-    VABufferID      coded_buf[2];
-    VABufferID      last_coded_buf;
-    VABufferID      seq_param_buf;
-    VABufferID      pic_param_buf;
-    VABufferID      slice_param_buf;
-    VASurfaceID *   ci_shared_surfaces;
-    VASurfaceID *   surfaces;
-    guint           surface_num;
+    virtual MIX_RESULT Initialize(
+        MixVideoConfigParamsEnc* config_params_enc,
+        MixFrameManager * frame_mgr,
+        MixBufferPool * input_buf_pool,
+        MixSurfacePool ** surface_pool,
+        MixUsrReqSurfacesInfo * requested_surface_info,
+        VADisplay va_display);
 
-    MixVideoFrame  *cur_frame;	//current input frame to be encoded;
-    MixVideoFrame  *ref_frame;  //reference frame
-    MixVideoFrame  *rec_frame;	//reconstructed frame;
-    MixVideoFrame  *last_frame;	//last frame;
-    MixVideoFrame  *lookup_frame;
-#ifdef ANDROID
-    MixBuffer      *last_mix_buffer;
-#endif
+    virtual MIX_RESULT Encode(
+        MixBuffer * bufin[], int bufincnt,
+        MixIOVec * iovout[], int iovoutcnt,
+        MixVideoEncodeParams * encode_params);
 
-    guint basic_unit_size;  //for rate control
-    guint disable_deblocking_filter_idc;
+    virtual MIX_RESULT Flush();
+
+    virtual MIX_RESULT Deinitialize();
+
+    virtual MIX_RESULT GetMaxEncodedBufSize (uint *max_size);
+
+    virtual MIX_RESULT SetDynamicEncConfig (
+        MixVideoConfigParamsEnc * config_params, MixEncParamsType params_type);
+
+private:
+    /* Local Methods */
+    MIX_RESULT _process_encode (MixBuffer * bufin, MixIOVec * iovout);
+    MIX_RESULT _AnnexB_to_length_prefixed (
+        uint8 * bufin, uint bufin_len,
+        uint8* bufout, uint *bufout_len);
+    MIX_RESULT _send_encode_command ();
+    MIX_RESULT _send_dynamic_bitrate ();
+    MIX_RESULT _send_max_slice_size ();
+    MIX_RESULT _send_dynamic_framerate ();
+    MIX_RESULT _send_AIR ();
+    MIX_RESULT _send_seq_params ();
+    MIX_RESULT _send_picture_parameter ();
+    MIX_RESULT _send_slice_parameter ();
+    int _calc_level(int nummbs);
+
+
+public:
+    VABufferID coded_buf[2];
+    VABufferID last_coded_buf;
+    VABufferID seq_param_buf;
+    VABufferID pic_param_buf;
+    VABufferID slice_param_buf;
+    //VASurfaceID *   ci_shared_surfaces;
+    VASurfaceID * shared_surfaces;
+    VASurfaceID * surfaces;
+    uint surface_num;
+    uint shared_surfaces_cnt;
+    uint precreated_surfaces_cnt;
+
+    MixVideoFrame *cur_frame;	//current input frame to be encoded;
+    MixVideoFrame *ref_frame;  //reference frame
+    MixVideoFrame *rec_frame;	//reconstructed frame;
+    MixVideoFrame *last_frame;	//last frame;
+    MixVideoFrame *lookup_frame;
+    MixBuffer *last_mix_buffer;
+
+    uint basic_unit_size;  //for rate control
+    uint disable_deblocking_filter_idc;
+    uint8 vui_flag;
     MixDelimiterType delimiter_type;
-    guint idr_interval;
-    guint slice_num;
-    guint I_slice_num;
-    guint P_slice_num;
-    guint va_rcmode;
+    uint idr_interval;
+    uint slice_num;
+    uint I_slice_num;
+    uint P_slice_num;
+    uint va_rcmode_h264;
 
-    guint       encoded_frames;
-    guint       frame_num;
-    gboolean    pic_skipped;
+    uint encoded_frames;
+    uint frame_num;
+    bool pic_skipped;
 
-    gboolean    is_intra;
+    bool is_intra;
 
-    guint       coded_buf_size;
-    guint coded_buf_index;
+    uint coded_buf_size;
+    uint coded_buf_index;
+    uint8 ** usrptr;
+    uint alloc_surface_cnt;
 
-	/*< public > */
 };
 
-/**
- * MixVideoFormatEnc_H264Class:
- *
- * MI-X Video object class
- */
-struct _MixVideoFormatEnc_H264Class {
-	/*< public > */
-	MixVideoFormatEncClass parent_class;
 
-	/* class members */
-
-	/*< public > */
-};
-
-/**
- * mix_videoformatenc_h264_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoformatenc_h264_get_type(void);
 
 /**
  * mix_videoformatenc_h264_new:
@@ -120,43 +136,6 @@ MixVideoFormatEnc_H264 *mix_videoformatenc_h264_ref(MixVideoFormatEnc_H264 * mix
  *
  * Decrement reference count of the object.
  */
-#define mix_videoformatenc_h264_unref(obj) g_object_unref (G_OBJECT(obj))
-
-/* Class Methods */
-
-/* H.264 vmethods */
-MIX_RESULT mix_videofmtenc_h264_getcaps(MixVideoFormatEnc *mix, GString *msg);
-MIX_RESULT mix_videofmtenc_h264_initialize(MixVideoFormatEnc *mix,
-        MixVideoConfigParamsEnc * config_params_enc,
-        MixFrameManager * frame_mgr,
-        MixBufferPool * input_buf_pool,
-        MixSurfacePool ** surface_pool,
-        VADisplay va_display);
-MIX_RESULT mix_videofmtenc_h264_encode(MixVideoFormatEnc *mix, MixBuffer * bufin[],
-        gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
-        MixVideoEncodeParams * encode_params);
-MIX_RESULT mix_videofmtenc_h264_flush(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_h264_eos(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_h264_deinitialize(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_h264_set_dynamic_enc_config (MixVideoFormatEnc * mix,
-	MixVideoConfigParamsEnc * config_params_enc,
-	MixEncParamsType params_type);
-
-/* Local Methods */
-
-MIX_RESULT mix_videofmtenc_h264_get_max_encoded_buf_size (MixVideoFormatEnc *mix, guint *max_size);
-MIX_RESULT mix_videofmtenc_h264_process_encode (MixVideoFormatEnc_H264 *mix, MixBuffer * bufin,
-        MixIOVec * iovout);
-MIX_RESULT mix_videofmtenc_h264_AnnexB_to_length_prefixed (
-        guint8 * bufin, guint bufin_len, guint8* bufout, guint *bufout_len);
-
-MIX_RESULT mix_videofmtenc_h264_send_encode_command (MixVideoFormatEnc_H264 *mix);
-
-MIX_RESULT mix_videofmtenc_h264_send_dynamic_bitrate (MixVideoFormatEnc_H264 *mix);
-MIX_RESULT mix_videofmtenc_h264_send_max_slice_size (MixVideoFormatEnc_H264 *mix);
-MIX_RESULT mix_videofmtenc_h264_send_dynamic_framerate (MixVideoFormatEnc_H264 *mix);
-MIX_RESULT mix_videofmtenc_h264_send_AIR (MixVideoFormatEnc_H264 *mix);
-
-G_END_DECLS
+MixVideoFormatEnc_H264 *mix_videoformatenc_h264_unref(MixVideoFormatEnc_H264 * mix);
 
 #endif /* __MIX_VIDEOFORMATENC_H264_H__ */

@@ -31,19 +31,19 @@ uint32_t viddec_parse_sc(void *in, void *pcxt, void *sc_state)
     phase = cxt->phase;
     cxt->sc_end_pos = -1;
     pcxt=pcxt;
- 
+
     /* parse until there is more data and start code not found */
-    while((data_left > 0) &&(phase < 3))
+    while ((data_left > 0) &&(phase < 3))
     {
         /* Check if we are byte aligned & phase=0, if thats the case we can check
            work at a time instead of byte*/
-        if(((((uint32_t)ptr) & 0x3) == 0) && (phase == 0))
+        if (((((uint32_t)ptr) & 0x3) == 0) && (phase == 0))
         {
-            while(data_left > 3)
+            while (data_left > 3)
             {
                 uint32_t data;
                 char mask1 = 0, mask2=0;
-                
+
                 data = *((uint32_t *)ptr);
 #ifndef MFDBIGENDIAN
                 data = SWAP_WORD(data);
@@ -52,9 +52,11 @@ uint32_t viddec_parse_sc(void *in, void *pcxt, void *sc_state)
                 mask2 = (FIRST_STARTCODE_BYTE != (data & SC_BYTE_MASK1));
                 /* If second byte and fourth byte are not zero's then we cannot have a start code here as we need
                    two consecutive zero bytes for a start code pattern */
-                if(mask1 && mask2)
+                if (mask1 && mask2)
                 {/* Success so skip 4 bytes and start over */
-                    ptr+=4;size+=4;data_left-=4;
+                    ptr+=4;
+                    size+=4;
+                    data_left-=4;
                     continue;
                 }
                 else
@@ -63,35 +65,39 @@ uint32_t viddec_parse_sc(void *in, void *pcxt, void *sc_state)
                 }
             }
         }
- 
+
         /* At this point either data is not on a word boundary or phase > 0 or On a word boundary but we detected
            two zero bytes in the word so we look one byte at a time*/
-        if(data_left > 0)
+        if (data_left > 0)
         {
-            if(*ptr == FIRST_STARTCODE_BYTE)
+            if (*ptr == FIRST_STARTCODE_BYTE)
             {/* Phase can be 3 only if third start code byte is found */
                 phase++;
-                ptr++;size++;data_left--;
-                if(phase > 2)
+                ptr++;
+                size++;
+                data_left--;
+                if (phase > 2)
                 {
                     phase = 2;
 
                     if ( (((uint32_t)ptr) & 0x3) == 0 )
                     {
-                       while( data_left > 3 )
-                       {
-                           if(*((uint32_t *)ptr) != 0)
-                           {
-                               break;
-                           }
-                           ptr+=4;size+=4;data_left-=4;
-                       }
+                        while ( data_left > 3 )
+                        {
+                            if (*((uint32_t *)ptr) != 0)
+                            {
+                                break;
+                            }
+                            ptr+=4;
+                            size+=4;
+                            data_left-=4;
+                        }
                     }
                 }
             }
             else
             {
-                if((*ptr == THIRD_STARTCODE_BYTE) && (phase == 2))
+                if ((*ptr == THIRD_STARTCODE_BYTE) && (phase == 2))
                 {/* Match for start code so update context with byte position */
                     phase = 3;
                     cxt->sc_end_pos = size;
@@ -100,11 +106,13 @@ uint32_t viddec_parse_sc(void *in, void *pcxt, void *sc_state)
                 {
                     phase = 0;
                 }
-                ptr++;size++;data_left--;
+                ptr++;
+                size++;
+                data_left--;
             }
         }
     }
-    if((data_left > 0) && (phase == 3))
+    if ((data_left > 0) && (phase == 3))
     {
         viddec_sc_prefix_state_t *state = (viddec_sc_prefix_state_t *)sc_state;
         cxt->sc_end_pos++;

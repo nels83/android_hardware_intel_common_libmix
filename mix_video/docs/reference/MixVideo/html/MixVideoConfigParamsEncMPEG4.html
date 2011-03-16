@@ -49,22 +49,22 @@
 #define             <a class="link" href="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-unref" title="mix_videoconfigparamsenc_mpeg4_unref()">mix_videoconfigparamsenc_mpeg4_unref</a>(obj)
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-set-dlk" title="mix_videoconfigparamsenc_mpeg4_set_dlk ()">mix_videoconfigparamsenc_mpeg4_set_dlk</a>
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guint disable_deblocking_filter_idc);
+                                                         uint disable_deblocking_filter_idc);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-get-dlk" title="mix_videoconfigparamsenc_mpeg4_get_dlk ()">mix_videoconfigparamsenc_mpeg4_get_dlk</a>
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guint *disable_deblocking_filter_idc);
+                                                         uint *disable_deblocking_filter_idc);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-set-profile-level" title="mix_videoconfigparamsenc_mpeg4_set_profile_level ()">mix_videoconfigparamsenc_mpeg4_set_profile_level</a>
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guchar profile_and_level_indication);
+                                                         uchar profile_and_level_indication);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-get-profile-level" title="mix_videoconfigparamsenc_mpeg4_get_profile_level ()">mix_videoconfigparamsenc_mpeg4_get_profile_level</a>
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guchar *profile_and_level_indication);
+                                                         uchar *profile_and_level_indication);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-set-fixed-vti" title="mix_videoconfigparamsenc_mpeg4_set_fixed_vti ()">mix_videoconfigparamsenc_mpeg4_set_fixed_vti</a>
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guint fixed_vop_time_increment);
+                                                         uint fixed_vop_time_increment);
 MIX_RESULT          <a class="link" href="MixVideoConfigParamsEncMPEG4.html#mix-videoconfigparamsenc-mpeg4-get-fixed-vti" title="mix_videoconfigparamsenc_mpeg4_get_fixed_vti ()">mix_videoconfigparamsenc_mpeg4_get_fixed_vti</a>
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guint *fixed_vop_time_increment);
+                                                         uint *fixed_vop_time_increment);
 </pre>
 </div>
 <div class="refsect1" title="Object Hierarchy">
@@ -95,16 +95,16 @@ MI-X video MPEG 4:2 eecode configuration parameter objects.</p>
    * Default value is 3. 
    * Can be ignored (refer to encoding 
    * specification for more info). */
-  guchar  profile_and_level_indication;
+  uchar  profile_and_level_indication;
   
   /* Number of ticks between two successive VOPs 
    * in display order. Default value is 3. 
    * Can be ignored (refer to encoding specification 
    * for more info) */
-  guint fixed_vop_time_increment;
+  uint fixed_vop_time_increment;
   
   /* enable/disable deblocking */
-  guint disable_deblocking_filter_idc;
+  uint disable_deblocking_filter_idc;
   
   /* Reserved for future use */
   void *reserved1;
@@ -159,7 +159,7 @@ Decrement reference count of the object.</p>
 <a name="mix-videoconfigparamsenc-mpeg4-set-dlk"></a><h3>mix_videoconfigparamsenc_mpeg4_set_dlk ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_mpeg4_set_dlk
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guint disable_deblocking_filter_idc);</pre>
+                                                         uint disable_deblocking_filter_idc);</pre>
 <p>
 Set the The flag to enable/disable deblocking</p>
 <div class="variablelist"><table border="0">
@@ -188,7 +188,7 @@ Set the The flag to enable/disable deblocking</p>
 <a name="mix-videoconfigparamsenc-mpeg4-get-dlk"></a><h3>mix_videoconfigparamsenc_mpeg4_get_dlk ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_mpeg4_get_dlk
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guint *disable_deblocking_filter_idc);</pre>
+                                                         uint *disable_deblocking_filter_idc);</pre>
 <p>
 Get the The flag to enable/disable deblocking</p>
 <div class="variablelist"><table border="0">
@@ -217,7 +217,7 @@ Get the The flag to enable/disable deblocking</p>
 <a name="mix-videoconfigparamsenc-mpeg4-set-profile-level"></a><h3>mix_videoconfigparamsenc_mpeg4_set_profile_level ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_mpeg4_set_profile_level
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guchar profile_and_level_indication);</pre>
+                                                         uchar profile_and_level_indication);</pre>
 <p>
 Set profile_and_level_indication</p>
 <div class="variablelist"><table border="0">
@@ -248,7 +248,7 @@ Set profile_and_level_indication</p>
 <a name="mix-videoconfigparamsenc-mpeg4-get-profile-level"></a><h3>mix_videoconfigparamsenc_mpeg4_get_profile_level ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_mpeg4_get_profile_level
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guchar *profile_and_level_indication);</pre>
+                                                         uchar *profile_and_level_indication);</pre>
 <p>
 Set fixed_vop_time_increment</p>
 <div class="variablelist"><table border="0">
@@ -279,14 +279,14 @@ Set fixed_vop_time_increment</p>
 <a name="mix-videoconfigparamsenc-mpeg4-set-fixed-vti"></a><h3>mix_videoconfigparamsenc_mpeg4_set_fixed_vti ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_mpeg4_set_fixed_vti
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guint fixed_vop_time_increment);</pre>
+                                                         uint fixed_vop_time_increment);</pre>
 </div>
 <hr>
 <div class="refsect2" title="mix_videoconfigparamsenc_mpeg4_get_fixed_vti ()">
 <a name="mix-videoconfigparamsenc-mpeg4-get-fixed-vti"></a><h3>mix_videoconfigparamsenc_mpeg4_get_fixed_vti ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoconfigparamsenc_mpeg4_get_fixed_vti
                                                         (<a class="link" href="MixVideoConfigParamsEncMPEG4.html" title="MixVideoConfigParamsEncMPEG4">MixVideoConfigParamsEncMPEG4</a> *obj,
-                                                         guint *fixed_vop_time_increment);</pre>
+                                                         uint *fixed_vop_time_increment);</pre>
 <p>
 Get fixed_vop_time_increment</p>
 <div class="variablelist"><table border="0">

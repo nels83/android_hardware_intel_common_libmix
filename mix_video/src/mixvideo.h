@@ -9,16 +9,14 @@
 #ifndef __MIX_VIDEO_H__
 #define __MIX_VIDEO_H__
 
-#include <glib-object.h>
+
 
 #include <mixdrmparams.h>
 #include "mixvideoinitparams.h"
 #include "mixvideoconfigparamsdec.h"
 #include "mixvideodecodeparams.h"
-#if MIXVIDEO_ENCODE_ENABLE
 #include "mixvideoconfigparamsenc.h"
 #include "mixvideoencodeparams.h"
-#endif
 #include "mixvideorenderparams.h"
 #include "mixvideocaps.h"
 #include "mixbuffer.h"
@@ -30,38 +28,38 @@ class MixVideo;
  * Virtual methods typedef
  */
 
-typedef MIX_RESULT (*MixVideoGetVersionFunc)(MixVideo * mix, guint * major,
-		guint * minor);
+typedef MIX_RESULT (*MixVideoGetVersionFunc)(MixVideo * mix, uint * major,
+        uint * minor);
 
 typedef MIX_RESULT (*MixVideoInitializeFunc)(MixVideo * mix, MixCodecMode mode,
-		MixVideoInitParams * init_params, MixDrmParams * drm_init_params);
+        MixVideoInitParams * init_params, MixDrmParams * drm_init_params);
 
 typedef MIX_RESULT (*MixVideoDeinitializeFunc)(MixVideo * mix);
 
 typedef MIX_RESULT (*MixVideoConfigureFunc)(MixVideo * mix,
-		MixVideoConfigParams * config_params,
-		MixDrmParams * drm_config_params);
+        MixVideoConfigParams * config_params,
+        MixDrmParams * drm_config_params);
 
 typedef MIX_RESULT (*MixVideoGetConfigFunc)(MixVideo * mix,
-		MixVideoConfigParams ** config_params);
+        MixVideoConfigParams ** config_params);
 
 typedef MIX_RESULT (*MixVideoDecodeFunc)(MixVideo * mix, MixBuffer * bufin[],
-		gint bufincnt, MixVideoDecodeParams * decode_params);
+        int bufincnt, MixVideoDecodeParams * decode_params);
 
 typedef MIX_RESULT (*MixVideoGetFrameFunc)(MixVideo * mix,
-		MixVideoFrame ** frame);
+        MixVideoFrame ** frame);
 
 typedef MIX_RESULT (*MixVideoReleaseFrameFunc)(MixVideo * mix,
-		MixVideoFrame * frame);
+        MixVideoFrame * frame);
 
 typedef MIX_RESULT (*MixVideoRenderFunc)(MixVideo * mix,
-		MixVideoRenderParams * render_params, MixVideoFrame *frame);
+        MixVideoRenderParams * render_params, MixVideoFrame *frame);
 
-#if MIXVIDEO_ENCODE_ENABLE
+
 typedef MIX_RESULT (*MixVideoEncodeFunc)(MixVideo * mix, MixBuffer * bufin[],
-		gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
-		MixVideoEncodeParams * encode_params);
-#endif
+        int bufincnt, MixIOVec * iovout[], int iovoutcnt,
+        MixVideoEncodeParams * encode_params);
+
 
 typedef MIX_RESULT (*MixVideoFlushFunc)(MixVideo * mix);
 
@@ -72,15 +70,19 @@ typedef MIX_RESULT (*MixVideoGetStateFunc)(MixVideo * mix, MixState * state);
 typedef MIX_RESULT (*MixVideoGetMixBufferFunc)(MixVideo * mix, MixBuffer ** buf);
 
 typedef MIX_RESULT (*MixVideoReleaseMixBufferFunc)(MixVideo * mix,
-		MixBuffer * buf);
+        MixBuffer * buf);
 
 typedef MIX_RESULT (*MixVideoGetMaxCodedBufferSizeFunc) (MixVideo * mix,
-	      guint *max_size);
+        uint *max_size);
 
-#if MIXVIDEO_ENCODE_ENABLE
+
 typedef MIX_RESULT (*MixVideoSetDynamicEncConfigFunc) (MixVideo * mix,
-	      MixEncParamsType params_type, MixEncDynamicParams * dynamic_params);
-#endif
+        MixEncParamsType params_type, MixEncDynamicParams * dynamic_params);
+
+typedef MIX_RESULT (*MixVideoGetNewUsrptrForSurfaceBufferFunc) (MixVideo * mix,
+        uint width, uint height, uint format, 	uint expected_size,
+        uint *outsize, uint * stride, uint8 **usrptr);
+
 /**
  * MixVideo:
  * @parent: Parent object.
@@ -89,38 +91,35 @@ typedef MIX_RESULT (*MixVideoSetDynamicEncConfigFunc) (MixVideo * mix,
  */
 class MixVideo {
 public:
-	MixVideo();
-	~MixVideo();
-    
+    MixVideo();
+    ~MixVideo();
+
 public:
-	/*< private > */
-	gpointer context;
-	guint ref_count;
+    /*< private > */
+    void* context;
+    uint ref_count;
     MixVideoPrivate mPriv;
 
 public:
-	/*< virtual public >*/
-	MixVideoGetVersionFunc get_version_func;
-	MixVideoInitializeFunc initialize_func;
-	MixVideoDeinitializeFunc deinitialize_func;
-	MixVideoConfigureFunc configure_func;
-	MixVideoGetConfigFunc get_config_func;
-	MixVideoDecodeFunc decode_func;
-	MixVideoGetFrameFunc get_frame_func;
-	MixVideoReleaseFrameFunc release_frame_func;
-	MixVideoRenderFunc render_func;
-#if MIXVIDEO_ENCODE_ENABLE
-	MixVideoEncodeFunc encode_func;
-#endif
-	MixVideoFlushFunc flush_func;
-	MixVideoEOSFunc eos_func;
-	MixVideoGetStateFunc get_state_func;
-	MixVideoGetMixBufferFunc get_mix_buffer_func;
-	MixVideoReleaseMixBufferFunc release_mix_buffer_func;
-#if MIXVIDEO_ENCODE_ENABLE
-	MixVideoGetMaxCodedBufferSizeFunc get_max_coded_buffer_size_func;
-	MixVideoSetDynamicEncConfigFunc set_dynamic_enc_config_func;
-#endif
+    /*< virtual public >*/
+    MixVideoGetVersionFunc get_version_func;
+    MixVideoInitializeFunc initialize_func;
+    MixVideoDeinitializeFunc deinitialize_func;
+    MixVideoConfigureFunc configure_func;
+    MixVideoGetConfigFunc get_config_func;
+    MixVideoDecodeFunc decode_func;
+    MixVideoGetFrameFunc get_frame_func;
+    MixVideoReleaseFrameFunc release_frame_func;
+    MixVideoRenderFunc render_func;
+    MixVideoEncodeFunc encode_func;
+    MixVideoFlushFunc flush_func;
+    MixVideoEOSFunc eos_func;
+    MixVideoGetStateFunc get_state_func;
+    MixVideoGetMixBufferFunc get_mix_buffer_func;
+    MixVideoReleaseMixBufferFunc release_mix_buffer_func;
+    MixVideoGetMaxCodedBufferSizeFunc get_max_coded_buffer_size_func;
+    MixVideoSetDynamicEncConfigFunc set_dynamic_enc_config_func;
+    MixVideoGetNewUsrptrForSurfaceBufferFunc get_new_usrptr_for_surface_buffer;
 };
 
 /**
@@ -160,7 +159,7 @@ mix_video_unref(MixVideo * mix) ;
  *
  * This function will return the major and minor version numbers of the library.
  */
-MIX_RESULT mix_video_get_version(MixVideo * mix, guint * major, guint * minor);
+MIX_RESULT mix_video_get_version(MixVideo * mix, uint * major, uint * minor);
 
 
 
@@ -180,7 +179,7 @@ MIX_RESULT mix_video_get_version(MixVideo * mix, guint * major, guint * minor);
  * This function will return the major and minor version numbers of the library.
  */
 MIX_RESULT mix_video_initialize(MixVideo * mix, MixCodecMode mode,
-		MixVideoInitParams * init_params, MixDrmParams * drm_init_params);
+                                MixVideoInitParams * init_params, MixDrmParams * drm_init_params);
 
 /**
  * mix_video_deinitialize:
@@ -221,8 +220,8 @@ MIX_RESULT mix_video_deinitialize(MixVideo * mix);
  * This function can only be called after mix_video_initialize() has been called
  */
 MIX_RESULT mix_video_configure(MixVideo * mix,
-		MixVideoConfigParams * config_params,
-		MixDrmParams * drm_config_params);
+                               MixVideoConfigParams * config_params,
+                               MixDrmParams * drm_config_params);
 
 
 /**
@@ -244,7 +243,7 @@ MIX_RESULT mix_video_configure(MixVideo * mix,
  * </note>
  */
 MIX_RESULT mix_video_get_config(MixVideo * mix,
-		MixVideoConfigParams ** config_params);
+                                MixVideoConfigParams ** config_params);
 
 /**
  * mix_video_decode:
@@ -295,8 +294,8 @@ MIX_RESULT mix_video_get_config(MixVideo * mix,
  * of this pool, which is passed to mix_video_configure() in #the MixVideoConfigParams object.
  * </para>
  */
-MIX_RESULT mix_video_decode(MixVideo * mix, MixBuffer * bufin[], gint bufincnt,
-		MixVideoDecodeParams * decode_params);
+MIX_RESULT mix_video_decode(MixVideo * mix, MixBuffer * bufin[], int bufincnt,
+                            MixVideoDecodeParams * decode_params);
 
 
 /**
@@ -362,7 +361,7 @@ MIX_RESULT mix_video_release_frame(MixVideo * mix, MixVideoFrame * frame);
  * The display is either an X11 Pixmap or an X11 Window using the overlay.
  */
 MIX_RESULT mix_video_render(MixVideo * mix,
-		MixVideoRenderParams * render_params, MixVideoFrame *frame);
+                            MixVideoRenderParams * render_params, MixVideoFrame *frame);
 
 
 /**
@@ -438,15 +437,10 @@ MIX_RESULT mix_video_render(MixVideo * mix,
  * </para>
  *
  */
-#if MIXVIDEO_ENCODE_ENABLE
-MIX_RESULT mix_video_encode(MixVideo * mix, MixBuffer * bufin[], gint bufincnt,
-		MixIOVec * iovout[], gint iovoutcnt,
-		MixVideoEncodeParams * encode_params);
-#else
-MIX_RESULT mix_video_encode(MixVideo * mix, MixBuffer * bufin[], gint bufincnt,
-		MixIOVec * iovout[], gint iovoutcnt,
-		MixParams * encode_params);
-#endif
+MIX_RESULT mix_video_encode(MixVideo * mix, MixBuffer * bufin[], int bufincnt,
+                            MixIOVec * iovout[], int iovoutcnt,
+                            MixVideoEncodeParams * encode_params);
+
 /**
  * mix_video_flush:
  * @mix: #MixVideo object.
@@ -525,7 +519,7 @@ MIX_RESULT mix_video_release_mixbuffer(MixVideo * mix, MixBuffer * buf);
 /**
  * mix_video_get_max_coded_buffer_size:
  * @mix: #MixVideo object.
- * @bufsize: Pointer to guint.
+ * @bufsize: Pointer to uint.
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * <para>
@@ -536,7 +530,7 @@ MIX_RESULT mix_video_release_mixbuffer(MixVideo * mix, MixBuffer * buf);
  * This function can only be called once mix_video_configure() has been called.
  * </para>
  */
-MIX_RESULT mix_video_get_max_coded_buffer_size(MixVideo * mix, guint *bufsize);
+MIX_RESULT mix_video_get_max_coded_buffer_size(MixVideo * mix, uint *bufsize);
 
 
 /**
@@ -555,7 +549,26 @@ MIX_RESULT mix_video_get_max_coded_buffer_size(MixVideo * mix, guint *bufsize);
  */
 
 MIX_RESULT mix_video_set_dynamic_enc_config (MixVideo * mix,
-	MixEncParamsType params_type, MixEncDynamicParams * dynamic_params);
+        MixEncParamsType params_type, MixEncDynamicParams * dynamic_params);
 
 
+
+/**
+ * mix_video_get_new_userptr_for_surface_buffer:
+ * @mix: #MixVideo object.
+ * @width: Width of new surface to be created
+ * @height: Height of new surface to be created
+ * @format: Format of new surface to be created
+ * @usrptr: User space pointer mapped from the new created VA surface
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * <para>
+ * This function can be used to create a new VA surface and map the physical address to user space
+ * </para>
+ * <para>
+ * Usually this function is before the encoding session is started.
+ * </para>
+ */
+MIX_RESULT mix_video_get_new_userptr_for_surface_buffer (MixVideo * mix, uint width, uint height, uint format,
+        uint expected_size, uint *outsize, uint * stride, uint8 **usrptr);
 #endif /* __MIX_VIDEO_H__ */

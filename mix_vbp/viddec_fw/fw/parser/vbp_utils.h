@@ -13,6 +13,7 @@
 #include "viddec_pm_parse.h"
 #include "viddec_pm.h"
 #include "vbp_trace.h"
+#include <stdlib.h>
 
 #define MAGIC_NUMBER 0x0DEADBEEF
 #define MAX_WORKLOAD_ITEMS 1000
@@ -21,8 +22,19 @@
 #define MAX_NUM_SLICES 256
 
 /* maximum two pictures per sample buffer */
-#define MAX_NUM_PICTURES 2 
+#define MAX_NUM_PICTURES 2
 
+#define free free
+#define g_try_malloc malloc
+
+#define g_try_new(struct_type, n_structs)		\
+    ((struct_type *) g_try_malloc (sizeof (struct_type) * n_structs))
+#define g_try_new0(struct_type, n_structs)		\
+    ((struct_type *) g_try_malloc0 (sizeof (struct_type) * n_structs))
+
+
+
+void* g_try_malloc0(uint32 size);
 
 extern uint32 viddec_parse_sc(void *in, void *pcxt, void *sc_state);
 
@@ -43,38 +55,38 @@ typedef uint32 (*function_populate_query_data)(vbp_context* cxt);
 
 struct vbp_context_t
 {
-	/* magic number */
-	uint32 identifier;
+    /* magic number */
+    uint32 identifier;
 
-	/* parser type, eg, MPEG-2, MPEG-4, H.264, VC1 */
-	uint32 parser_type;
+    /* parser type, eg, MPEG-2, MPEG-4, H.264, VC1 */
+    uint32 parser_type;
 
-	/* handle to parser (shared object) */
-	void *fd_parser;
+    /* handle to parser (shared object) */
+    void *fd_parser;
 
-	/* parser (shared object) entry points */
-	viddec_parser_ops_t *parser_ops;
+    /* parser (shared object) entry points */
+    viddec_parser_ops_t *parser_ops;
 
-	/* parser context */
-	viddec_pm_cxt_t *parser_cxt;
+    /* parser context */
+    viddec_pm_cxt_t *parser_cxt;
 
-	/* work load */
-	viddec_workload_t *workload1, *workload2;
+    /* work load */
+    viddec_workload_t *workload1, *workload2;
 
-	/* persistent memory for parser */
-	uint32 *persist_mem;
+    /* persistent memory for parser */
+    uint32 *persist_mem;
 
-	/* format specific query data */
-	void *query_data;
+    /* format specific query data */
+    void *query_data;
 
-	
-	function_init_parser_entries 	func_init_parser_entries;
-	function_allocate_query_data 	func_allocate_query_data;
-	function_free_query_data 		func_free_query_data;
-	function_parse_init_data 		func_parse_init_data;
-	function_parse_start_code 		func_parse_start_code;
-	function_process_parsing_result func_process_parsing_result;
-	function_populate_query_data 	func_populate_query_data;
+
+    function_init_parser_entries 	func_init_parser_entries;
+    function_allocate_query_data 	func_allocate_query_data;
+    function_free_query_data 		func_free_query_data;
+    function_parse_init_data 		func_parse_init_data;
+    function_parse_start_code 		func_parse_start_code;
+    function_process_parsing_result func_process_parsing_result;
+    function_populate_query_data 	func_populate_query_data;
 
 };
 
@@ -88,7 +100,7 @@ uint32 vbp_utils_create_context(uint32 parser_type, vbp_context **ppcontext);
  */
 uint32 vbp_utils_destroy_context(vbp_context *pcontext);
 
-/* 
+/*
  * parse bitstream
  */
 uint32 vbp_utils_parse_buffer(vbp_context *pcontext, uint8 *data, uint32 size, uint8 init_data_flag);
@@ -98,7 +110,7 @@ uint32 vbp_utils_parse_buffer(vbp_context *pcontext, uint8 *data, uint32 size, u
  */
 uint32 vbp_utils_query(vbp_context *pcontext, void **data);
 
-/* 
+/*
  * flush un-parsed bitstream
  */
 uint32 vbp_utils_flush(vbp_context *pcontext);

@@ -26,7 +26,7 @@ extern void vbp_trace_util(const char* cat, const char* fun, int line, const cha
 #define VBP_TRACE_UTIL(cat, format, ...) \
 vbp_trace_util(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 
-#else 
+#else
 
 #include <utils/Log.h>
 #define VBP_TRACE_UTIL(cat, format,  ...) \

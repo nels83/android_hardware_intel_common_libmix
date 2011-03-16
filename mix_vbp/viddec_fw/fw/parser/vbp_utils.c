@@ -6,7 +6,7 @@
  No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
  */
 
-#include <glib.h>
+//#include <glib.h>
 #include <dlfcn.h>
 
 #include "vc1.h"
@@ -18,7 +18,14 @@
 #include "vbp_mp42_parser.h"
 
 
-/* buffer counter */         
+void* g_try_malloc0(uint32 size) {
+    void* pMem = malloc(size);
+    if (pMem)
+        memset(pMem, 0, size);
+    return pMem;
+}
+
+/* buffer counter */
 uint32 buffer_counter = 0;
 
 
@@ -29,26 +36,26 @@ uint32 buffer_counter = 0;
  */
 static uint32 vbp_utils_uninitialize_context(vbp_context *pcontext)
 {
-	uint32 error = VBP_OK;
-	
-	if (NULL == pcontext)
-	{
-		return error;
-	}
-	
-	/* not need to reset parser entry points. */
+    uint32 error = VBP_OK;
 
-	g_free(pcontext->parser_ops);
-	pcontext->parser_ops = NULL;
-	
+    if (NULL == pcontext)
+    {
+        return error;
+    }
 
-	if (pcontext->fd_parser)
-	{
-		dlclose(pcontext->fd_parser);
-		pcontext->fd_parser = NULL;
-	}
+    /* not need to reset parser entry points. */
 
-	return error;
+    free(pcontext->parser_ops);
+    pcontext->parser_ops = NULL;
+
+
+    if (pcontext->fd_parser)
+    {
+        dlclose(pcontext->fd_parser);
+        pcontext->fd_parser = NULL;
+    }
+
+    return error;
 }
 
 /**
@@ -58,61 +65,61 @@ static uint32 vbp_utils_uninitialize_context(vbp_context *pcontext)
  */
 static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 {
-	uint32 error = VBP_OK;
-	char *parser_name;
-  
-	switch (pcontext->parser_type)
-	{
-		case VBP_VC1:
+    uint32 error = VBP_OK;
+    char *parser_name;
+
+    switch (pcontext->parser_type)
+    {
+    case VBP_VC1:
 #ifndef ANDROID
-		parser_name = "libmixvbp_vc1.so.0";
+        parser_name = "libmixvbp_vc1.so.0";
 #else
-		parser_name = "libmixvbp_vc1.so";
+        parser_name = "libmixvbp_vc1.so";
 #endif
-		break;
+        break;
 
-		/* MPEG-2 parser is not supported. */
+        /* MPEG-2 parser is not supported. */
 
-		/*  case VBP_MPEG2:
-		parser_name = "libmixvbp_mpeg2.so.0";
-		break;*/
+        /*  case VBP_MPEG2:
+        parser_name = "libmixvbp_mpeg2.so.0";
+        break;*/
 
-		case VBP_MPEG4:
+    case VBP_MPEG4:
 #ifndef ANDROID
-		parser_name = "libmixvbp_mpeg4.so.0";
+        parser_name = "libmixvbp_mpeg4.so.0";
 #else
-		parser_name = "libmixvbp_mpeg4.so";
+        parser_name = "libmixvbp_mpeg4.so";
 #endif
-		break;
+        break;
 
-		case VBP_H264:
+    case VBP_H264:
 #ifndef ANDROID
-		parser_name = "libmixvbp_h264.so.0";
+        parser_name = "libmixvbp_h264.so.0";
 #else
-		parser_name = "libmixvbp_h264.so";
+        parser_name = "libmixvbp_h264.so";
 #endif
-		break;
+        break;
 
-		default:
-		g_warning ("Warning!  Unsupported parser type!");
-		return VBP_TYPE;
-	}
+    default:
+        //g_warning ("Warning!  Unsupported parser type!");
+        return VBP_TYPE;
+    }
 
-	pcontext->fd_parser = dlopen(parser_name, RTLD_LAZY);
-	if (NULL == pcontext->fd_parser)
-	{
-		ETRACE("Failed to load parser %s.", parser_name);
-		error =  VBP_LOAD;
-		goto cleanup;
-	}
+    pcontext->fd_parser = dlopen(parser_name, RTLD_LAZY);
+    if (NULL == pcontext->fd_parser)
+    {
+        ETRACE("Failed to load parser %s.", parser_name);
+        error =  VBP_LOAD;
+        goto cleanup;
+    }
 
-	pcontext->parser_ops = g_try_new(viddec_parser_ops_t, 1);
-	if (NULL == pcontext->parser_ops)
-	{
-		ETRACE("Failed to allocate memory");
-		error =  VBP_MEM;
-		goto cleanup;
-	}
+    pcontext->parser_ops = g_try_new(viddec_parser_ops_t, 1);
+    if (NULL == pcontext->parser_ops)
+    {
+        ETRACE("Failed to allocate memory");
+        error =  VBP_MEM;
+        goto cleanup;
+    }
 
 #define SET_FUNC_POINTER(X, Y)\
 	case X:\
@@ -125,32 +132,32 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 	pcontext->func_populate_query_data = vbp_populate_query_data_##Y;\
 	break;
 
-	switch (pcontext->parser_type)
-	{
-		SET_FUNC_POINTER(VBP_VC1, vc1);
-		SET_FUNC_POINTER(VBP_MPEG4, mp42);
-		SET_FUNC_POINTER(VBP_H264, h264);
-	}
+    switch (pcontext->parser_type)
+    {
+        SET_FUNC_POINTER(VBP_VC1, vc1);
+        SET_FUNC_POINTER(VBP_MPEG4, mp42);
+        SET_FUNC_POINTER(VBP_H264, h264);
+    }
 
-	/* set entry points for parser operations:
-		init
-		parse_sc
-		parse_syntax
-		get_cxt_size
-		is_wkld_done
-		is_frame_start
-	*/
-	error = pcontext->func_init_parser_entries(pcontext);
+    /* set entry points for parser operations:
+    	init
+    	parse_sc
+    	parse_syntax
+    	get_cxt_size
+    	is_wkld_done
+    	is_frame_start
+    */
+    error = pcontext->func_init_parser_entries(pcontext);
 
 cleanup:
 
-	if (VBP_OK != error)
-	{
-		/* no need to log error.  the loader would have done so already. */
-		vbp_utils_uninitialize_context(pcontext);
-	}
+    if (VBP_OK != error)
+    {
+        /* no need to log error.  the loader would have done so already. */
+        vbp_utils_uninitialize_context(pcontext);
+    }
 
-	return error;
+    return error;
 }
 
 /**
@@ -159,30 +166,30 @@ cleanup:
 *
 */
 static uint32 vbp_utils_free_parser_memory(vbp_context *pcontext)
-{	
-	if (NULL == pcontext)
-	{
-		return VBP_OK;
-	}
-	
-	if (pcontext->func_free_query_data)
-	{
-		pcontext->func_free_query_data(pcontext);
-	}
+{
+    if (NULL == pcontext)
+    {
+        return VBP_OK;
+    }
 
-	g_free(pcontext->workload2);
-	pcontext->workload2 = NULL;
+    if (pcontext->func_free_query_data)
+    {
+        pcontext->func_free_query_data(pcontext);
+    }
 
-	g_free(pcontext->workload1);
-	pcontext->workload1 = NULL;
+    free(pcontext->workload2);
+    pcontext->workload2 = NULL;
 
-	g_free(pcontext->persist_mem);
-	pcontext->persist_mem = NULL;
+    free(pcontext->workload1);
+    pcontext->workload1 = NULL;
 
-	g_free(pcontext->parser_cxt);
-	pcontext->parser_cxt = NULL;
-	
-	return VBP_OK;
+    free(pcontext->persist_mem);
+    pcontext->persist_mem = NULL;
+
+    free(pcontext->parser_cxt);
+    pcontext->parser_cxt = NULL;
+
+    return VBP_OK;
 }
 
 
@@ -193,80 +200,80 @@ static uint32 vbp_utils_free_parser_memory(vbp_context *pcontext)
  */
 static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
 {
-	/* pcontext is guaranteed to be valid input. */
-	uint32 error = VBP_OK;
-	viddec_parser_memory_sizes_t sizes;
+    /* pcontext is guaranteed to be valid input. */
+    uint32 error = VBP_OK;
+    viddec_parser_memory_sizes_t sizes;
 
-	pcontext->parser_cxt = g_try_new(viddec_pm_cxt_t, 1);
-	if (NULL == pcontext->parser_cxt)
-	{
-		ETRACE("Failed to allocate memory");
-		error = VBP_MEM;
-		goto cleanup;
-	}
+    pcontext->parser_cxt = g_try_new(viddec_pm_cxt_t, 1);
+    if (NULL == pcontext->parser_cxt)
+    {
+        ETRACE("Failed to allocate memory");
+        error = VBP_MEM;
+        goto cleanup;
+    }
 
-	/* invoke parser entry to get context size */
-	/* no return value, should always succeed. */
-	pcontext->parser_ops->get_cxt_size(&sizes);
+    /* invoke parser entry to get context size */
+    /* no return value, should always succeed. */
+    pcontext->parser_ops->get_cxt_size(&sizes);
 
-	/* allocate persistent memory for parser */
-	if (sizes.persist_size)
-	{
-		pcontext->persist_mem = g_try_malloc(sizes.persist_size);
-		if (NULL == pcontext->persist_mem)
-		{			
-			ETRACE("Failed to allocate memory");
-			error = VBP_MEM;
-			goto cleanup;
-		}
-	}
-	else
-	{
-		/* OK for VC-1, MPEG2 and MPEG4. */
-		if ((VBP_VC1 == pcontext->parser_type) || 
-			(VBP_MPEG2 == pcontext->parser_type) ||
-			(VBP_MPEG4 == pcontext->parser_type))
-		{
-			pcontext->persist_mem = NULL;
-		}
-		else
-		{
-			/* mandatory for H.264 */
-			ETRACE("Failed to allocate memory");
-			error =  VBP_TYPE;
-			goto cleanup;
-		}
-	}
+    /* allocate persistent memory for parser */
+    if (sizes.persist_size)
+    {
+        pcontext->persist_mem = g_try_malloc(sizes.persist_size);
+        if (NULL == pcontext->persist_mem)
+        {
+            ETRACE("Failed to allocate memory");
+            error = VBP_MEM;
+            goto cleanup;
+        }
+    }
+    else
+    {
+        /* OK for VC-1, MPEG2 and MPEG4. */
+        if ((VBP_VC1 == pcontext->parser_type) ||
+                (VBP_MPEG2 == pcontext->parser_type) ||
+                (VBP_MPEG4 == pcontext->parser_type))
+        {
+            pcontext->persist_mem = NULL;
+        }
+        else
+        {
+            /* mandatory for H.264 */
+            ETRACE("Failed to allocate memory");
+            error =  VBP_TYPE;
+            goto cleanup;
+        }
+    }
 
-	/* allocate a new workload with 1000 items. */
-	pcontext->workload1 = g_try_malloc(sizeof(viddec_workload_t) +
-		(MAX_WORKLOAD_ITEMS * sizeof(viddec_workload_item_t)));
-	if (NULL == pcontext->workload1)
-	{
-		ETRACE("Failed to allocate memory");
-		error = VBP_MEM;
-		goto cleanup;
-	}
+    /* allocate a new workload with 1000 items. */
+    pcontext->workload1 = g_try_malloc(sizeof(viddec_workload_t) +
+                                       (MAX_WORKLOAD_ITEMS * sizeof(viddec_workload_item_t)));
+    if (NULL == pcontext->workload1)
+    {
+        ETRACE("Failed to allocate memory");
+        error = VBP_MEM;
+        goto cleanup;
+    }
 
-	/* allocate a second workload with 1000 items. */
-	pcontext->workload2 = g_try_malloc(sizeof(viddec_workload_t) +
-		(MAX_WORKLOAD_ITEMS * sizeof(viddec_workload_item_t)));
-	if (NULL == pcontext->workload2)
-	{	
-		ETRACE("Failed to allocate memory");
-		error = VBP_MEM;
-		goto cleanup;
-	}
+    /* allocate a second workload with 1000 items. */
+    pcontext->workload2 = g_try_malloc(sizeof(viddec_workload_t) +
+                                       (MAX_WORKLOAD_ITEMS * sizeof(viddec_workload_item_t)));
+    if (NULL == pcontext->workload2)
+    {
+        ETRACE("Failed to allocate memory");
+        error = VBP_MEM;
+        goto cleanup;
+    }
 
-	/* allocate format-specific query data */
-	error = pcontext->func_allocate_query_data(pcontext);
- 
-cleanup:  
-	if (error != VBP_OK)
-	{
-		vbp_utils_free_parser_memory(pcontext);		
-	}
-	return error;
+    /* allocate format-specific query data */
+    error = pcontext->func_allocate_query_data(pcontext);
+
+cleanup:
+    if (error != VBP_OK)
+    {
+        vbp_utils_free_parser_memory(pcontext);
+    }
+    return error;
 }
 
 
@@ -278,105 +285,105 @@ cleanup:
  */
 static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_flag)
 {
-	viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
-	viddec_parser_ops_t *ops = pcontext->parser_ops;
-	uint32 error = VBP_OK;
-	int i;
+    viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
+    viddec_parser_ops_t *ops = pcontext->parser_ops;
+    uint32 error = VBP_OK;
+    int i;
 
-	/* reset list number. func_parse_init_data or func_parse_start_code will
-	* set it equal to number of sequence headers, picture headers or slices headers
-	* found in the sample buffer
-	*/
-	cxt->list.num_items = 0;
+    /* reset list number. func_parse_init_data or func_parse_start_code will
+    * set it equal to number of sequence headers, picture headers or slices headers
+    * found in the sample buffer
+    */
+    cxt->list.num_items = 0;
 
-	/**
-	* READ THIS NOTE: cxt->getbits.is_emul_reqd must be set to 1
-	* for H.264 and MPEG-4, VC1 advanced profile and set to 0
-	* for VC1 simple or main profile when parsing the frame 
-	* buffer. When parsing the sequence header, it must be set to 1
-	* always.
-	*
-	* PARSER IMPLEMENTOR: set this flag in the parser.
-	*/
-	
-	/*	
-	if ((codec_type == VBP_H264)  || (codec_type == VBP_MPEG4))
-	{	
-		cxt->getbits.is_emul_reqd = 1;
-	}
-	*/
+    /**
+    * READ THIS NOTE: cxt->getbits.is_emul_reqd must be set to 1
+    * for H.264 and MPEG-4, VC1 advanced profile and set to 0
+    * for VC1 simple or main profile when parsing the frame
+    * buffer. When parsing the sequence header, it must be set to 1
+    * always.
+    *
+    * PARSER IMPLEMENTOR: set this flag in the parser.
+    */
 
-	
-	/* populate the list.*/
-	if (init_data_flag)
-	{
-		error = pcontext->func_parse_init_data(pcontext);
-	}
-	else
-	{
-		error = pcontext->func_parse_start_code(pcontext);
-	}
+    /*
+    if ((codec_type == VBP_H264)  || (codec_type == VBP_MPEG4))
+    {
+    	cxt->getbits.is_emul_reqd = 1;
+    }
+    */
 
-	if (VBP_OK != error)
-	{
-		ETRACE("Failed to parse the start code!");
-		return error;
-	}
 
-	/* set up bitstream buffer */
-	cxt->getbits.list = &(cxt->list);
+    /* populate the list.*/
+    if (init_data_flag)
+    {
+        error = pcontext->func_parse_init_data(pcontext);
+    }
+    else
+    {
+        error = pcontext->func_parse_start_code(pcontext);
+    }
 
-	/* setup buffer pointer */
-	cxt->getbits.bstrm_buf.buf = cxt->parse_cubby.buf;
+    if (VBP_OK != error)
+    {
+        ETRACE("Failed to parse the start code!");
+        return error;
+    }
 
-	/* 
-	* TO DO:
-	* check if cxt->getbits.is_emul_reqd is set properly 
-	*/
+    /* set up bitstream buffer */
+    cxt->getbits.list = &(cxt->list);
 
-	for (i = 0; i < cxt->list.num_items; i++)
-	{
-		/* setup bitstream parser */
-		cxt->getbits.bstrm_buf.buf_index = cxt->list.data[i].stpos;
-		cxt->getbits.bstrm_buf.buf_st = cxt->list.data[i].stpos;
-		cxt->getbits.bstrm_buf.buf_end = cxt->list.data[i].edpos;
+    /* setup buffer pointer */
+    cxt->getbits.bstrm_buf.buf = cxt->parse_cubby.buf;
 
-		/* It is possible to end up with buf_offset not equal zero. */
-		cxt->getbits.bstrm_buf.buf_bitoff = 0;
-		
-		cxt->getbits.au_pos = 0;    
-    	cxt->getbits.list_off = 0;
-    	cxt->getbits.phase = 0;
-    	cxt->getbits.emulation_byte_counter = 0;
+    /*
+    * TO DO:
+    * check if cxt->getbits.is_emul_reqd is set properly
+    */
 
-		cxt->list.start_offset = cxt->list.data[i].stpos;
-		cxt->list.end_offset = cxt->list.data[i].edpos;
-		cxt->list.total_bytes = cxt->list.data[i].edpos - cxt->list.data[i].stpos;
+    for (i = 0; i < cxt->list.num_items; i++)
+    {
+        /* setup bitstream parser */
+        cxt->getbits.bstrm_buf.buf_index = cxt->list.data[i].stpos;
+        cxt->getbits.bstrm_buf.buf_st = cxt->list.data[i].stpos;
+        cxt->getbits.bstrm_buf.buf_end = cxt->list.data[i].edpos;
 
-		/* invoke parse entry point to parse the buffer */
-		error = ops->parse_syntax((void *)cxt, (void *)&(cxt->codec_data[0]));
-	
-		/* can't return error for now. Neet further investigation */
+        /* It is possible to end up with buf_offset not equal zero. */
+        cxt->getbits.bstrm_buf.buf_bitoff = 0;
 
-		/*if (0 != error)
-		{
-			ETRACE("failed to parse the syntax: %d!", error);
-			return error;
-		}*/	
-		
-		/* 
-		 * process parsing result
-		 */ 
-		error = pcontext->func_process_parsing_result(pcontext, i);
-		
-		if (0 != error)
-		{
-			ETRACE("Failed to process parsing result.");
-			return error;
-		}			
-	}
+        cxt->getbits.au_pos = 0;
+        cxt->getbits.list_off = 0;
+        cxt->getbits.phase = 0;
+        cxt->getbits.emulation_byte_counter = 0;
 
-	return VBP_OK;
+        cxt->list.start_offset = cxt->list.data[i].stpos;
+        cxt->list.end_offset = cxt->list.data[i].edpos;
+        cxt->list.total_bytes = cxt->list.data[i].edpos - cxt->list.data[i].stpos;
+
+        /* invoke parse entry point to parse the buffer */
+        error = ops->parse_syntax((void *)cxt, (void *)&(cxt->codec_data[0]));
+
+        /* can't return error for now. Neet further investigation */
+
+        /*if (0 != error)
+        {
+        	ETRACE("failed to parse the syntax: %d!", error);
+        	return error;
+        }*/
+
+        /*
+         * process parsing result
+         */
+        error = pcontext->func_process_parsing_result(pcontext, i);
+
+        if (0 != error)
+        {
+            ETRACE("Failed to process parsing result.");
+            return error;
+        }
+    }
+
+    return VBP_OK;
 }
 
 
@@ -387,71 +394,71 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
  */
 uint32 vbp_utils_create_context(uint32 parser_type, vbp_context **ppcontext)
 {
-	uint32 error = VBP_OK;
-	vbp_context *pcontext = NULL;
+    uint32 error = VBP_OK;
+    vbp_context *pcontext = NULL;
 
-	/* prevention from the failure */
-	*ppcontext =  NULL;
+    /* prevention from the failure */
+    *ppcontext =  NULL;
 
-	pcontext = g_try_new0(vbp_context, 1);
-	if (NULL == pcontext)
-	{
-		error = VBP_MEM;
-		goto cleanup;
-	}
+    pcontext = g_try_new0(vbp_context, 1);
+    if (NULL == pcontext)
+    {
+        error = VBP_MEM;
+        goto cleanup;
+    }
 
-	pcontext->parser_type = parser_type;
+    pcontext->parser_type = parser_type;
 
-	/* load parser, initialize parser operators and entry points */
-	error = vbp_utils_initialize_context(pcontext);
+    /* load parser, initialize parser operators and entry points */
+    error = vbp_utils_initialize_context(pcontext);
     if (VBP_OK != error)
     {
-		goto cleanup;
-	}
+        goto cleanup;
+    }
 
-	/* allocate parser context, persistent memory, query data and workload */
-	error = vbp_utils_allocate_parser_memory(pcontext);
-	if (VBP_OK != error)
-	{
-		goto cleanup;
-	}
+    /* allocate parser context, persistent memory, query data and workload */
+    error = vbp_utils_allocate_parser_memory(pcontext);
+    if (VBP_OK != error)
+    {
+        goto cleanup;
+    }
 
-	viddec_pm_utils_list_init(&(pcontext->parser_cxt->list));
-	viddec_pm_utils_bstream_init(&(pcontext->parser_cxt->getbits), NULL, 0);
-	pcontext->parser_cxt->cur_buf.list_index = -1;
-	pcontext->parser_cxt->parse_cubby.phase = 0;
+    viddec_pm_utils_list_init(&(pcontext->parser_cxt->list));
+    viddec_pm_utils_bstream_init(&(pcontext->parser_cxt->getbits), NULL, 0);
+    pcontext->parser_cxt->cur_buf.list_index = -1;
+    pcontext->parser_cxt->parse_cubby.phase = 0;
 
-	/* invoke the entry point to initialize the parser. */
-	pcontext->parser_ops->init(
-		(uint32_t *)pcontext->parser_cxt->codec_data,
-		(uint32_t *)pcontext->persist_mem,
-		 FALSE);
+    /* invoke the entry point to initialize the parser. */
+    pcontext->parser_ops->init(
+        (uint32_t *)pcontext->parser_cxt->codec_data,
+        (uint32_t *)pcontext->persist_mem,
+        FALSE);
 
-	viddec_emit_init(&(pcontext->parser_cxt->emitter));
+    viddec_emit_init(&(pcontext->parser_cxt->emitter));
 
-	/* overwrite init with our number of items. */
-	pcontext->parser_cxt->emitter.cur.max_items = MAX_WORKLOAD_ITEMS;
-	pcontext->parser_cxt->emitter.next.max_items = MAX_WORKLOAD_ITEMS;
+    /* overwrite init with our number of items. */
+    pcontext->parser_cxt->emitter.cur.max_items = MAX_WORKLOAD_ITEMS;
+    pcontext->parser_cxt->emitter.next.max_items = MAX_WORKLOAD_ITEMS;
 
-	/* set up to find the first start code. */
-	pcontext->parser_cxt->sc_prefix_info.first_sc_detect = 1;
+    /* set up to find the first start code. */
+    pcontext->parser_cxt->sc_prefix_info.first_sc_detect = 1;
 
-	/* indicates initialized OK. */
-	pcontext->identifier = MAGIC_NUMBER;
-	*ppcontext = pcontext;
-	error = VBP_OK;
+    /* indicates initialized OK. */
+    pcontext->identifier = MAGIC_NUMBER;
+    *ppcontext = pcontext;
+    error = VBP_OK;
 
 cleanup:
 
-	if (VBP_OK != error)
-	{
-		vbp_utils_free_parser_memory(pcontext);
-		vbp_utils_uninitialize_context(pcontext);
-		g_free(pcontext);
-		pcontext = NULL;
-	}
+    if (VBP_OK != error)
+    {
+        vbp_utils_free_parser_memory(pcontext);
+        vbp_utils_uninitialize_context(pcontext);
+        free(pcontext);
+        pcontext = NULL;
+    }
 
-	return error;
+    return error;
 }
 
 /**
@@ -461,13 +468,13 @@ cleanup:
  */
 uint32 vbp_utils_destroy_context(vbp_context *pcontext)
 {
-	/* entry point, not need to validate input parameters. */
-	vbp_utils_free_parser_memory(pcontext);
-	vbp_utils_uninitialize_context(pcontext);
-	g_free(pcontext);
-	pcontext = NULL;
-	
-	return VBP_OK;
+    /* entry point, not need to validate input parameters. */
+    vbp_utils_free_parser_memory(pcontext);
+    vbp_utils_uninitialize_context(pcontext);
+    free(pcontext);
+    pcontext = NULL;
+
+    return VBP_OK;
 }
 
 
@@ -477,34 +484,34 @@ uint32 vbp_utils_destroy_context(vbp_context *pcontext)
  *
  */
 uint32 vbp_utils_parse_buffer(vbp_context *pcontext, uint8 *data, uint32 size,  uint8 init_data_flag)
-{	
-	/* entry point, not need to validate input parameters. */
+{
+    /* entry point, not need to validate input parameters. */
 
-	uint32 error = VBP_OK;
+    uint32 error = VBP_OK;
 
     //ITRACE("buffer counter: %d",buffer_counter);
 
-	/* set up emitter. */
-	pcontext->parser_cxt->emitter.cur.data = pcontext->workload1;
-	pcontext->parser_cxt->emitter.next.data = pcontext->workload2;
+    /* set up emitter. */
+    pcontext->parser_cxt->emitter.cur.data = pcontext->workload1;
+    pcontext->parser_cxt->emitter.next.data = pcontext->workload2;
 
-	/* reset bit offset */
-	pcontext->parser_cxt->getbits.bstrm_buf.buf_bitoff = 0;
+    /* reset bit offset */
+    pcontext->parser_cxt->getbits.bstrm_buf.buf_bitoff = 0;
 
 
-	/* set up cubby. */
-	pcontext->parser_cxt->parse_cubby.buf = data;
-	pcontext->parser_cxt->parse_cubby.size = size;
-	pcontext->parser_cxt->parse_cubby.phase = 0;
+    /* set up cubby. */
+    pcontext->parser_cxt->parse_cubby.buf = data;
+    pcontext->parser_cxt->parse_cubby.size = size;
+    pcontext->parser_cxt->parse_cubby.phase = 0;
 
-	error = vbp_utils_parse_es_buffer(pcontext, init_data_flag);
+    error = vbp_utils_parse_es_buffer(pcontext, init_data_flag);
 
-	/* rolling count of buffers. */
-	if (0 == init_data_flag)
-	{
-		buffer_counter++;
-	}
-	return error;
+    /* rolling count of buffers. */
+    if (0 == init_data_flag)
+    {
+        buffer_counter++;
+    }
+    return error;
 }
 
 /**
@@ -514,19 +521,19 @@ uint32 vbp_utils_parse_buffer(vbp_context *pcontext, uint8 *data, uint32 size,  
  */
 uint32 vbp_utils_query(vbp_context *pcontext, void **data)
 {
-	/* entry point, not need to validate input parameters. */
-	uint32 error = VBP_OK;
+    /* entry point, not need to validate input parameters. */
+    uint32 error = VBP_OK;
 
-	error = pcontext->func_populate_query_data(pcontext);
-	if (VBP_OK == error)
-	{
-		*data = pcontext->query_data;
-	}
-	else
-	{
-		*data = NULL;
-	}
-	return error;
+    error = pcontext->func_populate_query_data(pcontext);
+    if (VBP_OK == error)
+    {
+        *data = pcontext->query_data;
+    }
+    else
+    {
+        *data = NULL;
+    }
+    return error;
 }
 
 /**
@@ -536,6 +543,6 @@ uint32 vbp_utils_query(vbp_context *pcontext, void **data)
  */
 uint32 vbp_utils_flush(vbp_context *pcontext)
 {
-	return VBP_OK;
+    return VBP_OK;
 }
 

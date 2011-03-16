@@ -10,38 +10,38 @@
 #define __MIX_VIDEO_PRIVATE_H__
 
 #include "mixvideothread.h"
+#include "mixvideoformatenc.h"
 
 class MixFrameManager;
 class MixVideoFormat;
 typedef struct _MixVideoPrivate MixVideoPrivate;
 
 struct _MixVideoPrivate {
-	/*< private > */
+    /*< private > */
 
-	MixVideoMutex objlock;
-	gboolean initialized;
-	gboolean configured;
+    MixVideoMutex objlock;
+    bool initialized;
+    bool configured;
 
-	VADisplay va_display;
+    VADisplay va_display;
 
-	int va_major_version;
-	int va_minor_version;
+    int va_major_version;
+    int va_minor_version;
 
-	MixCodecMode codec_mode;
+    MixCodecMode codec_mode;
 
-	MixVideoInitParams 	*init_params;
-	MixDrmParams 		*drm_params;
+    MixVideoInitParams 	*init_params;
+    MixDrmParams 		*drm_params;
 
-	MixVideoConfigParams 	*config_params;
+    MixVideoConfigParams 	*config_params;
 
-	MixFrameManager 	*frame_manager;
-	MixVideoFormat 		*video_format;
-#if MIXVIDEO_ENCODE_ENABLE
-	MixVideoFormatEnc       *video_format_enc;
-#endif
+    MixFrameManager 	*frame_manager;
+    MixVideoFormat 		*video_format;
+    MixVideoFormatEnc       *video_format_enc;
 
-	MixSurfacePool		*surface_pool;
-	MixBufferPool		*buffer_pool;
+    MixSurfacePool		*surface_pool;
+    MixBufferPool		*buffer_pool;
+    MixUsrReqSurfacesInfo requested_surface_info;
 
 };
 

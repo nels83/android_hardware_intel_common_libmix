@@ -68,26 +68,26 @@ vc1_Status vc1_ParsePictureHeader_ProgressivePpicture_Adv(void* ctxt, vc1_Info *
         md->LUMSHIFT2 = picLayerHeader->LUMSHIFT;
     }
     else
-#ifdef VBP    
-		picLayerHeader->MVMODE2 = 0;
-#else		
+#ifdef VBP
+        picLayerHeader->MVMODE2 = 0;
+#else
         picLayerHeader->MVMODE2 = picLayerHeader->MVMODE;
 #endif
 
     if ((picLayerHeader->MVMODE == VC1_MVMODE_MIXED_MV) ||
-        ((picLayerHeader->MVMODE == VC1_MVMODE_INTENSCOMP) &&
-         (picLayerHeader->MVMODE2 == VC1_MVMODE_MIXED_MV)))
+            ((picLayerHeader->MVMODE == VC1_MVMODE_INTENSCOMP) &&
+             (picLayerHeader->MVMODE2 == VC1_MVMODE_MIXED_MV)))
     {
         if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-            md->widthMB, md->heightMB, BPP_MVTYPEMB)) !=
-            VC1_STATUS_OK)
+                                         md->widthMB, md->heightMB, BPP_MVTYPEMB)) !=
+                VC1_STATUS_OK)
         {
             return status;
         }
     }
 
     if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-        md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
+                                     md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
     {
         return status;
     }
@@ -156,7 +156,7 @@ vc1_Status vc1_ParsePictureHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pI
     }
 
     if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-        md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
+                                     md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
     {
         return status;
     }
@@ -213,7 +213,7 @@ vc1_Status vc1_ParseFieldHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pInf
     vc1_Status status = VC1_STATUS_OK;
     vc1_metadata_t *md = &pInfo->metadata;
     vc1_PictureLayerHeader *picLayerHeader = &pInfo->picLayerHeader;
-   
+
 
     VC1_GET_BITS9(5, picLayerHeader->PQINDEX);
     if ((status = vc1_CalculatePQuant(pInfo)) != VC1_STATUS_OK)
@@ -239,7 +239,7 @@ vc1_Status vc1_ParseFieldHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pInf
     }
 
     VC1_GET_BITS9(1, picLayerHeader->NUMREF);
-   
+
     if (picLayerHeader->NUMREF == 0)
     {
         VC1_GET_BITS9(1, picLayerHeader->REFFIELD);
@@ -294,7 +294,7 @@ vc1_Status vc1_ParseFieldHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pInf
         else
         {
             VC1_GET_BITS9(1, md->INTCOMPFIELD);
-            if(md->INTCOMPFIELD == 1)
+            if (md->INTCOMPFIELD == 1)
                 md->INTCOMPFIELD = VC1_INTCOMP_BOTTOM_FIELD;
             else
                 md->INTCOMPFIELD = VC1_INTCOMP_TOP_FIELD;
@@ -312,11 +312,11 @@ vc1_Status vc1_ParseFieldHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pInf
         }
     }
     else
-#ifdef VBP    
-		picLayerHeader->MVMODE2 = 0;
-#else		
+#ifdef VBP
+        picLayerHeader->MVMODE2 = 0;
+#else
         picLayerHeader->MVMODE2 = picLayerHeader->MVMODE;
-#endif        
+#endif
 
     VC1_GET_BITS9(3, picLayerHeader->MBMODETAB);
 
@@ -332,10 +332,10 @@ vc1_Status vc1_ParseFieldHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pInf
     VC1_GET_BITS9(3, picLayerHeader->CBPTAB); /* ICBPTAB. */
 
 #ifdef VBP
-	if (picLayerHeader->MVMODE == VC1_MVMODE_MIXED_MV)
-#else	
+    if (picLayerHeader->MVMODE == VC1_MVMODE_MIXED_MV)
+#else
     if (picLayerHeader->MVMODE2 == VC1_MVMODE_MIXED_MV)
-#endif    
+#endif
     {
         VC1_GET_BITS9(2, picLayerHeader->MV4BPTAB); /* 4MVBPTAB. */
     }

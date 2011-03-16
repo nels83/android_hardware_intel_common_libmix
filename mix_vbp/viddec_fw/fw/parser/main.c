@@ -31,7 +31,7 @@ int SMDEXPORT viddec_fw_parser_sven_init(struct SVEN_FW_Globals  *sven_fw_global
  * This function figures out if we crossesd watermark boundary on input data.
  * before represents the ES Queue data when we started and current represents ES Queue data
  * when we are ready to swap.Threshold is the amount of data specified by the driver to trigger an
- * interrupt. 
+ * interrupt.
  * We return true if threshold is between before and current.
  *------------------------------------------------------------------------------
  */
@@ -63,7 +63,7 @@ static uint32_t viddec_fw_get_total_input_Q_data(uint32_t indx)
  * Function:  mfd_round_robin
  * Params:
  *        [in]  pri: Priority of the stream
- *        [in] indx: stream id number of the last stream that was scheduled. 
+ *        [in] indx: stream id number of the last stream that was scheduled.
  *        [out] qnum: Stream id of priority(pri) which has data.
  * This function is responsible for figuring out which stream needs to be scheduled next.
  * It starts after the last scheduled stream and walks through all streams until it finds
@@ -80,15 +80,15 @@ uint32_t mfd_round_robin(uint32_t pri, int32_t *qnum, int32_t indx)
     int32_t i = CONFIG_IPC_FW_MAX_RX_QUEUES;
     uint32_t ret = 0;
     /* Go through all queues until we find a valid queue of reqd priority */
-    while(i>0)
+    while (i>0)
     {
         indx++;
-        if(indx >=  CONFIG_IPC_FW_MAX_RX_QUEUES) indx = 0;
+        if (indx >=  CONFIG_IPC_FW_MAX_RX_QUEUES) indx = 0;
 
-        /* We should look only at queues which match priority and 
+        /* We should look only at queues which match priority and
            in running state */
-        if( (_dmem.stream_info[indx].state == 1)
-            && (_dmem.stream_info[indx].priority == pri))
+        if ( (_dmem.stream_info[indx].state == 1)
+                && (_dmem.stream_info[indx].priority == pri))
         {
             uint32_t inpt_avail=0, output_avail=0, wklds_avail =0 , pos;
             FW_IPC_ReceiveQue   *rcv_q;
@@ -99,7 +99,7 @@ uint32_t mfd_round_robin(uint32_t pri, int32_t *qnum, int32_t indx)
             pos = 0;
             /* Need at least current and next to proceed */
             wklds_avail =  (ipc_mq_read_avail(&fwipc->wkld_q[indx].mq, (int32_t *)&pos) >= (CONFIG_IPC_MESSAGE_MAX_SIZE << 1));
-            if(inpt_avail && output_avail && wklds_avail)
+            if (inpt_avail && output_avail && wklds_avail)
             {/* Success condition: we have some data on input and enough space on output queue */
                 *qnum = indx;
                 ret =1;
@@ -132,7 +132,7 @@ void output_omar_wires( unsigned int value )
 {
 #ifdef RTL_SIMULATION
     reg_write(CONFIG_IPC_ROFF_HOST_DOORBELL, value );
-#endif    
+#endif
 }
 
 /*------------------------------------------------------------------------------
@@ -150,17 +150,17 @@ void viddec_fw_init_swap_memory(unsigned int stream_id, unsigned int swap, unsig
     cxt = (mfd_pk_strm_cxt *)&(_dmem.srm_cxt);
     cxt_swap = (mfd_stream_info *)&(_dmem.stream_info[stream_id]);
 
-    if(swap)
+    if (swap)
     {/* Swap context into local memory */
         cp_using_dma(cxt_swap->ddr_cxt, (uint32_t) &(cxt->pm), sizeof(viddec_pm_cxt_t), false, false);
     }
-    
+
     {
         mfd_init_swap_memory(&(cxt->pm), cxt_swap->strm_type, cxt_swap->ddr_cxt+cxt_swap->cxt_size, clean);
         cxt_swap->wl_time = 0;
         cxt_swap->es_time = 0;
     }
-    if(swap)
+    if (swap)
     {/* Swap context into DDR */
         cp_using_dma(cxt_swap->ddr_cxt, (uint32_t) &(cxt->pm), sizeof(viddec_pm_cxt_t), true, false);
     }
@@ -176,7 +176,7 @@ static inline void viddec_fw_push_current_frame_to_output(FW_IPC_Handle *fwipc, 
 {
     ipc_msg_data wkld_to_push;
     FwIPC_ReadMessage(fwipc, &fwipc->wkld_q[cur], (char *)&(wkld_to_push), sizeof(ipc_msg_data));
-    FwIPC_SendMessage(fwipc, cur, (char *)&(wkld_to_push),  sizeof(ipc_msg_data));    
+    FwIPC_SendMessage(fwipc, cur, (char *)&(wkld_to_push),  sizeof(ipc_msg_data));
 }
 
 /*------------------------------------------------------------------------------
@@ -189,7 +189,7 @@ static inline int viddec_fw_get_next_stream_to_schedule(void)
 {
     int32_t cur = -1;
 
-    if(mfd_round_robin(viddec_stream_priority_REALTIME, &cur, _dmem.g_pk_data.high_id))
+    if (mfd_round_robin(viddec_stream_priority_REALTIME, &cur, _dmem.g_pk_data.high_id))
     {
         /* On success store the stream id */
         _dmem.g_pk_data.high_id = cur;
@@ -197,7 +197,7 @@ static inline int viddec_fw_get_next_stream_to_schedule(void)
     else
     {
         /* Check Low priority Queues, Since we couldn't find a valid realtime stream */
-        if(mfd_round_robin(viddec_stream_priority_BACKGROUND, &cur, _dmem.g_pk_data.low_id))
+        if (mfd_round_robin(viddec_stream_priority_BACKGROUND, &cur, _dmem.g_pk_data.low_id))
         {
             _dmem.g_pk_data.low_id = cur;
         }
@@ -214,22 +214,22 @@ static inline int viddec_fw_get_next_stream_to_schedule(void)
  *------------------------------------------------------------------------------
  */
 static inline void viddec_fw_update_pending_interrupt_flag(int32_t cur, mfd_stream_info *cxt_swap, uint8_t pushed_a_workload,
-                                                           uint32_t es_Q_data_at_start)
+        uint32_t es_Q_data_at_start)
 {
-    if(_dmem.int_status[cur].mask)
+    if (_dmem.int_status[cur].mask)
     {
-        if(!cxt_swap->pending_interrupt)
+        if (!cxt_swap->pending_interrupt)
         {
             uint32_t es_Q_data_now;
             uint8_t wmark_boundary_reached=false;
             es_Q_data_now = viddec_fw_get_total_input_Q_data((uint32_t)cur);
             wmark_boundary_reached = viddec_fw_check_watermark_boundary(es_Q_data_at_start, es_Q_data_now, cxt_swap->low_watermark);
             _dmem.int_status[cur].status = 0;
-            if(pushed_a_workload)
+            if (pushed_a_workload)
             {
                 _dmem.int_status[cur].status |= VIDDEC_FW_WKLD_DATA_AVAIL;
             }
-            if(wmark_boundary_reached)
+            if (wmark_boundary_reached)
             {
                 _dmem.int_status[cur].status |= VIDDEC_FW_INPUT_WATERMARK_REACHED;
             }
@@ -247,21 +247,21 @@ static inline void viddec_fw_handle_error_and_inband_messages(int32_t cur, uint3
     FW_IPC_Handle *fwipc = GET_IPC_HANDLE(_dmem);
 
     viddec_fw_push_current_frame_to_output(fwipc, cur);
-    switch(pm_ret)
+    switch (pm_ret)
     {
-        case PM_EOS:
-        case PM_OVERFLOW:
-        {
-            viddec_fw_init_swap_memory(cur, false, true);
-        }
+    case PM_EOS:
+    case PM_OVERFLOW:
+    {
+        viddec_fw_init_swap_memory(cur, false, true);
+    }
+    break;
+    case PM_DISCONTINUITY:
+    {
+        viddec_fw_init_swap_memory(cur, false, false);
+    }
+    break;
+    default:
         break;
-        case PM_DISCONTINUITY:
-        {
-            viddec_fw_init_swap_memory(cur, false, false);
-        }
-        break;
-        default:
-            break;
     }
 }
 
@@ -290,10 +290,10 @@ void viddec_fw_debug_scheduled_stream_state(int32_t indx, int32_t start)
 /*------------------------------------------------------------------------------
  * Function:  viddec_fw_process_async_queues(A.K.A -> Parser Kernel)
  * This function is responsible for handling the asynchronous queues.
- * 
+ *
  * The first step is to figure out which stream to run. The current algorithm
- * will go through all high priority queues for a valid stream, if not found we 
- * go through lower priority queues. 
+ * will go through all high priority queues for a valid stream, if not found we
+ * go through lower priority queues.
  *
  * If a valid stream is found we swap the required context from DDR to DMEM and do all necessary
  * things to setup the stream.
@@ -308,8 +308,8 @@ static inline int32_t viddec_fw_process_async_queues()
     int32_t cur = -1;
 
     cur = viddec_fw_get_next_stream_to_schedule();
-	
-    if(cur != -1)
+
+    if (cur != -1)
     {
         FW_IPC_Handle *fwipc = GET_IPC_HANDLE(_dmem);
         FW_IPC_ReceiveQue   *rcv_q;
@@ -321,7 +321,7 @@ static inline int32_t viddec_fw_process_async_queues()
             mfd_stream_info *cxt_swap;
             cxt = (mfd_pk_strm_cxt *)&(_dmem.srm_cxt);
             cxt_swap = (mfd_stream_info *)&(_dmem.stream_info[cur]);
-            
+
             /* Step 1: Swap rodata to local memory. Not doing this currently as all the rodata fits in local memory. */
             {/* Step 2: Swap context into local memory */
                 cp_using_dma(cxt_swap->ddr_cxt, (uint32_t) &(cxt->pm), sizeof(viddec_pm_cxt_t), false, false);
@@ -349,76 +349,76 @@ static inline int32_t viddec_fw_process_async_queues()
                         get_wdog(&es_t1);
                         cxt_swap->es_time += get_total_ticks(es_t0, es_t1);
                     }
-                    switch(pm_ret)
+                    switch (pm_ret)
                     {
-                        case PM_EOS:
-                        case PM_WKLD_DONE:
-                        case PM_OVERFLOW:
-                        case PM_DISCONTINUITY:
-                        {/* Finished a frame worth of data or encountered fatal error*/
-                            stream_active = false;
-                        }
-                        break;
-                        case PM_NO_DATA:
-                        {
-                            uint32_t next_ret=0;
-                            if ( (NULL != data) && (0 != cxt_swap->es_time) )
-                            {
-                                /* print performance info for this buffer */
-                                WRITE_SVEN(SVEN_MODULE_EVENT_GV_FW_PK_ES_DONE, (int)cur, (int)cxt_swap->es_time, (int)cxt->input.phys,
-                                           (int)cxt->input.len, (int)cxt->input.id, (int)cxt->input.flags );
-                                cxt_swap->es_time = 0;
-                            }
-                            
-                            next_ret = FwIPC_ReadMessage(fwipc, rcv_q, (char *)&(cxt->input), sizeof(ipc_msg_data));
-                            if(next_ret != 0)
-                            {
-                                data = &(cxt->input);
-                                WRITE_SVEN(SVEN_MODULE_EVENT_GV_FW_PK_ES_START, (int)cur, (int)cxt_swap->wl_time,
-                                           (int)cxt->input.phys, (int)cxt->input.len, (int)cxt->input.id, (int)cxt->input.flags );
-                            }
-                            else
-                            {/* No data on input queue */
-                                cxt_swap->buffered_data = 0;
-                                stream_active = false;
-                            }
-                        }
-                        break;
-                        default:
-                        {/* Not done with current buffer */
-                            data = NULL;
-                        }
-                        break;
-                    }
-                }while(stream_active);
-                get_wdog(&time);
-                cxt_swap->wl_time += get_total_ticks(start_time, time);
-                /* Step 5: If workload done push workload out */
-                switch(pm_ret)
-                {
                     case PM_EOS:
                     case PM_WKLD_DONE:
                     case PM_OVERFLOW:
                     case PM_DISCONTINUITY:
-                    {/* Push current workload as we are done with the frame */
-                        cxt_swap->buffered_data = (PM_WKLD_DONE == pm_ret) ? true: false;
-                        viddec_pm_update_time(&(cxt->pm), cxt_swap->wl_time);
-
-                        /* xmit performance info for this workload output */
-                        WRITE_SVEN( SVEN_MODULE_EVENT_GV_FW_PK_WL_DONE, (int)cur, (int)cxt_swap->wl_time, (int)cxt->wkld1.phys,
-                                    (int)cxt->wkld1.len, (int)cxt->wkld1.id, (int)cxt->wkld1.flags );
-                        cxt_swap->wl_time = 0;
-
-                        viddec_fw_push_current_frame_to_output(fwipc, cur);
-                        if(pm_ret != PM_WKLD_DONE)
+                    {/* Finished a frame worth of data or encountered fatal error*/
+                        stream_active = false;
+                    }
+                    break;
+                    case PM_NO_DATA:
+                    {
+                        uint32_t next_ret=0;
+                        if ( (NULL != data) && (0 != cxt_swap->es_time) )
                         {
-                            viddec_fw_handle_error_and_inband_messages(cur, pm_ret);
+                            /* print performance info for this buffer */
+                            WRITE_SVEN(SVEN_MODULE_EVENT_GV_FW_PK_ES_DONE, (int)cur, (int)cxt_swap->es_time, (int)cxt->input.phys,
+                                       (int)cxt->input.len, (int)cxt->input.id, (int)cxt->input.flags );
+                            cxt_swap->es_time = 0;
                         }
-                        pushed_a_workload = true;
+
+                        next_ret = FwIPC_ReadMessage(fwipc, rcv_q, (char *)&(cxt->input), sizeof(ipc_msg_data));
+                        if (next_ret != 0)
+                        {
+                            data = &(cxt->input);
+                            WRITE_SVEN(SVEN_MODULE_EVENT_GV_FW_PK_ES_START, (int)cur, (int)cxt_swap->wl_time,
+                                       (int)cxt->input.phys, (int)cxt->input.len, (int)cxt->input.id, (int)cxt->input.flags );
+                        }
+                        else
+                        {/* No data on input queue */
+                            cxt_swap->buffered_data = 0;
+                            stream_active = false;
+                        }
                     }
                     break;
                     default:
-                        break;
+                    {/* Not done with current buffer */
+                        data = NULL;
+                    }
+                    break;
+                    }
+                } while (stream_active);
+                get_wdog(&time);
+                cxt_swap->wl_time += get_total_ticks(start_time, time);
+                /* Step 5: If workload done push workload out */
+                switch (pm_ret)
+                {
+                case PM_EOS:
+                case PM_WKLD_DONE:
+                case PM_OVERFLOW:
+                case PM_DISCONTINUITY:
+                {/* Push current workload as we are done with the frame */
+                    cxt_swap->buffered_data = (PM_WKLD_DONE == pm_ret) ? true: false;
+                    viddec_pm_update_time(&(cxt->pm), cxt_swap->wl_time);
+
+                    /* xmit performance info for this workload output */
+                    WRITE_SVEN( SVEN_MODULE_EVENT_GV_FW_PK_WL_DONE, (int)cur, (int)cxt_swap->wl_time, (int)cxt->wkld1.phys,
+                                (int)cxt->wkld1.len, (int)cxt->wkld1.id, (int)cxt->wkld1.flags );
+                    cxt_swap->wl_time = 0;
+
+                    viddec_fw_push_current_frame_to_output(fwipc, cur);
+                    if (pm_ret != PM_WKLD_DONE)
+                    {
+                        viddec_fw_handle_error_and_inband_messages(cur, pm_ret);
+                    }
+                    pushed_a_workload = true;
+                }
+                break;
+                default:
+                    break;
                 }
                 /* Update information on whether we have active interrupt for this stream */
                 viddec_fw_update_pending_interrupt_flag(cur, cxt_swap, pushed_a_workload, es_Q_data_at_start);
@@ -464,7 +464,7 @@ static inline void process_command(uint32_t cmd_id, unsigned char *command)
  * what are synchronous messages?  Anything releated to teardown or opening a stream Ex: open, close, flush etc.
  *
  * Only once synchronous message at a time. When a synchronous message its id is usually in cp doorbell. Once
- * we are done handling synchronous message through auto api we release doorbell to let the host write next 
+ * we are done handling synchronous message through auto api we release doorbell to let the host write next
  * message.
  *------------------------------------------------------------------------------
  */
@@ -473,7 +473,7 @@ static inline int32_t viddec_fw_process_sync_queues(unsigned char *msg)
 {
     int32_t ret = -1;
 
-    if(0 == reg_read(CONFIG_IPC_ROFF_RISC_DOORBELL_STATUS))
+    if (0 == reg_read(CONFIG_IPC_ROFF_RISC_DOORBELL_STATUS))
     {
         uint32_t command1=0;
         command1 = reg_read(CONFIG_IPC_ROFF_RISC_RX_DOORBELL);
@@ -494,11 +494,11 @@ static inline uint32_t viddec_fw_check_for_pending_int(void)
 {
     uint32_t i=0, ret=false;
     /* start from 0 to max streams that fw can handle*/
-    while(i < FW_SUPPORTED_STREAMS)
+    while (i < FW_SUPPORTED_STREAMS)
     {
-        if(_dmem.stream_info[i].state == 1)
+        if (_dmem.stream_info[i].state == 1)
         {
-            if((_dmem.stream_info[i].pending_interrupt) && _dmem.int_status[i].mask)
+            if ((_dmem.stream_info[i].pending_interrupt) && _dmem.int_status[i].mask)
             {
                 ret = true;
             }
@@ -522,7 +522,7 @@ static inline void viddec_fw_clear_processed_int(void)
 {
     uint32_t i=0;
     /* start from 0 to max streams that fw can handle*/
-    while(i < FW_SUPPORTED_STREAMS)
+    while (i < FW_SUPPORTED_STREAMS)
     {
         //if(_dmem.stream_info[i].state == 1)
         _dmem.stream_info[i].pending_interrupt = false;
@@ -535,9 +535,9 @@ static inline void viddec_fw_clear_processed_int(void)
  * Function:  viddec_fw_int_host
  * This function interrupts host if data is available for host or any other status
  * is valid which the host configures the FW to.
- * There is only one interrupt line so this is a shared Int for all streams, Host should 
+ * There is only one interrupt line so this is a shared Int for all streams, Host should
  * look at status of all streams when it receives a Int.
- * The FW will interrupt the host only if host doorbell is free, in other words the host 
+ * The FW will interrupt the host only if host doorbell is free, in other words the host
  * should always make the doorbell free at the End of its ISR.
  *------------------------------------------------------------------------------
  */
@@ -545,9 +545,9 @@ static inline void viddec_fw_clear_processed_int(void)
 static inline int32_t viddec_fw_int_host()
 {
     /* We Interrupt the host only if host is ready to receive an interrupt */
-    if((reg_read(CONFIG_IPC_ROFF_HOST_DOORBELL_STATUS) & GV_DOORBELL_STATS) == GV_DOORBELL_STATS)
+    if ((reg_read(CONFIG_IPC_ROFF_HOST_DOORBELL_STATUS) & GV_DOORBELL_STATS) == GV_DOORBELL_STATS)
     {
-        if(viddec_fw_check_for_pending_int())
+        if (viddec_fw_check_for_pending_int())
         {
             /* If a pending interrupt is found trigger INT */
             reg_write(CONFIG_IPC_ROFF_HOST_DOORBELL, VIDDEC_FW_PARSER_IPC_HOST_INT);
@@ -576,13 +576,13 @@ volatile unsigned int stack_corrupted __attribute__ ((section (".stckovrflwchk")
 int main(void)
 {
     unsigned char *msg = (uint8_t *)&(_dmem.buf.data[0]);
-    
+
     /* We wait until host reads sync message */
     reg_write(CONFIG_IPC_ROFF_HOST_RX_DOORBELL, GV_FW_IPC_HOST_SYNC);
 
     while ( GV_DOORBELL_STATS != reg_read(CONFIG_IPC_ROFF_HOST_DOORBELL_STATUS) )
     { /*poll register until done bit is set */
-      /* Host re-writes Vsparc DRAM (BSS) in this loop and will hit the DONE bit when complete */
+        /* Host re-writes Vsparc DRAM (BSS) in this loop and will hit the DONE bit when complete */
     }
     enable_intr();
     /* Initialize State for queues */
@@ -591,16 +591,16 @@ int main(void)
     _dmem.g_pk_data.high_id = _dmem.g_pk_data.low_id = -1;
     viddec_pm_init_ops();
     stack_corrupted = 0xDEADBEEF;
-    while(1)
+    while (1)
     {
         viddec_fw_process_sync_queues(msg);
         viddec_fw_process_async_queues();
         viddec_fw_int_host();
 #if 0
-        if(stack_corrupted != 0xDEADBEEF)
+        if (stack_corrupted != 0xDEADBEEF)
         {
             WRITE_SVEN(SVEN_MODULE_EVENT_GV_FW_FATAL_STACK_CORRPON, 0, 0, 0, 0, 0, 0);
-            while(1);
+            while (1);
         }
 #endif
     }

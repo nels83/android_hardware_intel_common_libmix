@@ -12,8 +12,6 @@
 #include "mixvideoformatenc.h"
 #include "mixvideoframe_private.h"
 
-G_BEGIN_DECLS
-
 #define MIX_VIDEO_ENC_PREVIEW_SURFACE_NUM       20
 
 #define min(X,Y) (((X) < (Y)) ? (X) : (Y))
@@ -22,69 +20,67 @@ G_BEGIN_DECLS
 /*
  * Type macros.
  */
-#define MIX_TYPE_VIDEOFORMATENC_PREVIEW                  (mix_videoformatenc_preview_get_type ())
-#define MIX_VIDEOFORMATENC_PREVIEW(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOFORMATENC_PREVIEW, MixVideoFormatEnc_Preview))
-#define MIX_IS_VIDEOFORMATENC_PREVIEW(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOFORMATENC_PREVIEW))
-#define MIX_VIDEOFORMATENC_PREVIEW_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOFORMATENC_PREVIEW, MixVideoFormatEnc_PreviewClass))
-#define MIX_IS_VIDEOFORMATENC_PREVIEW_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOFORMATENC_PREVIEW))
-#define MIX_VIDEOFORMATENC_PREVIEW_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOFORMATENC_PREVIEW, MixVideoFormatEnc_PreviewClass))
+#define MIX_VIDEOFORMATENC_PREVIEW(obj) (dynamic_cast<MixVideoFormatEnc_Preview*>(obj)))
+#define MIX_IS_VIDEOFORMATENC_PREVIEW(obj) (NULL != MIX_VIDEOFORMATENC_PREVIEW(obj))
 
-typedef struct _MixVideoFormatEnc_Preview MixVideoFormatEnc_Preview;
-typedef struct _MixVideoFormatEnc_PreviewClass MixVideoFormatEnc_PreviewClass;
+class MixVideoFormatEnc_Preview : public MixVideoFormatEnc {
+public:
+    MixVideoFormatEnc_Preview();
+    virtual ~MixVideoFormatEnc_Preview();
 
-struct _MixVideoFormatEnc_Preview {
-	/*< public > */
-	MixVideoFormatEnc parent;
+    virtual MIX_RESULT Initialize(
+        MixVideoConfigParamsEnc* config_params_enc,
+        MixFrameManager * frame_mgr,
+        MixBufferPool * input_buf_pool,
+        MixSurfacePool ** surface_pool,
+        MixUsrReqSurfacesInfo * requested_surface_info,
+        VADisplay va_display);
+    virtual MIX_RESULT Encode( MixBuffer * bufin[],
+                               int bufincnt, MixIOVec * iovout[], int iovoutcnt,
+                               MixVideoEncodeParams * encode_params);
+    virtual MIX_RESULT Flush();
+    virtual MIX_RESULT Deinitialize();
 
-    VABufferID      coded_buf;
-    VABufferID      seq_param_buf;
-    VABufferID      pic_param_buf;
-    VABufferID      slice_param_buf;	
-	VASurfaceID *   ci_shared_surfaces;
-	VASurfaceID *   surfaces;
-	guint           surface_num;	
+private:
+    /* Local Methods */
+    MIX_RESULT _process_encode (MixBuffer * bufin, MixIOVec * iovout);
 
-	MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
-	MixVideoFrame  *ref_frame;  //reference frame
-	MixVideoFrame  *rec_frame;	//reconstructed frame;	
+public:
+    VABufferID coded_buf;
+    VABufferID seq_param_buf;
+    VABufferID pic_param_buf;
+    VABufferID slice_param_buf;
+    VASurfaceID * shared_surfaces;
+    VASurfaceID * surfaces;
+    uint surface_num;
+    uint shared_surfaces_cnt;
+    uint precreated_surfaces_cnt;
 
-	guint basic_unit_size;  //for rate control
-	guint disable_deblocking_filter_idc;
-	guint slice_num;
-	guint va_rcmode; 
+    MixVideoFrame *cur_frame;	//current input frame to be encoded;
+    MixVideoFrame *ref_frame;	//reference frame
+    MixVideoFrame *rec_frame;	//reconstructed frame;
+    MixVideoFrame *lookup_frame;
+
+    uint basic_unit_size;	//for rate control
+    uint disable_deblocking_filter_idc;
+    uint slice_num;
+    uint va_rcmode_preview;
 
 
-	guint       encoded_frames;
-	gboolean    pic_skipped;
+    uint encoded_frames;
+    bool pic_skipped;
 
-	gboolean    is_intra;
+    bool is_intra;
 
-	guint       coded_buf_size;
+    uint coded_buf_size;
 
-	/*< public > */
+    uint8 ** usrptr;
+    uint alloc_surface_cnt;
+
+    /*< public > */
 };
 
-/**
- * MixVideoFormatEnc_PreviewClass:
- *
- * MI-X Video object class
- */
-struct _MixVideoFormatEnc_PreviewClass {
-	/*< public > */
-	MixVideoFormatEncClass parent_class;
 
-	/* class members */
-
-	/*< public > */
-};
-
-/**
- * mix_videoformatenc_preview_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoformatenc_preview_get_type(void);
 
 /**
  * mix_videoformatenc_preview_new:
@@ -109,29 +105,6 @@ MixVideoFormatEnc_Preview *mix_videoformatenc_preview_ref(MixVideoFormatEnc_Prev
  *
  * Decrement reference count of the object.
  */
-#define mix_videoformatenc_preview_unref(obj) g_object_unref (G_OBJECT(obj))
-
-/* Class Methods */
-
-/* Pure preview vmethods */
-MIX_RESULT mix_videofmtenc_preview_getcaps(MixVideoFormatEnc *mix, GString *msg);
-MIX_RESULT mix_videofmtenc_preview_initialize(MixVideoFormatEnc *mix, 
-        MixVideoConfigParamsEnc * config_params_enc,
-        MixFrameManager * frame_mgr,
-        MixBufferPool * input_buf_pool,
-        MixSurfacePool ** surface_pool,
-        VADisplay va_display);
-MIX_RESULT mix_videofmtenc_preview_encode(MixVideoFormatEnc *mix, MixBuffer * bufin[],
-        gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
-        MixVideoEncodeParams * encode_params);
-MIX_RESULT mix_videofmtenc_preview_flush(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_preview_eos(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_preview_deinitialize(MixVideoFormatEnc *mix);
-
-/* Local Methods */
-MIX_RESULT mix_videofmtenc_preview_process_encode (MixVideoFormatEnc_Preview *mix, MixBuffer * bufin, 
-        MixIOVec * iovout);
-
-G_END_DECLS
+MixVideoFormatEnc_Preview * mix_videoformatenc_preview_unref(MixVideoFormatEnc_Preview * mix);
 
 #endif /* __MIX_VIDEOFORMATENC_PREVIEW_H__ */

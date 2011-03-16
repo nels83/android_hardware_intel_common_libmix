@@ -2,23 +2,23 @@
 #include "viddec_mp4_videoobjectlayer.h"
 
 const unsigned char mp4_DefaultIntraQuantMatrix[64] = {
-    8, 17, 18, 19, 21, 23, 25, 27, 
+    8, 17, 18, 19, 21, 23, 25, 27,
     17, 18, 19, 21, 23, 25, 27, 28,
-    20, 21, 22, 23, 24, 26, 28, 30, 
+    20, 21, 22, 23, 24, 26, 28, 30,
     21, 22, 23, 24, 26, 28, 30, 32,
-    22, 23, 24, 26, 28, 30, 32, 35, 
+    22, 23, 24, 26, 28, 30, 32, 35,
     23, 24, 26, 28, 30, 32, 35, 38,
-    25, 26, 28, 30, 32, 35, 38, 41, 
+    25, 26, 28, 30, 32, 35, 38, 41,
     27, 28, 30, 32, 35, 38, 41, 45
 };
 const unsigned char mp4_DefaultNonIntraQuantMatrix[64] = {
-    16, 17, 18, 19, 20, 21, 22, 23, 
+    16, 17, 18, 19, 20, 21, 22, 23,
     17, 18, 19, 20, 21, 22, 23, 24,
-    18, 19, 20, 21, 22, 23, 24, 25, 
+    18, 19, 20, 21, 22, 23, 24, 25,
     19, 20, 21, 22, 23, 24, 26, 27,
-    20, 21, 22, 23, 25, 26, 27, 28, 
+    20, 21, 22, 23, 25, 26, 27, 28,
     21, 22, 23, 24, 26, 27, 28, 30,
-    22, 23, 24, 26, 27, 28, 30, 31, 
+    22, 23, 24, 26, 27, 28, 30, 31,
     23, 24, 25, 27, 28, 30, 31, 33
 };
 const unsigned char mp4_ClassicalZigzag[64] = {
@@ -42,7 +42,7 @@ static inline int mp4_GetMacroBlockNumberSize(int nmb)
 static inline void mp4_copy_default_table(const uint8_t *src, uint8_t *dst, uint32_t len)
 {
     uint32_t i;
-    for(i=0; i< len; i++)
+    for (i=0; i< len; i++)
         dst[i] = src[i];
 }
 
@@ -65,7 +65,7 @@ static inline mp4_Status_t mp4_Parse_QuantMatrix(void *parent, uint8_t *pQM)
     for (; i < 64; i ++)
     {
         pQM[mp4_ClassicalZigzag[i]] = last;
-    } 
+    }
     return ret;;
 }
 
@@ -77,20 +77,20 @@ static inline uint8_t mp4_pvt_valid_object_type_indication(uint8_t val)
 static inline uint8_t mp4_pvt_valid_object_layer_verid(uint8_t val)
 {
     uint8_t ret=false;
-    switch(val)
+    switch (val)
     {
-        case 1:
-        case 2:
-        case 4:
-        case 5:
-        {
-            ret = true;
-            break;
-        }
-        default:
-        {
-            break;
-        }
+    case 1:
+    case 2:
+    case 4:
+    case 5:
+    {
+        ret = true;
+        break;
+    }
+    default:
+    {
+        break;
+    }
     }
     return ret;
 }
@@ -103,7 +103,7 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
     int32_t                 getbits=0;
     uint32_t                code=0;
 
-    do 
+    do
     {
         getbits = viddec_pm_get_bits(parent, &(code), 4);
         BREAK_GETBITS_REQD_MISSING(getbits, ret);
@@ -118,8 +118,8 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
             parser->bitstream_error |= MP4_BS_ERROR_HDR_UNSUP;
             ret = MP4_STATUS_NOTSUPPORT;
         }
-        
-        if(cxt->vbv_parameters)
+
+        if (cxt->vbv_parameters)
         {/* TODO: Check for validity of marker bits */
             getbits = viddec_pm_get_bits(parent, &(code), 32);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
@@ -127,7 +127,7 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
             cxt->bit_rate = (code & 0xFFFE) >> 1; // Get rid of 1 marker bit
             cxt->bit_rate |= ((code & 0xFFFE0000) >> 2); // Get rid of 2 marker bits
 
-            if(cxt->bit_rate == 0)
+            if (cxt->bit_rate == 0)
             {
                 DEB("Error: mp4_Parse_VideoObject:vidObjLay->VOLControlParameters.bit_rate = 0\n");
                 parser->bitstream_error |= MP4_BS_ERROR_HDR_UNSUP;
@@ -135,13 +135,13 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
                 // Do we need to really break here? Why not just set an error and proceed
                 //break;
             }
-            
+
             getbits = viddec_pm_get_bits(parent, &(code), 19);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
-            /* 19 bits= firsthalf(15) + M + LatterHalf(3)*/            
+            /* 19 bits= firsthalf(15) + M + LatterHalf(3)*/
             cxt->vbv_buffer_size = code & 0x7;
             cxt->vbv_buffer_size |= ( (code >> 4) & 0x7FFF);
-            if(cxt->vbv_buffer_size == 0)
+            if (cxt->vbv_buffer_size == 0)
             {
                 DEB("Error: mp4_Parse_VideoObject:vidObjLay->VOLControlParameters.vbv_buffer_size = 0\n");
                 parser->bitstream_error |= MP4_BS_ERROR_HDR_UNSUP;
@@ -149,7 +149,7 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
                 // Do we need to really break here? Why not just set an error and proceed
                 //break;
             }
-            
+
             getbits = viddec_pm_get_bits(parent, &(code), 28);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             /* 28 bits= firsthalf(11) + M + LatterHalf(15) + M */
@@ -159,7 +159,7 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
             cxt->vbv_occupancy |= (code & 0x07FF);
         }
         ret = MP4_STATUS_OK;
-    } while(0);
+    } while (0);
 
     return ret;
 }
@@ -167,10 +167,10 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
 static uint32_t mp4_pvt_count_number_of_bits(uint32_t val)
 {
     uint32_t num_bits=0;
-    do{
+    do {
         val >>= 1;
         num_bits++;
-    }while(val);
+    } while (val);
     return num_bits;
 }
 
@@ -184,9 +184,9 @@ mp4_Parse_VOL_sprite(void *parent,  viddec_mp4_parser_t *parser)
     mp4_Status_t            ret = MP4_STATUS_PARSE_ERROR;
     int32_t                 getbits=0;
 
-    do{
+    do {
         if ((sprite_enable == MP4_SPRITE_STATIC) ||
-            (sprite_enable == MP4_SPRITE_GMC))
+                (sprite_enable == MP4_SPRITE_GMC))
         {
             if (sprite_enable != MP4_SPRITE_GMC)
             {
@@ -201,7 +201,7 @@ mp4_Parse_VOL_sprite(void *parent,  viddec_mp4_parser_t *parser)
             cxt->sprite_brightness_change = code & 0x1;
             cxt->sprite_warping_accuracy = (code >> 1) & 0x3;
             cxt->no_of_sprite_warping_points = code >> 3;
-            if(cxt->no_of_sprite_warping_points > 1)
+            if (cxt->no_of_sprite_warping_points > 1)
             {
                 DEB("Error: mp4_Parse_VideoObject:bad no_of_sprite_warping_points %d\n",
                     cxt->no_of_sprite_warping_points);
@@ -209,7 +209,7 @@ mp4_Parse_VOL_sprite(void *parent,  viddec_mp4_parser_t *parser)
                 break;
             }
 
-            if((vidObjLay->sprite_enable == MP4_SPRITE_GMC) && (cxt->sprite_brightness_change))
+            if ((vidObjLay->sprite_enable == MP4_SPRITE_GMC) && (cxt->sprite_brightness_change))
             {
                 DEB("Error: mp4_Parse_VideoObject:sprite_brightness_change should be 0 for GMC sprites\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
@@ -224,7 +224,7 @@ mp4_Parse_VOL_sprite(void *parent,  viddec_mp4_parser_t *parser)
             }
         }
         ret = MP4_STATUS_OK;
-    }while(0);
+    } while (0);
 
     return ret;
 }
@@ -236,7 +236,7 @@ static mp4_Status_t mp4_Parse_VOL_quant_mat(void *parent, mp4_VideoObjectLayer_t
     int32_t                 getbits=0;
     mp4_VOLQuant_mat_t      *quant = &(vidObjLay->quant_mat_info);
 
-    do{
+    do {
         getbits = viddec_pm_get_bits(parent, &(code), 1);
         BREAK_GETBITS_REQD_MISSING(getbits, ret);
         quant->load_intra_quant_mat = code;
@@ -248,7 +248,7 @@ static mp4_Status_t mp4_Parse_VOL_quant_mat(void *parent, mp4_VideoObjectLayer_t
         {
             mp4_copy_default_table((const uint8_t *)&mp4_DefaultIntraQuantMatrix[0], (uint8_t *)&(quant->intra_quant_mat[0]), 64);
         }
-        
+
         getbits = viddec_pm_get_bits(parent, &(code), 1);
         BREAK_GETBITS_REQD_MISSING(getbits, ret);
         quant->load_nonintra_quant_mat = code;
@@ -261,7 +261,7 @@ static mp4_Status_t mp4_Parse_VOL_quant_mat(void *parent, mp4_VideoObjectLayer_t
             mp4_copy_default_table((const uint8_t *)&mp4_DefaultNonIntraQuantMatrix[0], (uint8_t *)&(quant->nonintra_quant_mat[0]), 64);
         }
         ret = MP4_STATUS_OK;
-    }while(0);
+    } while (0);
     return ret;
 }
 
@@ -273,7 +273,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
     mp4_Status_t            ret = MP4_STATUS_PARSE_ERROR;
     int32_t                 getbits=0;
 
-    do{
+    do {
         if (vidObjLay->video_object_layer_shape == MP4_SHAPE_TYPE_RECTANGULAR)
         {
             /* TODO: check for validity of marker bits */
@@ -290,20 +290,20 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
 
         {
             uint32_t num_bits=1;
-            if(vidObjLay->video_object_layer_verid != 1) num_bits=2;
+            if (vidObjLay->video_object_layer_verid != 1) num_bits=2;
             getbits = viddec_pm_get_bits(parent, &(code), num_bits);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             vidObjLay->sprite_enable = code;
         }
 
         ret = mp4_Parse_VOL_sprite(parent, parser);
-        if(ret != MP4_STATUS_OK)
+        if (ret != MP4_STATUS_OK)
         {
             break;
         }
 
         if ((vidObjLay->video_object_layer_verid != 1) &&
-            (vidObjLay->video_object_layer_shape != MP4_SHAPE_TYPE_RECTANGULAR))
+                (vidObjLay->video_object_layer_shape != MP4_SHAPE_TYPE_RECTANGULAR))
         {
             /*  not supported shape*/
             DEB("Error: mp4_Parse_VideoObject: sadct_disable, not supp\n");
@@ -314,7 +314,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
         getbits = viddec_pm_get_bits(parent, &(code), 1);
         BREAK_GETBITS_FAIL(getbits, ret);
         vidObjLay->not_8_bit = (code  > 0 );
-        if(vidObjLay->not_8_bit)
+        if (vidObjLay->not_8_bit)
         {
             /*  8 bit is only supported mode*/
             DEB("Error: mp4_Parse_VideoObject: not_8_bit, not supp\n");
@@ -341,7 +341,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
         if (vidObjLay->quant_type)
         {
             ret = mp4_Parse_VOL_quant_mat(parent, vidObjLay);
-            if(ret != MP4_STATUS_OK)
+            if (ret != MP4_STATUS_OK)
             {
                 break;
             }
@@ -353,11 +353,11 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             vidObjLay->quarter_sample = code;
         }
-        
+
         getbits = viddec_pm_get_bits(parent, &(code), 1);
         BREAK_GETBITS_REQD_MISSING(getbits, ret);
         vidObjLay->complexity_estimation_disable = code;
-        if(!vidObjLay->complexity_estimation_disable)
+        if (!vidObjLay->complexity_estimation_disable)
         {/*  complexity estimation not supported */
             DEB("Error: mp4_Parse_VideoObject: vidObjLay->complexity_estimation_disable, not supp\n");
             ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
@@ -368,19 +368,19 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
         BREAK_GETBITS_REQD_MISSING(getbits, ret);
         vidObjLay->resync_marker_disable = ((code & 0x2) > 0);
         vidObjLay->data_partitioned = code & 0x1;
-        if(vidObjLay->data_partitioned)
+        if (vidObjLay->data_partitioned)
         {
             getbits = viddec_pm_get_bits(parent, &(code), 1);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             vidObjLay->reversible_vlc = code;
         }
-        
+
         if (vidObjLay->video_object_layer_verid != 1)
         {
             getbits = viddec_pm_get_bits(parent, &(code), 1);
             BREAK_GETBITS_FAIL(getbits, ret);
             vidObjLay->newpred_enable = code;
-            if(vidObjLay->newpred_enable)
+            if (vidObjLay->newpred_enable)
             {
                 DEB("Error: NEWPRED mode is not supported\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
@@ -394,7 +394,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
         getbits = viddec_pm_get_bits(parent, &(code), 1);
         BREAK_GETBITS_FAIL(getbits, ret);
         vidObjLay->scalability = code;
-        if(vidObjLay->scalability)
+        if (vidObjLay->scalability)
         {
             DEB("Error: VOL scalability is not supported\n");
             ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
@@ -403,7 +403,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
 
         // No need to parse further - none of the fields are interesting to parser/decoder/user
         ret = MP4_STATUS_OK;
-    }while(0);
+    } while (0);
     return ret;
 }
 
@@ -414,28 +414,28 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
     mp4_VisualObject_t      *visObj = &(pInfo->VisualObject);
     mp4_VideoObjectLayer_t  *vidObjLay = &(pInfo->VisualObject.VideoObject);
     mp4_Status_t            ret = MP4_STATUS_PARSE_ERROR;
-    int32_t                 getbits=0; 
+    int32_t                 getbits=0;
 
 //DEB("entering mp4_Parse_VideoObjectLayer: bs_err: %d, ret: %d\n", parser->bitstream_error, ret);
-    do{
+    do {
         vidObjLay->VideoObjectPlane.sprite_transmit_mode = MP4_SPRITE_TRANSMIT_MODE_PIECE;
 
         vidObjLay->short_video_header = 0;
         vidObjLay->video_object_layer_id = (parser->current_sc & 0xF);
-    
+
         getbits = viddec_pm_get_bits(parent, &code, 9);
         BREAK_GETBITS_REQD_MISSING(getbits, ret);
         vidObjLay->video_object_type_indication = code & 0xFF;
         vidObjLay->random_accessible_vol = ((code & 0x100) > 0);
 
-        if(!mp4_pvt_valid_object_type_indication(vidObjLay->video_object_type_indication))
+        if (!mp4_pvt_valid_object_type_indication(vidObjLay->video_object_type_indication))
         {        /* Streams with "unknown" type mismatch with ref */
             DEB("Warning: video_object_type_indication = %d, forcing to 1\n",
                 vidObjLay->video_object_type_indication);
             vidObjLay->video_object_type_indication = 1;
         }
 
-        if(vidObjLay->video_object_type_indication == MP4_VIDEO_OBJECT_TYPE_FINE_GRANULARITY_SCALABLE)
+        if (vidObjLay->video_object_type_indication == MP4_VIDEO_OBJECT_TYPE_FINE_GRANULARITY_SCALABLE)
         {/* This is not a supported type by HW */
             DEB("ERROR: mp4_Parse_VideoObject:video_object_type_indication = %.2X\n",
                 vidObjLay->video_object_type_indication);
@@ -449,14 +449,14 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
             vidObjLay->is_object_layer_identifier = code;
             vidObjLay->video_object_layer_verid =
                 (mp4_pvt_valid_object_layer_verid(visObj->visual_object_verid)) ? visObj->visual_object_verid : 1;
-                
+
             if (vidObjLay->is_object_layer_identifier)
             {
                 getbits = viddec_pm_get_bits(parent, &(code), 7);
                 BREAK_GETBITS_REQD_MISSING(getbits, ret);
                 vidObjLay->video_object_layer_priority = code & 0x7;
                 vidObjLay->video_object_layer_verid = (code >> 3) & 0xF;
-                if(!mp4_pvt_valid_object_layer_verid(vidObjLay->video_object_layer_verid))
+                if (!mp4_pvt_valid_object_layer_verid(vidObjLay->video_object_layer_verid))
                 {
                     DEB("Error: mp4_Parse_VideoObject:is_identifier = %d, expected[1,5]\n",
                         vidObjLay->video_object_layer_verid);
@@ -470,21 +470,21 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
             getbits = viddec_pm_get_bits(parent, &(code), 4);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             vidObjLay->aspect_ratio_info = code & 0xF;
-            if(vidObjLay->aspect_ratio_info == MP4_ASPECT_RATIO_EXTPAR)
+            if (vidObjLay->aspect_ratio_info == MP4_ASPECT_RATIO_EXTPAR)
             {
                 getbits = viddec_pm_get_bits(parent, &(code), 16);
                 BREAK_GETBITS_REQD_MISSING(getbits, ret);
                 vidObjLay->aspect_ratio_info_par_width = (code >> 8) & 0xFF;
                 vidObjLay->aspect_ratio_info_par_height = code & 0xFF;
             }
-        
+
             getbits = viddec_pm_get_bits(parent, &(code), 1);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             vidObjLay->is_vol_control_parameters = code;
-            if(vidObjLay->is_vol_control_parameters)
+            if (vidObjLay->is_vol_control_parameters)
             {
                 ret = mp4_pvt_VOL_volcontrolparameters(parent, parser);
-                if(ret != MP4_STATUS_OK)
+                if (ret != MP4_STATUS_OK)
                 {
                     break;
                 }
@@ -503,20 +503,20 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
             }
 
             if ((vidObjLay->video_object_layer_verid != 1) &&
-                (vidObjLay->video_object_layer_shape == MP4_SHAPE_TYPE_GRAYSCALE))
+                    (vidObjLay->video_object_layer_shape == MP4_SHAPE_TYPE_GRAYSCALE))
             {/* Grayscale not supported */
                 DEB("Error: MP4_SHAPE_TYPE_GRAYSCALE not supported\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
-        
+
             getbits = viddec_pm_get_bits(parent, &(code), 19);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             /* TODO: check validity of marker */
-            vidObjLay->vop_time_increment_resolution = (code >> 2) & 0xFFFF;            
+            vidObjLay->vop_time_increment_resolution = (code >> 2) & 0xFFFF;
             vidObjLay->fixed_vop_rate = code & 0x1;
 
-            if(vidObjLay->vop_time_increment_resolution == 0)
+            if (vidObjLay->vop_time_increment_resolution == 0)
             {
                 DEB("Error: 0 value for vop_time_increment_resolution\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
@@ -524,9 +524,9 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
             }
             /* calculate number bits in vop_time_increment_resolution */
             vidObjLay->vop_time_increment_resolution_bits = (uint8_t)mp4_pvt_count_number_of_bits(
-                (uint32_t)(vidObjLay->vop_time_increment_resolution -1));
+                        (uint32_t)(vidObjLay->vop_time_increment_resolution -1));
 
-            if(vidObjLay->fixed_vop_rate)
+            if (vidObjLay->fixed_vop_rate)
             {
                 getbits = viddec_pm_get_bits(parent, &(code), vidObjLay->vop_time_increment_resolution_bits);
                 BREAK_GETBITS_REQD_MISSING(getbits, ret);
@@ -536,7 +536,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
             if (vidObjLay->video_object_layer_shape != MP4_SHAPE_TYPE_BINARYONLY)
             {
                 ret = mp4_Parse_VOL_notbinaryonly(parent, parser);
-                if(ret != MP4_STATUS_OK)
+                if (ret != MP4_STATUS_OK)
                 {
                     break;
                 }
@@ -551,10 +551,10 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
 
         vidObjLay->VideoObjectPlane.sprite_transmit_mode = MP4_SPRITE_TRANSMIT_MODE_PIECE;
         ret = MP4_STATUS_OK;
-    } while(0);
+    } while (0);
 
     mp4_set_hdr_bitstream_error(parser, true, ret);
-    if(ret != MP4_STATUS_OK)
+    if (ret != MP4_STATUS_OK)
         parser->bitstream_error |= MP4_BS_ERROR_HDR_NONDEC;
 //DEB("before wkld mp4_Parse_VideoObjectLayer: bs_err: %d, ret: %d\n", parser->bitstream_error, ret);
 
@@ -562,7 +562,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
     {
         viddec_workload_item_t wi;
         viddec_workload_t *wl = viddec_pm_get_header(parent);
-    
+
         wi.vwi_type = VIDDEC_WORKLOAD_MPEG4_VIDEO_OBJ;
 
         wi.mp4_vol.vol_aspect_ratio = 0;
@@ -584,7 +584,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
         viddec_fw_mp4_vol_set_vop_time_increment_resolution(&wi.mp4_vol, vidObjLay->vop_time_increment_resolution);
 
         ret = (mp4_Status_t)viddec_pm_append_workitem(parent, &wi, false);
-        if(ret == 1)
+        if (ret == 1)
             ret = MP4_STATUS_OK;
 
         memset(&(wl->attrs), 0, sizeof(viddec_frame_attributes_t));
@@ -592,6 +592,6 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
         wl->attrs.cont_size.width = vidObjLay->video_object_layer_width;
         wl->attrs.cont_size.height = vidObjLay->video_object_layer_height;
     }
-    
-    return ret;    
+
+    return ret;
 }

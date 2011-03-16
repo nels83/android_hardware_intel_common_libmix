@@ -43,16 +43,16 @@
 <div class="refsynopsisdiv" title="Synopsis">
 <a name="MixBuffer.synopsis"></a><h2>Synopsis</h2>
 <pre class="synopsis">
-void                (<a class="link" href="MixBuffer.html#MixBufferCallback" title="MixBufferCallback ()">*MixBufferCallback</a>)                (gulong token,
-                                                         guchar *data);
+void                (<a class="link" href="MixBuffer.html#MixBufferCallback" title="MixBufferCallback ()">*MixBufferCallback</a>)                (ulong token,
+                                                         uchar *data);
                     <a class="link" href="MixBuffer.html#MixBuffer-struct" title="MixBuffer">MixBuffer</a>;
 <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *         <a class="link" href="MixBuffer.html#mix-buffer-new" title="mix_buffer_new ()">mix_buffer_new</a>                      (void);
 <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *         <a class="link" href="MixBuffer.html#mix-buffer-ref" title="mix_buffer_ref ()">mix_buffer_ref</a>                      (<a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *mix);
 void                <a class="link" href="MixBuffer.html#mix-buffer-unref" title="mix_buffer_unref ()">mix_buffer_unref</a>                    (<a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *mix);
 MIX_RESULT          <a class="link" href="MixBuffer.html#mix-buffer-set-data" title="mix_buffer_set_data ()">mix_buffer_set_data</a>                 (<a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *obj,
-                                                         guchar *data,
-                                                         guint size,
-                                                         gulong token,
+                                                         uchar *data,
+                                                         uint size,
+                                                         ulong token,
                                                          <a class="link" href="MixBuffer.html#MixBufferCallback" title="MixBufferCallback ()">MixBufferCallback</a> callback);
 </pre>
 </div>
@@ -88,8 +88,8 @@ data buffers as necessary).
 <a name="MixBuffer.details"></a><h2>Details</h2>
 <div class="refsect2" title="MixBufferCallback ()">
 <a name="MixBufferCallback"></a><h3>MixBufferCallback ()</h3>
-<pre class="programlisting">void                (*MixBufferCallback)                (gulong token,
-                                                         guchar *data);</pre>
+<pre class="programlisting">void                (*MixBufferCallback)                (ulong token,
+                                                         uchar *data);</pre>
 </div>
 <hr>
 <div class="refsect2" title="MixBuffer">
@@ -99,10 +99,10 @@ data buffers as necessary).
 
 	
 	/* Pointer to coded data buffer */
-	guchar *data;
+	uchar *data;
 	
 	/* Size of coded data buffer */
-	guint size;
+	uint size;
 	
 	/* Token that will be passed to 
 	 * the callback function. Can be 
@@ -111,7 +111,7 @@ data buffers as necessary).
 	 * with this coded data buffer, 
 	 * such as a pointer to a structure 
 	 * belonging to the application. */
-	gulong token;
+	ulong token;
 	
 	/* callback function pointer */
 	MixBufferCallback callback;
@@ -176,9 +176,9 @@ Decrement reference count of the object.</p>
 <div class="refsect2" title="mix_buffer_set_data ()">
 <a name="mix-buffer-set-data"></a><h3>mix_buffer_set_data ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_buffer_set_data                 (<a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *obj,
-                                                         guchar *data,
-                                                         guint size,
-                                                         gulong token,
+                                                         uchar *data,
+                                                         uint size,
+                                                         ulong token,
                                                          <a class="link" href="MixBuffer.html#MixBufferCallback" title="MixBufferCallback ()">MixBufferCallback</a> callback);</pre>
 <p>
 Set data buffer, size, token and callback function</p>

@@ -36,34 +36,34 @@ class MixVideoDecodeParams : public MixParams {
 public:
     MixVideoDecodeParams();
     ~MixVideoDecodeParams();
-    virtual gboolean copy(MixParams *target) const;
-    virtual gboolean equal(MixParams* obj) const;
+    virtual bool copy(MixParams *target) const;
+    virtual bool equal(MixParams* obj) const;
     virtual MixParams* dup() const;
 public:
-	/*< public > */
-	/* TODO: Add properties */
-	
-	/* Presentation timestamp for the video 
-	 * frame data, in milliseconds */
-	guint64 timestamp;
-	
-	/* Indicates a discontinuity in the stream */
-	gboolean discontinuity;
+    /*< public > */
+    /* TODO: Add properties */
+
+    /* Presentation timestamp for the video
+     * frame data, in milliseconds */
+    uint64 timestamp;
+
+    /* Indicates a discontinuity in the stream */
+    bool discontinuity;
 
     /* output only, indicate if stream contains a new sequence */
-    gboolean new_sequence;
-    
-	/* Reserved for future use */	
-	void *reserved1;
-	
-	/* Reserved for future use */	
-	void *reserved2;
-	
-	/* Reserved for future use */	
-	void *reserved3;
-	
-	/* Reserved for future use */	
-	void *reserved4;
+    bool new_sequence;
+
+    /* Reserved for future use */
+    void *reserved1;
+
+    /* Reserved for future use */
+    void *reserved2;
+
+    /* Reserved for future use */
+    void *reserved3;
+
+    /* Reserved for future use */
+    void *reserved4;
 };
 
 /**
@@ -98,71 +98,71 @@ MixVideoDecodeParams *mix_videodecodeparams_ref(MixVideoDecodeParams * mix);
 /**
  * mix_videodecodeparams_set_timestamp:
  * @obj: #MixVideoDecodeParams object
- * @timestamp: Presentation timestamp for the video frame data, in milliseconds    
+ * @timestamp: Presentation timestamp for the video frame data, in milliseconds
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
- * Set Presentation timestamp 
+ * Set Presentation timestamp
  */
 MIX_RESULT mix_videodecodeparams_set_timestamp(MixVideoDecodeParams * obj,
-		guint64 timestamp);
+        uint64 timestamp);
 
 /**
  * mix_videodecodeparams_get_timestamp:
  * @obj: #MixVideoDecodeParams object
- * @timestamp: Presentation timestamp for the video frame data, in milliseconds to be returned.     
+ * @timestamp: Presentation timestamp for the video frame data, in milliseconds to be returned.
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
- * Get Presentation timestamp 
+ * Get Presentation timestamp
  */
 MIX_RESULT mix_videodecodeparams_get_timestamp(MixVideoDecodeParams * obj,
-		guint64 * timestamp);
+        uint64 * timestamp);
 
 /**
  * mix_videodecodeparams_set_discontinuity:
  * @obj: #MixVideoDecodeParams object
- * @discontinuity: Flag to indicate a discontinuity in the stream.     
+ * @discontinuity: Flag to indicate a discontinuity in the stream.
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set discontinuity flag
  */
 MIX_RESULT mix_videodecodeparams_set_discontinuity(MixVideoDecodeParams * obj,
-		gboolean discontinuity);
+        bool discontinuity);
 
 
 /**
  * mix_videodecodeparams_get_discontinuity:
  * @obj: #MixVideoDecodeParams object
- * @discontinuity: Discontinuity flag to be returned     
+ * @discontinuity: Discontinuity flag to be returned
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Get discontinuity flag
  */
 MIX_RESULT mix_videodecodeparams_get_discontinuity(MixVideoDecodeParams * obj,
-		gboolean *discontinuity);
+        bool *discontinuity);
 
 
 /**
  * mix_videodecodeparams_set_new_sequence:
  * @obj: #MixVideoDecodeParams object
- * @new_sequence: Flag to indicate if stream contains a new sequence.     
+ * @new_sequence: Flag to indicate if stream contains a new sequence.
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set new_sequence flag
  */
 MIX_RESULT mix_videodecodeparams_set_new_sequence(MixVideoDecodeParams * obj,
-		gboolean new_sequence);
+        bool new_sequence);
 
 
 /**
  * mix_videodecodeparams_get_new_sequence:
  * @obj: #MixVideoDecodeParams object
- * @new_sequence: new_sequence flag to be returned     
+ * @new_sequence: new_sequence flag to be returned
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Get new_sequence flag
  */
 MIX_RESULT mix_videodecodeparams_get_new_sequence(MixVideoDecodeParams * obj,
-		gboolean *new_sequence);
+        bool *new_sequence);
 
 
 #endif /* __MIX_VIDEODECODEPARAMS_H__ */

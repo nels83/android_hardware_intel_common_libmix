@@ -107,7 +107,7 @@ vc1_Status vc1_ParsePictureHeader_Adv(void* ctxt, vc1_Info *pInfo)
         if (picLayerHeader->PS_PRESENT == 1)
         {
             if ((md->INTERLACE == 1) &&
-                (md->PSF == 0))
+                    (md->PSF == 0))
             {
                 if (md->PULLDOWN == 1)
                     number_of_pan_scan_window = 2 + picLayerHeader->RFF;
@@ -139,23 +139,23 @@ vc1_Status vc1_ParsePictureHeader_Adv(void* ctxt, vc1_Info *pInfo)
         md->RNDCTRL =  picLayerHeader->RNDCTRL;
 
         if ((md->INTERLACE == 1) ||
-            (picLayerHeader->FCM != VC1_FCM_PROGRESSIVE))
+                (picLayerHeader->FCM != VC1_FCM_PROGRESSIVE))
         {
             VC1_GET_BITS9(1, picLayerHeader->UVSAMP);
         }
 
         if ((md->FINTERPFLAG == 1) &&
-            (picLayerHeader->FCM == VC1_FCM_PROGRESSIVE))
+                (picLayerHeader->FCM == VC1_FCM_PROGRESSIVE))
         {
             VC1_GET_BITS9(1, tempValue); /* INTERPFRM. */
         }
 
         if ((picLayerHeader->PTYPE == VC1_B_FRAME) &&
-            (picLayerHeader->FCM == VC1_FCM_PROGRESSIVE))
+                (picLayerHeader->FCM == VC1_FCM_PROGRESSIVE))
         {
             if ((status = vc1_DecodeHuffmanPair(ctxt, VC1_BFRACTION_TBL,
                                                 &picLayerHeader->BFRACTION_NUM, &picLayerHeader->BFRACTION_DEN))
-                != VC1_STATUS_OK)
+                    != VC1_STATUS_OK)
             {
                 return status;
             }
@@ -260,14 +260,14 @@ vc1_Status vc1_ParseFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
 
     if (md->TFCNTRFLAG)
     {
-        VC1_GET_BITS9(8, picLayerHeader->TFCNTR); 
+        VC1_GET_BITS9(8, picLayerHeader->TFCNTR);
     }
 
     if (md->PULLDOWN == 1)
     {
         if (md->PSF == 1)
         {
-            VC1_GET_BITS9(2, picLayerHeader->RPTFRM); 
+            VC1_GET_BITS9(2, picLayerHeader->RPTFRM);
         }
         else
         {
@@ -279,7 +279,7 @@ vc1_Status vc1_ParseFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
 
     if (md->PANSCAN_FLAG == 1)
     {
-        VC1_GET_BITS9(1, picLayerHeader->PS_PRESENT); 
+        VC1_GET_BITS9(1, picLayerHeader->PS_PRESENT);
         if (picLayerHeader->PS_PRESENT)
         {
             if (md->PULLDOWN)
@@ -300,9 +300,9 @@ vc1_Status vc1_ParseFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
     VC1_GET_BITS9(1, md->RNDCTRL);
 
 #ifdef VBP
-	picLayerHeader->RNDCTRL = md->RNDCTRL;
+    picLayerHeader->RNDCTRL = md->RNDCTRL;
 #endif
-    
+
     VC1_GET_BITS9(1, picLayerHeader->UVSAMP);
 
     if ((md->REFDIST_FLAG == 1) && (picLayerHeader->FPTYPE <= 3))
@@ -315,14 +315,14 @@ vc1_Status vc1_ParseFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
         }
         md->REFDIST = tmp;
     } else if (md->REFDIST_FLAG == 0) {
-		md->REFDIST = 0;
-	}
+        md->REFDIST = 0;
+    }
 
     if ((picLayerHeader->FPTYPE >= 4) && (picLayerHeader->FPTYPE <= 7))
     {
         if ((status = vc1_DecodeHuffmanPair(ctxt, VC1_BFRACTION_TBL,
                                             &picLayerHeader->BFRACTION_NUM, &picLayerHeader->BFRACTION_DEN)) !=
-            VC1_STATUS_OK)
+                VC1_STATUS_OK)
         {
             return status;
         }
@@ -355,7 +355,7 @@ vc1_Status vc1_ParsePictureFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
     if (pInfo->picLayerHeader.FCM == VC1_FCM_PROGRESSIVE)
     {
         if ((pInfo->picLayerHeader.PTYPE == VC1_I_FRAME) ||
-            (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME))
+                (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME))
         {
             status = vc1_ParsePictureHeader_ProgressiveIpicture_Adv(ctxt, pInfo);
         }
@@ -369,7 +369,7 @@ vc1_Status vc1_ParsePictureFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
     else if (pInfo->picLayerHeader.FCM == VC1_FCM_FRAME_INTERLACE)
     {
         if ((pInfo->picLayerHeader.PTYPE == VC1_I_FRAME) ||
-            (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME))
+                (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME))
         {
             status = vc1_ParsePictureHeader_InterlaceIpicture_Adv(ctxt, pInfo);
         }
@@ -383,13 +383,13 @@ vc1_Status vc1_ParsePictureFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
     else if (pInfo->picLayerHeader.FCM == VC1_FCM_FIELD_INTERLACE)
     {
         int ptype;
-        if( pInfo->picLayerHeader.CurrField == 0)
+        if ( pInfo->picLayerHeader.CurrField == 0)
             ptype = pInfo->picLayerHeader.PTypeField1;
         else
             ptype = pInfo->picLayerHeader.PTypeField2;
 
         if ((ptype == VC1_I_FRAME) ||
-            (ptype == VC1_BI_FRAME))
+                (ptype == VC1_BI_FRAME))
         {
             status = vc1_ParseFieldHeader_InterlaceIpicture_Adv(ctxt, pInfo);
         }

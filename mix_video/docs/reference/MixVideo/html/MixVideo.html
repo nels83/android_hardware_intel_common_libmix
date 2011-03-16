@@ -51,8 +51,8 @@
 <a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *          <a class="link" href="MixVideo.html#mix-video-ref" title="mix_video_ref ()">mix_video_ref</a>                       (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);
 #define             <a class="link" href="MixVideo.html#mix-video-unref" title="mix_video_unref()">mix_video_unref</a>                     (obj)
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-version" title="mix_video_get_version ()">mix_video_get_version</a>               (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
-                                                         guint *major,
-                                                         guint *minor);
+                                                         uint *major,
+                                                         uint *minor);
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-initialize" title="mix_video_initialize ()">mix_video_initialize</a>                (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixCodecMode" title="enum MixCodecMode">MixCodecMode</a> mode,
                                                          <a class="link" href="MixVideoInitParams.html" title="MixVideoInitParams">MixVideoInitParams</a> *init_params,
@@ -65,7 +65,7 @@ MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-config" ti
                                                          <a class="link" href="MixVideoConfigParams.html" title="MixVideoConfigParams">MixVideoConfigParams</a> **config_params);
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-decode" title="mix_video_decode ()">mix_video_decode</a>                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
                                                          <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *bufin[],
-                                                         gint bufincnt,
+                                                         int bufincnt,
                                                          <a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *decode_params);
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-frame" title="mix_video_get_frame ()">mix_video_get_frame</a>                 (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
                                                          <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> **frame);
@@ -76,9 +76,9 @@ MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-render" title=
                                                          <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *frame);
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-encode" title="mix_video_encode ()">mix_video_encode</a>                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
                                                          <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *bufin[],
-                                                         gint bufincnt,
+                                                         int bufincnt,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec">MixIOVec</a> *iovout[],
-                                                         gint iovoutcnt,
+                                                         int iovoutcnt,
                                                          <a class="link" href="MixVideoEncodeParams.html" title="MixVideoEncodeParams">MixVideoEncodeParams</a> *encode_params);
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-flush" title="mix_video_flush ()">mix_video_flush</a>                     (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-eos" title="mix_video_eos ()">mix_video_eos</a>                       (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix);
@@ -89,7 +89,7 @@ MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-mixbuffer"
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-release-mixbuffer" title="mix_video_release_mixbuffer ()">mix_video_release_mixbuffer</a>         (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
                                                          <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *buf);
 MIX_RESULT          <a class="link" href="MixVideo.html#mix-video-get-max-coded-buffer-size" title="mix_video_get_max_coded_buffer_size ()">mix_video_get_max_coded_buffer_size</a> (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
-                                                         guint *bufsize);
+                                                         uint *bufsize);
 </pre>
 </div>
 <div class="refsect1" title="Object Hierarchy">
@@ -224,8 +224,8 @@ Decrement reference count of the object.</p>
 <div class="refsect2" title="mix_video_get_version ()">
 <a name="mix-video-get-version"></a><h3>mix_video_get_version ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_video_get_version               (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
-                                                         guint *major,
-                                                         guint *minor);</pre>
+                                                         uint *major,
+                                                         uint *minor);</pre>
 <p>
 This function will return the major and minor version numbers of the library.</p>
 <div class="variablelist"><table border="0">
@@ -422,7 +422,7 @@ For <a class="link" href="MixVideo.html#mix-video-get-config" title="mix_video_g
 <a name="mix-video-decode"></a><h3>mix_video_decode ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_video_decode                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
                                                          <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *bufin[],
-                                                         gint bufincnt,
+                                                         int bufincnt,
                                                          <a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *decode_params);</pre>
 <p>
 </p>
@@ -630,9 +630,9 @@ The display is either an X11 Pixmap or an X11 Window using the overlay.</p>
 <a name="mix-video-encode"></a><h3>mix_video_encode ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_video_encode                    (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
                                                          <a class="link" href="MixBuffer.html" title="MixBuffer">MixBuffer</a> *bufin[],
-                                                         gint bufincnt,
+                                                         int bufincnt,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixIOVec" title="MixIOVec">MixIOVec</a> *iovout[],
-                                                         gint iovoutcnt,
+                                                         int iovoutcnt,
                                                          <a class="link" href="MixVideoEncodeParams.html" title="MixVideoEncodeParams">MixVideoEncodeParams</a> *encode_params);</pre>
 <p>
 </p>
@@ -916,7 +916,7 @@ This function releases a frame object that was acquired from <a class="link" hre
 <div class="refsect2" title="mix_video_get_max_coded_buffer_size ()">
 <a name="mix-video-get-max-coded-buffer-size"></a><h3>mix_video_get_max_coded_buffer_size ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_video_get_max_coded_buffer_size (<a class="link" href="MixVideo.html" title="MixVideo">MixVideo</a> *mix,
-                                                         guint *bufsize);</pre>
+                                                         uint *bufsize);</pre>
 <p>
 </p>
 <p>
@@ -938,7 +938,7 @@ This function can only be called once <a class="link" href="MixVideo.html#mix-vi
 </tr>
 <tr>
 <td><p><span class="term"><em class="parameter"><code>bufsize</code></em> :</span></p></td>
-<td> Pointer to guint.
+<td> Pointer to uint.
 </td>
 </tr>
 <tr>

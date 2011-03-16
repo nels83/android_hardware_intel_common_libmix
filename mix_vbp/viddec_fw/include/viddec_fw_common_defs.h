@@ -1,57 +1,57 @@
-/*  
-    This file is provided under a dual BSD/GPLv2 license.  When using or 
+/*
+    This file is provided under a dual BSD/GPLv2 license.  When using or
     redistributing this file, you may do so under either license.
-    
+
     GPL LICENSE SUMMARY
-    
+
     Copyright(c) 2007-2009 Intel Corporation. All rights reserved.
-    
-    This program is free software; you can redistribute it and/or modify 
+
+    This program is free software; you can redistribute it and/or modify
     it under the terms of version 2 of the GNU General Public License as
     published by the Free Software Foundation.
 
-    This program is distributed in the hope that it will be useful, but 
-    WITHOUT ANY WARRANTY; without even the implied warranty of 
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
 
-    You should have received a copy of the GNU General Public License 
-    along with this program; if not, write to the Free Software 
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-    The full GNU General Public License is included in this distribution 
+    The full GNU General Public License is included in this distribution
     in the file called LICENSE.GPL.
 
     Contact Information:
 
-    BSD LICENSE 
+    BSD LICENSE
 
     Copyright(c) 2007-2009 Intel Corporation. All rights reserved.
     All rights reserved.
 
-    Redistribution and use in source and binary forms, with or without 
-    modification, are permitted provided that the following conditions 
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
     are met:
 
-    * Redistributions of source code must retain the above copyright 
+    * Redistributions of source code must retain the above copyright
     notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright 
-    notice, this list of conditions and the following disclaimer in 
-    the documentation and/or other materials provided with the 
+    * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
     distribution.
-    * Neither the name of Intel Corporation nor the names of its 
-    contributors may be used to endorse or promote products derived 
+    * Neither the name of Intel Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
     from this software without specific prior written permission.
 
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR 
-    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
-    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
@@ -96,7 +96,7 @@ typedef struct viddec_input_buffer
 #ifdef HOST_ONLY
     unsigned char           *buf; /* virt pointer to buffer. This is a don't care for FW */
 #endif
-}ipc_msg_data;
+} ipc_msg_data;
 
 typedef ipc_msg_data viddec_input_buffer_t;
 typedef ipc_msg_data viddec_ipc_msg_data;
@@ -111,34 +111,34 @@ typedef enum
     VIDDEC_FW_PORT_FULL,     /* The operation failed since queue is full */
     VIDDEC_FW_PORT_EMPTY,   /* The operation failed since queue is empty */
     VIDDEC_FW_NEED_FREE_WKLD, /* The operation failed since a free wkld is not available */
-}viddec_fw_return_types_t;
+} viddec_fw_return_types_t;
 
 /* Defines for Interrupt mask and status */
 typedef enum
 {
     VIDDEC_FW_WKLD_DATA_AVAIL=1, /* A processed workload is available */
     VIDDEC_FW_INPUT_WATERMARK_REACHED=2,     /* The input path is below the set watermark for current stream */
-}viddec_fw_parser_int_status_t;
+} viddec_fw_parser_int_status_t;
 
 /* Defines for attributes on stream, If not set explicitly will be default values */
 typedef enum
 {
     VIDDEC_FW_INPUT_Q_WATERMARK, /* Define for setting Input queue watermarks */
     VIDDEC_FW_STREAM_PRIORITY,    /* Define for setting stream priority */
-}viddec_fw_stream_attributes_t;
+} viddec_fw_stream_attributes_t;
 
 typedef struct
 {
     unsigned int input_q_space; /* Num of messages that can be written to input queue */
     unsigned int output_q_data; /* Num of messages in output queue */
     unsigned int workload_q_status; /* Number of free wklds available to parser */
-}viddec_fw_q_status_t;
+} viddec_fw_q_status_t;
 
 typedef struct
 {
     unsigned int to_fw_q_space;     /* Num of messages that can be written to input queue */
     unsigned int from_fw_q_data;    /* Num of messages in output queue */
-}viddec_fw_decoder_q_status_t;
+} viddec_fw_decoder_q_status_t;
 
 enum viddec_fw_decoder_int_status
 {
@@ -154,14 +154,14 @@ enum viddec_fw_decoder_int_status
 /** Hardware Accelerated stream formats */
 typedef enum viddec_stream_format
 {
-   MFD_STREAM_FORMAT_MPEG=1,
-   MFD_STREAM_FORMAT_H264,
-   MFD_STREAM_FORMAT_VC1,
-   MFD_STREAM_FORMAT_MPEG42,
+    MFD_STREAM_FORMAT_MPEG=1,
+    MFD_STREAM_FORMAT_H264,
+    MFD_STREAM_FORMAT_VC1,
+    MFD_STREAM_FORMAT_MPEG42,
 
-   MFD_STREAM_FORMAT_MAX,   /* must be last  */
-   MFD_STREAM_FORMAT_INVALID
-}viddec_stream_format;
+    MFD_STREAM_FORMAT_MAX,   /* must be last  */
+    MFD_STREAM_FORMAT_INVALID
+} viddec_stream_format;
 
 /* Workload specific error codes */
 enum viddec_fw_workload_error_codes
@@ -174,7 +174,7 @@ enum viddec_fw_workload_error_codes
     VIDDEC_FW_WORKLOAD_ERR_MISSING_DMEM      = (1 << 4),/* This is impartial or empty frame from Parser/Decoder */
     VIDDEC_FW_WORKLOAD_ERR_UNSUPPORTED       = (1 << 5),/* Parser Detected unsupported feature in the stream */
     /* First 8 bits reserved for Non Decodable errors */
-    VIDDEC_FW_WORKLOAD_ERR_CONCEALED         = (1 << 9),/* The decoder concealed some errors in this frame */ 
+    VIDDEC_FW_WORKLOAD_ERR_CONCEALED         = (1 << 9),/* The decoder concealed some errors in this frame */
     VIDDEC_FW_WORKLOAD_ERR_MISSING_REFERENCE = (1 << 10),/* Deocder/parser detected at least one of the required reference frames is missing */
     VIDDEC_FW_WORKLOAD_ERR_IN_REFERENCE      = (1 << 11),/* Deocder/parser detected at least one of the reference frames has errors in it */
     VIDDEC_FW_WORKLOAD_ERR_DANGLING_FLD      = (1 << 12),/* Parser detected at least one of the fields are missing */
@@ -185,7 +185,7 @@ enum viddec_fw_workload_error_codes
     VIDDEC_FW_WORKLOAD_ERR_TOPFIELD          = (1 << 17),/* Decoder/Parser detected  errors in "top field" or "frame"*/
     VIDDEC_FW_WORKLOAD_ERR_BOTTOMFIELD       = (1 << 18),/* Decoder/Parser detected  errors in "bottom field" or "frame" */
     VIDDEC_FW_WORKLOAD_ERR_BITSTREAM_ERROR   = (1 << 19),/* Parser detected errors */
-	 
+
 };
 
 enum viddec_fw_mpeg2_error_codes
@@ -217,7 +217,7 @@ typedef int bool;
 #endif
 #endif
 
-#endif 
+#endif
 /* end of #ifdef VBP */
 
 #endif

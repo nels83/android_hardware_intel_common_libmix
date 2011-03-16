@@ -20,7 +20,7 @@ void viddec_pm_utils_list_init(viddec_pm_utils_list_t *cxt)
 uint32_t viddec_pm_utils_list_addbuf(viddec_pm_utils_list_t *list, viddec_input_buffer_t *es_buf)
 {
     uint32_t ret = 0;
-    if((list->num_items + 1) <= MAX_IBUFS_PER_SC)
+    if ((list->num_items + 1) <= MAX_IBUFS_PER_SC)
     {
         list->num_items +=1;
         list->sc_ibuf[list->num_items - 1] = *es_buf;
@@ -37,10 +37,10 @@ uint32_t viddec_pm_utils_list_addbuf(viddec_pm_utils_list_t *list, viddec_input_
 uint32_t viddec_pm_utils_list_getbyte_position(viddec_pm_utils_list_t *list, uint32_t byte, uint32_t *list_index, uint32_t *offset)
 {
     uint32_t index = 0, accumulated_size=0;
-    
+
     /* First buffer in list is always special case, since start offset is tied to it */
     accumulated_size = list->sc_ibuf[index].len - list->start_offset;
-    if( accumulated_size >= byte)
+    if ( accumulated_size >= byte)
     {
         /* we found a match in first buffer itself */
         *offset = list->start_offset + byte - 1;
@@ -49,9 +49,9 @@ uint32_t viddec_pm_utils_list_getbyte_position(viddec_pm_utils_list_t *list, uin
     }
     index++;
     /* walkthrough the list until we find the byte */
-    while(index < list->num_items)
-    { 
-        if((accumulated_size + list->sc_ibuf[index].len) >= byte)
+    while (index < list->num_items)
+    {
+        if ((accumulated_size + list->sc_ibuf[index].len) >= byte)
         {
             *offset = byte - accumulated_size - 1;
             *list_index = index;
@@ -73,26 +73,26 @@ void viddec_pm_utils_list_updatebytepos(viddec_pm_utils_list_t *list, uint8_t sc
 {
     uint32_t items=0;
     uint32_t start=0, end=0;
- 
-    if(list->num_items != 0)
+
+    if (list->num_items != 0)
     {
         end = list->sc_ibuf[0].len - list->start_offset;
-        if((int32_t)end >= list->total_bytes) end = list->total_bytes;
+        if ((int32_t)end >= list->total_bytes) end = list->total_bytes;
         list->data[items].stpos = start;
         list->data[items].edpos = end;
         items++;
-        while((int32_t)end < list->total_bytes)
+        while ((int32_t)end < list->total_bytes)
         {
             start = end;
             end += list->sc_ibuf[items].len;
-            if((int32_t)end >= list->total_bytes) end = list->total_bytes;
+            if ((int32_t)end >= list->total_bytes) end = list->total_bytes;
             list->data[items].stpos = start;
             list->data[items].edpos = end;
             items++;
         }
-        while(items < list->num_items)
+        while (items < list->num_items)
         {
-            if(sc_prefix_length != 0)
+            if (sc_prefix_length != 0)
             {
                 start = end = list->total_bytes+1;
             }
@@ -102,7 +102,7 @@ void viddec_pm_utils_list_updatebytepos(viddec_pm_utils_list_t *list, uint8_t sc
             }
             list->data[items].stpos = start;
             list->data[items].edpos = end;
-            items++;            
+            items++;
         }
         /* Normal access unit sequence is SC+data+SC. We read SC+data+SC bytes so far.
            but the current access unit should be SC+data, the Second SC belongs to next access unit.
@@ -117,7 +117,7 @@ static inline void viddec_pm_utils_list_emit_slice_tags_append(viddec_emitter_wk
       Most of the time len >0. However we can have a condition on EOS where the last buffer can be
       zero sized in which case we want to make sure that we emit END of SLICE information.
      */
-    if((wi->es.es_phys_len != 0) || (wi->es.es_flags&VIDDEC_WORKLOAD_FLAGS_ES_END_SLICE))
+    if ((wi->es.es_phys_len != 0) || (wi->es.es_flags&VIDDEC_WORKLOAD_FLAGS_ES_END_SLICE))
     {
         viddec_emit_append(cur_wkld, wi);
     }
@@ -128,7 +128,7 @@ static inline void viddec_pm_utils_list_emit_slice_tags_append(viddec_emitter_wk
  */
 void viddec_pm_utils_list_emit_slice_tags(viddec_pm_utils_list_t *list, uint32_t start, uint32_t end, viddec_emitter *emitter, uint32_t is_cur_wkld, viddec_workload_item_t *wi)
 {
-    if((list->num_items != 0) && ((int32_t)start < (list->total_bytes)) && ((int32_t)end <= (list->total_bytes)))
+    if ((list->num_items != 0) && ((int32_t)start < (list->total_bytes)) && ((int32_t)end <= (list->total_bytes)))
     {
         uint32_t flags=0, items=0;
         viddec_emitter_wkld *cur_wkld;
@@ -136,14 +136,14 @@ void viddec_pm_utils_list_emit_slice_tags(viddec_pm_utils_list_t *list, uint32_t
         flags = wi->es.es_flags;
         cur_wkld = (is_cur_wkld != 0) ? &(emitter->cur):&(emitter->next);
         /* Seek until we find a ES buffer entry which has the start position */
-        while(start >= list->data[items].edpos) items++;
-        
-        if(end < list->data[items].edpos)
+        while (start >= list->data[items].edpos) items++;
+
+        if (end < list->data[items].edpos)
         { /* One ES buffer has both start and end in it. So dump a single entry */
             wi->es.es_phys_len = end - start + 1;
             wi->es.es_phys_addr = list->sc_ibuf[items].phys + start - list->data[items].stpos;
             /* Account for start_offset if its the first buffer in List */
-            if(items == 0) wi->es.es_phys_addr += list->start_offset;
+            if (items == 0) wi->es.es_phys_addr += list->start_offset;
 
             wi->es.es_flags = flags | VIDDEC_WORKLOAD_FLAGS_ES_START_SLICE | VIDDEC_WORKLOAD_FLAGS_ES_END_SLICE;
             viddec_pm_utils_list_emit_slice_tags_append(cur_wkld, wi);
@@ -153,12 +153,12 @@ void viddec_pm_utils_list_emit_slice_tags(viddec_pm_utils_list_t *list, uint32_t
             /* We know that there are at least two buffers for the requested data. Dump the first item */
             wi->es.es_phys_len = list->data[items].edpos - start;
             wi->es.es_phys_addr = list->sc_ibuf[items].phys + start - list->data[items].stpos;
-            if(items == 0) wi->es.es_phys_addr += list->start_offset;
+            if (items == 0) wi->es.es_phys_addr += list->start_offset;
             wi->es.es_flags = flags | VIDDEC_WORKLOAD_FLAGS_ES_START_SLICE;
             viddec_pm_utils_list_emit_slice_tags_append(cur_wkld, wi);
             items++;
             /* Dump everything in between if any until the last buffer */
-            while(end >= list->data[items].edpos)
+            while (end >= list->data[items].edpos)
             {
                 wi->es.es_phys_len = list->data[items].edpos - list->data[items].stpos;
                 wi->es.es_phys_addr = list->sc_ibuf[items].phys;
@@ -183,22 +183,22 @@ void viddec_pm_utils_list_remove_used_entries(viddec_pm_utils_list_t *list, uint
 {
     list->end_offset = -1;
 
-    if(list->num_items != 0)
+    if (list->num_items != 0)
     {
-        if(length != 0)
+        if (length != 0)
         {
             uint32_t items = list->num_items-1, byte_pos;
             uint32_t index=0;
             viddec_input_buffer_t *es_buf;
             byte_pos = list->total_bytes;
-            while((list->data[items].edpos > byte_pos) && (list->data[items].stpos > byte_pos))
+            while ((list->data[items].edpos > byte_pos) && (list->data[items].stpos > byte_pos))
             {
                 items--;
             }
-            if(items != 0)
+            if (items != 0)
             {
                 list->start_offset = byte_pos - list->data[items].stpos;
-                while(items < list->num_items)
+                while (items < list->num_items)
                 {
                     es_buf = &(list->sc_ibuf[items]);
                     list->sc_ibuf[index] = *es_buf;

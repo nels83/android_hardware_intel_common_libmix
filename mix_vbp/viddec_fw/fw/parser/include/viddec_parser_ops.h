@@ -9,13 +9,13 @@ typedef enum
 {
     VIDDEC_PARSE_EOS = 0x0FFF, /* Dummy start code to force EOS */
     VIDDEC_PARSE_DISCONTINUITY,  /* Dummy start code to force completion and flush */
-}viddec_parser_inband_messages_t;
+} viddec_parser_inband_messages_t;
 
 typedef struct
 {
     uint32_t context_size;
     uint32_t persist_size;
-}viddec_parser_memory_sizes_t;
+} viddec_parser_memory_sizes_t;
 
 typedef    void  (*fn_init)(void *ctxt, uint32_t *persist, uint32_t preserve);
 typedef    uint32_t (*fn_parse_sc) (void *ctxt, void *pcxt, void *sc_state);
@@ -36,7 +36,7 @@ typedef struct
     fn_is_frame_start is_frame_start;
     fn_gen_contrib_tags gen_contrib_tags;
     fn_gen_assoc_tags gen_assoc_tags;
-}viddec_parser_ops_t;
+} viddec_parser_ops_t;
 
 
 typedef enum
@@ -44,11 +44,11 @@ typedef enum
     VIDDEC_PARSE_ERROR = 0xF0,
     VIDDEC_PARSE_SUCESS = 0xF1,
     VIDDEC_PARSE_FRMDONE = 0xF2,
-}viddec_parser_error_t;
+} viddec_parser_error_t;
 
 /*
  *
- *Functions used by Parsers 
+ *Functions used by Parsers
  *
  */
 
@@ -56,7 +56,7 @@ typedef enum
  */
 int32_t viddec_pm_get_bits(void *parent, uint32_t *data, uint32_t num_bits);
 
-/* This function returns requested number of bits(<=32) with out incrementing au byte position 
+/* This function returns requested number of bits(<=32) with out incrementing au byte position
  */
 int32_t viddec_pm_peek_bits(void *parent, uint32_t *data, uint32_t num_bits);
 

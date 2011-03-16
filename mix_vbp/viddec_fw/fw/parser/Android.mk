@@ -23,9 +23,6 @@ LOCAL_SRC_FILES :=			\
 LOCAL_CFLAGS := -DVBP -DHOST_ONLY
 
 LOCAL_C_INCLUDES +=			\
-	$(GLIB_TOP)			\
-	$(GLIB_TOP)/glib		\
-	$(GLIB_TOP)/android		\
 	$(LOCAL_PATH)/include		\
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/include		   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/include		   \
@@ -46,8 +43,7 @@ LOCAL_MODULE := libmixvbp
 
 LOCAL_SHARED_LIBRARIES :=		\
 	libdl				\
-	libcutils			\
-	libglib-2.0
+	libcutils
 
 ifeq ($(strip $(MIXVBP_LOG_ENABLE)),true)
 LOCAL_CFLAGS += -DVBP_TRACE

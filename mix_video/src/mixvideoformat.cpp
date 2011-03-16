@@ -5,289 +5,279 @@
 
  No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
  */
-#include <glib.h>
+
 #include "mixvideolog.h"
 
 #include "mixvideoformat.h"
+#include <string.h>
+#include <stdlib.h>
 
 #define MIXUNREF(obj, unref) if(obj) { unref(obj); obj = NULL; }
 
 MixVideoFormat::MixVideoFormat()
-	:mLock()
-	,initialized(FALSE)
-	,va_initialized(FALSE)
-	,framemgr(NULL)
-	,surfacepool(NULL)
-	,inputbufpool(NULL)
-	,inputbufqueue(NULL)
-	,va_display(NULL)
-	,va_context(VA_INVALID_ID)
-	,va_config(VA_INVALID_ID)
-	,va_surfaces(NULL)
-	,va_num_surfaces(0)
-	,mime_type(NULL)
-	,frame_rate_num(0)
-	,frame_rate_denom(0)
-	,picture_width(0)
-	,picture_height(0)
-	,parse_in_progress(FALSE)
-	,current_timestamp((guint64)-1)
-	,end_picture_pending(FALSE)
-	,video_frame(NULL)
-	,extra_surfaces(0)
-	,config_params(NULL)
-	,ref_count(1) {
+        :mLock()
+        ,initialized(FALSE)
+        ,va_initialized(FALSE)
+        ,framemgr(NULL)
+        ,surfacepool(NULL)
+        ,inputbufpool(NULL)
+        ,inputbufqueue(NULL)
+        ,va_display(NULL)
+        ,va_context(VA_INVALID_ID)
+        ,va_config(VA_INVALID_ID)
+        ,va_surfaces(NULL)
+        ,va_num_surfaces(0)
+        ,mime_type(NULL)
+        ,frame_rate_num(0)
+        ,frame_rate_denom(0)
+        ,picture_width(0)
+        ,picture_height(0)
+        ,parse_in_progress(FALSE)
+        ,current_timestamp((uint64)-1)
+        ,end_picture_pending(FALSE)
+        ,video_frame(NULL)
+        ,extra_surfaces(0)
+        ,config_params(NULL)
+        ,ref_count(1) {
 }
 
-MixVideoFormat::~MixVideoFormat(){
-	/* clean up here. */
-	VAStatus va_status;
-	MixInputBufferEntry *buf_entry = NULL;
+MixVideoFormat::~MixVideoFormat() {
+    /* clean up here. */
+    VAStatus va_status;
+    MixInputBufferEntry *buf_entry = NULL;
 
-	if (this->mime_type) {
-		if (this->mime_type->str)
-			g_string_free(this->mime_type, TRUE);
-		else
-			g_string_free(this->mime_type, FALSE);
-	}
+    if (this->mime_type) {
+        free(this->mime_type);
+    }
 
-	//MiVideo object calls the _deinitialize() for frame manager
-	MIXUNREF(this->framemgr, mix_framemanager_unref);
+    //MiVideo object calls the _deinitialize() for frame manager
+    MIXUNREF(this->framemgr, mix_framemanager_unref);
 
-	if (this->surfacepool) {
-		mix_surfacepool_deinitialize(this->surfacepool);
-		MIXUNREF(this->surfacepool, mix_surfacepool_unref);
-	}
+    if (this->surfacepool) {
+        mix_surfacepool_deinitialize(this->surfacepool);
+        MIXUNREF(this->surfacepool, mix_surfacepool_unref);
+    }
 
-	if (this->config_params) {
-		mix_videoconfigparams_unref(this->config_params);
-		this->config_params = NULL;
-	}
+    if (this->config_params) {
+        mix_videoconfigparams_unref(this->config_params);
+        this->config_params = NULL;
+    }
 
-	//libVA cleanup (vaTerminate is called from MixVideo object)
-	if (this->va_display) {
-		if (this->va_context != VA_INVALID_ID) {
-			va_status = vaDestroyContext(this->va_display, this->va_context);
-			if (va_status != VA_STATUS_SUCCESS) {
-				LOG_W( "Failed vaDestroyContext\n");
-			}
-			this->va_context = VA_INVALID_ID;
-		}
-		if (this->va_config != VA_INVALID_ID) {
-			va_status = vaDestroyConfig(this->va_display, this->va_config);
-			if (va_status != VA_STATUS_SUCCESS) {
-				LOG_W( "Failed vaDestroyConfig\n");
-			}
-			this->va_config = VA_INVALID_ID;
-		}
-		if (this->va_surfaces) {
-			va_status = vaDestroySurfaces(this->va_display, this->va_surfaces, this->va_num_surfaces);
-			if (va_status != VA_STATUS_SUCCESS) {
-				LOG_W( "Failed vaDestroySurfaces\n");
-			}
-			g_free(this->va_surfaces);
-			this->va_surfaces = NULL;
-			this->va_num_surfaces = 0;
-		}
-	}
+    //libVA cleanup (vaTerminate is called from MixVideo object)
+    if (this->va_display) {
+        if (this->va_context != VA_INVALID_ID) {
+            va_status = vaDestroyContext(this->va_display, this->va_context);
+            if (va_status != VA_STATUS_SUCCESS) {
+                LOG_W( "Failed vaDestroyContext\n");
+            }
+            this->va_context = VA_INVALID_ID;
+        }
+        if (this->va_config != VA_INVALID_ID) {
+            va_status = vaDestroyConfig(this->va_display, this->va_config);
+            if (va_status != VA_STATUS_SUCCESS) {
+                LOG_W( "Failed vaDestroyConfig\n");
+            }
+            this->va_config = VA_INVALID_ID;
+        }
+        if (this->va_surfaces) {
+            va_status = vaDestroySurfaces(this->va_display, this->va_surfaces, this->va_num_surfaces);
+            if (va_status != VA_STATUS_SUCCESS) {
+                LOG_W( "Failed vaDestroySurfaces\n");
+            }
+            free(this->va_surfaces);
+            this->va_surfaces = NULL;
+            this->va_num_surfaces = 0;
+        }
+    }
 
-	if (this->video_frame) {
-		mix_videoframe_unref(this->video_frame);
-		this->video_frame = NULL;
-	}
+    if (this->video_frame) {
+        mix_videoframe_unref(this->video_frame);
+        this->video_frame = NULL;
+    }
 
-	//Deinit input buffer queue 
-	while (!g_queue_is_empty(this->inputbufqueue)) {
-		buf_entry = reinterpret_cast<MixInputBufferEntry*>(g_queue_pop_head(this->inputbufqueue)); 
-		mix_buffer_unref(buf_entry->buf);
-		g_free(buf_entry);
-	}
+    //Deinit input buffer queue
+    while (!j_queue_is_empty(this->inputbufqueue)) {
+        buf_entry = reinterpret_cast<MixInputBufferEntry*>(j_queue_pop_head(this->inputbufqueue));
+        mix_buffer_unref(buf_entry->buf);
+        free(buf_entry);
+    }
 
-	g_queue_free(this->inputbufqueue);
+    j_queue_free(this->inputbufqueue);
 
-	//MixBuffer pool is deallocated in MixVideo object
-	this->inputbufpool = NULL;
+    //MixBuffer pool is deallocated in MixVideo object
+    this->inputbufpool = NULL;
 }
 
-MIX_RESULT MixVideoFormat::GetCaps(GString *msg) {
-	g_print("mix_videofmt_getcaps_default\n");
-	return MIX_RESULT_SUCCESS;
+MIX_RESULT MixVideoFormat::GetCaps(char *msg) {
+    LOG_V("mix_videofmt_getcaps_default\n");
+    return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT MixVideoFormat::Initialize(
-	MixVideoConfigParamsDec * config_params,
-	MixFrameManager * frame_mgr,
-	MixBufferPool * input_buf_pool,
-	MixSurfacePool ** surface_pool,
-	VADisplay va_display) {
+    MixVideoConfigParamsDec * config_params,
+    MixFrameManager * frame_mgr,
+    MixBufferPool * input_buf_pool,
+    MixSurfacePool ** surface_pool,
+    VADisplay va_display) {
 
-	LOG_V(	"Begin\n");
-	MIX_RESULT res = MIX_RESULT_SUCCESS;
-	MixInputBufferEntry *buf_entry = NULL;
+    LOG_V(	"Begin\n");
+    MIX_RESULT res = MIX_RESULT_SUCCESS;
+    MixInputBufferEntry *buf_entry = NULL;
 
-	if (!config_params || !frame_mgr || !input_buf_pool || !surface_pool || !va_display) {
-		LOG_E( "NUll pointer passed in\n");
-		return (MIX_RESULT_NULL_PTR);
-	}
+    if (!config_params || !frame_mgr || !input_buf_pool || !surface_pool || !va_display) {
+        LOG_E( "NUll pointer passed in\n");
+        return (MIX_RESULT_NULL_PTR);
+    }
 
-	Lock();
+    Lock();
 
-	//Clean up any previous framemgr
-	MIXUNREF(this->framemgr, mix_framemanager_unref);
-	this->framemgr = frame_mgr;
-	mix_framemanager_ref(this->framemgr);
-	if (this->config_params) {
-		mix_videoconfigparams_unref(this->config_params);
-	}
-	this->config_params = config_params;
-	mix_videoconfigparams_ref(reinterpret_cast<MixVideoConfigParams*>(this->config_params));
+    //Clean up any previous framemgr
+    MIXUNREF(this->framemgr, mix_framemanager_unref);
+    this->framemgr = frame_mgr;
+    mix_framemanager_ref(this->framemgr);
+    if (this->config_params) {
+        mix_videoconfigparams_unref(this->config_params);
+    }
+    this->config_params = config_params;
+    mix_videoconfigparams_ref(reinterpret_cast<MixVideoConfigParams*>(this->config_params));
 
-	this->va_display = va_display;
+    this->va_display = va_display;
 
-	//Clean up any previous mime_type
-	if (this->mime_type) {
-		if (this->mime_type->str)
-			g_string_free(this->mime_type, TRUE);
-		else
-			g_string_free(this->mime_type, FALSE);
-	}
-	gchar *mime_tmp = NULL;
-	res = mix_videoconfigparamsdec_get_mime_type(config_params, &mime_tmp);
-	if (NULL != mime_tmp) {
-		this->mime_type = g_string_new(mime_tmp);
-		g_free(mime_tmp);
-		if (NULL == this->mime_type) {//new failed
-			res = MIX_RESULT_NO_MEMORY;
-			LOG_E( "Could not duplicate mime_type\n");
-			goto cleanup;
-		}
-	}//else there is no mime_type; leave as NULL
+    //Clean up any previous mime_type
+    if (this->mime_type) {
+        free(this->mime_type);
+        this->mime_type = NULL;
+    }
 
-	res = mix_videoconfigparamsdec_get_frame_rate(config_params, &(this->frame_rate_num), &(this->frame_rate_denom));
-	if (res != MIX_RESULT_SUCCESS) {
-		LOG_E( "Error getting frame_rate\n");
-		goto cleanup;
-	}
-	res = mix_videoconfigparamsdec_get_picture_res(config_params, &(this->picture_width), &(this->picture_height));
-	if (res != MIX_RESULT_SUCCESS) {
-		LOG_E( "Error getting picture_res\n");
-		goto cleanup;
-	}
+    res = mix_videoconfigparamsdec_get_mime_type(config_params, &this->mime_type);
+    if (NULL == this->mime_type) {
+        res = MIX_RESULT_NO_MEMORY;
+        LOG_E( "Could not duplicate mime_type\n");
+        goto cleanup;
+    }//else there is no mime_type; leave as NULL
 
-	if (this->inputbufqueue) {
-		//Deinit previous input buffer queue 	
-		while (!g_queue_is_empty(this->inputbufqueue)) {
-			buf_entry = reinterpret_cast<MixInputBufferEntry*>(g_queue_pop_head(this->inputbufqueue)); 
-			mix_buffer_unref(buf_entry->buf);
-			g_free(buf_entry);
-		}
-		g_queue_free(this->inputbufqueue);
-	}
+    res = mix_videoconfigparamsdec_get_frame_rate(config_params, &(this->frame_rate_num), &(this->frame_rate_denom));
+    if (res != MIX_RESULT_SUCCESS) {
+        LOG_E( "Error getting frame_rate\n");
+        goto cleanup;
+    }
+    res = mix_videoconfigparamsdec_get_picture_res(config_params, &(this->picture_width), &(this->picture_height));
+    if (res != MIX_RESULT_SUCCESS) {
+        LOG_E( "Error getting picture_res\n");
+        goto cleanup;
+    }
 
-	//MixBuffer pool is cleaned up in MixVideo object
-	this->inputbufpool = NULL;
+    if (this->inputbufqueue) {
+        //Deinit previous input buffer queue
+        while (!j_queue_is_empty(this->inputbufqueue)) {
+            buf_entry = reinterpret_cast<MixInputBufferEntry*>(j_queue_pop_head(this->inputbufqueue));
+            mix_buffer_unref(buf_entry->buf);
+            free(buf_entry);
+        }
+        j_queue_free(this->inputbufqueue);
+    }
 
-	this->inputbufpool = input_buf_pool;
-	this->inputbufqueue = g_queue_new();
-	if (NULL == this->inputbufqueue) {//New failed
-		res = MIX_RESULT_NO_MEMORY;
-		LOG_E( "Could not duplicate mime_type\n");
-		goto cleanup;
-	}
+    //MixBuffer pool is cleaned up in MixVideo object
+    this->inputbufpool = NULL;
 
-	// surface pool, VA context/config and parser handle are initialized by
-	// derived classes
+    this->inputbufpool = input_buf_pool;
+    this->inputbufqueue = j_queue_new();
+    if (NULL == this->inputbufqueue) {//New failed
+        res = MIX_RESULT_NO_MEMORY;
+        LOG_E( "Could not duplicate mime_type\n");
+        goto cleanup;
+    }
 
-	
+    // surface pool, VA context/config and parser handle are initialized by
+    // derived classes
+
+
 cleanup:
-	if (res != MIX_RESULT_SUCCESS) {
-		MIXUNREF(this->framemgr, mix_framemanager_unref);
-		if (this->mime_type) {
-			if (this->mime_type->str)
-				g_string_free(this->mime_type, TRUE);
-			else
-				g_string_free(this->mime_type, FALSE);
-			this->mime_type = NULL;
-		}
-		Unlock();
-		this->frame_rate_num = 0;
-		this->frame_rate_denom = 1;
-		this->picture_width = 0;
-		this->picture_height = 0;
-	} else {//Normal unlock	
-		Unlock();
-	}
+    if (res != MIX_RESULT_SUCCESS) {
+        MIXUNREF(this->framemgr, mix_framemanager_unref);
+        if (this->mime_type) {
+            free(this->mime_type);
+            this->mime_type = NULL;
+        }
+        Unlock();
+        this->frame_rate_num = 0;
+        this->frame_rate_denom = 1;
+        this->picture_width = 0;
+        this->picture_height = 0;
+    } else {//Normal unlock
+        Unlock();
+    }
 
-	LOG_V( "End\n");
+    LOG_V( "End\n");
 
-	return res;
+    return res;
 
 }
 
 MIX_RESULT MixVideoFormat::Decode(
-	MixBuffer * bufin[], gint bufincnt, 
-	MixVideoDecodeParams * decode_params) {
-	return MIX_RESULT_SUCCESS;
+    MixBuffer * bufin[], int bufincnt,
+    MixVideoDecodeParams * decode_params) {
+    return MIX_RESULT_SUCCESS;
 }
 MIX_RESULT MixVideoFormat::Flush() {
-	return MIX_RESULT_SUCCESS;
+    return MIX_RESULT_SUCCESS;
 }
 MIX_RESULT MixVideoFormat::EndOfStream() {
-	return MIX_RESULT_SUCCESS;
+    return MIX_RESULT_SUCCESS;
 }
 MIX_RESULT MixVideoFormat::Deinitialize() {
-	return MIX_RESULT_SUCCESS;
+    return MIX_RESULT_SUCCESS;
 }
 
 
-MixVideoFormat* mix_videoformat_unref(MixVideoFormat* mix){
-	if (NULL != mix)
-		return mix->Unref();
-	else
-		return NULL;
+MixVideoFormat* mix_videoformat_unref(MixVideoFormat* mix) {
+    if (NULL != mix)
+        return mix->Unref();
+    else
+        return NULL;
 }
 
 MixVideoFormat * mix_videoformat_new(void) {
-	return new MixVideoFormat();
+    return new MixVideoFormat();
 }
 
 MixVideoFormat * mix_videoformat_ref(MixVideoFormat * mix) {
-	if (NULL != mix)
-		mix->Ref();
-	return mix;
+    if (NULL != mix)
+        mix->Ref();
+    return mix;
 }
 
 
 /* mixvideoformat class methods implementation */
-MIX_RESULT mix_videofmt_getcaps(MixVideoFormat *mix, GString *msg) {
-	return mix->GetCaps(msg);
+MIX_RESULT mix_videofmt_getcaps(MixVideoFormat *mix, char *msg) {
+    return mix->GetCaps(msg);
 }
 
 MIX_RESULT mix_videofmt_initialize(
-	MixVideoFormat *mix,
-	MixVideoConfigParamsDec * config_params,
-	MixFrameManager * frame_mgr,
-	MixBufferPool * input_buf_pool,
-	MixSurfacePool ** surface_pool,
-	VADisplay va_display) {
-	return mix->Initialize(config_params, frame_mgr,
-		input_buf_pool, surface_pool, va_display);
+    MixVideoFormat *mix,
+    MixVideoConfigParamsDec * config_params,
+    MixFrameManager * frame_mgr,
+    MixBufferPool * input_buf_pool,
+    MixSurfacePool ** surface_pool,
+    VADisplay va_display) {
+    return mix->Initialize(config_params, frame_mgr,
+                           input_buf_pool, surface_pool, va_display);
 }
 
 MIX_RESULT mix_videofmt_decode(
-	MixVideoFormat *mix, MixBuffer * bufin[],
-	gint bufincnt, MixVideoDecodeParams * decode_params) {
-	return mix->Decode(bufin, bufincnt, decode_params);
+    MixVideoFormat *mix, MixBuffer * bufin[],
+    int bufincnt, MixVideoDecodeParams * decode_params) {
+    return mix->Decode(bufin, bufincnt, decode_params);
 }
 
 MIX_RESULT mix_videofmt_flush(MixVideoFormat *mix) {
-	return mix->Flush();
+    return mix->Flush();
 }
 
 MIX_RESULT mix_videofmt_eos(MixVideoFormat *mix) {
-	return mix->EndOfStream();
+    return mix->EndOfStream();
 }
 
 MIX_RESULT mix_videofmt_deinitialize(MixVideoFormat *mix) {
-	return mix->Deinitialize();
+    return mix->Deinitialize();
 }

@@ -20,11 +20,11 @@ void *memcpy(void *dest, const void *src, uint32_t n)
     ptr8_to = (uint8_t *)dest;
 
     trail = ((uint32_t)ptr8_frm) & 0x3;
-    if((trail == (((uint32_t)ptr8_to) & 0x3)) && (n > 4))
+    if ((trail == (((uint32_t)ptr8_to) & 0x3)) && (n > 4))
     {
         /* check to see what's the offset bytes to go to a word alignment */
         bytes_left -= trail;
-        while(align > 0){
+        while (align > 0) {
             *ptr8_to ++ = *ptr8_frm ++;
             trail--;
         }
@@ -34,14 +34,14 @@ void *memcpy(void *dest, const void *src, uint32_t n)
         ptr32_to = (uint32_t *)ptr8_to;
         ptr32_frm = (uint32_t *)ptr8_frm;
         /* copy word by word */
-        while(bytes_left > 0){
+        while (bytes_left > 0) {
             *ptr32_to ++ = *ptr32_frm ++;
             bytes_left -= 4;
         }
         /* If there are any trailing bytes do a byte copy */
         ptr8_to = (uint8_t *)ptr32_to;
         ptr8_frm = (uint8_t *)ptr32_frm;
-        while(trail > 0){
+        while (trail > 0) {
             *ptr8_to ++ = *ptr8_frm ++;
             trail--;
         }
@@ -49,7 +49,7 @@ void *memcpy(void *dest, const void *src, uint32_t n)
     else
     {/* case when src and dest addr are not on same alignment.
         Just do a byte copy */
-        while(bytes_left > 0){
+        while (bytes_left > 0) {
             *ptr8_to ++ = *ptr8_frm ++;
             bytes_left -= 1;
         }
@@ -72,11 +72,11 @@ void *memset(void *s, int32_t c, uint32_t n)
     mask = c & 0xFF;
     mask |= (mask << 8);
     mask |= (mask << 16);
-    if(n >= 4)
+    if (n >= 4)
     {
         uint32_t trail=0;
         trail = 4 - (((uint32_t)ptr8) & 0x3);
-        if(trail < 4)
+        if (trail < 4)
         {
             ptr32 = (uint32_t *)(((uint32_t)ptr8) & ~0x3);
             data = (*ptr32 >> (8*trail)) << (8*trail);
@@ -86,20 +86,20 @@ void *memset(void *s, int32_t c, uint32_t n)
             ptr8 += trail;
         }
         ptr32 = (uint32_t *)((uint32_t)ptr8);
-        while(bytes_left >= 4)
+        while (bytes_left >= 4)
         {
             *ptr32 = mask;
             ptr32++;
             bytes_left -=4;
         }
-        if(bytes_left > 0)
+        if (bytes_left > 0)
         {
             data = (*ptr32 << (8*bytes_left)) >> (8*bytes_left);
             data |= (mask << (32 - (8*bytes_left)));
             *ptr32=data;
         }
     }
-    
+
     return s;
 }
 
@@ -113,7 +113,7 @@ void *memset(void *s, int32_t c, uint32_t n)
  *         [in] to_ddr    : Direction of copy, if true copy to ddr else copy to local memory.
  *         [in] swap      : Enable or disable byte swap(endian).
  *         [out] return   : Actual number of bytes copied, which can be more than what was requested
- *                          since we can only copy words at a time.                   
+ *                          since we can only copy words at a time.
  * Limitations: DMA can transfer Words only, Local addr & DDR addr should be word aligned.
  *------------------------------------------------------------------------------
  */
@@ -121,7 +121,7 @@ uint32_t cp_using_dma(uint32_t ddr_addr, uint32_t local_addr, uint32_t size, cha
 {
     uint32_t val=0, wrote = size;
 
-    while((reg_read(DMA_CONTROL_STATUS) & DMA_CTRL_STATUS_BUSY) != 0)
+    while ((reg_read(DMA_CONTROL_STATUS) & DMA_CTRL_STATUS_BUSY) != 0)
     {
         /* wait if DMA is busy with a transcation Error condition??*/
     }
@@ -133,17 +133,17 @@ uint32_t cp_using_dma(uint32_t ddr_addr, uint32_t local_addr, uint32_t size, cha
     val=(wrote & 0xffff) << 2;
     reg_write(DMA_CONTROL_STATUS, DMA_CTRL_STATUS_DONE);
     val |= DMA_CTRL_STATUS_START;
-	/* If size > 64 use 128 byte burst speed */
-    if(wrote > 64)
+    /* If size > 64 use 128 byte burst speed */
+    if (wrote > 64)
         val |= (1<<18);
-    if(swap) /* Endian swap if needed */
+    if (swap) /* Endian swap if needed */
         val |= DMA_CTRL_STATUS_SWAP;
-    if(to_ddr)
+    if (to_ddr)
         val = val | DMA_CTRL_STATUS_DIRCN;
     reg_write(DMA_CONTROL_STATUS, val);
-    while((reg_read(DMA_CONTROL_STATUS) & DMA_CTRL_STATUS_DONE) == 0)
+    while ((reg_read(DMA_CONTROL_STATUS) & DMA_CTRL_STATUS_DONE) == 0)
     {
-		/* wait till DMA is done */
+        /* wait till DMA is done */
     }
     reg_write(DMA_CONTROL_STATUS, DMA_CTRL_STATUS_DONE);
 
@@ -160,7 +160,7 @@ uint32_t cp_using_dma(uint32_t ddr_addr, uint32_t local_addr, uint32_t size, cha
  *         [in] to_ddr    : Direction of copy, if true copy to ddr else copy to local memory.
  *         [in] swap      : Enable or disable byte swap(endian).
  *         [out] return   : Actual number of bytes copied, which can be more than what was requested
- *                          since we can only copy words at a time.                   
+ *                          since we can only copy words at a time.
  * Limitations: DMA can transfer Words only, Local addr & DDR addr should be word aligned.
  *------------------------------------------------------------------------------
  */
@@ -168,7 +168,7 @@ uint32_t cp_using_dma_phys(uint32_t ddr_addr, uint32_t local_addr, uint32_t size
 {
     uint32_t val=0, wrote = size;
 
-    while((reg_read(DMA_CONTROL_STATUS) & DMA_CTRL_STATUS_BUSY) != 0)
+    while ((reg_read(DMA_CONTROL_STATUS) & DMA_CTRL_STATUS_BUSY) != 0)
     {
         /* wait if DMA is busy with a transcation Error condition??*/
     }
@@ -180,17 +180,17 @@ uint32_t cp_using_dma_phys(uint32_t ddr_addr, uint32_t local_addr, uint32_t size
     val=(wrote & 0xffff) << 2;
     reg_write(DMA_CONTROL_STATUS, DMA_CTRL_STATUS_DONE);
     val |= DMA_CTRL_STATUS_START;
-	/* If size > 64 use 128 byte burst speed */
-    if(wrote > 64)
+    /* If size > 64 use 128 byte burst speed */
+    if (wrote > 64)
         val |= (1<<18);
-    if(swap) /* Endian swap if needed */
+    if (swap) /* Endian swap if needed */
         val |= DMA_CTRL_STATUS_SWAP;
-    if(to_ddr)
+    if (to_ddr)
         val = val | DMA_CTRL_STATUS_DIRCN;
     reg_write(DMA_CONTROL_STATUS, val);
-    while((reg_read(DMA_CONTROL_STATUS) & DMA_CTRL_STATUS_DONE) == 0)
+    while ((reg_read(DMA_CONTROL_STATUS) & DMA_CTRL_STATUS_DONE) == 0)
     {
-		/* wait till DMA is done */
+        /* wait till DMA is done */
     }
     reg_write(DMA_CONTROL_STATUS, DMA_CTRL_STATUS_DONE);
 
@@ -201,17 +201,17 @@ void update_ctrl_reg(uint8_t enable, uint32_t mask)
 {
     uint32_t read_val = 0;
     read_val = reg_read(CONFIG_CP_CONTROL_REG);
-    if(enable)
+    if (enable)
     {
         read_val = read_val | mask;
     }
     else
     {
-        read_val = read_val & ~mask;        
+        read_val = read_val & ~mask;
     }
-    reg_write(CONFIG_CP_CONTROL_REG, read_val);    
+    reg_write(CONFIG_CP_CONTROL_REG, read_val);
     return;
-    
+
 }
 
 extern uint32_t sven_get_timestamp();
@@ -225,24 +225,24 @@ uint32_t set_wdog(uint32_t offset)
     update_ctrl_reg(1, WATCH_DOG_ENABLE);
     return offset & WATCH_DOG_MASK;
 #else
-    return sven_get_timestamp();    
-#endif    
+    return sven_get_timestamp();
+#endif
 }
 
 void get_wdog(uint32_t *value)
 {
-#ifdef B0_TIMER_FIX    
+#ifdef B0_TIMER_FIX
     *value = reg_read(WATCH_DOG_COUNTER) & WATCH_DOG_MASK;
     reg_write(INT_REG, ~INT_WDOG_ENABLE);
     update_ctrl_reg(0, WATCH_DOG_ENABLE);
 #else
     *value = sven_get_timestamp();
-#endif    
+#endif
 }
 
 uint32_t get_total_ticks(uint32_t start, uint32_t end)
 {
-    uint32_t value;    
+    uint32_t value;
 #ifdef B0_TIMER_FIX
     value = (start-end) + (start*timer);
     timer=0;

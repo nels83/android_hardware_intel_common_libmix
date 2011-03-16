@@ -10,7 +10,7 @@
  * SECTION:mixvideodecodeparams
  * @short_description: MI-X Video Decode Paramters
  *
- * The #MixVideoDecodeParams object will be created by the MMF/App 
+ * The #MixVideoDecodeParams object will be created by the MMF/App
  * and provided to MixVideo in the MixVideo mix_video_decode() function.
  */
 
@@ -19,107 +19,107 @@
 #define MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT(obj) \
 	if(!obj) return MIX_RESULT_NULL_PTR; \
 	if(!MIX_IS_VIDEODECODEPARAMS(obj)) return MIX_RESULT_FAIL; \
-
+ 
 #define MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT(obj, prop) \
 	if(!obj || !prop) return MIX_RESULT_NULL_PTR; \
 	if(!MIX_IS_VIDEODECODEPARAMS(obj)) return MIX_RESULT_FAIL; \
-
+ 
 
 MixVideoDecodeParams::MixVideoDecodeParams()
-	:timestamp(0)
-	,discontinuity(FALSE)
-	,new_sequence(FALSE)
-	,reserved1(NULL)
-	,reserved2(NULL)
-	,reserved3(NULL)
-	,reserved4(NULL) {
+        :timestamp(0)
+        ,discontinuity(FALSE)
+        ,new_sequence(FALSE)
+        ,reserved1(NULL)
+        ,reserved2(NULL)
+        ,reserved3(NULL)
+        ,reserved4(NULL) {
 }
 
 MixVideoDecodeParams::~MixVideoDecodeParams() {
 }
 
-gboolean MixVideoDecodeParams::copy(MixParams *target) const {
-	gboolean ret = FALSE;
-	MixVideoDecodeParams * this_target = MIX_VIDEODECODEPARAMS(target);
-	if (NULL != this_target) {
-		// chain up base class
-		ret = MixParams::copy(target);
-	}
-	return ret;
+bool MixVideoDecodeParams::copy(MixParams *target) const {
+    bool ret = FALSE;
+    MixVideoDecodeParams * this_target = MIX_VIDEODECODEPARAMS(target);
+    if (NULL != this_target) {
+        // chain up base class
+        ret = MixParams::copy(target);
+    }
+    return ret;
 }
 
-gboolean MixVideoDecodeParams::equal(MixParams* obj) const {
-	gboolean ret = FALSE;
-	MixVideoDecodeParams * this_obj = MIX_VIDEODECODEPARAMS(obj);
-	if (NULL != this_obj)
-		ret = MixParams::equal(this_obj);
-	return ret;
+bool MixVideoDecodeParams::equal(MixParams* obj) const {
+    bool ret = FALSE;
+    MixVideoDecodeParams * this_obj = MIX_VIDEODECODEPARAMS(obj);
+    if (NULL != this_obj)
+        ret = MixParams::equal(this_obj);
+    return ret;
 }
 
 MixParams* MixVideoDecodeParams::dup() const {
-	MixParams *ret = new MixVideoDecodeParams();
-	if (NULL != ret) {
-		if (FALSE == copy(ret)) {
-			ret->Unref();
-			ret = NULL;
-		}
-	}
-	return ret;
+    MixParams *ret = new MixVideoDecodeParams();
+    if (NULL != ret) {
+        if (FALSE == copy(ret)) {
+            ret->Unref();
+            ret = NULL;
+        }
+    }
+    return ret;
 }
 
 MixVideoDecodeParams * mix_videodecodeparams_new(void) {
-	return new MixVideoDecodeParams();
+    return new MixVideoDecodeParams();
 }
 
 MixVideoDecodeParams *
 mix_videodecodeparams_ref(MixVideoDecodeParams * mix) {
-	if (NULL != mix)
-		mix->Ref();
-	return mix;
+    if (NULL != mix)
+        mix->Ref();
+    return mix;
 }
 
 
 /* TODO: Add getters and setters for properties. */
 
 MIX_RESULT mix_videodecodeparams_set_timestamp(
-	MixVideoDecodeParams * obj, guint64 timestamp) {
-	MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT (obj);
-	obj->timestamp = timestamp;
-	return MIX_RESULT_SUCCESS;
+    MixVideoDecodeParams * obj, uint64 timestamp) {
+    MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT (obj);
+    obj->timestamp = timestamp;
+    return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videodecodeparams_get_timestamp(
-	MixVideoDecodeParams * obj, guint64 * timestamp) {
-	MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, timestamp);
-	*timestamp = obj->timestamp;
-	return MIX_RESULT_SUCCESS;
+    MixVideoDecodeParams * obj, uint64 * timestamp) {
+    MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, timestamp);
+    *timestamp = obj->timestamp;
+    return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videodecodeparams_set_discontinuity(
-	MixVideoDecodeParams * obj, gboolean discontinuity) {
-	MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT (obj);
-	obj->discontinuity = discontinuity;
-	return MIX_RESULT_SUCCESS;
+    MixVideoDecodeParams * obj, bool discontinuity) {
+    MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT (obj);
+    obj->discontinuity = discontinuity;
+    return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videodecodeparams_get_discontinuity(
-	MixVideoDecodeParams * obj, gboolean *discontinuity) {
-	MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, discontinuity);
-	*discontinuity = obj->discontinuity;
-	return MIX_RESULT_SUCCESS;
+    MixVideoDecodeParams * obj, bool *discontinuity) {
+    MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, discontinuity);
+    *discontinuity = obj->discontinuity;
+    return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videodecodeparams_set_new_sequence(
-	MixVideoDecodeParams * obj, gboolean new_sequence) {
-	MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT (obj);
-	obj->new_sequence = new_sequence;
-	return MIX_RESULT_SUCCESS;
+    MixVideoDecodeParams * obj, bool new_sequence) {
+    MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT (obj);
+    obj->new_sequence = new_sequence;
+    return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_videodecodeparams_get_new_sequence(
-	MixVideoDecodeParams * obj, gboolean *new_sequence) {
-	MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, new_sequence);
-	*new_sequence = obj->new_sequence;
-	return MIX_RESULT_SUCCESS;
+    MixVideoDecodeParams * obj, bool *new_sequence) {
+    MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, new_sequence);
+    *new_sequence = obj->new_sequence;
+    return MIX_RESULT_SUCCESS;
 }
 

@@ -23,47 +23,47 @@
 
 class MixVideoFormat_MP42 : public MixVideoFormat {
 public:
-	MixVideoFormat_MP42();
-	virtual ~MixVideoFormat_MP42();
+    MixVideoFormat_MP42();
+    virtual ~MixVideoFormat_MP42();
 
-	virtual MIX_RESULT Initialize(
-		MixVideoConfigParamsDec * config_params,
-		MixFrameManager * frame_mgr,
-		MixBufferPool * input_buf_pool,
-		MixSurfacePool ** surface_pool,
-		VADisplay va_display);
-	virtual MIX_RESULT Decode(
-		MixBuffer * bufin[], gint bufincnt, 
-		MixVideoDecodeParams * decode_params);
-	virtual MIX_RESULT Flush();
-	virtual MIX_RESULT EndOfStream();
+    virtual MIX_RESULT Initialize(
+        MixVideoConfigParamsDec * config_params,
+        MixFrameManager * frame_mgr,
+        MixBufferPool * input_buf_pool,
+        MixSurfacePool ** surface_pool,
+        VADisplay va_display);
+    virtual MIX_RESULT Decode(
+        MixBuffer * bufin[], int bufincnt,
+        MixVideoDecodeParams * decode_params);
+    virtual MIX_RESULT Flush();
+    virtual MIX_RESULT EndOfStream();
 
 private:
-	MIX_RESULT _handle_ref_frames(
-		enum _picture_type frame_type, MixVideoFrame * current_frame);
-	MIX_RESULT _release_input_buffers(guint64 timestamp);
-	MIX_RESULT _update_config_params(vbp_data_mp42 *data);
-	MIX_RESULT _initialize_va(vbp_data_mp42 *data);
-	MIX_RESULT _decode_a_slice(
-		vbp_data_mp42* data, vbp_picture_data_mp42* pic_data);
-	MIX_RESULT _decode_end(gboolean drop_picture);
-	MIX_RESULT _decode_continue(vbp_data_mp42 *data);
-	MIX_RESULT _decode_begin(vbp_data_mp42* data);
-	MIX_RESULT _decode_a_buffer(
-		MixBuffer * bufin, guint64 ts, gboolean discontinuity);
+    MIX_RESULT _handle_ref_frames(
+        enum _picture_type frame_type, MixVideoFrame * current_frame);
+    MIX_RESULT _release_input_buffers(uint64 timestamp);
+    MIX_RESULT _update_config_params(vbp_data_mp42 *data);
+    MIX_RESULT _initialize_va(vbp_data_mp42 *data);
+    MIX_RESULT _decode_a_slice(
+        vbp_data_mp42* data, vbp_picture_data_mp42* pic_data);
+    MIX_RESULT _decode_end(bool drop_picture);
+    MIX_RESULT _decode_continue(vbp_data_mp42 *data);
+    MIX_RESULT _decode_begin(vbp_data_mp42* data);
+    MIX_RESULT _decode_a_buffer(
+        MixBuffer * bufin, uint64 ts, bool discontinuity);
 
 public:
-	/*< public > */
-	MixVideoFrame * reference_frames[2];
-	MixVideoFrame * last_frame;
-	gint last_vop_coding_type;
-	guint last_vop_time_increment;
+    /*< public > */
+    MixVideoFrame * reference_frames[2];
+    MixVideoFrame * last_frame;
+    int last_vop_coding_type;
+    uint last_vop_time_increment;
 
-	/* indicate if future n-vop is a placeholder of a packed frame */
-	gboolean next_nvop_for_PB_frame;
+    /* indicate if future n-vop is a placeholder of a packed frame */
+    bool next_nvop_for_PB_frame;
 
-	/* indicate if iq_matrix_buffer is sent to driver */
-	gboolean iq_matrix_buf_sent;
+    /* indicate if iq_matrix_buffer is sent to driver */
+    bool iq_matrix_buf_sent;
 };
 
 

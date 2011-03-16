@@ -4,7 +4,7 @@
 
 void viddec_mpeg2_append_workitem(void *parent, viddec_workload_item_t *wi, uint8_t flag)
 {
-	return;
+    return;
 }
 
 void viddec_mpeg2_emit_workload(void *parent, void *ctxt)
@@ -13,13 +13,13 @@ void viddec_mpeg2_emit_workload(void *parent, void *ctxt)
 }
 
 void viddec_mpeg2_append_pixeldata(void *parent, uint8_t flag)
-{ 
-	return;
+{
+    return;
 }
 
 viddec_workload_t*  viddec_mpeg2_get_header (void *parent, uint8_t flag)
 {
- 	viddec_workload_t *ret;
+    viddec_workload_t *ret;
     if (flag)
     {
         ret = viddec_pm_get_next_header(parent);

@@ -1,8 +1,8 @@
-/** 
+/**
  * viddec_mpeg2_parse.c
  * --------------------
  * This file acts as the main interface between the parser manager and MPEG2
- * parser. All the operations done by the MPEG2 parser are defined here and 
+ * parser. All the operations done by the MPEG2 parser are defined here and
  * functions pointers for each operation is returned to the parser manager.
  */
 
@@ -37,26 +37,26 @@ static void viddec_mpeg2_parser_init
     parser->mpeg2_prev_temp_ref                 =  0;
     parser->mpeg2_num_pan_scan_offsets          =  0;
 
-    if(preserve)
+    if (preserve)
     {
-    	/* Init all picture level header info */
-    	memset(&parser->info.pic_hdr, 0, sizeof(struct mpeg2_picture_hdr_info));
-    	memset(&parser->info.pic_cod_ext, 0, sizeof(struct mpeg2_picture_coding_ext_info));
-    	memset(&parser->info.pic_disp_ext, 0, sizeof(struct mpeg2_picture_disp_ext_info));
+        /* Init all picture level header info */
+        memset(&parser->info.pic_hdr, 0, sizeof(struct mpeg2_picture_hdr_info));
+        memset(&parser->info.pic_cod_ext, 0, sizeof(struct mpeg2_picture_coding_ext_info));
+        memset(&parser->info.pic_disp_ext, 0, sizeof(struct mpeg2_picture_disp_ext_info));
     }
     else
     {
-    	/* Init all header info */
-    	memset(&parser->info, 0, sizeof(struct mpeg2_info));
+        /* Init all header info */
+        memset(&parser->info, 0, sizeof(struct mpeg2_info));
 
-    	parser->mpeg2_stream                        =  false;
-    	parser->mpeg2_custom_qmat_parsed            =  false;
-    	parser->mpeg2_valid_seq_hdr_parsed          =  false;
-    	parser->mpeg2_curr_seq_headers              =  MPEG2_HEADER_NONE;
-	}	
+        parser->mpeg2_stream                        =  false;
+        parser->mpeg2_custom_qmat_parsed            =  false;
+        parser->mpeg2_valid_seq_hdr_parsed          =  false;
+        parser->mpeg2_curr_seq_headers              =  MPEG2_HEADER_NONE;
+    }
 
     MPEG2_DEB("MPEG2 Parser: Context Initialized.\n");
-   
+
     return;
 }
 
@@ -125,7 +125,7 @@ static void viddec_mpeg2_get_error_code
 
     /* Missing sequence header and irrecoverable flag is set */
     if ((!(parser->mpeg2_curr_seq_headers & MPEG2_HEADER_SEQ))
-    		&& (!parser->mpeg2_valid_seq_hdr_parsed))
+            && (!parser->mpeg2_valid_seq_hdr_parsed))
     {
         *error_code |= ( VIDDEC_FW_WORKLOAD_ERR_MISSING_SEQ_INFO
                          | VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE ) ;
@@ -156,7 +156,7 @@ static void viddec_mpeg2_get_error_code
     {
         if (wl->is_reference_frame == 0) *error_code |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
     }
-    
+
     /* For non-decodable frames, do not set reference info so that the workload */
     /* manager does not increment ref count. */
     if (*error_code & VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE)
@@ -211,7 +211,7 @@ static uint32_t viddec_mpeg2_is_workload_done
     viddec_workload_t *wl = viddec_pm_get_header(parent);
     uint32_t ret = VIDDEC_PARSE_SUCESS;
     uint32_t frame_boundary = 0;
-	uint8_t force_frame_complete = 0;	
+    uint8_t force_frame_complete = 0;
     parent = parent;
 
     /* Detect Frame Boundary */
@@ -220,12 +220,12 @@ static uint32_t viddec_mpeg2_is_workload_done
     {
         parser->mpeg2_first_slice_flag = false;
     }
-    
-	force_frame_complete = ((VIDDEC_PARSE_EOS == next_sc) || (VIDDEC_PARSE_DISCONTINUITY == next_sc));
+
+    force_frame_complete = ((VIDDEC_PARSE_EOS == next_sc) || (VIDDEC_PARSE_DISCONTINUITY == next_sc));
 
     if (force_frame_complete || (frame_boundary && (parser->mpeg2_pic_metadata_complete)))
     {
-		if(!force_frame_complete)
+        if (!force_frame_complete)
         {
             parser->mpeg2_wl_status            |= MPEG2_WL_COMPLETE;
             parser->mpeg2_last_parsed_slice_sc  =  MPEG2_SC_SLICE_MAX;
@@ -281,82 +281,82 @@ static mpeg2_status viddec_mpeg2_parse
     }
 
     /* Parse Metadata based on the start code found */
-    switch( current_sc )
+    switch ( current_sc )
     {
         /* Sequence Start Code */
-        case MPEG2_SC_SEQ_HDR:
-        {
-            parser->mpeg2_curr_seq_headers = MPEG2_HEADER_NONE;
-            viddec_mpeg2_parse_seq_hdr(parent, ctxt);
-        }
-        break;
+    case MPEG2_SC_SEQ_HDR:
+    {
+        parser->mpeg2_curr_seq_headers = MPEG2_HEADER_NONE;
+        viddec_mpeg2_parse_seq_hdr(parent, ctxt);
+    }
+    break;
 
-        /* Picture Start Code */
-        case MPEG2_SC_PICTURE:
-        {
-            viddec_mpeg2_parse_pic_hdr(parent, ctxt);
-        }
-        break;
+    /* Picture Start Code */
+    case MPEG2_SC_PICTURE:
+    {
+        viddec_mpeg2_parse_pic_hdr(parent, ctxt);
+    }
+    break;
 
-        /* Extension Code */
-        case MPEG2_SC_EXT:
-        {
-            viddec_mpeg2_parse_ext(parent, ctxt);
-        }
-        break;
+    /* Extension Code */
+    case MPEG2_SC_EXT:
+    {
+        viddec_mpeg2_parse_ext(parent, ctxt);
+    }
+    break;
 
-        /* Group of Pictures Header */
-        case MPEG2_SC_GROUP:
-        {
-            viddec_mpeg2_parse_gop_hdr(parent, ctxt);
-        }
-        break;
+    /* Group of Pictures Header */
+    case MPEG2_SC_GROUP:
+    {
+        viddec_mpeg2_parse_gop_hdr(parent, ctxt);
+    }
+    break;
 
-        /* Unused Start Code */
-        case MPEG2_SC_SEQ_END:
-        case MPEG2_SC_SEQ_ERR:
-            break;
+    /* Unused Start Code */
+    case MPEG2_SC_SEQ_END:
+    case MPEG2_SC_SEQ_ERR:
+        break;
 
         /* User Data */
-        case MPEG2_SC_USER_DATA:
-        {
-            viddec_mpeg2_parse_and_append_user_data(parent, ctxt);
-        }
-        break;
+    case MPEG2_SC_USER_DATA:
+    {
+        viddec_mpeg2_parse_and_append_user_data(parent, ctxt);
+    }
+    break;
 
-        default:
-        {
-            /* Slice Data - Append slice data to the workload */
-            if ((current_sc >= MPEG2_SC_SLICE_MIN) &&
+    default:
+    {
+        /* Slice Data - Append slice data to the workload */
+        if ((current_sc >= MPEG2_SC_SLICE_MIN) &&
                 (current_sc <= MPEG2_SC_SLICE_MAX))
+        {
+            if (!parser->mpeg2_first_slice_flag)
             {
-                if (!parser->mpeg2_first_slice_flag)
-                {
-                    /* At this point, all the metadata required by the MPEG2 */
-                    /* hardware for decoding is extracted and stored. So the */
-                    /* metadata can be packed into workitems and emitted out.*/
-                    viddec_mpeg2_emit_workload(parent, ctxt);
+                /* At this point, all the metadata required by the MPEG2 */
+                /* hardware for decoding is extracted and stored. So the */
+                /* metadata can be packed into workitems and emitted out.*/
+                viddec_mpeg2_emit_workload(parent, ctxt);
 
-                    /* If the current picture is progressive or it is the */
-                    /* second field of interlaced field picture then, set */
-                    /* the workload done flag. */
-                    if ((!parser->mpeg2_picture_interlaced)
+                /* If the current picture is progressive or it is the */
+                /* second field of interlaced field picture then, set */
+                /* the workload done flag. */
+                if ((!parser->mpeg2_picture_interlaced)
                         || ((parser->mpeg2_picture_interlaced) && (!parser->mpeg2_first_field)))
-                    {
-                        parser->mpeg2_pic_metadata_complete = true;
-                    }
-                    else if ((parser->mpeg2_picture_interlaced) && (parser->mpeg2_first_field))
-                    {
-                        parser->mpeg2_curr_frame_headers = MPEG2_HEADER_NONE;
-                    }
-                    
-                    parser->mpeg2_first_slice_flag = true;
+                {
+                    parser->mpeg2_pic_metadata_complete = true;
                 }
-                parser->mpeg2_last_parsed_slice_sc = current_sc;
-                viddec_mpeg2_parse_and_append_slice_data(parent, ctxt);
-                parser->mpeg2_wl_status |= MPEG2_WL_PARTIAL_SLICE;
+                else if ((parser->mpeg2_picture_interlaced) && (parser->mpeg2_first_field))
+                {
+                    parser->mpeg2_curr_frame_headers = MPEG2_HEADER_NONE;
+                }
+
+                parser->mpeg2_first_slice_flag = true;
             }
+            parser->mpeg2_last_parsed_slice_sc = current_sc;
+            viddec_mpeg2_parse_and_append_slice_data(parent, ctxt);
+            parser->mpeg2_wl_status |= MPEG2_WL_PARTIAL_SLICE;
         }
+    }
     } /* Switch */
 
     /* Save last parsed start code */

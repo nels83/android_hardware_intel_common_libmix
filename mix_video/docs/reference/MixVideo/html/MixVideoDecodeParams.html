@@ -48,15 +48,15 @@
 <a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> * <a class="link" href="MixVideoDecodeParams.html#mix-videodecodeparams-ref" title="mix_videodecodeparams_ref ()">mix_videodecodeparams_ref</a>        (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *mix);
 #define             <a class="link" href="MixVideoDecodeParams.html#mix-videodecodeparams-unref" title="mix_videodecodeparams_unref()">mix_videodecodeparams_unref</a>         (obj)
 MIX_RESULT          <a class="link" href="MixVideoDecodeParams.html#mix-videodecodeparams-set-timestamp" title="mix_videodecodeparams_set_timestamp ()">mix_videodecodeparams_set_timestamp</a> (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *obj,
-                                                         guint64 timestamp);
+                                                         uint64 timestamp);
 MIX_RESULT          <a class="link" href="MixVideoDecodeParams.html#mix-videodecodeparams-get-timestamp" title="mix_videodecodeparams_get_timestamp ()">mix_videodecodeparams_get_timestamp</a> (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *obj,
-                                                         guint64 *timestamp);
+                                                         uint64 *timestamp);
 MIX_RESULT          <a class="link" href="MixVideoDecodeParams.html#mix-videodecodeparams-set-discontinuity" title="mix_videodecodeparams_set_discontinuity ()">mix_videodecodeparams_set_discontinuity</a>
                                                         (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *obj,
-                                                         gboolean discontinuity);
+                                                         bool discontinuity);
 MIX_RESULT          <a class="link" href="MixVideoDecodeParams.html#mix-videodecodeparams-get-discontinuity" title="mix_videodecodeparams_get_discontinuity ()">mix_videodecodeparams_get_discontinuity</a>
                                                         (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *obj,
-                                                         gboolean *discontinuity);
+                                                         bool *discontinuity);
 </pre>
 </div>
 <div class="refsect1" title="Object Hierarchy">
@@ -84,10 +84,10 @@ and provided to MixVideo in the MixVideo <a class="link" href="MixVideo.html#mix
 	
 	/* Presentation timestamp for the video 
 	 * frame data, in milliseconds */
-	guint64 timestamp;
+	uint64 timestamp;
 	
 	/* Indicates a discontinuity in the stream */
-	gboolean discontinuity;
+	bool discontinuity;
 
 	/* Reserved for future use */	
 	void *reserved1;
@@ -162,7 +162,7 @@ Decrement reference count of the object.</p>
 <div class="refsect2" title="mix_videodecodeparams_set_timestamp ()">
 <a name="mix-videodecodeparams-set-timestamp"></a><h3>mix_videodecodeparams_set_timestamp ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videodecodeparams_set_timestamp (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *obj,
-                                                         guint64 timestamp);</pre>
+                                                         uint64 timestamp);</pre>
 <p>
 Set Presentation timestamp</p>
 <div class="variablelist"><table border="0">
@@ -190,7 +190,7 @@ Set Presentation timestamp</p>
 <div class="refsect2" title="mix_videodecodeparams_get_timestamp ()">
 <a name="mix-videodecodeparams-get-timestamp"></a><h3>mix_videodecodeparams_get_timestamp ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videodecodeparams_get_timestamp (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *obj,
-                                                         guint64 *timestamp);</pre>
+                                                         uint64 *timestamp);</pre>
 <p>
 Get Presentation timestamp</p>
 <div class="variablelist"><table border="0">
@@ -219,7 +219,7 @@ Get Presentation timestamp</p>
 <a name="mix-videodecodeparams-set-discontinuity"></a><h3>mix_videodecodeparams_set_discontinuity ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videodecodeparams_set_discontinuity
                                                         (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *obj,
-                                                         gboolean discontinuity);</pre>
+                                                         bool discontinuity);</pre>
 <p>
 Set discontinuity flag</p>
 <div class="variablelist"><table border="0">
@@ -248,7 +248,7 @@ Set discontinuity flag</p>
 <a name="mix-videodecodeparams-get-discontinuity"></a><h3>mix_videodecodeparams_get_discontinuity ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videodecodeparams_get_discontinuity
                                                         (<a class="link" href="MixVideoDecodeParams.html" title="MixVideoDecodeParams">MixVideoDecodeParams</a> *obj,
-                                                         gboolean *discontinuity);</pre>
+                                                         bool *discontinuity);</pre>
 <p>
 Get discontinuity flag</p>
 <div class="variablelist"><table border="0">

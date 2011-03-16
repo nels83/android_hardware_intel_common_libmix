@@ -93,26 +93,26 @@ vc1_Status vc1_ParsePictureHeader_ProgressivePpicture(void* ctxt, vc1_Info *pInf
         VC1_GET_BITS9(6, picLayerHeader->LUMSHIFT);
     }
     else
-#ifdef VBP   
+#ifdef VBP
         picLayerHeader->MVMODE2 = 0;
-#else        
+#else
         picLayerHeader->MVMODE2 = picLayerHeader->MVMODE;
 #endif
 
     if ((picLayerHeader->MVMODE == VC1_MVMODE_MIXED_MV) ||
-        ((picLayerHeader->MVMODE == VC1_MVMODE_INTENSCOMP) &&
-         (picLayerHeader->MVMODE2 == VC1_MVMODE_MIXED_MV)))
+            ((picLayerHeader->MVMODE == VC1_MVMODE_INTENSCOMP) &&
+             (picLayerHeader->MVMODE2 == VC1_MVMODE_MIXED_MV)))
     {
         if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-            md->widthMB, md->heightMB, BPP_MVTYPEMB))
-            != VC1_STATUS_OK)
+                                         md->widthMB, md->heightMB, BPP_MVTYPEMB))
+                != VC1_STATUS_OK)
         {
             return status;
         }
     }
 
     if ((status = vc1_DecodeBitplane(ctxt, pInfo,
-        md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
+                                     md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
     {
         return status;
     }

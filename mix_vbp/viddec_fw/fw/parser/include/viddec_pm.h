@@ -27,7 +27,7 @@ typedef enum
     PM_INBAND_MESSAGES = 0x500,
     PM_EOS = 0x501,
     PM_DISCONTINUITY = 0x502,
-}pm_parse_state_t;
+} pm_parse_state_t;
 
 /* This is a temporary structure for first pass sc parsing. index tells us where we are in list of es buffers
    cur_es points to current es buffer we are parsing. */
@@ -37,7 +37,7 @@ typedef struct
     uint32_t cur_offset;
     uint32_t cur_size;
     viddec_input_buffer_t *cur_es;
-}viddec_pm_sc_cur_buf_t;
+} viddec_pm_sc_cur_buf_t;
 
 typedef struct
 {
@@ -46,7 +46,7 @@ typedef struct
     uint8_t frame_done;
     uint8_t first_buf_aligned;
     uint8_t using_next;
-}vidded_pm_pending_tags_t;
+} vidded_pm_pending_tags_t;
 
 /* This structure holds all necessary data required by parser manager for stream parsing.
  */
@@ -73,11 +73,11 @@ typedef struct
 #else
     uint32_t codec_data[MAX_CODEC_CXT_SIZE>>2];
 #endif
-}viddec_pm_cxt_t;
+} viddec_pm_cxt_t;
 
-/* 
+/*
  *
- * Functions used by Parser kernel 
+ * Functions used by Parser kernel
  *
  */
 

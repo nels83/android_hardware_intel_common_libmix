@@ -18,7 +18,7 @@ typedef struct
 {
     uint32_t stpos;
     uint32_t edpos;
-}viddec_pm_utils_au_bytepos_t;
+} viddec_pm_utils_au_bytepos_t;
 
 /* this structure is for storing all necessary information for list handling */
 typedef struct
@@ -30,7 +30,7 @@ typedef struct
     viddec_input_buffer_t sc_ibuf[MAX_IBUFS_PER_SC]; /* Place to store buffer descriptors */
     viddec_pm_utils_au_bytepos_t data[MAX_IBUFS_PER_SC]; /* place to store au byte positions */
     int32_t total_bytes;                 /* total bytes for current access unit including first sc prefix*/
-}viddec_pm_utils_list_t;
+} viddec_pm_utils_list_t;
 
 /* This function initialises the list to default values */
 void viddec_pm_utils_list_init(viddec_pm_utils_list_t *cxt);

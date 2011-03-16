@@ -34,19 +34,19 @@ uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state)
     phase = cxt->phase;
     cxt->sc_end_pos = -1;
     p_info = (viddec_mp4_parser_t *)pcxt;
- 
+
     /* parse until there is more data and start code not found */
-    while((data_left > 0) &&(phase < 3))
+    while ((data_left > 0) &&(phase < 3))
     {
         /* Check if we are byte aligned & phase=0, if thats the case we can check
            work at a time instead of byte*/
-        if(((((uint32_t)ptr) & 0x3) == 0) && (phase == 0))
+        if (((((uint32_t)ptr) & 0x3) == 0) && (phase == 0))
         {
-            while(data_left > 3)
+            while (data_left > 3)
             {
                 uint32_t data;
                 char mask1 = 0, mask2=0;
-                
+
                 data = *((uint32_t *)ptr);
 #ifndef MFDBIGENDIAN
                 data = SWAP_WORD(data);
@@ -55,9 +55,11 @@ uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state)
                 mask2 = (FIRST_STARTCODE_BYTE != (data & SC_BYTE_MASK1));
                 /* If second byte and fourth byte are not zero's then we cannot have a start code here as we need
                    two consecutive zero bytes for a start code pattern */
-                if(mask1 && mask2)
+                if (mask1 && mask2)
                 {/* Success so skip 4 bytes and start over */
-                    ptr+=4;size+=4;data_left-=4;
+                    ptr+=4;
+                    size+=4;
+                    data_left-=4;
                     continue;
                 }
                 else
@@ -66,28 +68,32 @@ uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state)
                 }
             }
         }
- 
+
         /* At this point either data is not on a word boundary or phase > 0 or On a word boundary but we detected
            two zero bytes in the word so we look one byte at a time*/
-        if(data_left > 0)
+        if (data_left > 0)
         {
-            if(*ptr == FIRST_STARTCODE_BYTE)
+            if (*ptr == FIRST_STARTCODE_BYTE)
             {/* Phase can be 3 only if third start code byte is found */
                 phase++;
-                ptr++;size++;data_left--;
-                if(phase > 2)
+                ptr++;
+                size++;
+                data_left--;
+                if (phase > 2)
                 {
                     phase = 2;
 
                     if ( (((uint32_t)ptr) & 0x3) == 0 )
                     {
-                        while( data_left > 3 )
+                        while ( data_left > 3 )
                         {
-                            if(*((uint32_t *)ptr) != 0)
+                            if (*((uint32_t *)ptr) != 0)
                             {
                                 break;
                             }
-                            ptr+=4;size+=4;data_left-=4;
+                            ptr+=4;
+                            size+=4;
+                            data_left-=4;
                         }
                     }
                 }
@@ -95,13 +101,13 @@ uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state)
             else
             {
                 uint8_t normal_sc=0, short_sc=0;
-                if(phase == 2)
+                if (phase == 2)
                 {
                     normal_sc = (*ptr == THIRD_STARTCODE_BYTE);
                     short_sc  = (p_info->ignore_scs == 0) && (SHORT_THIRD_STARTCODE_BYTE == ( *ptr & 0xFC));
                 }
 
-                if(!(normal_sc | short_sc))
+                if (!(normal_sc | short_sc))
                 {
                     phase = 0;
                 }
@@ -111,7 +117,7 @@ uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state)
                     phase = 3;
                     p_info->cur_sc_prefix = p_info->next_sc_prefix;
                     p_info->next_sc_prefix = (normal_sc) ? 1: 0;
-                    if(normal_sc)
+                    if (normal_sc)
                     {
                         p_info->ignore_scs=1;
                     }
@@ -125,11 +131,13 @@ uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state)
                         break;
                     }
                 }
-                ptr++;size++;data_left--;
+                ptr++;
+                size++;
+                data_left--;
             }
         }
     }
-    if((data_left > 0) && (phase == 3))
+    if ((data_left > 0) && (phase == 3))
     {
         cxt->sc_end_pos++;
         state->next_sc = cxt->buf[cxt->sc_end_pos];

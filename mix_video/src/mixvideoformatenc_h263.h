@@ -12,7 +12,6 @@
 #include "mixvideoformatenc.h"
 #include "mixvideoframe_private.h"
 
-G_BEGIN_DECLS
 
 #define MIX_VIDEO_ENC_H263_SURFACE_NUM       20
 
@@ -22,75 +21,78 @@ G_BEGIN_DECLS
 /*
  * Type macros.
  */
-#define MIX_TYPE_VIDEOFORMATENC_H263                  (mix_videoformatenc_h263_get_type ())
-#define MIX_VIDEOFORMATENC_H263(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOFORMATENC_H263, MixVideoFormatEnc_H263))
-#define MIX_IS_VIDEOFORMATENC_H263(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOFORMATENC_H263))
-#define MIX_VIDEOFORMATENC_H263_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOFORMATENC_H263, MixVideoFormatEnc_H263Class))
-#define MIX_IS_VIDEOFORMATENC_H263_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOFORMATENC_H263))
-#define MIX_VIDEOFORMATENC_H263_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOFORMATENC_H263, MixVideoFormatEnc_H263Class))
+#define MIX_VIDEOFORMATENC_H263(obj)                  (reinterpret_cast<MixVideoFormatEnc_H263*>(obj))
+#define MIX_IS_VIDEOFORMATENC_H263(obj)               ((NULL !=MIX_VIDEOFORMATENC_H263(obj)) ? TRUE : FALSE)
 
-typedef struct _MixVideoFormatEnc_H263 MixVideoFormatEnc_H263;
-typedef struct _MixVideoFormatEnc_H263Class MixVideoFormatEnc_H263Class;
+class MixVideoFormatEnc_H263 : public MixVideoFormatEnc {
+public:
+    MixVideoFormatEnc_H263();
+    virtual ~MixVideoFormatEnc_H263();
 
-struct _MixVideoFormatEnc_H263 {
-	/*< public > */
-	MixVideoFormatEnc parent;
+    virtual MIX_RESULT Initialize(
+        MixVideoConfigParamsEnc* config_params_enc,
+        MixFrameManager * frame_mgr,
+        MixBufferPool * input_buf_pool,
+        MixSurfacePool ** surface_pool,
+        MixUsrReqSurfacesInfo * requested_surface_info,
+        VADisplay va_display);
 
+    virtual MIX_RESULT Encode( MixBuffer * bufin[],
+                               int bufincnt, MixIOVec * iovout[], int iovoutcnt,
+                               MixVideoEncodeParams * encode_params);
 
-    	VABufferID      coded_buf[2];
-    	VABufferID      last_coded_buf;		
-    	VABufferID      seq_param_buf;
-    	VABufferID      pic_param_buf;
-    	VABufferID      slice_param_buf;	
-	VASurfaceID * ci_shared_surfaces;
-	VASurfaceID * surfaces;
-	guint surface_num;	
+    virtual MIX_RESULT Flush();
 
-	MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
-	MixVideoFrame  *ref_frame;  //reference frame
-	MixVideoFrame  *rec_frame;	//reconstructed frame;	
-	MixVideoFrame  *last_frame;	//last frame;
-#ifdef ANDROID
-        MixBuffer      *last_mix_buffer;
-#endif
+    virtual MIX_RESULT Deinitialize();
 
-	guint disable_deblocking_filter_idc;
-	guint slice_num;
-	guint va_rcmode; 
+    virtual MIX_RESULT GetMaxEncodedBufSize (uint *max_size);
 
-	guint encoded_frames;
-	gboolean pic_skipped;
+    /* Local Methods */
+private:
+    MIX_RESULT _process_encode (MixBuffer * bufin, MixIOVec * iovout);
+    MIX_RESULT _send_encode_command();
+    MIX_RESULT _send_seq_params();
+    MIX_RESULT _send_picture_parameter();
+    MIX_RESULT _send_slice_parameter();
+    MIX_RESULT _send_dynamic_bitrate();
+    MIX_RESULT _send_dynamic_framerate();
 
-	gboolean is_intra;
+public:
+    VABufferID coded_buf[2];
+    VABufferID last_coded_buf;
+    VABufferID seq_param_buf;
+    VABufferID pic_param_buf;
+    VABufferID slice_param_buf;
+    VASurfaceID * shared_surfaces;
+    VASurfaceID * surfaces;
+    uint surface_num;
+    uint shared_surfaces_cnt;
+    uint precreated_surfaces_cnt;
 
-	guint coded_buf_size;
-	guint coded_buf_index;
-		
+    MixVideoFrame *cur_frame;	//current input frame to be encoded;
+    MixVideoFrame *ref_frame;  //reference frame
+    MixVideoFrame *rec_frame;	//reconstructed frame;
+    MixVideoFrame *last_frame;	//last frame;
+    MixVideoFrame *lookup_frame;
+    MixBuffer *last_mix_buffer;
 
-	/*< public > */
+    uint disable_deblocking_filter_idc;
+    uint slice_num;
+    uint va_rcmode_h263;
+
+    uint encoded_frames;
+    bool pic_skipped;
+
+    bool is_intra;
+
+    uint coded_buf_size;
+    uint coded_buf_index;
+
+    uint8 ** usrptr;
+    uint alloc_surface_cnt;
 };
 
-/**
- * MixVideoFormatEnc_H263Class:
- *
- * MI-X Video object class
- */
-struct _MixVideoFormatEnc_H263Class {
-	/*< public > */
-	MixVideoFormatEncClass parent_class;
 
-	/* class members */
-
-	/*< public > */
-};
-
-/**
- * mix_videoformatenc_h263_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoformatenc_h263_get_type(void);
 
 /**
  * mix_videoformatenc_h263_new:
@@ -115,33 +117,8 @@ MixVideoFormatEnc_H263 *mix_videoformatenc_h263_ref(MixVideoFormatEnc_H263 * mix
  *
  * Decrement reference count of the object.
  */
-#define mix_videoformatenc_h263_unref(obj) g_object_unref (G_OBJECT(obj))
-
-/* Class Methods */
-
-/* MPEG-4:2 vmethods */
-MIX_RESULT mix_videofmtenc_h263_getcaps(MixVideoFormatEnc *mix, GString *msg);
-MIX_RESULT mix_videofmtenc_h263_initialize(MixVideoFormatEnc *mix, 
-				  MixVideoConfigParamsEnc * config_params_enc,
-				  MixFrameManager * frame_mgr,
-				  MixBufferPool * input_buf_pool,
-				  MixSurfacePool ** surface_pool,
-				  VADisplay va_display);
-MIX_RESULT mix_videofmtenc_h263_encode(MixVideoFormatEnc *mix, MixBuffer * bufin[],
-                gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
-	MixVideoEncodeParams * encode_params);
-MIX_RESULT mix_videofmtenc_h263_flush(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_h263_eos(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_h263_deinitialize(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_h263_get_max_encoded_buf_size (MixVideoFormatEnc *mix, guint * max_size);
-
-/* Local Methods */
-
-MIX_RESULT mix_videofmtenc_h263_process_encode (MixVideoFormatEnc_H263 *mix, MixBuffer * bufin, 
-	MixIOVec * iovout);
-MIX_RESULT mix_videofmtenc_h263_send_encode_command (MixVideoFormatEnc_H263 *mix);
-
-G_END_DECLS
+//#define mix_videoformatenc_h263_unref(obj) g_object_unref (G_OBJECT(obj))
+MixVideoFormatEnc_H263 *mix_videoformatenc_h263_unref(MixVideoFormatEnc_H263 * mix);
 
 #endif /* __MIX_VIDEOFORMATENC_H263_H__ */
 

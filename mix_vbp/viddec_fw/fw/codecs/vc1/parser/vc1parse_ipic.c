@@ -43,8 +43,8 @@ vc1_Status vc1_ParsePictureHeader_ProgressiveIpicture(void* ctxt, vc1_Info *pInf
     if (picLayerHeader->PTYPE == VC1_BI_FRAME)
     {
         if ((status = vc1_DecodeHuffmanPair(ctxt, VC1_BFRACTION_TBL,
-            &picLayerHeader->BFRACTION_NUM, &picLayerHeader->BFRACTION_DEN))
-            != VC1_STATUS_OK)
+                                            &picLayerHeader->BFRACTION_NUM, &picLayerHeader->BFRACTION_DEN))
+                != VC1_STATUS_OK)
         {
             return status;
         }

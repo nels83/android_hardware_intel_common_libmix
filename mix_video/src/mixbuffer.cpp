@@ -1,4 +1,4 @@
-/* 
+/*
  INTEL CONFIDENTIAL
  Copyright 2009 Intel Corporation All Rights Reserved.
  The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
@@ -33,17 +33,17 @@
 #include "mixbuffer.h"
 #include "mixbuffer_private.h"
 
-#define SAFE_FREE(p) if(p) { g_free(p); p = NULL; }
+#define SAFE_FREE(p) if(p) { free(p); p = NULL; }
 
 MixBuffer::MixBuffer()
-	:data(NULL)
-	,size(0)
-	,token(0)
-	,callback(NULL)
-	,pool(NULL) {
+        :data(NULL)
+        ,size(0)
+        ,token(0)
+        ,callback(NULL)
+        ,pool(NULL) {
 }
 
-MixBuffer::~MixBuffer(){
+MixBuffer::~MixBuffer() {
 }
 
 /**
@@ -54,14 +54,14 @@ MixBuffer::~MixBuffer(){
  * Copy duplicate of the object.
  */
 MixParams * MixBuffer::dup() const {
-	MixParams *ret = new MixBuffer();
-	if (NULL != ret) {
-		if (FALSE == copy(ret)) {
-			ret->Unref();
-			ret = NULL;
-		}
-	}
-	return ret;
+    MixParams *ret = new MixBuffer();
+    if (NULL != ret) {
+        if (FALSE == copy(ret)) {
+            ret->Unref();
+            ret = NULL;
+        }
+    }
+    return ret;
 }
 
 /**
@@ -71,74 +71,74 @@ MixParams * MixBuffer::dup() const {
  *
  * Copy instance data from @src to @target.
  */
-gboolean MixBuffer::copy(MixParams * target) const {
-	gboolean ret = FALSE;
-	MixBuffer * this_target = MIX_BUFFER(target);
-	if (NULL != this_target) {
-		this_target->data = data;
-		this_target->size = size;
-		this_target->token = token;
-		this_target->callback = callback;
-		ret = MixParams::copy(target);
-	}
-	return ret;
+bool MixBuffer::copy(MixParams * target) const {
+    bool ret = FALSE;
+    MixBuffer * this_target = MIX_BUFFER(target);
+    if (NULL != this_target) {
+        this_target->data = data;
+        this_target->size = size;
+        this_target->token = token;
+        this_target->callback = callback;
+        ret = MixParams::copy(target);
+    }
+    return ret;
 }
 
-gboolean MixBuffer::equal(MixParams * obj) const {
-	gboolean ret = FALSE;
-	MixBuffer * this_obj = MIX_BUFFER(obj);
-	if (NULL != this_obj) {
-		if (this_obj->data == data &&
-			this_obj->size == size &&
-			this_obj->token == token &&
-			this_obj->callback == callback) {
-			ret = MixParams::equal(this_obj);
-		}
-	}
-	return ret;
+bool MixBuffer::equal(MixParams * obj) const {
+    bool ret = FALSE;
+    MixBuffer * this_obj = MIX_BUFFER(obj);
+    if (NULL != this_obj) {
+        if (this_obj->data == data &&
+                this_obj->size == size &&
+                this_obj->token == token &&
+                this_obj->callback == callback) {
+            ret = MixParams::equal(this_obj);
+        }
+    }
+    return ret;
 }
 
 MixBuffer * mix_buffer_new(void) {
-	return new MixBuffer();
+    return new MixBuffer();
 }
 
 MixBuffer * mix_buffer_ref(MixBuffer * mix) {
-	if (NULL != mix)
-		mix->Ref();
-	return mix;
+    if (NULL != mix)
+        mix->Ref();
+    return mix;
 }
 
 
 
 MIX_RESULT mix_buffer_set_data(
-	MixBuffer * obj, guchar *data, guint size,
-	gulong token, MixBufferCallback callback) {
-	obj->data = data;
-	obj->size = size;
-	obj->token = token;
-	obj->callback = callback;
-	return MIX_RESULT_SUCCESS;
+    MixBuffer * obj, uchar *data, uint size,
+    ulong token, MixBufferCallback callback) {
+    obj->data = data;
+    obj->size = size;
+    obj->token = token;
+    obj->callback = callback;
+    return MIX_RESULT_SUCCESS;
 }
 
 MIX_RESULT mix_buffer_set_pool(MixBuffer *obj, MixBufferPool *pool) {
-	obj->pool = pool;
-	return MIX_RESULT_SUCCESS;
+    obj->pool = pool;
+    return MIX_RESULT_SUCCESS;
 }
 
 void mix_buffer_unref(MixBuffer * obj) {
-	
-	if (NULL != obj) {
-		gint newRefcount = obj->GetRefCount() - 1;
-		LOG_I( "after unref, refcount = %d\n", newRefcount);
-		// Unref through base class
-		obj->Unref();
-		if (1 == newRefcount) {
-			g_return_if_fail(obj->pool != NULL);
-			if (obj->callback) {
-				obj->callback(obj->token, obj->data);
-			}
-			mix_bufferpool_put(obj->pool, obj);
-		}
-	}
+
+    if (NULL != obj) {
+        int newRefcount = obj->GetRefCount() - 1;
+        LOG_I( "after unref, refcount = %d\n", newRefcount);
+        // Unref through base class
+        obj->Unref();
+        if (1 == newRefcount) {
+            return_if_fail(obj->pool != NULL);
+            if (obj->callback) {
+                obj->callback(obj->token, obj->data);
+            }
+            mix_bufferpool_put(obj->pool, obj);
+        }
+    }
 }
 

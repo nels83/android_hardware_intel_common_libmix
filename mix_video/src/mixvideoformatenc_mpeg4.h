@@ -12,9 +12,9 @@
 #include "mixvideoformatenc.h"
 #include "mixvideoframe_private.h"
 
-G_BEGIN_DECLS
 
-#define MIX_VIDEO_ENC_MPEG4_SURFACE_NUM       20
+
+#define MIX_VIDEO_ENC_MPEG4_SURFACE_NUM		20
 
 #define min(X,Y) (((X) < (Y)) ? (X) : (Y))
 #define max(X,Y) (((X) > (Y)) ? (X) : (Y))
@@ -22,75 +22,74 @@ G_BEGIN_DECLS
 /*
  * Type macros.
  */
-#define MIX_TYPE_VIDEOFORMATENC_MPEG4                  (mix_videoformatenc_mpeg4_get_type ())
-#define MIX_VIDEOFORMATENC_MPEG4(obj)                  (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOFORMATENC_MPEG4, MixVideoFormatEnc_MPEG4))
-#define MIX_IS_VIDEOFORMATENC_MPEG4(obj)               (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOFORMATENC_MPEG4))
-#define MIX_VIDEOFORMATENC_MPEG4_CLASS(klass)          (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOFORMATENC_MPEG4, MixVideoFormatEnc_MPEG4Class))
-#define MIX_IS_VIDEOFORMATENC_MPEG4_CLASS(klass)       (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOFORMATENC_MPEG4))
-#define MIX_VIDEOFORMATENC_MPEG4_GET_CLASS(obj)        (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOFORMATENC_MPEG4, MixVideoFormatEnc_MPEG4Class))
+#define MIX_VIDEOFORMATENC_MPEG4(obj) (reinterpret_cast<MixVideoFormatEnc_MPEG4*>(obj))
+#define MIX_IS_VIDEOFORMATENC_MPEG4(obj) (NULL != MIX_VIDEOFORMATENC_MPEG4(obj))
 
-typedef struct _MixVideoFormatEnc_MPEG4 MixVideoFormatEnc_MPEG4;
-typedef struct _MixVideoFormatEnc_MPEG4Class MixVideoFormatEnc_MPEG4Class;
+class MixVideoFormatEnc_MPEG4 : public MixVideoFormatEnc {
+public:
+    MixVideoFormatEnc_MPEG4();
+    virtual ~MixVideoFormatEnc_MPEG4();
 
-struct _MixVideoFormatEnc_MPEG4 {
-	/*< public > */
-	MixVideoFormatEnc parent;
+    /* MPEG-4:2 vmethods */
+    virtual MIX_RESULT Initialize(
+        MixVideoConfigParamsEnc* config_params_enc,
+        MixFrameManager * frame_mgr,
+        MixBufferPool * input_buf_pool,
+        MixSurfacePool ** surface_pool,
+        MixUsrReqSurfacesInfo * requested_surface_info,
+        VADisplay va_display);
+    virtual MIX_RESULT Encode( MixBuffer * bufin[],
+                               int bufincnt, MixIOVec * iovout[], int iovoutcnt,
+                               MixVideoEncodeParams * encode_params);
+    virtual MIX_RESULT Flush();
+    virtual MIX_RESULT Deinitialize();
+    virtual MIX_RESULT GetMaxEncodedBufSize (uint *max_size);
 
+protected:
+    /* Local Methods */
+    MIX_RESULT _process_encode (MixBuffer * bufin, MixIOVec * iovout);
+    MIX_RESULT _send_encode_command ();
+    MIX_RESULT _send_seq_params ();
+    MIX_RESULT _send_picture_parameter();
+    MIX_RESULT _send_slice_parameter();
 
-    	VABufferID      coded_buf[2];
-    	VABufferID      last_coded_buf;		
-    	VABufferID      seq_param_buf;
-    	VABufferID      pic_param_buf;
-    	VABufferID      slice_param_buf;	
-	VASurfaceID * ci_shared_surfaces;
-	VASurfaceID * surfaces;
-	guint surface_num;	
+public:
+    VABufferID coded_buf[2];
+    VABufferID last_coded_buf;
+    VABufferID seq_param_buf;
+    VABufferID pic_param_buf;
+    VABufferID slice_param_buf;
+    VASurfaceID * shared_surfaces;
+    VASurfaceID * surfaces;
+    uint surface_num;
+    uint shared_surfaces_cnt;
+    uint precreated_surfaces_cnt;
 
-	MixVideoFrame  *cur_frame;	//current input frame to be encoded;	
-	MixVideoFrame  *ref_frame;  //reference frame
-	MixVideoFrame  *rec_frame;	//reconstructed frame;	
-	MixVideoFrame  *last_frame;	//last frame;	
-	
+    MixVideoFrame *cur_frame;	//current input frame to be encoded;
+    MixVideoFrame *ref_frame;	//reference frame
+    MixVideoFrame *rec_frame;	//reconstructed frame;
+    MixVideoFrame *last_frame;	//last frame;
+    MixVideoFrame *lookup_frame;
 
-	guchar  profile_and_level_indication;
- 	guint fixed_vop_time_increment;
-	guint disable_deblocking_filter_idc;
-	
-	guint va_rcmode; 
+    MixBuffer *last_mix_buffer;
 
-	guint encoded_frames;
-	gboolean pic_skipped;
+    uchar profile_and_level_indication;
+    uint fixed_vop_time_increment;
+    uint disable_deblocking_filter_idc;
 
-	gboolean is_intra;
+    uint va_rcmode_mpeg4;
 
-	guint coded_buf_size;
-	guint coded_buf_index;
-		
+    uint encoded_frames;
+    bool pic_skipped;
 
-	/*< public > */
+    bool is_intra;
+
+    uint coded_buf_size;
+    uint coded_buf_index;
+
+    uint8 ** usrptr;
+    uint alloc_surface_cnt;
 };
-
-/**
- * MixVideoFormatEnc_MPEG4Class:
- *
- * MI-X Video object class
- */
-struct _MixVideoFormatEnc_MPEG4Class {
-	/*< public > */
-	MixVideoFormatEncClass parent_class;
-
-	/* class members */
-
-	/*< public > */
-};
-
-/**
- * mix_videoformatenc_mpeg4_get_type:
- * @returns: type
- *
- * Get the type of object.
- */
-GType mix_videoformatenc_mpeg4_get_type(void);
 
 /**
  * mix_videoformatenc_mpeg4_new:
@@ -115,33 +114,6 @@ MixVideoFormatEnc_MPEG4 *mix_videoformatenc_mpeg4_ref(MixVideoFormatEnc_MPEG4 * 
  *
  * Decrement reference count of the object.
  */
-#define mix_videoformatenc_mpeg4_unref(obj) g_object_unref (G_OBJECT(obj))
-
-/* Class Methods */
-
-/* MPEG-4:2 vmethods */
-MIX_RESULT mix_videofmtenc_mpeg4_getcaps(MixVideoFormatEnc *mix, GString *msg);
-MIX_RESULT mix_videofmtenc_mpeg4_initialize(MixVideoFormatEnc *mix, 
-				  MixVideoConfigParamsEnc * config_params_enc,
-				  MixFrameManager * frame_mgr,
-				  MixBufferPool * input_buf_pool,
-				  MixSurfacePool ** surface_pool,
-				  VADisplay va_display);
-MIX_RESULT mix_videofmtenc_mpeg4_encode(MixVideoFormatEnc *mix, MixBuffer * bufin[],
-                gint bufincnt, MixIOVec * iovout[], gint iovoutcnt,
-	MixVideoEncodeParams * encode_params);
-MIX_RESULT mix_videofmtenc_mpeg4_flush(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_mpeg4_eos(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_mpeg4_deinitialize(MixVideoFormatEnc *mix);
-MIX_RESULT mix_videofmtenc_mpeg4_get_max_encoded_buf_size (MixVideoFormatEnc *mix, guint * max_size);
-
-/* Local Methods */
-
-MIX_RESULT mix_videofmtenc_mpeg4_process_encode (MixVideoFormatEnc_MPEG4 *mix, MixBuffer * bufin, 
-	MixIOVec * iovout);
-MIX_RESULT mix_videofmtenc_mpeg4_send_encode_command (MixVideoFormatEnc_MPEG4 *mix);
-
-G_END_DECLS
+MixVideoFormatEnc_MPEG4 *mix_videoformatenc_mpeg4_unref(MixVideoFormatEnc_MPEG4 * mix);
 
 #endif /* __MIX_VIDEOFORMATENC_MPEG4_H__ */
-

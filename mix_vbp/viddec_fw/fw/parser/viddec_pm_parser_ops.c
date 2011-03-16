@@ -16,8 +16,10 @@ int32_t viddec_pm_get_bits(void *parent, uint32_t *data, uint32_t num_bits)
 
     cxt = (viddec_pm_cxt_t *)parent;
     ret = viddec_pm_utils_bstream_peekbits(&(cxt->getbits), data, num_bits, 1);
-    if(ret == -1)
-    {DEB("FAILURE!!!! getbits returned %d\n", ret);}
+    if (ret == -1)
+    {
+        DEB("FAILURE!!!! getbits returned %d\n", ret);
+    }
 
     return ret;
 }
@@ -27,7 +29,7 @@ int32_t viddec_pm_peek_bits(void *parent, uint32_t *data, uint32_t num_bits)
     int32_t ret = 1;
     viddec_pm_cxt_t *cxt;
 
-    cxt = (viddec_pm_cxt_t *)parent;    
+    cxt = (viddec_pm_cxt_t *)parent;
     ret = viddec_pm_utils_bstream_peekbits(&(cxt->getbits), data, num_bits, 0);
     return ret;
 }
@@ -48,13 +50,13 @@ int32_t viddec_pm_append_workitem(void *parent, viddec_workload_item_t *item, ui
     int32_t ret = 1;
     viddec_pm_cxt_t *cxt;
     viddec_emitter_wkld *emit;
-    
+
     cxt = (viddec_pm_cxt_t *)parent;
     emit = (next) ? &(cxt->emitter.next) : &(cxt->emitter.cur);
     ret = viddec_emit_append(emit, item);
     return ret;
 #else
-	return 1;
+    return 1;
 #endif
 }
 
@@ -68,7 +70,7 @@ int32_t viddec_pm_get_au_pos(void *parent, uint32_t *bit, uint32_t *byte, uint8_
     viddec_pm_utils_bstream_get_au_offsets(&(cxt->getbits), bit, byte, is_emul);
 
     return ret;
-    
+
 }
 
 static inline int32_t viddec_pm_append_restof_pixel_data(void *parent, uint32_t cur_wkld)
@@ -78,11 +80,11 @@ static inline int32_t viddec_pm_append_restof_pixel_data(void *parent, uint32_t 
     uint32_t start=0, b_off=0;
     uint8_t emul=0;
     viddec_workload_item_t wi;
-    
+
     cxt = (viddec_pm_cxt_t *)parent;
     viddec_pm_utils_skip_if_current_is_emulation(&(cxt->getbits));
     viddec_pm_utils_bstream_get_au_offsets(&(cxt->getbits), &b_off, &start, &emul);
-    if(emul) start--;
+    if (emul) start--;
 
     wi.vwi_type = VIDDEC_WORKLOAD_PIXEL_ES;
     wi.es.es_flags = 0;
@@ -123,7 +125,7 @@ int32_t viddec_pm_is_nomoredata(void *parent)
     int32_t ret=0;
     viddec_pm_cxt_t *cxt;
 
-    cxt = (viddec_pm_cxt_t *)parent;    
+    cxt = (viddec_pm_cxt_t *)parent;
     ret = viddec_pm_utils_bstream_nomorerbspdata(&(cxt->getbits));
     return ret;
 }

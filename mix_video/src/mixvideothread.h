@@ -14,28 +14,28 @@
 
 class MixVideoMutex {
 public:
-	enum {
-		PRIVATE = 0,
-		SHARED = 1
-	};
-	
-	MixVideoMutex();
-	MixVideoMutex(const char* name);
-	MixVideoMutex(int type, const char* name = NULL);
-	~MixVideoMutex();
+    enum {
+        PRIVATE = 0,
+        SHARED = 1
+    };
 
-	// lock or unlock the mutex
-	int lock();
-	void unlock();
-	// lock if possible; returns 0 on success, error otherwise
-	int tryLock();
+    MixVideoMutex();
+    MixVideoMutex(const char* name);
+    MixVideoMutex(int type, const char* name = NULL);
+    ~MixVideoMutex();
+
+    // lock or unlock the mutex
+    int lock();
+    void unlock();
+    // lock if possible; returns 0 on success, error otherwise
+    int tryLock();
 private:
-	// A mutex cannot be copied
-	MixVideoMutex(const MixVideoMutex&);
-	MixVideoMutex& operator = (const MixVideoMutex&);
+    // A mutex cannot be copied
+    MixVideoMutex(const MixVideoMutex&);
+    MixVideoMutex& operator = (const MixVideoMutex&);
 
 private:
-	pthread_mutex_t mMutex;
+    pthread_mutex_t mMutex;
 };
 
 

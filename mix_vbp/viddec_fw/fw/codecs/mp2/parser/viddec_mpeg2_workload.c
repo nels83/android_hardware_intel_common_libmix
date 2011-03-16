@@ -1,16 +1,16 @@
 /**
  * viddec_mpeg2_workload.c
  * -----------------------
- * This file packs the data parsed and stored in the context into workload and 
+ * This file packs the data parsed and stored in the context into workload and
  * emits it out. The current list of workitems emitter into the workload
  * include:
- * 
+ *
  * - DMEM - Register Data
  * - Past and Future picture references
  * - Quantization matrix data
- * 
+ *
  * Slice data gets appended into the workload in viddec_mpeg2_parse.c
- * 
+ *
  * Also, the frame attributes are updated in the workload.
  */
 
@@ -105,7 +105,7 @@ static void viddec_mpeg2_pack_qmat(struct viddec_mpeg2_parser *parser)
 
     for (index=0; index<MPEG2_QUANT_MAT_SIZE; index++)
     {
-        qmat_packed[index] = 
+        qmat_packed[index] =
             (((uint32_t)qmat_unpacked[(index<<2)+0])<< 24) |
             (((uint32_t)qmat_unpacked[(index<<2)+1])<< 16) |
             (((uint32_t)qmat_unpacked[(index<<2)+2])<<  8) |
@@ -200,7 +200,7 @@ static inline void mpeg2_emit_frameid(void *parent, int32_t wl_type, uint8_t fla
 static inline void mpeg2_send_ref_reorder(void *parent, uint8_t flag)
 {
     viddec_workload_item_t wi;
-    
+
     wi.vwi_type = VIDDEC_WORKLOAD_REFERENCE_FRAME_REORDER;
     wi.ref_reorder.ref_table_offset = 0;
     /* Reorder index 1 to index 0 only */
@@ -216,19 +216,19 @@ static void viddec_mpeg2_manage_ref(void *parent, void *ctxt)
 {
     int32_t frame_id = 1;
     int32_t frame_type;
-    
+
     /* Get MPEG2 Parser context */
     struct viddec_mpeg2_parser *parser = (struct viddec_mpeg2_parser *) ctxt;
     viddec_workload_t *wl = viddec_mpeg2_get_header( parent, parser->mpeg2_use_next_workload );
     wl->is_reference_frame = 0;
-    
+
     /* Identify the frame type (I, P or B) */
     frame_type = parser->info.pic_hdr.picture_coding_type;
 
     /* Send reference frame information based on whether the picture is a */
     /* frame picture or field picture. */
     if ((!parser->mpeg2_picture_interlaced)
-        || ((parser->mpeg2_picture_interlaced) && (parser->mpeg2_first_field)))
+            || ((parser->mpeg2_picture_interlaced) && (parser->mpeg2_first_field)))
     {
         /* Check if we need to reorder frame references/send frame for display */
         /* in case of I or P type */
@@ -242,22 +242,22 @@ static void viddec_mpeg2_manage_ref(void *parent, void *ctxt)
         }
 
         /* Send reference frame workitems */
-        switch(frame_type)
+        switch (frame_type)
         {
-            case MPEG2_PC_TYPE_I:
-            {
-                break;
-            }
-            case MPEG2_PC_TYPE_P:
-            {
-                mpeg2_emit_frameid(parent, VIDDEC_WORKLOAD_MPEG2_REF_PAST, parser->mpeg2_use_next_workload);
-                break;
-            }
-            case MPEG2_PC_TYPE_B:
-            {
-                mpeg2_emit_frameid(parent, VIDDEC_WORKLOAD_MPEG2_REF_PAST, parser->mpeg2_use_next_workload);
-                mpeg2_emit_frameid(parent, VIDDEC_WORKLOAD_MPEG2_REF_FUTURE, parser->mpeg2_use_next_workload);
-            }
+        case MPEG2_PC_TYPE_I:
+        {
+            break;
+        }
+        case MPEG2_PC_TYPE_P:
+        {
+            mpeg2_emit_frameid(parent, VIDDEC_WORKLOAD_MPEG2_REF_PAST, parser->mpeg2_use_next_workload);
+            break;
+        }
+        case MPEG2_PC_TYPE_B:
+        {
+            mpeg2_emit_frameid(parent, VIDDEC_WORKLOAD_MPEG2_REF_PAST, parser->mpeg2_use_next_workload);
+            mpeg2_emit_frameid(parent, VIDDEC_WORKLOAD_MPEG2_REF_FUTURE, parser->mpeg2_use_next_workload);
+        }
         }
 
         /* Set reference information updated flag */
@@ -437,20 +437,20 @@ void viddec_mpeg2_emit_workload(void *parent, void *ctxt)
 
     /* Send MPEG2 DMEM workitems */
     viddec_mpeg2_append_workitems(parent,
-                                   (uint32_t *) &parser->wi,
-                                   VIDDEC_WORKLOAD_MPEG2_DMEM,
-                                   MPEG2_NUM_DMEM_WL_ITEMS,
-                                   parser->mpeg2_use_next_workload);
+                                  (uint32_t *) &parser->wi,
+                                  VIDDEC_WORKLOAD_MPEG2_DMEM,
+                                  MPEG2_NUM_DMEM_WL_ITEMS,
+                                  parser->mpeg2_use_next_workload);
     parser->mpeg2_wl_status |= MPEG2_WL_DMEM_DATA;
     MPEG2_DEB("Adding %d items as DMEM Data.\n", MPEG2_NUM_DMEM_WL_ITEMS);
 
     /* Send MPEG2 Quantization Matrix workitems, if updated */
     viddec_mpeg2_pack_qmat(parser);
     viddec_mpeg2_append_workitems(parent,
-                                   (uint32_t *) parser->wi.qmat,
-                                   VIDDEC_WORKLOAD_MPEG2_QMAT,
-                                   MPEG2_NUM_QMAT_WL_ITEMS,
-                                   parser->mpeg2_use_next_workload);
+                                  (uint32_t *) parser->wi.qmat,
+                                  VIDDEC_WORKLOAD_MPEG2_QMAT,
+                                  MPEG2_NUM_QMAT_WL_ITEMS,
+                                  parser->mpeg2_use_next_workload);
     MPEG2_DEB("Adding %d items as QMAT Data.\n", MPEG2_NUM_QMAT_WL_ITEMS);
 
     /* Manage reference frames */

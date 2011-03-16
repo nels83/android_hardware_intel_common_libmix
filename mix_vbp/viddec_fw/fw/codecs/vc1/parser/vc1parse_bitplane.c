@@ -184,7 +184,7 @@ static void vc1_Norm2ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
         col[1] = 2;   /* (i+1)%width; */
 
         // Consider special case where width is 1
-        if(width == 1)
+        if (width == 1)
         {
             col[0] = 0;   /* i%width; */
             row[0] = 1;   /* i/width; */
@@ -192,7 +192,7 @@ static void vc1_Norm2ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
             row[1] = 2;   /* (i+1)/width; */
         }
     }
-    
+
     /* decode every pair of bits in natural scan order */
     for (i = (width*height) & 1; i < (width*height/2)*2; i += 2)
     {
@@ -218,7 +218,7 @@ static void vc1_Norm2ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
             {
                 put_bit(1, col[0],row[0], width, height, pBitplane->invert,
                         pBitplane->databits);
-            	put_bit(1, col[1],row[1], width, height, pBitplane->invert,
+                put_bit(1, col[1],row[1], width, height, pBitplane->invert,
                         pBitplane->databits);
             }
             else
@@ -228,21 +228,21 @@ static void vc1_Norm2ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
                 {
                     put_bit(1, col[0],row[0], width, height, pBitplane->invert,
                             pBitplane->databits);
-            	    put_bit(0, col[1],row[1], width, height, pBitplane->invert,
+                    put_bit(0, col[1],row[1], width, height, pBitplane->invert,
                             pBitplane->databits);
                 }
                 else
                 {
                     put_bit(0, col[0],row[0], width, height, pBitplane->invert,
                             pBitplane->databits);
-            	    put_bit(1, col[1],row[1], width, height, pBitplane->invert,
+                    put_bit(1, col[1],row[1], width, height, pBitplane->invert,
                             pBitplane->databits);
                 }
             }
         }
 
         // Consider special case where width is 1
-        if(width == 1)
+        if (width == 1)
         {
             row[0] += 2;
             row[1] += 2;
@@ -252,7 +252,7 @@ static void vc1_Norm2ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
             col[0] += 2;   /* i%width; */
             if ( col[0] >= width )
             {
-		// For odd sizes, col[0] can alternatively start at 0 and 1
+                // For odd sizes, col[0] can alternatively start at 0 and 1
                 col[0] -= width;
                 row[0]++;
             }
@@ -260,7 +260,7 @@ static void vc1_Norm2ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
             col[1] += 2;   /* (i+1)%width; */
             if ( col[1] >= width )
             {
-		// For odd sizes, col[1] can alternatively start at 0 and 1
+                // For odd sizes, col[1] can alternatively start at 0 and 1
                 col[1] -= width;
                 row[1]++;
             }
@@ -376,12 +376,12 @@ static void vc1_Norm6ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
 
         //if (1 == ColSkip)
         {
-            for(j = 0; j < height; j++)
+            for (j = 0; j < height; j++)
             {
-			int32_t Value = 0;
-			if (1 == ColSkip) VC1_GET_BITS(1, Value);
-			
-			put_bit(Value, i, j, width, height,pBitplane->invert,pBitplane->databits);
+                int32_t Value = 0;
+                if (1 == ColSkip) VC1_GET_BITS(1, Value);
+
+                put_bit(Value, i, j, width, height,pBitplane->invert,pBitplane->databits);
             }
         }
     }
@@ -394,10 +394,10 @@ static void vc1_Norm6ModeDecode(void* ctxt, vc1_Bitplane *pBitplane,
         {
             for (i = ResidualX; i < width; i++)
             {
-				int32_t Value = 0;
-				if (1 == RowSkip) VC1_GET_BITS(1, Value);
-				
-				put_bit(Value, i, j, width, height,pBitplane->invert,pBitplane->databits);
+                int32_t Value = 0;
+                if (1 == RowSkip) VC1_GET_BITS(1, Value);
+
+                put_bit(Value, i, j, width, height,pBitplane->invert,pBitplane->databits);
             }
         }
     }
@@ -423,7 +423,7 @@ int initBitplane(vc1_Bitplane *pBitplane,uint32_t width, uint32_t height)
     numDword = ((width + 31)>>5) *  height;
     numDword += numDword & 1; /* add 1 in case numDword is odd */
 
-    for (i=0;i<numDword;i++) pBitplane->databits[i] = 0;
+    for (i=0; i<numDword; i++) pBitplane->databits[i] = 0;
     return(numDword);
 }
 
@@ -432,7 +432,7 @@ int initBitplane(vc1_Bitplane *pBitplane,uint32_t width, uint32_t height)
  *    width: width in MB unit
  *    height: height in MB unit
  */
-vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo, 
+vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
                               uint32_t width, uint32_t height, vc1_bpp_type_t bpnum)
 {
     uint32_t i, j;
@@ -442,7 +442,7 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
     vc1_Bitplane bp;
     vc1_Bitplane *bpp = &bp;
 
-    // By default, set imode to raw 
+    // By default, set imode to raw
     pInfo->metadata.bp_raw[bpnum - VIDDEC_WORKLOAD_VC1_BITPLANE0] = true;
 
     // bitplane data would be temporarily stored in the vc1 context
@@ -519,16 +519,16 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
                     VC1_GET_BITS(1, tempValue);
                     put_bit( tempValue, i, j, width, height, bpp->invert, bpp->databits);
                 }
-            } 
+            }
             else if (bpp->invert) { // fill column with ones
                 for (j = 0; j < height; j++) {
                     put_bit( 0, i, j, width, height, bpp->invert, bpp->databits);
                 }
-            }//end for else  
+            }//end for else
         }
     }
 
-    if(bpp->imode != VC1_BITPLANE_RAW_MODE)
+    if (bpp->imode != VC1_BITPLANE_RAW_MODE)
     {
         uint32_t* pl;
         int sizeinbytes,nitems,i;
@@ -544,10 +544,10 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
 
         // How many payloads must be generated
         nitems = (sizeinbytes + (sizeof(wi.data.data_payload) - 1)) /
-            sizeof(wi.data.data_payload);
+                 sizeof(wi.data.data_payload);
 
         // Dump DMEM to an array of workitems
-        for( i = 0; i < nitems; i++ )
+        for ( i = 0; i < nitems; i++ )
         {
             wi.vwi_type           =  bpnum;
             wi.data.data_offset   = (char *)pl - (char *)bit_dw; // offset within struct
@@ -562,153 +562,153 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
 
 #ifdef VBP
     {
-      viddec_pm_cxt_t     *cxt    = (viddec_pm_cxt_t *)ctxt;
-      vc1_viddec_parser_t *parser = (vc1_viddec_parser_t *)(cxt->codec_data);
+        viddec_pm_cxt_t     *cxt    = (viddec_pm_cxt_t *)ctxt;
+        vc1_viddec_parser_t *parser = (vc1_viddec_parser_t *)(cxt->codec_data);
 
-      if (biplaneSz > 4096)
-      {
-        /* bigger than we got, so let's bail with a non meaningful error. */
-        return VC1_STATUS_ERROR;
-      }
-      
-      /* At this point bp contains the information we need for the bit-plane */
-      /* bpnum is the enumeration that tells us which bitplane this is for.  */
-      /* pInfo->picLayerHeader.ACPRED is one of the bitplanes I need to fill.*/
-      switch (bpnum)
-      {
+        if (biplaneSz > 4096)
+        {
+            /* bigger than we got, so let's bail with a non meaningful error. */
+            return VC1_STATUS_ERROR;
+        }
+
+        /* At this point bp contains the information we need for the bit-plane */
+        /* bpnum is the enumeration that tells us which bitplane this is for.  */
+        /* pInfo->picLayerHeader.ACPRED is one of the bitplanes I need to fill.*/
+        switch (bpnum)
+        {
         case VIDDEC_WORKLOAD_VC1_BITPLANE0:
-          if (pInfo->picLayerHeader.PTYPE == VC1_B_FRAME)
-          {
-            if(bp.imode != VC1_BITPLANE_RAW_MODE)
+            if (pInfo->picLayerHeader.PTYPE == VC1_B_FRAME)
             {
-              pInfo->picLayerHeader.FORWARDMB.invert = bp.invert;
-              pInfo->picLayerHeader.FORWARDMB.imode = bp.imode;
-              for (i = 0; i < biplaneSz; i++)
-              {
-                parser->bp_forwardmb[i] = bp.databits[i];
-              }
-              pInfo->picLayerHeader.FORWARDMB.databits = parser->bp_forwardmb;
+                if (bp.imode != VC1_BITPLANE_RAW_MODE)
+                {
+                    pInfo->picLayerHeader.FORWARDMB.invert = bp.invert;
+                    pInfo->picLayerHeader.FORWARDMB.imode = bp.imode;
+                    for (i = 0; i < biplaneSz; i++)
+                    {
+                        parser->bp_forwardmb[i] = bp.databits[i];
+                    }
+                    pInfo->picLayerHeader.FORWARDMB.databits = parser->bp_forwardmb;
+                }
+                else
+                {
+                    pInfo->picLayerHeader.raw_FORWARDMB = 1;
+                }
             }
-            else
+            if ( (pInfo->picLayerHeader.PTYPE == VC1_I_FRAME)
+                    || (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME) )
             {
-              pInfo->picLayerHeader.raw_FORWARDMB = 1;
+                if (bp.imode != VC1_BITPLANE_RAW_MODE)
+                {
+                    pInfo->picLayerHeader.ACPRED.invert = bp.invert;
+                    pInfo->picLayerHeader.ACPRED.imode = bp.imode;
+                    for (i = 0; i < biplaneSz; i++)
+                    {
+                        parser->bp_acpred[i] = bp.databits[i];
+                    }
+                    pInfo->picLayerHeader.ACPRED.databits = parser->bp_acpred;
+                }
+                else
+                {
+                    pInfo->picLayerHeader.raw_ACPRED = 1;
+                }
             }
-          }
-          if ( (pInfo->picLayerHeader.PTYPE == VC1_I_FRAME)
-                || (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME) )
-          {
-            if(bp.imode != VC1_BITPLANE_RAW_MODE)
+            if (pInfo->picLayerHeader.PTYPE == VC1_P_FRAME)
             {
-              pInfo->picLayerHeader.ACPRED.invert = bp.invert;
-              pInfo->picLayerHeader.ACPRED.imode = bp.imode;
-              for (i = 0; i < biplaneSz; i++)
-              {
-                parser->bp_acpred[i] = bp.databits[i];
-              }
-              pInfo->picLayerHeader.ACPRED.databits = parser->bp_acpred;
+                if (bp.imode != VC1_BITPLANE_RAW_MODE)
+                {
+                    pInfo->picLayerHeader.MVTYPEMB.invert = bp.invert;
+                    pInfo->picLayerHeader.MVTYPEMB.imode = bp.imode;
+                    for (i = 0; i < biplaneSz; i++)
+                    {
+                        parser->bp_mvtypemb[i] = bp.databits[i];
+                    }
+                    pInfo->picLayerHeader.MVTYPEMB.databits = parser->bp_mvtypemb;
+                }
+                else
+                {
+                    pInfo->picLayerHeader.raw_MVTYPEMB = 1;
+                }
             }
-            else
-            {
-              pInfo->picLayerHeader.raw_ACPRED = 1;
-            }
-          }
-          if (pInfo->picLayerHeader.PTYPE == VC1_P_FRAME)
-          {
-            if(bp.imode != VC1_BITPLANE_RAW_MODE)
-            {
-              pInfo->picLayerHeader.MVTYPEMB.invert = bp.invert;
-              pInfo->picLayerHeader.MVTYPEMB.imode = bp.imode;
-              for (i = 0; i < biplaneSz; i++)
-              {
-                parser->bp_mvtypemb[i] = bp.databits[i];
-              }
-              pInfo->picLayerHeader.MVTYPEMB.databits = parser->bp_mvtypemb;
-            }
-            else
-            {
-              pInfo->picLayerHeader.raw_MVTYPEMB = 1;
-            }
-          }
-          break;
+            break;
         case VIDDEC_WORKLOAD_VC1_BITPLANE1:
-          if ( (pInfo->picLayerHeader.PTYPE == VC1_I_FRAME)
-                || (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME) )
-          {
-            if(bp.imode != VC1_BITPLANE_RAW_MODE)
+            if ( (pInfo->picLayerHeader.PTYPE == VC1_I_FRAME)
+                    || (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME) )
             {
-              pInfo->picLayerHeader.OVERFLAGS.invert = bp.invert;
-              pInfo->picLayerHeader.OVERFLAGS.imode = bp.imode;
-              for (i = 0; i < biplaneSz; i++)
-              {
-                parser->bp_overflags[i] = bp.databits[i];
-              }
-              pInfo->picLayerHeader.OVERFLAGS.databits = parser->bp_overflags;
+                if (bp.imode != VC1_BITPLANE_RAW_MODE)
+                {
+                    pInfo->picLayerHeader.OVERFLAGS.invert = bp.invert;
+                    pInfo->picLayerHeader.OVERFLAGS.imode = bp.imode;
+                    for (i = 0; i < biplaneSz; i++)
+                    {
+                        parser->bp_overflags[i] = bp.databits[i];
+                    }
+                    pInfo->picLayerHeader.OVERFLAGS.databits = parser->bp_overflags;
+                }
+                else
+                {
+                    pInfo->picLayerHeader.raw_OVERFLAGS = 1;
+                }
             }
-            else
+            if ( (pInfo->picLayerHeader.PTYPE == VC1_P_FRAME)
+                    || (pInfo->picLayerHeader.PTYPE == VC1_B_FRAME) )
             {
-              pInfo->picLayerHeader.raw_OVERFLAGS = 1;
+                if (bp.imode != VC1_BITPLANE_RAW_MODE)
+                {
+                    pInfo->picLayerHeader.SKIPMB.invert = bp.invert;
+                    pInfo->picLayerHeader.SKIPMB.imode = bp.imode;
+                    for (i = 0; i < biplaneSz; i++)
+                    {
+                        parser->bp_skipmb[i] = bp.databits[i];
+                    }
+                    pInfo->picLayerHeader.SKIPMB.databits = parser->bp_skipmb;
+                }
+                else
+                {
+                    pInfo->picLayerHeader.raw_SKIPMB = 1;
+                }
             }
-          }
-          if ( (pInfo->picLayerHeader.PTYPE == VC1_P_FRAME)
-                || (pInfo->picLayerHeader.PTYPE == VC1_B_FRAME) )
-          {
-            if(bp.imode != VC1_BITPLANE_RAW_MODE)
-            {
-              pInfo->picLayerHeader.SKIPMB.invert = bp.invert;
-              pInfo->picLayerHeader.SKIPMB.imode = bp.imode;
-              for (i = 0; i < biplaneSz; i++)
-              {
-                parser->bp_skipmb[i] = bp.databits[i];
-              }
-              pInfo->picLayerHeader.SKIPMB.databits = parser->bp_skipmb;
-            }
-            else
-            {
-              pInfo->picLayerHeader.raw_SKIPMB = 1;
-            }
-          }
-          break;
+            break;
         case VIDDEC_WORKLOAD_VC1_BITPLANE2:
-          if ( (pInfo->picLayerHeader.PTYPE == VC1_P_FRAME)
-                || (pInfo->picLayerHeader.PTYPE == VC1_B_FRAME) )
-          {
-            if(bp.imode != VC1_BITPLANE_RAW_MODE)
+            if ( (pInfo->picLayerHeader.PTYPE == VC1_P_FRAME)
+                    || (pInfo->picLayerHeader.PTYPE == VC1_B_FRAME) )
             {
-              pInfo->picLayerHeader.DIRECTMB.invert = bp.invert;
-              pInfo->picLayerHeader.DIRECTMB.imode = bp.imode;
-              for (i = 0; i < biplaneSz; i++)
-              {
-                parser->bp_directmb[i] = bp.databits[i];
-              }
-              pInfo->picLayerHeader.DIRECTMB.databits = parser->bp_directmb;
+                if (bp.imode != VC1_BITPLANE_RAW_MODE)
+                {
+                    pInfo->picLayerHeader.DIRECTMB.invert = bp.invert;
+                    pInfo->picLayerHeader.DIRECTMB.imode = bp.imode;
+                    for (i = 0; i < biplaneSz; i++)
+                    {
+                        parser->bp_directmb[i] = bp.databits[i];
+                    }
+                    pInfo->picLayerHeader.DIRECTMB.databits = parser->bp_directmb;
+                }
+                else
+                {
+                    pInfo->picLayerHeader.raw_DIRECTMB = 1;
+                }
             }
-            else
+            if ( (pInfo->picLayerHeader.PTYPE == VC1_I_FRAME)
+                    || (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME) )
             {
-              pInfo->picLayerHeader.raw_DIRECTMB = 1;
+                if (bp.imode != VC1_BITPLANE_RAW_MODE)
+                {
+                    pInfo->picLayerHeader.FIELDTX.invert = bp.invert;
+                    pInfo->picLayerHeader.FIELDTX.imode = bp.imode;
+                    for (i = 0; i < biplaneSz; i++)
+                    {
+                        parser->bp_fieldtx[i] = bp.databits[i];
+                    }
+                    pInfo->picLayerHeader.FIELDTX.databits = parser->bp_fieldtx;
+                }
+                else
+                {
+                    pInfo->picLayerHeader.raw_FIELDTX = 1;
+                }
             }
-          }
-          if ( (pInfo->picLayerHeader.PTYPE == VC1_I_FRAME)
-                || (pInfo->picLayerHeader.PTYPE == VC1_BI_FRAME) )
-          {
-            if(bp.imode != VC1_BITPLANE_RAW_MODE)
-            {
-              pInfo->picLayerHeader.FIELDTX.invert = bp.invert;
-              pInfo->picLayerHeader.FIELDTX.imode = bp.imode;
-              for (i = 0; i < biplaneSz; i++)
-              {
-                parser->bp_fieldtx[i] = bp.databits[i];
-              }
-              pInfo->picLayerHeader.FIELDTX.databits = parser->bp_fieldtx;
-            }
-            else
-            {
-              pInfo->picLayerHeader.raw_FIELDTX = 1;
-            }
-          }
-          break;
-      }
+            break;
+        }
     }
 #endif
-    
+
     return status;
 }

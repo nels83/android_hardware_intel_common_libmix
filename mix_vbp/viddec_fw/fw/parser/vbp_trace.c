@@ -13,15 +13,15 @@
 
 void vbp_trace_util(const char* cat, const char* fun, int line, const char* format, ...)
 {
-	if (NULL == cat || NULL == fun || NULL == format)
-		return;
-				
-	printf("%s %s(#%d): ", cat, fun, line);
-	va_list args;
-	va_start(args, format);
-	vprintf(format, args);
-	va_end(args);
-	printf("\n");
+    if (NULL == cat || NULL == fun || NULL == format)
+        return;
+
+    printf("%s %s(#%d): ", cat, fun, line);
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+    printf("\n");
 }
 
 #endif

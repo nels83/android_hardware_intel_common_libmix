@@ -15,24 +15,24 @@ uint32_t viddec_fw_mp4_populate_attr(viddec_workload_t *wl, viddec_mp4_parser_t 
 
     attr->cont_size.width = vol->video_object_layer_width;
     attr->cont_size.height = vol->video_object_layer_height;
- 
+
     // Translate vop_coding_type
-    switch(vol->VideoObjectPlane.vop_coding_type)
+    switch (vol->VideoObjectPlane.vop_coding_type)
     {
-        case MP4_VOP_TYPE_B:
-            attr->frame_type = VIDDEC_FRAME_TYPE_B;
-            break;
-        case MP4_VOP_TYPE_P:
-            attr->frame_type = VIDDEC_FRAME_TYPE_P;
-            break;
-        case MP4_VOP_TYPE_S:
-            attr->frame_type = VIDDEC_FRAME_TYPE_S;
-            break;
-        case MP4_VOP_TYPE_I:
-            attr->frame_type = VIDDEC_FRAME_TYPE_I;
-            break;
-        default:
-            break;
+    case MP4_VOP_TYPE_B:
+        attr->frame_type = VIDDEC_FRAME_TYPE_B;
+        break;
+    case MP4_VOP_TYPE_P:
+        attr->frame_type = VIDDEC_FRAME_TYPE_P;
+        break;
+    case MP4_VOP_TYPE_S:
+        attr->frame_type = VIDDEC_FRAME_TYPE_S;
+        break;
+    case MP4_VOP_TYPE_I:
+        attr->frame_type = VIDDEC_FRAME_TYPE_I;
+        break;
+    default:
+        break;
     } // switch on vop_coding_type
 
     attr->mpeg4.top_field_first = vol->VideoObjectPlane.top_field_first;
@@ -168,18 +168,18 @@ uint32_t viddec_fw_mp4_insert_sprite_workitem(void *parent, viddec_mp4_parser_t 
     uint8_t warp_index = 0;
     int i, j;
 
-    if(!vol->sprite_info.no_of_sprite_warping_points)
+    if (!vol->sprite_info.no_of_sprite_warping_points)
         return result;
 
     no_of_sprite_workitems = (vol->sprite_info.no_of_sprite_warping_points > 3) ? 2 : 1;
 
-    for(i=0; i<no_of_sprite_workitems; i++)
+    for (i=0; i<no_of_sprite_workitems; i++)
     {
         memset(&sprite_info, 0, sizeof(viddec_fw_mp4_sprite_trajectory_t));
-    
-        for(j=0; j<no_of_entries_per_item; j++)
+
+        for (j=0; j<no_of_entries_per_item; j++)
         {
-            if(warp_index < vol->sprite_info.no_of_sprite_warping_points)
+            if (warp_index < vol->sprite_info.no_of_sprite_warping_points)
             {
                 viddec_fw_mp4_set_warping_point_index(sprite_info.warping_mv_code[j], warp_index);
                 viddec_fw_mp4_set_warping_mv_code_du(sprite_info.warping_mv_code[j], vop->warping_mv_code_du[warp_index]);
@@ -187,7 +187,7 @@ uint32_t viddec_fw_mp4_insert_sprite_workitem(void *parent, viddec_mp4_parser_t 
             }
             else
             {
-               sprite_info.warping_mv_code[j] = 0xF << 28;
+                sprite_info.warping_mv_code[j] = 0xF << 28;
             }
             warp_index++;
         }
@@ -228,16 +228,16 @@ uint32_t viddec_fw_mp4_insert_qmat(void *parent, uint8_t intra_quant_flag, uint3
     // No of items = (64/4 Dwords / 3 entries per workload item)
     // 64 8b entries => 64 * 8 / 32 DWORDS => 64/4 DWORDS => 16 DWORDS
     // Each item can store 3 DWORDS, 16 DWORDS => 16/3 items => 6 items
-    for(i=0; i<6; i++)
+    for (i=0; i<6; i++)
     {
         memset(&wi, 0, sizeof(viddec_workload_item_t));
 
-        if(intra_quant_flag)
+        if (intra_quant_flag)
             wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_IQUANT;
         else
             wi.vwi_type = (workload_item_type)VIDDEC_WORKLOAD_MP4_NIQUANT;
 
-        if(i == 6)
+        if (i == 6)
         {
             wi.vwi_payload[0] = qmat[0];
             wi.vwi_payload[1] = 0;
@@ -262,12 +262,12 @@ uint32_t viddec_fw_mp4_insert_inversequant_workitem(void *parent, mp4_VOLQuant_m
 {
     uint32_t result = MP4_STATUS_OK;
 
-    if(qmat->load_intra_quant_mat)
+    if (qmat->load_intra_quant_mat)
     {
         result = viddec_fw_mp4_insert_qmat(parent, true, (uint32_t *) &(qmat->intra_quant_mat));
     }
 
-    if(qmat->load_nonintra_quant_mat)
+    if (qmat->load_nonintra_quant_mat)
     {
         result = viddec_fw_mp4_insert_qmat(parent, false, (uint32_t *) &(qmat->nonintra_quant_mat));
     }
@@ -331,39 +331,39 @@ uint32_t viddec_fw_mp4_emit_workload(void *parent, void *ctxt)
     result = viddec_fw_mp4_insert_sprite_workitem(parent, parser);
     result = viddec_fw_mp4_insert_inversequant_workitem(parent, &(parser->info.VisualObject.VideoObject.quant_mat_info));
 
-    if(parser->info.VisualObject.VideoObject.short_video_header)
-      result = viddec_fw_mp4_insert_vpsh_workitem(parent, parser);
+    if (parser->info.VisualObject.VideoObject.short_video_header)
+        result = viddec_fw_mp4_insert_vpsh_workitem(parent, parser);
 
-    if(!parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coded)
+    if (!parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coded)
         wl->is_reference_frame |= WORKLOAD_SKIPPED_FRAME;
-    
+
     // Send reference re-order tag for all reference frame types
     if (parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coding_type != MP4_VOP_TYPE_B)
     {
         result = viddec_fw_mp4_insert_reorder_workitem(parent);
     }
-    
+
     // Handle vop_coding_type based information
-    switch(parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coding_type)
+    switch (parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coding_type)
     {
-        case MP4_VOP_TYPE_B:
-            result = viddec_fw_mp4_insert_bvop_workitem(parent, parser);
-            result = viddec_fw_mp4_insert_past_frame_workitem(parent);
-            result = viddec_fw_mp4_insert_future_frame_workitem(parent);
-            break;
-        case MP4_VOP_TYPE_P:
-        case MP4_VOP_TYPE_S:
-            result = viddec_fw_mp4_insert_past_frame_workitem(parent);
-            // Deliberate fall-thru to type I
-        case MP4_VOP_TYPE_I:
-            wl->is_reference_frame |= WORKLOAD_REFERENCE_FRAME | (1 & WORKLOAD_REFERENCE_FRAME_BMASK);
-            // Swap reference information
-            parser->ref_frame[VIDDEC_MP4_INDX_2] = parser->ref_frame[VIDDEC_MP4_INDX_1];
-            parser->ref_frame[VIDDEC_MP4_INDX_1] = parser->ref_frame[VIDDEC_MP4_INDX_0];
-            break;
-            break;
-        default:
-            break;
+    case MP4_VOP_TYPE_B:
+        result = viddec_fw_mp4_insert_bvop_workitem(parent, parser);
+        result = viddec_fw_mp4_insert_past_frame_workitem(parent);
+        result = viddec_fw_mp4_insert_future_frame_workitem(parent);
+        break;
+    case MP4_VOP_TYPE_P:
+    case MP4_VOP_TYPE_S:
+        result = viddec_fw_mp4_insert_past_frame_workitem(parent);
+        // Deliberate fall-thru to type I
+    case MP4_VOP_TYPE_I:
+        wl->is_reference_frame |= WORKLOAD_REFERENCE_FRAME | (1 & WORKLOAD_REFERENCE_FRAME_BMASK);
+        // Swap reference information
+        parser->ref_frame[VIDDEC_MP4_INDX_2] = parser->ref_frame[VIDDEC_MP4_INDX_1];
+        parser->ref_frame[VIDDEC_MP4_INDX_1] = parser->ref_frame[VIDDEC_MP4_INDX_0];
+        break;
+        break;
+    default:
+        break;
     } // switch on vop_coding_type
 
     result = viddec_pm_append_pixeldata(parent);

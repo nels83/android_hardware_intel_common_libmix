@@ -24,45 +24,45 @@
 
 class MixVideoFormat_VC1 : public MixVideoFormat {
 public:
-	MixVideoFormat_VC1();
-	virtual ~MixVideoFormat_VC1();
+    MixVideoFormat_VC1();
+    virtual ~MixVideoFormat_VC1();
 
-	virtual MIX_RESULT Initialize(
-		MixVideoConfigParamsDec * config_params,
-		MixFrameManager * frame_mgr,
-		MixBufferPool * input_buf_pool,
-		MixSurfacePool ** surface_pool,
-		VADisplay va_display);
-	virtual MIX_RESULT Decode(
-		MixBuffer * bufin[], gint bufincnt, 
-		MixVideoDecodeParams * decode_params);
-	virtual MIX_RESULT Flush();
-	virtual MIX_RESULT EndOfStream();
+    virtual MIX_RESULT Initialize(
+        MixVideoConfigParamsDec * config_params,
+        MixFrameManager * frame_mgr,
+        MixBufferPool * input_buf_pool,
+        MixSurfacePool ** surface_pool,
+        VADisplay va_display);
+    virtual MIX_RESULT Decode(
+        MixBuffer * bufin[], int bufincnt,
+        MixVideoDecodeParams * decode_params);
+    virtual MIX_RESULT Flush();
+    virtual MIX_RESULT EndOfStream();
 
 private:
-	MIX_RESULT _handle_ref_frames(
-		enum _picture_type frame_type, MixVideoFrame * current_frame);
-	MIX_RESULT _process_decode(
-		vbp_data_vc1 *data, guint64 timestamp, gboolean discontinuity);
-	MIX_RESULT _release_input_buffers(guint64 timestamp);
-	MIX_RESULT _update_seq_header(
-		MixVideoConfigParamsDec* config_params, MixIOVec *header);
-	MIX_RESULT _update_config_params(vbp_data_vc1 *data);
-	MIX_RESULT _decode_a_picture(
-	vbp_data_vc1 *data, int pic_index, MixVideoFrame *frame);
+    MIX_RESULT _handle_ref_frames(
+        enum _picture_type frame_type, MixVideoFrame * current_frame);
+    MIX_RESULT _process_decode(
+        vbp_data_vc1 *data, uint64 timestamp, bool discontinuity);
+    MIX_RESULT _release_input_buffers(uint64 timestamp);
+    MIX_RESULT _update_seq_header(
+        MixVideoConfigParamsDec* config_params, MixIOVec *header);
+    MIX_RESULT _update_config_params(vbp_data_vc1 *data);
+    MIX_RESULT _decode_a_picture(
+        vbp_data_vc1 *data, int pic_index, MixVideoFrame *frame);
 #ifdef YUVDUMP
-	MIX_RESULT _get_Img_from_surface (MixVideoFrame * frame);
+    MIX_RESULT _get_Img_from_surface (MixVideoFrame * frame);
 #endif
 
 
 public:
-	/*< public > */
+    /*< public > */
 
-	/*< private > */
-	MixVideoFrame * reference_frames[2];
-	gboolean haveBframes;
-	gboolean loopFilter;
-	MixVideoFrame * lastFrame;
+    /*< private > */
+    MixVideoFrame * reference_frames[2];
+    bool haveBframes;
+    bool loopFilter;
+    MixVideoFrame * lastFrame;
 };
 
 /**

@@ -29,8 +29,8 @@ vc1_Status vc1_ParsePictureHeader_ProgressiveBpicture(void* ctxt, vc1_Info *pInf
     vc1_PictureLayerHeader *picLayerHeader = &pInfo->picLayerHeader;
 
     if ((status = vc1_DecodeHuffmanPair(ctxt, VC1_BFRACTION_TBL,
-        &picLayerHeader->BFRACTION_NUM, &picLayerHeader->BFRACTION_DEN)) !=
-        VC1_STATUS_OK)
+                                        &picLayerHeader->BFRACTION_NUM, &picLayerHeader->BFRACTION_DEN)) !=
+            VC1_STATUS_OK)
     {
         return status;
     }
@@ -55,16 +55,16 @@ vc1_Status vc1_ParsePictureHeader_ProgressiveBpicture(void* ctxt, vc1_Info *pInf
 
     VC1_GET_BITS9(1, picLayerHeader->MVMODE);
     picLayerHeader->MVMODE = (picLayerHeader->MVMODE == 1) ?
-        VC1_MVMODE_1MV : VC1_MVMODE_HPELBI_1MV;
+                             VC1_MVMODE_1MV : VC1_MVMODE_HPELBI_1MV;
 
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-        md->widthMB, md->heightMB, BPP_DIRECTMB)) != VC1_STATUS_OK)
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, md->heightMB, BPP_DIRECTMB)) != VC1_STATUS_OK)
     {
         return VC1_STATUS_OK;
     }
 
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-        md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
     {
         return status;
     }

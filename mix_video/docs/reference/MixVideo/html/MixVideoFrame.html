@@ -48,21 +48,21 @@
 <a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *     <a class="link" href="MixVideoFrame.html#mix-videoframe-ref" title="mix_videoframe_ref ()">mix_videoframe_ref</a>                  (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj);
 void                <a class="link" href="MixVideoFrame.html#mix-videoframe-unref" title="mix_videoframe_unref ()">mix_videoframe_unref</a>                (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj);
 MIX_RESULT          <a class="link" href="MixVideoFrame.html#mix-videoframe-set-frame-id" title="mix_videoframe_set_frame_id ()">mix_videoframe_set_frame_id</a>         (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         gulong frame_id);
+                                                         ulong frame_id);
 MIX_RESULT          <a class="link" href="MixVideoFrame.html#mix-videoframe-get-frame-id" title="mix_videoframe_get_frame_id ()">mix_videoframe_get_frame_id</a>         (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         gulong *frame_id);
+                                                         ulong *frame_id);
 MIX_RESULT          <a class="link" href="MixVideoFrame.html#mix-videoframe-set-ci-frame-idx" title="mix_videoframe_set_ci_frame_idx ()">mix_videoframe_set_ci_frame_idx</a>     (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         guint ci_frame_idx);
+                                                         uint ci_frame_idx);
 MIX_RESULT          <a class="link" href="MixVideoFrame.html#mix-videoframe-get-ci-frame-idx" title="mix_videoframe_get_ci_frame_idx ()">mix_videoframe_get_ci_frame_idx</a>     (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         guint *ci_frame_idx);
+                                                         uint *ci_frame_idx);
 MIX_RESULT          <a class="link" href="MixVideoFrame.html#mix-videoframe-set-timestamp" title="mix_videoframe_set_timestamp ()">mix_videoframe_set_timestamp</a>        (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         guint64 timestamp);
+                                                         uint64 timestamp);
 MIX_RESULT          <a class="link" href="MixVideoFrame.html#mix-videoframe-get-timestamp" title="mix_videoframe_get_timestamp ()">mix_videoframe_get_timestamp</a>        (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         guint64 *timestamp);
+                                                         uint64 *timestamp);
 MIX_RESULT          <a class="link" href="MixVideoFrame.html#mix-videoframe-set-discontinuity" title="mix_videoframe_set_discontinuity ()">mix_videoframe_set_discontinuity</a>    (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         gboolean discontinuity);
+                                                         bool discontinuity);
 MIX_RESULT          <a class="link" href="MixVideoFrame.html#mix-videoframe-get-discontinuity" title="mix_videoframe_get_discontinuity ()">mix_videoframe_get_discontinuity</a>    (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         gboolean *discontinuity);
+                                                         bool *discontinuity);
 </pre>
 </div>
 <div class="refsect1" title="Object Hierarchy">
@@ -104,23 +104,23 @@ needs to display/re-display this frame.
 
 	
 	/* ID associated with the decoded frame */
-	gulong frame_id;
+	ulong frame_id;
 	
 	/* ID associated with the CI frame 
 	 * (used for encode only) */	
-	guint ci_frame_idx;	
+	uint ci_frame_idx;	
 	
 	/* 64 bit timestamp. For decode, 
 	 * this is preserved from the corresponding 
 	 * MixVideoDecodeParams field. For encode, 
 	 * this is created during encoding. */
-	guint64 timestamp;
+	uint64 timestamp;
 	
 	/* Flag indicating whether there 
 	 * is a discontinuity. For decode, 
 	 * this is preserved from the corresponding 
 	 * MixVideoDecodeParams field. */
-	gboolean discontinuity;
+	bool discontinuity;
 
 	/* Reserved for future use */ 
 	void *reserved1;
@@ -194,7 +194,7 @@ Decrement reference count of the object.</p>
 <div class="refsect2" title="mix_videoframe_set_frame_id ()">
 <a name="mix-videoframe-set-frame-id"></a><h3>mix_videoframe_set_frame_id ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoframe_set_frame_id         (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         gulong frame_id);</pre>
+                                                         ulong frame_id);</pre>
 <p>
 Set Frame ID</p>
 <div class="variablelist"><table border="0">
@@ -222,7 +222,7 @@ Set Frame ID</p>
 <div class="refsect2" title="mix_videoframe_get_frame_id ()">
 <a name="mix-videoframe-get-frame-id"></a><h3>mix_videoframe_get_frame_id ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoframe_get_frame_id         (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         gulong *frame_id);</pre>
+                                                         ulong *frame_id);</pre>
 <p>
 Get Frame ID</p>
 <div class="variablelist"><table border="0">
@@ -250,7 +250,7 @@ Get Frame ID</p>
 <div class="refsect2" title="mix_videoframe_set_ci_frame_idx ()">
 <a name="mix-videoframe-set-ci-frame-idx"></a><h3>mix_videoframe_set_ci_frame_idx ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoframe_set_ci_frame_idx     (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         guint ci_frame_idx);</pre>
+                                                         uint ci_frame_idx);</pre>
 <p>
 Set CI Frame ID</p>
 <div class="variablelist"><table border="0">
@@ -278,7 +278,7 @@ Set CI Frame ID</p>
 <div class="refsect2" title="mix_videoframe_get_ci_frame_idx ()">
 <a name="mix-videoframe-get-ci-frame-idx"></a><h3>mix_videoframe_get_ci_frame_idx ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoframe_get_ci_frame_idx     (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         guint *ci_frame_idx);</pre>
+                                                         uint *ci_frame_idx);</pre>
 <p>
 Get CI Frame ID</p>
 <div class="variablelist"><table border="0">
@@ -306,7 +306,7 @@ Get CI Frame ID</p>
 <div class="refsect2" title="mix_videoframe_set_timestamp ()">
 <a name="mix-videoframe-set-timestamp"></a><h3>mix_videoframe_set_timestamp ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoframe_set_timestamp        (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         guint64 timestamp);</pre>
+                                                         uint64 timestamp);</pre>
 <p>
 Set Frame timestamp</p>
 <div class="variablelist"><table border="0">
@@ -334,7 +334,7 @@ Set Frame timestamp</p>
 <div class="refsect2" title="mix_videoframe_get_timestamp ()">
 <a name="mix-videoframe-get-timestamp"></a><h3>mix_videoframe_get_timestamp ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoframe_get_timestamp        (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         guint64 *timestamp);</pre>
+                                                         uint64 *timestamp);</pre>
 <p>
 Get Frame timestamp</p>
 <div class="variablelist"><table border="0">
@@ -362,7 +362,7 @@ Get Frame timestamp</p>
 <div class="refsect2" title="mix_videoframe_set_discontinuity ()">
 <a name="mix-videoframe-set-discontinuity"></a><h3>mix_videoframe_set_discontinuity ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoframe_set_discontinuity    (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         gboolean discontinuity);</pre>
+                                                         bool discontinuity);</pre>
 <p>
 Get discontinuity flag</p>
 <div class="variablelist"><table border="0">
@@ -390,7 +390,7 @@ Get discontinuity flag</p>
 <div class="refsect2" title="mix_videoframe_get_discontinuity ()">
 <a name="mix-videoframe-get-discontinuity"></a><h3>mix_videoframe_get_discontinuity ()</h3>
 <pre class="programlisting">MIX_RESULT          mix_videoframe_get_discontinuity    (<a class="link" href="MixVideoFrame.html" title="MixVideoFrame">MixVideoFrame</a> *obj,
-                                                         gboolean *discontinuity);</pre>
+                                                         bool *discontinuity);</pre>
 <p>
 Get discontinuity flag</p>
 <div class="variablelist"><table border="0">

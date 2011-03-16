@@ -6,21 +6,21 @@
 
 int32_t viddec_emit_flush_current_wkld(viddec_emitter *emit)
 {
-    if(emit->cur.data != NULL)
+    if (emit->cur.data != NULL)
     {
         emit->cur.data->num_items = emit->cur.num_items;
     }
-    if(emit->next.data != NULL)
+    if (emit->next.data != NULL)
     {
         emit->next.data->num_items = emit->next.num_items;
     }
     emit->cur.num_items = emit->next.num_items;
     emit->next.num_items = 0;
-    if(emit->cur.data != NULL)
+    if (emit->cur.data != NULL)
     {
         emit->cur.data->result = emit->cur.result;
     }
-    if(emit->next.data != NULL)
+    if (emit->next.data != NULL)
     {
         emit->next.data->result = emit->next.result;
     }
@@ -32,7 +32,7 @@ int32_t viddec_emit_flush_current_wkld(viddec_emitter *emit)
 int32_t viddec_emit_append(viddec_emitter_wkld *cxt, viddec_workload_item_t *item)
 {
     int32_t ret =0;
-    if((cxt->num_items < cxt->max_items) && (cxt->data != NULL))
+    if ((cxt->num_items < cxt->max_items) && (cxt->data != NULL))
     {
         cxt->data->item[cxt->num_items] = *item;
         cxt->num_items++;
@@ -54,7 +54,7 @@ int32_t viddec_emit_contr_tag(viddec_emitter *emit, viddec_input_buffer_t *ibuf,
 
     cur_wkld = (using_next == 0)? &(emit->cur):&(emit->next);
 
-    if(!incomplete)
+    if (!incomplete)
         item.vwi_type           = VIDDEC_WORKLOAD_IBUF_DONE;
     else
         item.vwi_type           = VIDDEC_WORKLOAD_IBUF_CONTINUED;

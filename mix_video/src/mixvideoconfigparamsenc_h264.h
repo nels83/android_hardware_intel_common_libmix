@@ -13,13 +13,13 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideodef.h"
 
 
-
 /**
-* MIX_VIDEOCONFIGPARAMSENC_H264:
-* @obj: object to be type-casted.
+* MIX_TYPE_VIDEOCONFIGPARAMSENC_H264:
+*
+* Get type of class.
 */
-//#define MIX_VIDEOCONFIGPARAMSENC_H264(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_H264, MixVideoConfigParamsEncH264))
 #define MIX_VIDEOCONFIGPARAMSENC_H264(obj) (reinterpret_cast<MixVideoConfigParamsEncH264*>(obj))
+
 
 /**
 * MIX_IS_VIDEOCONFIGPARAMSENC_H264:
@@ -27,79 +27,61 @@ No license under any patent, copyright, trade secret or other intellectual prope
 *
 * Checks if the given object is an instance of #MixVideoConfigParamsEncH264
 */
-//#define MIX_IS_VIDEOCONFIGPARAMSENC_H264(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_H264))
+#define MIX_IS_VIDEOCONFIGPARAMSENC_H264(obj) ((NULL != MIX_VIDEOCONFIGPARAMSENC_H264(obj)) ? TRUE : FALSE)
 
-/**
-* MIX_VIDEOCONFIGPARAMSENC_H264_CLASS:
-* @klass: class to be type-casted.
-*/
-//#define MIX_VIDEOCONFIGPARAMSENC_H264_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC_H264, MixVideoConfigParamsEncH264Class))
-
-/**
-* MIX_IS_VIDEOCONFIGPARAMSENC_H264_CLASS:
-* @klass: a class.
-*
-* Checks if the given class is #MixVideoConfigParamsEncH264Class
-*/
-//#define MIX_IS_VIDEOCONFIGPARAMSENC_H264_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC_H264))
-
-/**
-* MIX_VIDEOCONFIGPARAMSENC_H264_GET_CLASS:
-* @obj: a #MixParams object.
-*
-* Get the class instance of the object.
-*/
-//#define MIX_VIDEOCONFIGPARAMSENC_H264_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC_H264, MixVideoConfigParamsEncH264Class))
-
-
-//typedef struct _MixVideoConfigParamsEncH264Class MixVideoConfigParamsEncH264Class;
 
 /**
 * MixVideoConfigParamsEncH264:
 *
 * MI-X VideoConfig Parameter object
 */
-class MixVideoConfigParamsEncH264 : public MixVideoConfigParamsEnc
-{
+class MixVideoConfigParamsEncH264 : public MixVideoConfigParamsEnc {
+public:
+    MixVideoConfigParamsEncH264();
+    virtual ~MixVideoConfigParamsEncH264();
+    virtual bool copy(MixParams *target) const;
+    virtual bool equal(MixParams* obj) const;
+    virtual MixParams* dup() const;
+
 public:
 
-  /*< public > */
+    /* TODO: Add H.264 configuration paramters */
 
-  /* TODO: Add H.264 configuration paramters */
+    /* The basic unit size used by rate control */
+    uint basic_unit_size;
 
-  /* The basic unit size used by rate control */
-  guint basic_unit_size;
+    /* Number of slices in one frame */
+    uint slice_num;
 
-  /* Number of slices in one frame */
-  guint slice_num;
+    /* Number of slices in one I frame */
+    uint I_slice_num;
 
-  /* Number of slices in one I frame */
-  guint I_slice_num;
+    /* Number of slices in one P frame */
+    uint P_slice_num;
 
-  /* Number of slices in one P frame */
-  guint P_slice_num;
+    /* enable/disable deblocking */
+    uint8 disable_deblocking_filter_idc;
 
-  /* enable/disable deblocking */
-  guint8 disable_deblocking_filter_idc;
+    /* enable/disable vui */
+    uint8 vui_flag;
 
-  /* delimiter_type */
-  MixDelimiterType delimiter_type;
+    /* delimiter_type */
+    MixDelimiterType delimiter_type;
 
-  guint idr_interval;
+    uint idr_interval;
 
-  /* Reserved for future use */
-  void *reserved1;
+    /* Reserved for future use */
+    void *reserved1;
 
-  /* Reserved for future use */
-  void *reserved2;
+    /* Reserved for future use */
+    void *reserved2;
 
-  /* Reserved for future use */
-  void *reserved3;
+    /* Reserved for future use */
+    void *reserved3;
 
-  /* Reserved for future use */
-  void *reserved4;
+    /* Reserved for future use */
+    void *reserved4;
 };
-
 
 
 /**
@@ -116,8 +98,8 @@ MixVideoConfigParamsEncH264 *mix_videoconfigparamsenc_h264_new (void);
 *
 * Add reference count.
 */
-MixVideoConfigParamsEncH264
-  * mix_videoconfigparamsenc_h264_ref (MixVideoConfigParamsEncH264 * mix);
+MixVideoConfigParamsEncH264*
+mix_videoconfigparamsenc_h264_ref (MixVideoConfigParamsEncH264 * mix);
 
 /**
 * mix_videoconfigparamsenc_h264_unref:
@@ -140,8 +122,8 @@ MixVideoConfigParamsEncH264
  *
  * Set The basic unit size used by rate control
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_set_bus (MixVideoConfigParamsEncH264 * obj,
-		guint basic_unit_size);
+MIX_RESULT mix_videoconfigparamsenc_h264_set_bus (
+    MixVideoConfigParamsEncH264 * obj, uint basic_unit_size);
 
 /**
  * mix_videoconfigparamsenc_h264_get_bus:
@@ -151,8 +133,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_bus (MixVideoConfigParamsEncH264 * 
  *
  * Get The basic unit size used by rate control
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_get_bus (MixVideoConfigParamsEncH264 * obj,
-		guint * basic_unit_size);
+MIX_RESULT mix_videoconfigparamsenc_h264_get_bus (
+    MixVideoConfigParamsEncH264 * obj, uint * basic_unit_size);
 
 /**
  * mix_videoconfigparamsenc_h264_set_dlk:
@@ -162,8 +144,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_bus (MixVideoConfigParamsEncH264 * 
  *
  * Set the The flag to enable/disable deblocking
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_set_dlk (MixVideoConfigParamsEncH264 * obj,
-		guint disable_deblocking_filter_idc);
+MIX_RESULT mix_videoconfigparamsenc_h264_set_dlk (
+    MixVideoConfigParamsEncH264 * obj, uint disable_deblocking_filter_idc);
 
 /**
  * mix_videoconfigparamsenc_h264_get_dlk:
@@ -173,8 +155,31 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_dlk (MixVideoConfigParamsEncH264 * 
  *
  * Get the The flag to enable/disable deblocking
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_get_dlk (MixVideoConfigParamsEncH264 * obj,
-		guint * disable_deblocking_filter_idc);
+MIX_RESULT mix_videoconfigparamsenc_h264_get_dlk (
+    MixVideoConfigParamsEncH264 * obj, uint * disable_deblocking_filter_idc);
+
+/**
+ * mix_videoconfigparamsenc_h264_set_vui_flag:
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @vui_flag: The flag to enable/disable vui
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set the The flag to enable/disable vui
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_set_vui_flag (
+    MixVideoConfigParamsEncH264 * obj, uint8 vui_flag);
+
+/**
+ * mix_videoconfigparamsenc_h264_get_vui_flag
+ * @obj: #MixVideoConfigParamsEncH264 object
+ * @vui_flag: vui_flag to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get the The flag to enable/disable vui_flag
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_get_vui_flag (
+    MixVideoConfigParamsEncH264 * obj, uint8 * vui_flag);
+
 
 /**
  * mix_videoconfigparamsenc_h264_set_slice_num:
@@ -184,8 +189,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_dlk (MixVideoConfigParamsEncH264 * 
  *
  * Set the Number of slices in one frame
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_set_slice_num(MixVideoConfigParamsEncH264 * obj,
-		guint slice_num);
+MIX_RESULT mix_videoconfigparamsenc_h264_set_slice_num(
+    MixVideoConfigParamsEncH264 * obj, uint slice_num);
 
 /**
  * mix_videoconfigparamsenc_h264_get_slice_num:
@@ -195,8 +200,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_slice_num(MixVideoConfigParamsEncH2
  *
  * Get the Number of slices in one frame
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_get_slice_num(MixVideoConfigParamsEncH264 * obj,
-		guint * slice_num);
+MIX_RESULT mix_videoconfigparamsenc_h264_get_slice_num(
+    MixVideoConfigParamsEncH264 * obj, uint * slice_num);
 
 
 /**
@@ -207,8 +212,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_slice_num(MixVideoConfigParamsEncH2
  *
  * Set the Number of slices in one I frame
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_set_I_slice_num(MixVideoConfigParamsEncH264 * obj,
-		guint I_slice_num);
+MIX_RESULT mix_videoconfigparamsenc_h264_set_I_slice_num(
+    MixVideoConfigParamsEncH264 * obj, uint I_slice_num);
 
 /**
  * mix_videoconfigparamsenc_h264_get_I_slice_num:
@@ -218,8 +223,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_I_slice_num(MixVideoConfigParamsEnc
  *
  * Get the Number of slices in one I frame
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_get_I_slice_num(MixVideoConfigParamsEncH264 * obj,
-		guint * I_slice_num);
+MIX_RESULT mix_videoconfigparamsenc_h264_get_I_slice_num(
+    MixVideoConfigParamsEncH264 * obj, uint * I_slice_num);
 
 /**
  * mix_videoconfigparamsenc_h264_set_P_slice_num:
@@ -229,8 +234,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_I_slice_num(MixVideoConfigParamsEnc
  *
  * Set the Number of slices in one P frame
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_set_P_slice_num(MixVideoConfigParamsEncH264 * obj,
-		guint P_slice_num);
+MIX_RESULT mix_videoconfigparamsenc_h264_set_P_slice_num(
+    MixVideoConfigParamsEncH264 * obj, uint P_slice_num);
 
 /**
  * mix_videoconfigparamsenc_h264_get_P_slice_num:
@@ -240,8 +245,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_P_slice_num(MixVideoConfigParamsEnc
  *
  * Get the Number of slices in one P frame
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_get_P_slice_num(MixVideoConfigParamsEncH264 * obj,
-		guint * P_slice_num);
+MIX_RESULT mix_videoconfigparamsenc_h264_get_P_slice_num(
+    MixVideoConfigParamsEncH264 * obj, uint * P_slice_num);
 
 /**
  * mix_videoconfigparamsenc_h264_set_delimiter_type:
@@ -251,8 +256,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_P_slice_num(MixVideoConfigParamsEnc
  *
  * Set Delimiter type
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_set_delimiter_type (MixVideoConfigParamsEncH264 * obj,
-		MixDelimiterType delimiter_type);
+MIX_RESULT mix_videoconfigparamsenc_h264_set_delimiter_type (
+    MixVideoConfigParamsEncH264 * obj, MixDelimiterType delimiter_type);
 
 /**
  * mix_videoconfigparamsenc_h264_get_delimiter_type:
@@ -262,8 +267,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_delimiter_type (MixVideoConfigParam
  *
  * Get Delimiter type
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_get_delimiter_type (MixVideoConfigParamsEncH264 * obj,
-		MixDelimiterType * delimiter_type);
+MIX_RESULT mix_videoconfigparamsenc_h264_get_delimiter_type (
+    MixVideoConfigParamsEncH264 * obj, MixDelimiterType * delimiter_type);
 
 
 /**
@@ -274,8 +279,8 @@ MIX_RESULT mix_videoconfigparamsenc_h264_get_delimiter_type (MixVideoConfigParam
  *
  * Set IDR interval
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_set_IDR_interval (MixVideoConfigParamsEncH264 * obj,
-		guint idr_interval);
+MIX_RESULT mix_videoconfigparamsenc_h264_set_IDR_interval (
+    MixVideoConfigParamsEncH264 * obj, uint idr_interval);
 
 
 /**
@@ -286,8 +291,9 @@ MIX_RESULT mix_videoconfigparamsenc_h264_set_IDR_interval (MixVideoConfigParamsE
  *
  * Get IDR interval
  */
-MIX_RESULT mix_videoconfigparamsenc_h264_get_IDR_interval (MixVideoConfigParamsEncH264 * obj,
-		guint * idr_interval);
+MIX_RESULT mix_videoconfigparamsenc_h264_get_IDR_interval (
+    MixVideoConfigParamsEncH264 * obj, uint * idr_interval);
+
 
 
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_H264_H__ */

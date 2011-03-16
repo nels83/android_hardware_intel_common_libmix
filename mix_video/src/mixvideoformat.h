@@ -10,7 +10,7 @@
 #define __MIX_VIDEOFORMAT_H__
 
 #include <va/va.h>
-#include <glib-object.h>
+
 
 extern "C" {
 #include "vbp_loader.h"
@@ -27,6 +27,8 @@ extern "C" {
 #include "mixbufferpool.h"
 #include "mixvideoformatqueue.h"
 #include "mixvideothread.h"
+#include <j_queue.h>
+
 
 // Redefine the Handle defined in vbp_loader.h
 #define VBPhandle Handle
@@ -36,91 +38,91 @@ class MixVideoFormat;
 #define MIX_VIDEOFORMAT(obj) (dynamic_cast<MixVideoFormat*>(obj))
 /* vmethods typedef */
 
-typedef MIX_RESULT (*MixVideoFmtGetCapsFunc)(MixVideoFormat *mix, GString *msg);
+typedef MIX_RESULT (*MixVideoFmtGetCapsFunc)(MixVideoFormat *mix, char *msg);
 typedef MIX_RESULT (*MixVideoFmtInitializeFunc)(MixVideoFormat *mix,
-		MixVideoConfigParamsDec * config_params,
-                MixFrameManager * frame_mgr,
-		MixBufferPool * input_buf_pool,
-		MixSurfacePool ** surface_pool,
-		VADisplay va_display);
-typedef MIX_RESULT (*MixVideoFmtDecodeFunc)(MixVideoFormat *mix, 
-		MixBuffer * bufin[], gint bufincnt, 
-		MixVideoDecodeParams * decode_params);
+        MixVideoConfigParamsDec * config_params,
+        MixFrameManager * frame_mgr,
+        MixBufferPool * input_buf_pool,
+        MixSurfacePool ** surface_pool,
+        VADisplay va_display);
+typedef MIX_RESULT (*MixVideoFmtDecodeFunc)(MixVideoFormat *mix,
+        MixBuffer * bufin[], int bufincnt,
+        MixVideoDecodeParams * decode_params);
 typedef MIX_RESULT (*MixVideoFmtFlushFunc)(MixVideoFormat *mix);
 typedef MIX_RESULT (*MixVideoFmtEndOfStreamFunc)(MixVideoFormat *mix);
 typedef MIX_RESULT (*MixVideoFmtDeinitializeFunc)(MixVideoFormat *mix);
 
 class MixVideoFormat {
-	/*< public > */
+    /*< public > */
 public:
-	MixVideoFormat();
-	virtual ~MixVideoFormat();
-
-	
-	virtual MIX_RESULT GetCaps(GString *msg);
-	virtual MIX_RESULT Initialize(
-		MixVideoConfigParamsDec * config_params,
-		MixFrameManager * frame_mgr,
-		MixBufferPool * input_buf_pool,
-		MixSurfacePool ** surface_pool,
-		VADisplay va_display);
-	virtual MIX_RESULT Decode(
-		MixBuffer * bufin[], gint bufincnt, 
-		MixVideoDecodeParams * decode_params);
-	virtual MIX_RESULT Flush();
-	virtual MIX_RESULT EndOfStream();
-	virtual MIX_RESULT Deinitialize();
+    MixVideoFormat();
+    virtual ~MixVideoFormat();
 
 
-	void Lock() {
-		mLock.lock();
-	}
+    virtual MIX_RESULT GetCaps(char *msg);
+    virtual MIX_RESULT Initialize(
+        MixVideoConfigParamsDec * config_params,
+        MixFrameManager * frame_mgr,
+        MixBufferPool * input_buf_pool,
+        MixSurfacePool ** surface_pool,
+        VADisplay va_display);
+    virtual MIX_RESULT Decode(
+        MixBuffer * bufin[], int bufincnt,
+        MixVideoDecodeParams * decode_params);
+    virtual MIX_RESULT Flush();
+    virtual MIX_RESULT EndOfStream();
+    virtual MIX_RESULT Deinitialize();
 
-	void Unlock() {
-		mLock.unlock();
-	}
 
-	MixVideoFormat* Ref() {
-		++ref_count;
-		return this;
-	}
-	MixVideoFormat* Unref() {
-		if (0 == (--ref_count)) {
-			delete this;
-			return NULL;
-		} else {
-			return this;
-		}
-	}
+    void Lock() {
+        mLock.lock();
+    }
+
+    void Unlock() {
+        mLock.unlock();
+    }
+
+    MixVideoFormat* Ref() {
+        ++ref_count;
+        return this;
+    }
+    MixVideoFormat* Unref() {
+        if (0 == (--ref_count)) {
+            delete this;
+            return NULL;
+        } else {
+            return this;
+        }
+    }
 
 public:
-	/*< private > */
-	MixVideoMutex mLock;
-	gboolean initialized;
-	MixFrameManager *framemgr;
-	MixSurfacePool *surfacepool;
-	VADisplay va_display;
-	VAContextID va_context;
-	VAConfigID va_config;
-	VASurfaceID *va_surfaces;
-	guint va_num_surfaces;
-	VBPhandle parser_handle;
-	GString *mime_type;
-	guint frame_rate_num;
-	guint frame_rate_denom;
-	guint picture_width;
-	guint picture_height;
-	gboolean parse_in_progress;
-	gboolean discontinuity_frame_in_progress;
-	guint64 current_timestamp;
-	MixBufferPool *inputbufpool;
-	GQueue *inputbufqueue;    
-	gboolean va_initialized;
-	gboolean end_picture_pending;
-	MixVideoFrame* video_frame;    
-	guint extra_surfaces;
-	MixVideoConfigParamsDec * config_params;
-	guint ref_count ;
+    /*< private > */
+    MixVideoMutex mLock;
+    bool initialized;
+    MixFrameManager *framemgr;
+    MixSurfacePool *surfacepool;
+    VADisplay va_display;
+    VAContextID va_context;
+    VAConfigID va_config;
+    VASurfaceID *va_surfaces;
+    uint va_num_surfaces;
+    VBPhandle parser_handle;
+    char *mime_type;
+    uint frame_rate_num;
+    uint frame_rate_denom;
+    uint picture_width;
+    uint picture_height;
+    bool parse_in_progress;
+    bool discontinuity_frame_in_progress;
+    uint64 current_timestamp;
+    MixBufferPool *inputbufpool;
+    JQueue *inputbufqueue;
+    bool va_initialized;
+    bool end_picture_pending;
+    MixVideoFrame* video_frame;
+    uint extra_surfaces;
+    MixVideoConfigParamsDec * config_params;
+    uint ref_count ;
 };
 
 
@@ -151,19 +153,19 @@ MixVideoFormat* mix_videoformat_unref(MixVideoFormat* mix);
 
 /* Class Methods */
 
-MIX_RESULT mix_videofmt_getcaps(MixVideoFormat *mix, GString *msg);
+MIX_RESULT mix_videofmt_getcaps(MixVideoFormat *mix, char *msg);
 
 MIX_RESULT mix_videofmt_initialize(
-	MixVideoFormat *mix,
-	MixVideoConfigParamsDec * config_params,
-	MixFrameManager * frame_mgr,
-	MixBufferPool * input_buf_pool,
-	MixSurfacePool ** surface_pool,
-	VADisplay va_display);
+    MixVideoFormat *mix,
+    MixVideoConfigParamsDec * config_params,
+    MixFrameManager * frame_mgr,
+    MixBufferPool * input_buf_pool,
+    MixSurfacePool ** surface_pool,
+    VADisplay va_display);
 
 MIX_RESULT mix_videofmt_decode(
-	MixVideoFormat *mix, MixBuffer * bufin[],
-	gint bufincnt, MixVideoDecodeParams * decode_params);
+    MixVideoFormat *mix, MixBuffer * bufin[],
+    int bufincnt, MixVideoDecodeParams * decode_params);
 
 MIX_RESULT mix_videofmt_flush(MixVideoFormat *mix);
 

@@ -28,18 +28,18 @@ class MixVideoConfigParams : public MixParams {
 public:
     MixVideoConfigParams();
     virtual ~MixVideoConfigParams();
-    virtual gboolean copy(MixParams *target) const;
-    virtual gboolean equal(MixParams* obj) const;
+    virtual bool copy(MixParams *target) const;
+    virtual bool equal(MixParams* obj) const;
     virtual MixParams* dup() const;
-	/*< public > */
-	//MixParams parent;
+    /*< public > */
+    //MixParams parent;
 
-	/*< private > */
+    /*< private > */
 protected:
-	void *reserved1;
-	void *reserved2;
-	void *reserved3;
-	void *reserved4;
+    void *reserved1;
+    void *reserved2;
+    void *reserved3;
+    void *reserved4;
 };
 
 

@@ -19,11 +19,11 @@
 #ifdef HOST_ONLY
 #define DUMP_TO_MEM(x) DEB("0x%.08X ",x);
 #define WRITE_SVEN(event, p1, p2, p3, p4, p5, p6) DEB("Sven evnt=0x%.8X p1=%d p2=%d p3=%d p4=%d p5=%d p6=%d\n",event, p1, p2, p3, p4, p5, p6)
-#define read_ret(x) 
-#define read_fp(x) 
-#define read_sp(x) 
-#define read_wim(x) 
-#define read_psr(x) 
+#define read_ret(x)
+#define read_fp(x)
+#define read_sp(x)
+#define read_wim(x)
+#define read_psr(x)
 #else
 extern uint32_t dump_ptr;
 /* Macros for Dumping data to DDR */

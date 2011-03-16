@@ -4,7 +4,7 @@
 /**
  * mpeg2.h
  * -------
- * This file contains all the necessary enumerations and structures needed from 
+ * This file contains all the necessary enumerations and structures needed from
  * the MPEG-2 Specification.
  */
 

@@ -7,7 +7,7 @@ typedef union
 {
     uint8_t byte[8];
     uint32_t word[2];
-}viddec_pm_utils_getbits_t;
+} viddec_pm_utils_getbits_t;
 
 void viddec_pm_utils_bstream_reload(viddec_pm_utils_bstream_cxt_t *cxt);
 uint32_t viddec_pm_utils_bstream_getphys(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t pos, uint32_t lst_index);
@@ -35,18 +35,18 @@ uint8_t viddec_pm_utils_bstream_nomorerbspdata(viddec_pm_utils_bstream_cxt_t *cx
        data_reamining should be 2 for 00000001, as we don't count sc prefix its current byte and extra 00 as we check for 000001.
        NOTE: This is used for H264 only.
     */
-    switch(data_remaining)
+    switch (data_remaining)
     {
-        case 2:
-            /* If next byte is 0 and its the last byte in access unit */
-            ret = (cxt->bstrm_buf.buf[cxt->bstrm_buf.buf_index+1] == 0x0);
-            break;
-        case 1:
-            /* if the current byte is last byte */
-            ret = true;
-            break;
-        default:
-            break;
+    case 2:
+        /* If next byte is 0 and its the last byte in access unit */
+        ret = (cxt->bstrm_buf.buf[cxt->bstrm_buf.buf_index+1] == 0x0);
+        break;
+    case 1:
+        /* if the current byte is last byte */
+        ret = true;
+        break;
+    default:
+        break;
     }
     return ret;
 }
@@ -61,7 +61,7 @@ uint8_t viddec_pm_utils_bstream_nomoredata(viddec_pm_utils_bstream_cxt_t *cxt)
     /* Check to see if the last byte Acces unit offset is the last byte for current access unit.
      End represents the first invalid byte, so (end - st) will give number of bytes.*/
     last_byte_offset_plus_one = cxt->au_pos + (cxt->bstrm_buf.buf_end - cxt->bstrm_buf.buf_st);
-    if((int32_t)last_byte_offset_plus_one >= cxt->list->total_bytes)
+    if ((int32_t)last_byte_offset_plus_one >= cxt->list->total_bytes)
     {
         ret = true;
     }
@@ -83,7 +83,7 @@ static inline uint32_t viddec_pm_utils_bstream_datafromindex(viddec_pm_utils_lis
     int32_t val=0;
     val = (list->data[index].edpos <= (uint32_t)list->total_bytes) ? list->data[index].edpos: (uint32_t)list->total_bytes;
     val = val - (int32_t)offset;
-    if(val > 0) ret = (uint32_t)val;
+    if (val > 0) ret = (uint32_t)val;
     return val;
 }
 
@@ -92,19 +92,19 @@ static inline uint32_t viddec_pm_utils_bstream_datafromindex(viddec_pm_utils_lis
  at returns index of ES buffer in list which has byte_offset
 */
 static inline uint32_t viddec_pm_utils_bstream_maxbytes_from_index(viddec_pm_utils_bstream_cxt_t *cxt,
-                                                                   uint32_t *lst_index,
-                                                                   uint32_t byte_offset,
-                                                                   uint32_t *physaddr)
+        uint32_t *lst_index,
+        uint32_t byte_offset,
+        uint32_t *physaddr)
 {
     viddec_pm_utils_list_t *list;
     uint32_t last_byte_offst=0, bytes_left=0;/* default return value is 0 bytes */
 
     list = cxt->list;
-    while(*lst_index < list->num_items)
+    while (*lst_index < list->num_items)
     {
         /* Check to see if we reached the buffer with last valid byte of current access unit, List can have data beyond current access unit */
         last_byte_offst = (list->data[*lst_index].edpos <= (uint32_t)list->total_bytes) ? list->data[*lst_index].edpos: (uint32_t)list->total_bytes;
-        if(byte_offset < last_byte_offst)
+        if (byte_offset < last_byte_offst)
         {/* Found a match so return with data remaining */
             bytes_left = viddec_pm_utils_bstream_datafromindex(list, *lst_index, byte_offset);
             *physaddr = viddec_pm_utils_bstream_getphys(cxt, byte_offset, *lst_index);
@@ -119,10 +119,11 @@ static inline uint32_t viddec_pm_utils_bstream_maxbytes_from_index(viddec_pm_uti
 static inline void viddec_pm_utils_bstream_scratch_copyto(viddec_pm_utils_bstream_scratch_cxt_t *cxt, uint8_t *data, uint32_t num_bytes)
 {
     uint32_t i=0;
-    for(i=0; i<num_bytes;i++)
+    for (i=0; i<num_bytes; i++)
     {
         cxt->buf_scratch[i] = *data;
-        data++;cxt->size++;
+        data++;
+        cxt->size++;
     }
 }
 
@@ -130,7 +131,7 @@ static inline void viddec_pm_utils_bstream_scratch_copyto(viddec_pm_utils_bstrea
 static inline void viddec_pm_utils_bstream_scratch_copyfrom(viddec_pm_utils_bstream_scratch_cxt_t *cxt, uint8_t *data)
 {
     uint32_t i=0;
-    for(i=0; i<cxt->size;i++)
+    for (i=0; i<cxt->size; i++)
     {
         *data = cxt->buf_scratch[i];
         data++;
@@ -139,22 +140,22 @@ static inline void viddec_pm_utils_bstream_scratch_copyfrom(viddec_pm_utils_bstr
 
 /* This function populates requested number of bytes into data parameter, skips emulation prevention bytes if needed */
 static inline int32_t viddec_pm_utils_getbytes(viddec_pm_utils_bstream_buf_cxt_t *bstream,
-                                               viddec_pm_utils_getbits_t *data,/* gets populated with read bytes*/
-                                               uint32_t *act_bytes, /* actual number of bytes read can be more due to emulation prev bytes*/
-                                               uint32_t *phase,    /* Phase for emulation */
-                                               uint32_t num_bytes,/* requested number of bytes*/
-                                               uint32_t emul_reqd, /* On true we look for emulation prevention */
-                                               uint8_t is_offset_zero /* Are we on aligned byte position for first byte*/
-                                               )
+        viddec_pm_utils_getbits_t *data,/* gets populated with read bytes*/
+        uint32_t *act_bytes, /* actual number of bytes read can be more due to emulation prev bytes*/
+        uint32_t *phase,    /* Phase for emulation */
+        uint32_t num_bytes,/* requested number of bytes*/
+        uint32_t emul_reqd, /* On true we look for emulation prevention */
+        uint8_t is_offset_zero /* Are we on aligned byte position for first byte*/
+                                              )
 {
     int32_t ret = 1;
     uint8_t cur_byte = 0, valid_bytes_read = 0;
     *act_bytes = 0;
 
-    while(valid_bytes_read < num_bytes)
+    while (valid_bytes_read < num_bytes)
     {
         cur_byte = bstream->buf[bstream->buf_index + *act_bytes];
-        if((cur_byte == 0x3) &&(*phase == 2))
+        if ((cur_byte == 0x3) &&(*phase == 2))
         {/* skip emulation byte. we update the phase only if emulation prevention is enabled */
             *phase = 0;
         }
@@ -165,9 +166,9 @@ static inline int32_t viddec_pm_utils_getbytes(viddec_pm_utils_bstream_buf_cxt_t
               We only update phase for first byte if bit offset is 0. If its not 0 then it was already accounted for in the past.
               From second byte onwards we always look to update phase.
              */
-            if((*act_bytes != 0) || (is_offset_zero))
+            if ((*act_bytes != 0) || (is_offset_zero))
             {
-                if(cur_byte == 0)
+                if (cur_byte == 0)
                 {
                     /* Update phase only if emulation prevention is required */
                     *phase +=( ((*phase < 2) && emul_reqd ) ? 1: 0 );
@@ -181,9 +182,9 @@ static inline int32_t viddec_pm_utils_getbytes(viddec_pm_utils_bstream_buf_cxt_t
         }
         *act_bytes +=1;
     }
-   /* Check to see if we reached end during above operation. We might be out of range buts it safe since our array
-      has at least MIN_DATA extra bytes and the maximum out of bounds we will go is 5 bytes */
-    if((bstream->buf_index + *act_bytes -1) >= bstream->buf_end)
+    /* Check to see if we reached end during above operation. We might be out of range buts it safe since our array
+       has at least MIN_DATA extra bytes and the maximum out of bounds we will go is 5 bytes */
+    if ((bstream->buf_index + *act_bytes -1) >= bstream->buf_end)
     {
         ret = -1;
     }
@@ -196,18 +197,18 @@ static inline int32_t viddec_pm_utils_getbytes(viddec_pm_utils_bstream_buf_cxt_t
 */
 static inline void viddec_pm_utils_check_bstream_reload(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t *data_left)
 {
-#ifdef VBP	
-	*data_left = viddec_pm_utils_bstream_bytesincubby(&(cxt->bstrm_buf));
-#else	
+#ifdef VBP
+    *data_left = viddec_pm_utils_bstream_bytesincubby(&(cxt->bstrm_buf));
+#else
     uint8_t isReload=0;
 
     *data_left = viddec_pm_utils_bstream_bytesincubby(&(cxt->bstrm_buf));
     /* If we have minimum data we should continue, else try to read more data */
-    if(*data_left <MIN_DATA)
+    if (*data_left <MIN_DATA)
     {
         /* Check to see if we already read last byte of current access unit */
         isReload = !(viddec_pm_utils_bstream_nomoredata(cxt) == 1);
-        while(isReload)
+        while (isReload)
         {
             /* We have more data in access unit so keep reading until we get at least minimum data */
             viddec_pm_utils_bstream_reload(cxt);
@@ -225,7 +226,7 @@ static inline void viddec_pm_utils_check_bstream_reload(viddec_pm_utils_bstream_
 */
 static inline void viddec_pm_utils_update_skipoffsets(viddec_pm_utils_bstream_buf_cxt_t *bstream, uint32_t bits, uint32_t bytes)
 {
-    if((bits & 0x7) == 0)
+    if ((bits & 0x7) == 0)
     {
         bstream->buf_bitoff = 0;
         bstream->buf_index +=bytes;
@@ -243,15 +244,15 @@ static inline void viddec_pm_utils_update_skipoffsets(viddec_pm_utils_bstream_bu
   However in some cases we might send data to HW without reading the next bit, in which case we are on
   emulation byte. To avoid sending invalid data, this function has to be called first to skip.
 */
-   
+
 void viddec_pm_utils_skip_if_current_is_emulation(viddec_pm_utils_bstream_cxt_t *cxt)
 {
     viddec_pm_utils_bstream_buf_cxt_t *bstream = &(cxt->bstrm_buf);
 
-    if(cxt->is_emul_reqd &&
-       (cxt->phase >= 2) &&
-       (bstream->buf_bitoff == 0) &&
-       (bstream->buf[bstream->buf_index] == 0x3) )
+    if (cxt->is_emul_reqd &&
+            (cxt->phase >= 2) &&
+            (bstream->buf_bitoff == 0) &&
+            (bstream->buf[bstream->buf_index] == 0x3) )
     {
         bstream->buf_index += 1;
         cxt->phase = 0;
@@ -268,10 +269,10 @@ uint32_t viddec_pm_utils_bstream_getphys(viddec_pm_utils_bstream_cxt_t *cxt, uin
     viddec_pm_utils_list_t *list;
 
     list = cxt->list;
-    while(lst_index < list->num_items)
+    while (lst_index < list->num_items)
     {
         last_byte_offst = (list->data[lst_index].edpos <= (uint32_t)list->total_bytes) ? list->data[lst_index].edpos: (uint32_t)list->total_bytes;
-        if(pos < last_byte_offst)
+        if (pos < last_byte_offst)
         {
 #ifndef MFDBIGENDIAN
             ret = (uint32_t)list->sc_ibuf[lst_index].buf;
@@ -279,7 +280,7 @@ uint32_t viddec_pm_utils_bstream_getphys(viddec_pm_utils_bstream_cxt_t *cxt, uin
             ret = list->sc_ibuf[lst_index].phys;
 #endif
             ret +=(pos - list->data[lst_index].stpos);
-            if(lst_index == 0) ret+=list->start_offset;
+            if (lst_index == 0) ret+=list->start_offset;
             break;
         }
         lst_index++;
@@ -304,7 +305,7 @@ void viddec_pm_utils_bstream_reload(viddec_pm_utils_bstream_cxt_t *cxt)
         int32_t cur_bytes=0;
         viddec_pm_utils_bstream_scratch_init(&(cxt->scratch));
         cur_bytes = viddec_pm_utils_bstream_bytesincubby(&(cxt->bstrm_buf));
-        if(cur_bytes > 0)
+        if (cur_bytes > 0)
         {
             viddec_pm_utils_bstream_scratch_copyto(&(cxt->scratch), &(bstream->buf[bstream->buf_index]), cur_bytes);
             cxt->scratch.bitoff = bstream->buf_bitoff;
@@ -320,11 +321,11 @@ void viddec_pm_utils_bstream_reload(viddec_pm_utils_bstream_cxt_t *cxt)
             /* byte pos points to the position from where we want to read data.*/
             byte_pos = cxt->au_pos + cxt->scratch.size;
             data_left = viddec_pm_utils_bstream_maxbytes_from_index(cxt, &(cxt->list_off), byte_pos, &ddr_addr);
-            if(data_left > CUBBY_SIZE)
+            if (data_left > CUBBY_SIZE)
             {
                 data_left = CUBBY_SIZE;
             }
-            if(data_left != 0)
+            if (data_left != 0)
             {
                 ddr_mask = ddr_addr & 0x3;
                 ddr_addr = ddr_addr & ~0x3;
@@ -350,8 +351,8 @@ void viddec_pm_utils_bstream_reload(viddec_pm_utils_bstream_cxt_t *cxt)
 void viddec_pm_utils_bstream_init(viddec_pm_utils_bstream_cxt_t *cxt, viddec_pm_utils_list_t *list, uint32_t is_emul)
 {
 #ifdef VBP
-	cxt->emulation_byte_counter = 0;
-#endif    
+    cxt->emulation_byte_counter = 0;
+#endif
 
     cxt->au_pos = 0;
     cxt->list = list;
@@ -373,7 +374,7 @@ int32_t viddec_pm_utils_bstream_get_current_byte(viddec_pm_utils_bstream_cxt_t *
 
     bstream = &(cxt->bstrm_buf);
     viddec_pm_utils_check_bstream_reload(cxt, &data_left);
-    if(data_left != 0)
+    if (data_left != 0)
     {
         *byte = bstream->buf[bstream->buf_index];
         ret = 1;
@@ -392,28 +393,28 @@ int32_t viddec_pm_utils_bstream_skipbits(viddec_pm_utils_bstream_cxt_t *cxt, uin
 
     bstream = &(cxt->bstrm_buf);
     viddec_pm_utils_check_bstream_reload(cxt, &data_left);
-    if((num_bits <= 32) && (num_bits > 0) && (data_left != 0))
+    if ((num_bits <= 32) && (num_bits > 0) && (data_left != 0))
     {
         uint8_t bytes_required=0;
 
         bytes_required = (bstream->buf_bitoff + num_bits + 7)>>3;
-        if(bytes_required <= data_left)
+        if (bytes_required <= data_left)
         {
             viddec_pm_utils_getbits_t data;
             uint32_t act_bytes =0;
-            if(viddec_pm_utils_getbytes(bstream, &data,  &act_bytes, &(cxt->phase), bytes_required, cxt->is_emul_reqd, (bstream->buf_bitoff == 0)) != -1)
+            if (viddec_pm_utils_getbytes(bstream, &data,  &act_bytes, &(cxt->phase), bytes_required, cxt->is_emul_reqd, (bstream->buf_bitoff == 0)) != -1)
             {
                 uint32_t total_bits=0;
                 total_bits=num_bits+bstream->buf_bitoff;
                 viddec_pm_utils_update_skipoffsets(bstream, total_bits, act_bytes);
                 ret=1;
-                
-#ifdef VBP                
+
+#ifdef VBP
                 if (act_bytes > bytes_required)
                 {
-                	cxt->emulation_byte_counter = act_bytes - bytes_required;
+                    cxt->emulation_byte_counter = act_bytes - bytes_required;
                 }
-#endif                
+#endif
             }
         }
     }
@@ -430,7 +431,7 @@ int32_t viddec_pm_utils_bstream_peekbits(viddec_pm_utils_bstream_cxt_t *cxt, uin
     /* STEP 1: Make sure that we have at least minimum data before we calculate bits */
     viddec_pm_utils_check_bstream_reload(cxt, &data_left);
 
-    if((num_bits <= 32) && (num_bits > 0) && (data_left != 0))
+    if ((num_bits <= 32) && (num_bits > 0) && (data_left != 0))
     {
         uint32_t bytes_required=0;
         viddec_pm_utils_bstream_buf_cxt_t *bstream;
@@ -439,13 +440,13 @@ int32_t viddec_pm_utils_bstream_peekbits(viddec_pm_utils_bstream_cxt_t *cxt, uin
         bytes_required = (bstream->buf_bitoff + num_bits + 7)>>3;
 
         /* Step 2: Make sure we have bytes for requested bits */
-        if(bytes_required <= data_left)
+        if (bytes_required <= data_left)
         {
             uint32_t act_bytes, phase;
             viddec_pm_utils_getbits_t data;
             phase = cxt->phase;
             /* Step 3: Due to emualtion prevention bytes sometimes the bytes_required > actual_required bytes */
-            if(viddec_pm_utils_getbytes(bstream, &data, &act_bytes, &phase, bytes_required, cxt->is_emul_reqd, (bstream->buf_bitoff == 0)) != -1)
+            if (viddec_pm_utils_getbytes(bstream, &data, &act_bytes, &phase, bytes_required, cxt->is_emul_reqd, (bstream->buf_bitoff == 0)) != -1)
             {
                 uint32_t total_bits=0;
                 uint32_t shift_by=0;
@@ -460,7 +461,7 @@ int32_t viddec_pm_utils_bstream_peekbits(viddec_pm_utils_bstream_cxt_t *cxt, uin
                 data.word[1] = SWAP_WORD(data.word[1]);
 #endif
                 total_bits = num_bits+bstream->buf_bitoff;
-                if(total_bits > 32)
+                if (total_bits > 32)
                 {
                     /* We have to use both the words to get required data */
                     shift_by = total_bits - 32;
@@ -472,18 +473,18 @@ int32_t viddec_pm_utils_bstream_peekbits(viddec_pm_utils_bstream_cxt_t *cxt, uin
                     data.word[0] = data.word[0] >> shift_by;
                 }
                 *out = data.word[0];
-                if(skip)
+                if (skip)
                 {
                     /* update au byte position if needed */
                     viddec_pm_utils_update_skipoffsets(bstream, total_bits, act_bytes);
                     cxt->phase = phase;
-                    
-#ifdef VBP                    
+
+#ifdef VBP
                     if (act_bytes > bytes_required)
                     {
-                    	cxt->emulation_byte_counter += act_bytes - bytes_required;
+                        cxt->emulation_byte_counter += act_bytes - bytes_required;
                     }
-#endif                  
+#endif
                 }
 
                 ret =1;

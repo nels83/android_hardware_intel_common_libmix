@@ -30,7 +30,7 @@ vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo)
     uint32_t result;
     vc1_Status status = VC1_STATUS_OK;
     vc1_metadata_t *md = &pInfo->metadata;
-    vc1_RcvSequenceHeader rcv; 
+    vc1_RcvSequenceHeader rcv;
 
     memset(&rcv, 0, sizeof(vc1_RcvSequenceHeader));
 
@@ -52,11 +52,11 @@ vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo)
     md->QUANTIZER = rcv.struct_c.QUANTIZER;
     md->FINTERPFLAG = rcv.struct_c.FINTERPFLAG;
 #ifdef VBP
-	md->SYNCMARKER = rcv.struct_c.SYNCMARKER;
-#endif	 
+    md->SYNCMARKER = rcv.struct_c.SYNCMARKER;
+#endif
 
     if ((md->PROFILE == VC1_PROFILE_SIMPLE) ||
-        (md->MULTIRES && md->PROFILE == VC1_PROFILE_MAIN))
+            (md->MULTIRES && md->PROFILE == VC1_PROFILE_MAIN))
     {
         md->DQUANT = 0;
     }
@@ -76,7 +76,7 @@ vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo)
     // POPULATE WORKLOAD ITEM
     {
         viddec_workload_item_t wi;
-    
+
         wi.vwi_type = VIDDEC_WORKLOAD_VC1_SEQ_HDR_STRUCT_A_C;
 
         wi.vc1_sh_struct_a_c.size = 0;
@@ -122,17 +122,17 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
 
     // PARSE SEQUENCE HEADER
     result = viddec_pm_get_bits(ctxt, &sh.flags, 15);
-    if(result == 1)
+    if (result == 1)
     {
         md->PROFILE = sh.seq_flags.PROFILE;
         md->LEVEL = sh.seq_flags.LEVEL;
         md->CHROMAFORMAT = sh.seq_flags.COLORDIFF_FORMAT;
         md->FRMRTQ = sh.seq_flags.FRMRTQ_POSTPROC;
-        md->BITRTQ = sh.seq_flags.BITRTQ_POSTPROC;        
+        md->BITRTQ = sh.seq_flags.BITRTQ_POSTPROC;
     }
 
     result = viddec_pm_get_bits(ctxt, &sh.max_size, 32);
-    if(result == 1)
+    if (result == 1)
     {
         md->POSTPROCFLAG = sh.seq_max_size.POSTPROCFLAG;
         md->width = sh.seq_max_size.MAX_CODED_WIDTH;
@@ -147,10 +147,10 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
     if (sh.seq_max_size.DISPLAY_EXT == 1)
     {
         result = viddec_pm_get_bits(ctxt, &sh.disp_size, 29);
-        if(result == 1)
+        if (result == 1)
         {
             if (sh.seq_disp_size.ASPECT_RATIO_FLAG == 1)
-            {   
+            {
                 result = viddec_pm_get_bits(ctxt, &tempValue, 4);
                 sh.ASPECT_RATIO = tempValue;
                 if (sh.ASPECT_RATIO == 15)
@@ -219,13 +219,13 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
     // POPULATE WORKLOAD ITEM
     {
         viddec_workload_item_t wi_sl, wi_de;
-    
+
         wi_sl.vwi_type = VIDDEC_WORKLOAD_SEQUENCE_INFO;
 
         wi_sl.vc1_sl.size = 0;
         wi_sl.vc1_sl.flags = 0;
         wi_sl.vc1_sl.pad = 0;
-    
+
         viddec_fw_vc1_set_profile(&wi_sl.vc1_sl, sh.seq_flags.PROFILE);
         viddec_fw_vc1_set_level(&wi_sl.vc1_sl, sh.seq_flags.LEVEL);
         viddec_fw_vc1_set_colordiff_format(&wi_sl.vc1_sl, sh.seq_flags.COLORDIFF_FORMAT);
@@ -296,13 +296,13 @@ vc1_Status vc1_ParseEntryPointLayer(void* ctxt, vc1_Info *pInfo)
 
     // PARSE ENTRYPOINT HEADER
     result = viddec_pm_get_bits(ctxt, &ep.flags, 13);
-    if(result == 1)
+    if (result == 1)
     {
         // Skip the flags already peeked at (13) and the unneeded hrd_full data
         // NOTE: HRD_NUM_LEAKY_BUCKETS is initialized to 0 when HRD_PARAM_FLAG is not present
         int hrd_bits = md->HRD_NUM_LEAKY_BUCKETS * 8;
-        while(hrd_bits >= 32)
-        { 
+        while (hrd_bits >= 32)
+        {
             result = viddec_pm_skip_bits(ctxt, 32);
             hrd_bits -= 32;
         }
@@ -322,27 +322,27 @@ vc1_Status vc1_ParseEntryPointLayer(void* ctxt, vc1_Info *pInfo)
         md->QUANTIZER = ep.ep_flags.QUANTIZER;
 
         result = viddec_pm_get_bits(ctxt, &temp, 1);
-        if(result == 1)
+        if (result == 1)
         {
             ep.CODED_SIZE_FLAG = temp;
-            if(ep.CODED_SIZE_FLAG)
+            if (ep.CODED_SIZE_FLAG)
             {
                 result = viddec_pm_get_bits(ctxt, &ep.size, 24);
                 md->width = ep.ep_size.CODED_WIDTH;
                 md->height = ep.ep_size.CODED_HEIGHT;
             }
         }
-        if(ep.ep_flags.EXTENDED_MV)
+        if (ep.ep_flags.EXTENDED_MV)
         {
             result = viddec_pm_get_bits(ctxt, &temp, 1);
             md->EXTENDED_DMV = ep.EXTENDED_DMV = temp;
         }
 
         result = viddec_pm_get_bits(ctxt, &temp, 1);
-        if(result == 1)
+        if (result == 1)
         {
             md->RANGE_MAPY_FLAG = ep.RANGE_MAPY_FLAG = temp;
-            if(ep.RANGE_MAPY_FLAG)
+            if (ep.RANGE_MAPY_FLAG)
             {
                 result = viddec_pm_get_bits(ctxt, &temp, 3);
                 md->RANGE_MAPY = ep.RANGE_MAPY = temp;
@@ -350,10 +350,10 @@ vc1_Status vc1_ParseEntryPointLayer(void* ctxt, vc1_Info *pInfo)
         }
 
         result = viddec_pm_get_bits(ctxt, &temp, 1);
-        if(result == 1)
+        if (result == 1)
         {
             md->RANGE_MAPUV_FLAG = ep.RANGE_MAPUV_FLAG = temp;
-            if(ep.RANGE_MAPUV_FLAG)
+            if (ep.RANGE_MAPUV_FLAG)
             {
                 result = viddec_pm_get_bits(ctxt, &temp, 3);
                 md->RANGE_MAPUV = ep.RANGE_MAPUV = temp;
@@ -364,7 +364,7 @@ vc1_Status vc1_ParseEntryPointLayer(void* ctxt, vc1_Info *pInfo)
     // POPULATE WORKLOAD ITEM
     {
         viddec_workload_item_t wi;
-    
+
         wi.vwi_type = VIDDEC_WORKLOAD_GOP_INFO;
 
         wi.vc1_ep.size = 0;
@@ -402,15 +402,15 @@ vc1_Status vc1_ParsePictureLayer(void* ctxt, vc1_Info *pInfo)
     uint32_t temp;
     int i;
 
-    for(i=0; i<VC1_MAX_BITPLANE_CHUNKS; i++)
+    for (i=0; i<VC1_MAX_BITPLANE_CHUNKS; i++)
     {
         pInfo->metadata.bp_raw[i] = true;
     }
 
-    if (pInfo->metadata.PROFILE == VC1_PROFILE_ADVANCED) 
+    if (pInfo->metadata.PROFILE == VC1_PROFILE_ADVANCED)
     {
         VC1_PEEK_BITS(2, temp); /* fcm */
-        if( (pInfo->metadata.INTERLACE == 1) && (temp == VC1_FCM_FIELD_INTERLACE))
+        if ( (pInfo->metadata.INTERLACE == 1) && (temp == VC1_FCM_FIELD_INTERLACE))
         {
             status = vc1_ParseFieldHeader_Adv(ctxt, pInfo);
         }
@@ -474,7 +474,7 @@ vc1_Status vc1_ParseSliceLayer(void* ctxt, vc1_Info *pInfo)
         uint32_t last_bitoff = pInfo->bitoff;
         status = vc1_ParsePictureLayer(ctxt, pInfo);
         pInfo->picture_info_has_changed = 1;
-        if( status ) {
+        if ( status ) {
             /* FIXME - is this a good way of handling this? Failed, see if it's for fields */
             pInfo->bufptr = last_bufptr;
             pInfo->bitoff = last_bitoff;
@@ -492,7 +492,7 @@ vc1_Status vc1_ParseSliceLayer(void* ctxt, vc1_Info *pInfo)
  * This function parses the user data information as defined in SMPTE 421M annex F.
  * It then appends that data to the workload.
  * Assume the flush byte 0x80 is within the 3 bytes before next start code.
- * let's put 1 byte per item first 
+ * let's put 1 byte per item first
  *------------------------------------------------------------------------------
  */
 vc1_Status vc1_ParseAndAppendUserData(void* ctxt, uint32_t sc)
@@ -501,29 +501,29 @@ vc1_Status vc1_ParseAndAppendUserData(void* ctxt, uint32_t sc)
     uint32_t user_data;
     viddec_workload_item_t wi;
     uint32_t ud_id;
-    
+
     /* find the scope based on start code sc */
-    switch(sc) {
-        case vc1_SCSequenceUser:
-            wi.vwi_type = VIDDEC_WORKLOAD_SEQ_USER_DATA;
-            break;
-        case vc1_SCEntryPointUser:
-            wi.vwi_type = VIDDEC_WORKLOAD_GOP_USER_DATA;
-            break;
-        case vc1_SCFrameUser:
-            wi.vwi_type = VIDDEC_WORKLOAD_FRM_USER_DATA;
-            break;
-        case vc1_SCFieldUser:
-            wi.vwi_type = VIDDEC_WORKLOAD_FLD_USER_DATA;
-            break;
-        case vc1_SCSliceUser:
-            wi.vwi_type = VIDDEC_WORKLOAD_SLC_USER_DATA;
-            break;
-        default:
-            wi.vwi_type = VIDDEC_WORKLOAD_INVALID; //ERROR - should not happen
-            break;
+    switch (sc) {
+    case vc1_SCSequenceUser:
+        wi.vwi_type = VIDDEC_WORKLOAD_SEQ_USER_DATA;
+        break;
+    case vc1_SCEntryPointUser:
+        wi.vwi_type = VIDDEC_WORKLOAD_GOP_USER_DATA;
+        break;
+    case vc1_SCFrameUser:
+        wi.vwi_type = VIDDEC_WORKLOAD_FRM_USER_DATA;
+        break;
+    case vc1_SCFieldUser:
+        wi.vwi_type = VIDDEC_WORKLOAD_FLD_USER_DATA;
+        break;
+    case vc1_SCSliceUser:
+        wi.vwi_type = VIDDEC_WORKLOAD_SLC_USER_DATA;
+        break;
+    default:
+        wi.vwi_type = VIDDEC_WORKLOAD_INVALID; //ERROR - should not happen
+        break;
     }
-    
+
     /* get identifier - 4 bytes*/
     // Extract this information but discard it for now
     VC1_GET_BITS(32, ud_id);
@@ -532,12 +532,12 @@ vc1_Status vc1_ParseAndAppendUserData(void* ctxt, uint32_t sc)
        Keep adding data payloads till it reaches size 11. When it is 11, the maximum user data payload size,
        append the workitem. This loop is repeated till all user data is extracted and appended. */
     wi.user_data.size = 0;
-    while(viddec_pm_get_bits(ctxt, &user_data, 8) != -1)
+    while (viddec_pm_get_bits(ctxt, &user_data, 8) != -1)
     {
         /* Store the valid byte in data payload */
         wi.user_data.data_payload[wi.user_data.size] = user_data;
         wi.user_data.size++;
-        
+
         /* When size exceeds payload size, append workitem and continue */
         if (wi.user_data.size >= 11)
         {
@@ -545,14 +545,14 @@ vc1_Status vc1_ParseAndAppendUserData(void* ctxt, uint32_t sc)
             viddec_pm_append_workitem(ctxt, &wi,false);
             wi.user_data.size = 0;
         }
-        if(user_data == 0x80) // flushing byte
+        if (user_data == 0x80) // flushing byte
             break;
     }
     /* If size is not 0, append remaining user data. */
     if (wi.user_data.size > 0)
     {
         int i;
-        for(i=wi.user_data.size;i<11;i++)
+        for (i=wi.user_data.size; i<11; i++)
         {
             wi.user_data.data_payload[i] = 0;
         }

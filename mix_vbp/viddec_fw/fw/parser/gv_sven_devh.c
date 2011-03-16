@@ -75,22 +75,22 @@ static os_devhandle_t         g_svenh;
 //#define SVEN_DEVH_DISABLE_SVEN
 
 extern int sven_fw_is_tx_enabled(
-   struct SVENHandle       *svenh );
+    struct SVENHandle       *svenh );
 
 #ifndef SVEN_DEVH_DISABLE_SVEN
 static void sven_write_event(
-   struct SVENHandle        *svenh,
-   struct SVENEvent         *ev )
+    struct SVENHandle        *svenh,
+    struct SVENEvent         *ev )
 {
-   if ( NULL == svenh )
-      svenh = &g_svenh.devh_svenh;
+    if ( NULL == svenh )
+        svenh = &g_svenh.devh_svenh;
 
-   if ( NULL != svenh->phot )
-      sven_fw_write_event(svenh,ev);
+    if ( NULL != svenh->phot )
+        sven_fw_write_event(svenh,ev);
 }
 
 static void sven_fw_initialize_event_top(
-   struct SVENEvent         *ev,
+    struct SVENEvent         *ev,
     int                      module,
     int                      unit,
     int                      event_type,
@@ -106,14 +106,14 @@ static void sven_fw_initialize_event_top(
 
 uint32_t sven_get_timestamp()
 {
-   uint32_t    value = 0;
+    uint32_t    value = 0;
 
-   if ( NULL != g_svenh.devh_svenh.ptime )
-   {
-      value = sven_fw_read_external_register( &g_svenh.devh_svenh, g_svenh.devh_svenh.ptime );
-   }
+    if ( NULL != g_svenh.devh_svenh.ptime )
+    {
+        value = sven_fw_read_external_register( &g_svenh.devh_svenh, g_svenh.devh_svenh.ptime );
+    }
 
-   return(value);
+    return(value);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -125,26 +125,26 @@ void devh_SVEN_SetModuleUnit(
     int                      sven_unit )
 {
 #ifndef SVEN_DEVH_DISABLE_SVEN
-   if ( NULL == devh )
-      devh = &g_svenh;
-   devh->devh_sven_module = sven_module;
-   devh->devh_sven_unit = sven_unit;
+    if ( NULL == devh )
+        devh = &g_svenh;
+    devh->devh_sven_module = sven_module;
+    devh->devh_sven_unit = sven_unit;
 #endif
 }
 
 os_devhandle_t *devhandle_factory( const char *desc )
 {
-   /* pointer to global vsparc local registers */
-   g_svenh.devh_regs_ptr = (void *) 0x10000000;   /* firmware address to Local (GV) registers */
+    /* pointer to global vsparc local registers */
+    g_svenh.devh_regs_ptr = (void *) 0x10000000;   /* firmware address to Local (GV) registers */
 
-   return( &g_svenh );
+    return( &g_svenh );
 }
 
 int devhandle_connect_name(
     os_devhandle_t          *devh,
     const char              *devname )
 {
-   return(1);
+    return(1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -169,10 +169,10 @@ void devh_SVEN_WriteModuleEvent(
         return;
 
     sven_fw_initialize_event_top( &ev,
-        devh->devh_sven_module,
-        1 /* devh->devh_sven_unit */,
-        SVEN_event_type_module_specific,
-        module_event_subtype );
+                                  devh->devh_sven_module,
+                                  1 /* devh->devh_sven_unit */,
+                                  SVEN_event_type_module_specific,
+                                  module_event_subtype );
 
     ev.u.se_uint[0]        = payload0;
     ev.u.se_uint[1]        = payload1;
@@ -189,36 +189,36 @@ void devh_SVEN_WriteModuleEvent(
 /* SVEN FW TX: Required custom routines to enable FW TX                   */
 /* ---------------------------------------------------------------------- */
 int sven_fw_set_globals(
-   struct SVEN_FW_Globals  *fw_globals )
+    struct SVEN_FW_Globals  *fw_globals )
 {
-   sven_fw_attach( &g_svenh.devh_svenh, fw_globals );
-   devh_SVEN_SetModuleUnit( &g_svenh, SVEN_module_GEN4_GV, 1 );
-   return(0);
+    sven_fw_attach( &g_svenh.devh_svenh, fw_globals );
+    devh_SVEN_SetModuleUnit( &g_svenh, SVEN_module_GEN4_GV, 1 );
+    return(0);
 }
 
 uint32_t cp_using_dma_phys(uint32_t ddr_addr, uint32_t local_addr, uint32_t size, char to_ddr, char swap);
 
 unsigned int sven_fw_read_external_register(
-   struct SVENHandle       *svenh,
-   volatile unsigned int   *preg )
+    struct SVENHandle       *svenh,
+    volatile unsigned int   *preg )
 {
-   unsigned int      reg __attribute__ ((aligned(8)));
+    unsigned int      reg __attribute__ ((aligned(8)));
 
-   (void)svenh;   // argument unused
+    (void)svenh;   // argument unused
 
-   cp_using_dma_phys( (uint32_t) preg, (uint32_t) &reg, 4, 0, 0 );
+    cp_using_dma_phys( (uint32_t) preg, (uint32_t) &reg, 4, 0, 0 );
 
-   return( reg );
+    return( reg );
 }
 
 void sven_fw_copy_event_to_host_mem(
-   struct SVENHandle          *svenh,
-   volatile struct SVENEvent  *to,
-   const struct SVENEvent     *from )
+    struct SVENHandle          *svenh,
+    volatile struct SVENEvent  *to,
+    const struct SVENEvent     *from )
 {
-   (void)svenh;   // argument unused
+    (void)svenh;   // argument unused
 
-   cp_using_dma_phys( (uint32_t) to, (uint32_t) from, sizeof(*to), 1, 0 );
+    cp_using_dma_phys( (uint32_t) to, (uint32_t) from, sizeof(*to), 1, 0 );
 }
 /* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */

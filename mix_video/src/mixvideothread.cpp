@@ -10,41 +10,41 @@
  * SECTION:mixvideoinitparams
  * @short_description: MI-X Video Initialization Parameters
  *
- * The MixVideoInitParams object will be created by the MMF/App 
- * and provided in the mix_video_initialize() function. 
- * The get and set methods for the properties will be available for 
+ * The MixVideoInitParams object will be created by the MMF/App
+ * and provided in the mix_video_initialize() function.
+ * The get and set methods for the properties will be available for
  * the caller to set and get information used at initialization time.
  */
 
 #include "mixvideothread.h"
 
 MixVideoMutex::MixVideoMutex() {
-	pthread_mutex_init(&mMutex, NULL);
+    pthread_mutex_init(&mMutex, NULL);
 }
 MixVideoMutex::MixVideoMutex(const char* name) {
-	pthread_mutex_init(&mMutex, NULL);
+    pthread_mutex_init(&mMutex, NULL);
 }
 MixVideoMutex::MixVideoMutex(int type, const char* name) {
-	if (type == SHARED) {
-		pthread_mutexattr_t attr;
-		pthread_mutexattr_init(&attr);
-		pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-		pthread_mutex_init(&mMutex, &attr);
-		pthread_mutexattr_destroy(&attr);
-	} else {
-		pthread_mutex_init(&mMutex, NULL);
-	}
+    if (type == SHARED) {
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+        pthread_mutex_init(&mMutex, &attr);
+        pthread_mutexattr_destroy(&attr);
+    } else {
+        pthread_mutex_init(&mMutex, NULL);
+    }
 }
 MixVideoMutex::~MixVideoMutex() {
-	pthread_mutex_destroy(&mMutex);
+    pthread_mutex_destroy(&mMutex);
 }
 int MixVideoMutex::lock() {
-	return -pthread_mutex_lock(&mMutex);
+    return -pthread_mutex_lock(&mMutex);
 }
 void MixVideoMutex::unlock() {
-	pthread_mutex_unlock(&mMutex);
+    pthread_mutex_unlock(&mMutex);
 }
 int MixVideoMutex::tryLock() {
-	return -pthread_mutex_trylock(&mMutex);
+    return -pthread_mutex_trylock(&mMutex);
 }
 

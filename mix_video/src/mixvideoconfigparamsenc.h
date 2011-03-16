@@ -16,7 +16,6 @@
  * MIX_VIDEOCONFIGPARAMSENC:
  * @obj: object to be type-casted.
  */
-//#define MIX_VIDEOCONFIGPARAMSENC(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEnc))
 #define MIX_VIDEOCONFIGPARAMSENC(obj) (reinterpret_cast<MixVideoConfigParamsEnc*>(obj))
 
 /**
@@ -25,29 +24,7 @@
  *
  * Checks if the given object is an instance of #MixParams
  */
-//#define MIX_IS_VIDEOCONFIGPARAMSENC(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC))
-
-/**
- * MIX_VIDEOCONFIGPARAMSENC_CLASS:
- * @klass: class to be type-casted.
- */
-//#define MIX_VIDEOCONFIGPARAMSENC_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEncClass))
-
-/**
- * MIX_IS_VIDEOCONFIGPARAMSENC_CLASS:
- * @klass: a class.
- *
- * Checks if the given class is #MixParamsClass
- */
-//#define MIX_IS_VIDEOCONFIGPARAMSENC_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), MIX_TYPE_VIDEOCONFIGPARAMSENC))
-
-/**
- * MIX_VIDEOCONFIGPARAMSENC_GET_CLASS:
- * @obj: a #MixParams object.
- *
- * Get the class instance of the object.
- */
-//#define MIX_VIDEOCONFIGPARAMSENC_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), MIX_TYPE_VIDEOCONFIGPARAMSENC, MixVideoConfigParamsEncClass))
+#define MIX_IS_VIDEOCONFIGPARAMSENC(obj) (NULL != MIX_VIDEOCONFIGPARAMSENC(obj))
 
 
 
@@ -57,106 +34,117 @@
  * MI-X VideoConfig Parameter object
  */
 class MixVideoConfigParamsEnc : public MixVideoConfigParams {
-	/*< public > */
-	//MixIOVec header;
-
-	/* the type of the following members will be changed after MIX API doc is ready */
 public:
-	/* Encoding profile */
-	MixProfile profile;
+    MixVideoConfigParamsEnc();
+    virtual ~MixVideoConfigParamsEnc();
+    virtual bool copy(MixParams *target) const;
+    virtual bool equal(MixParams* obj) const;
+    virtual MixParams* dup() const;
+public:
+    /*< public > */
+    //MixIOVec header;
 
-	guint8 level;
+    /* the type of the following members will be changed after MIX API doc is ready */
 
-	/* Raw format to be encoded */
-	MixRawTargetFormat raw_format;
+    /* Encoding profile */
+    MixProfile profile;
 
-	/* Rate control mode */
-	MixRateControl rate_control;
+    uint8 level;
 
-	/* Bitrate when rate control is used */
-	guint bitrate;
+    /* Raw format to be encoded */
+    MixRawTargetFormat raw_format;
 
-	/* Numerator of frame rate */
-	guint frame_rate_num;
+    /* Rate control mode */
+    MixRateControl rate_control;
 
-	/* Denominator of frame rate */
-	guint frame_rate_denom;
+    /* Bitrate when rate control is used */
+    uint bitrate;
 
-	/* The initial QP value */
-	guint initial_qp;
+    /* Numerator of frame rate */
+    uint frame_rate_num;
 
-	/* The minimum QP value */
-	guint min_qp;
+    /* Denominator of frame rate */
+    uint frame_rate_denom;
 
-	/* this is the bit-rate the rate control is targeting, as a percentage of the maximum bit-rate
-	* for example if target_percentage is 95 then the rate control will target a bit-rate that is
-	* 95% of the maximum bit-rate
-	*/
-	guint target_percentage;
+    /* The initial QP value */
+    uint initial_qp;
 
-	/* windows size in milliseconds. For example if this is set to 500, then the rate control will guarantee the */
-	guint window_size;
+    /* The minimum QP value */
+    uint min_qp;
 
-	/* Number of frames between key frames (GOP size) */
-	guint intra_period;
+    /* this is the bit-rate the rate control is targeting, as a percentage of the maximum bit-rate
+    * for example if target_percentage is 95 then the rate control will target a bit-rate that is
+    * 95% of the maximum bit-rate
+    */
+    uint target_percentage;
 
-	/* Width of video frame */
-	guint16 picture_width;
+    /* windows size in milliseconds. For example if this is set to 500, then the rate control will guarantee the */
+    uint window_size;
 
-	/* Height of the video frame */
-	guint16 picture_height;
+    /* Number of frames between key frames (GOP size) */
+    uint intra_period;
 
-	/* Mime type, reserved */
-	GString * mime_type;
+    /* Width of video frame */
+    uint16 picture_width;
 
-	/* Encode target format */
-	MixEncodeTargetFormat encode_format;
+    /* Height of the video frame */
+    uint16 picture_height;
 
-	/* Size of the pool of MixBuffer objects */
-	guint mixbuffer_pool_size;
+    /* Mime type, reserved */
+    char * mime_type;
 
-	/* Are buffers shared between capture and encoding drivers */
-	gboolean share_buf_mode;
+    /* Encode target format */
+    MixEncodeTargetFormat encode_format;
 
-	/* Array of frame IDs created by capture library */
-	gulong *	ci_frame_id;
+    /* Size of the pool of MixBuffer objects */
+    uint mixbuffer_pool_size;
 
-	/* Size of the array ci_frame_id */
-	guint	ci_frame_num;
+    /* Are buffers shared between capture and encoding drivers */
+    bool share_buf_mode;
 
-	guint 	CIR_frame_cnt;
+    /* Array of frame IDs created by capture library */
+    ulong * ci_frame_id;
+
+    /* Size of the array ci_frame_id */
+    uint ci_frame_num;
+
+    uint CIR_frame_cnt;
 
     /* The maximum slice size to be set to video driver (in bits).
      * The encoder hardware will try to make sure the single slice does not exceed this size
      * If not, mix_video_encode() will report a specific error
      */
-	guint	max_slice_size;
+    uint max_slice_size;
 
-	MixVideoIntraRefreshType refresh_type;
+    MixVideoIntraRefreshType refresh_type;
 
-	MixAIRParams air_params;
+    MixAIRParams air_params;
 
-	/* < private > */
-	gulong draw;
+    MixBufferAllocationMode buffer_mode;
+    void * buf_info;
 
-	/*< public > */
+    /* < private > */
+    ulong draw;
 
-	/* Indicates whether MixVideoFrames suitable for displaying
-	 * need to be enqueued for retrieval using mix_video_get_frame() */
-	gboolean need_display;
+    /*< public > */
 
-	/* Reserved for future use */
-	void *reserved1;
+    /* Indicates whether MixVideoFrames suitable for displaying
+     * need to be enqueued for retrieval using mix_video_get_frame() */
+    bool need_display;
 
-	/* Reserved for future use */
-	void *reserved2;
+    /* Reserved for future use */
+    void *reserved1;
 
-	/* Reserved for future use */
-	void *reserved3;
+    /* Reserved for future use */
+    void *reserved2;
 
-	/* Reserved for future use */
-	void *reserved4;
+    /* Reserved for future use */
+    void *reserved3;
+
+    /* Reserved for future use */
+    void *reserved4;
 };
+
 
 /**
  * mix_videoconfigparamsenc_new:
@@ -165,6 +153,7 @@ public:
  * Use this method to create new instance of #MixVideoConfigParamsEnc
  */
 MixVideoConfigParamsEnc *mix_videoconfigparamsenc_new(void);
+
 /**
  * mix_videoconfigparamsenc_ref:
  * @mix: object to add reference
@@ -192,8 +181,8 @@ MixVideoConfigParamsEnc *mix_videoconfigparamsenc_ref(MixVideoConfigParamsEnc * 
  *
  * Set mime type
  */
-MIX_RESULT mix_videoconfigparamsenc_set_mime_type(MixVideoConfigParamsEnc * obj,
-		const gchar * mime_type);
+MIX_RESULT mix_videoconfigparamsenc_set_mime_type(
+    MixVideoConfigParamsEnc * obj, const char * mime_type);
 
 /**
  * mix_videoconfigparamsenc_get_mime_type:
@@ -207,8 +196,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_mime_type(MixVideoConfigParamsEnc * obj,
  * Caller is responsible to g_free *mime_type
  * </note>
  */
-MIX_RESULT mix_videoconfigparamsenc_get_mime_type(MixVideoConfigParamsEnc * obj,
-		gchar ** mime_type);
+MIX_RESULT mix_videoconfigparamsenc_get_mime_type(
+    MixVideoConfigParamsEnc * obj, char ** mime_type);
 
 
 /**
@@ -220,8 +209,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_mime_type(MixVideoConfigParamsEnc * obj,
  *
  * Set frame rate
  */
-MIX_RESULT mix_videoconfigparamsenc_set_frame_rate(MixVideoConfigParamsEnc * obj,
-		guint frame_rate_num, guint frame_rate_denom);
+MIX_RESULT mix_videoconfigparamsenc_set_frame_rate(
+    MixVideoConfigParamsEnc * obj, uint frame_rate_num, uint frame_rate_denom);
 
 /**
  * mix_videoconfigparamsenc_get_frame_rate:
@@ -232,8 +221,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_frame_rate(MixVideoConfigParamsEnc * obj
  *
  * Get frame rate
  */
-MIX_RESULT mix_videoconfigparamsenc_get_frame_rate(MixVideoConfigParamsEnc * obj,
-		guint * frame_rate_num, guint * frame_rate_denom);
+MIX_RESULT mix_videoconfigparamsenc_get_frame_rate(
+    MixVideoConfigParamsEnc * obj, uint * frame_rate_num, uint * frame_rate_denom);
 
 /**
  * mix_videoconfigparamsenc_set_picture_res:
@@ -244,8 +233,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_frame_rate(MixVideoConfigParamsEnc * obj
  *
  * Set width and height of video frame
  */
-MIX_RESULT mix_videoconfigparamsenc_set_picture_res(MixVideoConfigParamsEnc * obj,
-		guint picture_width, guint picture_height);
+MIX_RESULT mix_videoconfigparamsenc_set_picture_res(
+    MixVideoConfigParamsEnc * obj, uint picture_width, uint picture_height);
 
 /**
  * mix_videoconfigparamsenc_get_picture_res:
@@ -256,8 +245,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_picture_res(MixVideoConfigParamsEnc * ob
  *
  * Get width and height of video frame
  */
-MIX_RESULT mix_videoconfigparamsenc_get_picture_res(MixVideoConfigParamsEnc * obj,
-		guint * picture_width, guint * picture_height);
+MIX_RESULT mix_videoconfigparamsenc_get_picture_res(
+    MixVideoConfigParamsEnc * obj, uint * picture_width, uint * picture_height);
 
 /**
  * mix_videoconfigparamsenc_set_encode_format:
@@ -267,8 +256,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_picture_res(MixVideoConfigParamsEnc * ob
  *
  * Set Encode target format
  */
-MIX_RESULT mix_videoconfigparamsenc_set_encode_format (MixVideoConfigParamsEnc * obj,
-		MixEncodeTargetFormat encode_format);
+MIX_RESULT mix_videoconfigparamsenc_set_encode_format (
+    MixVideoConfigParamsEnc * obj, MixEncodeTargetFormat encode_format);
 
 /**
  * mix_videoconfigparamsenc_get_encode_format:
@@ -278,8 +267,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_encode_format (MixVideoConfigParamsEnc *
  *
  * Get Encode target format
  */
-MIX_RESULT mix_videoconfigparamsenc_get_encode_format (MixVideoConfigParamsEnc * obj,
-		MixEncodeTargetFormat * encode_format);
+MIX_RESULT mix_videoconfigparamsenc_get_encode_format (
+    MixVideoConfigParamsEnc * obj, MixEncodeTargetFormat * encode_format);
 
 /**
  * mix_videoconfigparamsenc_set_bit_rate:
@@ -289,8 +278,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_encode_format (MixVideoConfigParamsEnc *
  *
  * Set bitrate
  */
-MIX_RESULT mix_videoconfigparamsenc_set_bit_rate (MixVideoConfigParamsEnc * obj,
-        guint bps);
+MIX_RESULT mix_videoconfigparamsenc_set_bit_rate (
+    MixVideoConfigParamsEnc * obj, uint bps);
 
 /**
  * mix_videoconfigparamsenc_get_bit_rate:
@@ -300,8 +289,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_bit_rate (MixVideoConfigParamsEnc * obj,
  *
  * Get bitrate
  */
-MIX_RESULT mix_videoconfigparamsenc_get_bit_rate (MixVideoConfigParamsEnc * obj,
-        guint *bps);
+MIX_RESULT mix_videoconfigparamsenc_get_bit_rate (
+    MixVideoConfigParamsEnc * obj, uint *bps);
 
 /**
  * mix_videoconfigparamsenc_set_init_qp:
@@ -311,8 +300,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_bit_rate (MixVideoConfigParamsEnc * obj,
  *
  * Set The initial QP value
  */
-MIX_RESULT mix_videoconfigparamsenc_set_init_qp (MixVideoConfigParamsEnc * obj,
-        guint initial_qp);
+MIX_RESULT mix_videoconfigparamsenc_set_init_qp (
+    MixVideoConfigParamsEnc * obj, uint initial_qp);
 
 /**
  * mix_videoconfigparamsenc_get_init_qp:
@@ -322,8 +311,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_init_qp (MixVideoConfigParamsEnc * obj,
  *
  * Get The initial QP value
  */
-MIX_RESULT mix_videoconfigparamsenc_get_init_qp (MixVideoConfigParamsEnc * obj,
-        guint *initial_qp);
+MIX_RESULT mix_videoconfigparamsenc_get_init_qp (
+    MixVideoConfigParamsEnc * obj, uint *initial_qp);
 
 /**
  * mix_videoconfigparamsenc_set_min_qp:
@@ -333,8 +322,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_init_qp (MixVideoConfigParamsEnc * obj,
  *
  * Set The minimum QP value
  */
-MIX_RESULT mix_videoconfigparamsenc_set_min_qp (MixVideoConfigParamsEnc * obj,
-        guint min_qp);
+MIX_RESULT mix_videoconfigparamsenc_set_min_qp (
+    MixVideoConfigParamsEnc * obj, uint min_qp);
 
 /**
  * mix_videoconfigparamsenc_get_min_qp:
@@ -344,8 +333,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_min_qp (MixVideoConfigParamsEnc * obj,
  *
  * Get The minimum QP value
  */
-MIX_RESULT mix_videoconfigparamsenc_get_min_qp(MixVideoConfigParamsEnc * obj,
-        guint *min_qp);
+MIX_RESULT mix_videoconfigparamsenc_get_min_qp(
+    MixVideoConfigParamsEnc * obj, uint *min_qp);
 
 
 /**
@@ -356,8 +345,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_min_qp(MixVideoConfigParamsEnc * obj,
  *
  * Set The  target percentage value
  */
-MIX_RESULT mix_videoconfigparamsenc_set_target_percentage (MixVideoConfigParamsEnc * obj,
-        guint target_percentage);
+MIX_RESULT mix_videoconfigparamsenc_set_target_percentage (
+    MixVideoConfigParamsEnc * obj, uint target_percentage);
 
 /**
  * mix_videoconfigparamsenc_get_target_percentage:
@@ -367,8 +356,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_target_percentage (MixVideoConfigParamsE
  *
  * Get The target percentage value
  */
-MIX_RESULT mix_videoconfigparamsenc_get_target_percentage(MixVideoConfigParamsEnc * obj,
-        guint *target_percentage);
+MIX_RESULT mix_videoconfigparamsenc_get_target_percentage(
+    MixVideoConfigParamsEnc * obj, uint *target_percentage);
 
 /**
  * mix_videoconfigparamsenc_set_window_size:
@@ -378,8 +367,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_target_percentage(MixVideoConfigParamsEn
  *
  * Set The window size value
  */
-MIX_RESULT mix_videoconfigparamsenc_set_window_size (MixVideoConfigParamsEnc * obj,
-        guint window_size);
+MIX_RESULT mix_videoconfigparamsenc_set_window_size (
+    MixVideoConfigParamsEnc * obj, uint window_size);
 
 /**
  * mix_videoconfigparamsenc_get_window_size:
@@ -389,8 +378,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_window_size (MixVideoConfigParamsEnc * o
  *
  * Get The window size value
  */
-MIX_RESULT mix_videoconfigparamsenc_get_window_size (MixVideoConfigParamsEnc * obj,
-        guint *window_size);
+MIX_RESULT mix_videoconfigparamsenc_get_window_size (
+    MixVideoConfigParamsEnc * obj, uint *window_size);
 
 /**
  * mix_videoconfigparamsenc_set_intra_period:
@@ -400,8 +389,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_window_size (MixVideoConfigParamsEnc * o
  *
  * Set Number of frames between key frames (GOP size)
  */
-MIX_RESULT mix_videoconfigparamsenc_set_intra_period (MixVideoConfigParamsEnc * obj,
-        guint intra_period);
+MIX_RESULT mix_videoconfigparamsenc_set_intra_period (
+    MixVideoConfigParamsEnc * obj, uint intra_period);
 
 /**
  * mix_videoconfigparamsenc_get_intra_period:
@@ -411,8 +400,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_intra_period (MixVideoConfigParamsEnc * 
  *
  * Get Number of frames between key frames (GOP size)
  */
-MIX_RESULT mix_videoconfigparamsenc_get_intra_period (MixVideoConfigParamsEnc * obj,
-        guint *intra_period);
+MIX_RESULT mix_videoconfigparamsenc_get_intra_period (
+    MixVideoConfigParamsEnc * obj, uint *intra_period);
 
 /**
  * mix_videoconfigparamsenc_set_buffer_pool_size:
@@ -422,8 +411,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_intra_period (MixVideoConfigParamsEnc * 
  *
  * Set Size of the pool of #MixBuffer objects
  */
-MIX_RESULT mix_videoconfigparamsenc_set_buffer_pool_size(MixVideoConfigParamsEnc * obj,
-		guint bufpoolsize);
+MIX_RESULT mix_videoconfigparamsenc_set_buffer_pool_size(
+    MixVideoConfigParamsEnc * obj, uint bufpoolsize);
 
 /**
  * mix_videoconfigparamsenc_set_buffer_pool_size:
@@ -433,32 +422,32 @@ MIX_RESULT mix_videoconfigparamsenc_set_buffer_pool_size(MixVideoConfigParamsEnc
  *
  * Get Size of the pool of #MixBuffer objects
  */
-MIX_RESULT mix_videoconfigparamsenc_get_buffer_pool_size(MixVideoConfigParamsEnc * obj,
-		guint *bufpoolsize);
+MIX_RESULT mix_videoconfigparamsenc_get_buffer_pool_size(
+    MixVideoConfigParamsEnc * obj, uint *bufpoolsize);
 
 /**
  * mix_videoconfigparamsenc_set_share_buf_mode:
  * @obj: #MixVideoConfigParamsEnc object
  * @share_buf_mod: A flag to indicate whether buffers are shared
- *                 between capture and encoding drivers or not
+ * between capture and encoding drivers or not
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set the flag that indicates whether buffers are shared between capture and encoding drivers or not
  */
-MIX_RESULT mix_videoconfigparamsenc_set_share_buf_mode (MixVideoConfigParamsEnc * obj,
-		gboolean share_buf_mod);
+MIX_RESULT mix_videoconfigparamsenc_set_share_buf_mode (
+    MixVideoConfigParamsEnc * obj, bool share_buf_mod);
 
 /**
  * mix_videoconfigparamsenc_get_share_buf_mode:
  * @obj: #MixVideoConfigParamsEnc object
  * @share_buf_mod: the flag to be returned that indicates whether buffers
- *                 are shared between capture and encoding drivers or not
+ * are shared between capture and encoding drivers or not
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Get the flag that indicates whether buffers are shared between capture and encoding drivers or not
  */
-MIX_RESULT mix_videoconfigparamsenc_get_share_buf_mode(MixVideoConfigParamsEnc * obj,
-		gboolean *share_buf_mod);
+MIX_RESULT mix_videoconfigparamsenc_get_share_buf_mode(
+    MixVideoConfigParamsEnc * obj, bool *share_buf_mod);
 
 /**
  * mix_videoconfigparamsenc_set_ci_frame_info:
@@ -469,8 +458,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_share_buf_mode(MixVideoConfigParamsEnc *
  *
  * Set CI frame information
  */
-MIX_RESULT mix_videoconfigparamsenc_set_ci_frame_info(MixVideoConfigParamsEnc * obj,
-		gulong *	ci_frame_id, guint  ci_frame_num);
+MIX_RESULT mix_videoconfigparamsenc_set_ci_frame_info(
+    MixVideoConfigParamsEnc * obj, ulong * ci_frame_id, uint ci_frame_num);
 
 /**
  * mix_videoconfigparamsenc_get_ci_frame_info:
@@ -484,8 +473,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_ci_frame_info(MixVideoConfigParamsEnc * 
  * Caller is responsible to g_free *ci_frame_id
  * </note>
  */
-MIX_RESULT mix_videoconfigparamsenc_get_ci_frame_info (MixVideoConfigParamsEnc * obj,
-		gulong * *ci_frame_id, guint *ci_frame_num);
+MIX_RESULT mix_videoconfigparamsenc_get_ci_frame_info (
+    MixVideoConfigParamsEnc * obj, ulong * *ci_frame_id, uint *ci_frame_num);
 
 
 /**
@@ -496,8 +485,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_ci_frame_info (MixVideoConfigParamsEnc *
  *
  * Set drawable
  */
-MIX_RESULT mix_videoconfigparamsenc_set_drawable (MixVideoConfigParamsEnc * obj,
-		gulong draw);
+MIX_RESULT mix_videoconfigparamsenc_set_drawable (
+    MixVideoConfigParamsEnc * obj, ulong draw);
 
 /**
  * mix_videoconfigparamsenc_get_drawable:
@@ -507,35 +496,35 @@ MIX_RESULT mix_videoconfigparamsenc_set_drawable (MixVideoConfigParamsEnc * obj,
  *
  * Get drawable
  */
-MIX_RESULT mix_videoconfigparamsenc_get_drawable (MixVideoConfigParamsEnc * obj,
-        gulong *draw);
+MIX_RESULT mix_videoconfigparamsenc_get_drawable (
+    MixVideoConfigParamsEnc * obj, ulong *draw);
 
 /**
  * mix_videoconfigparamsenc_set_need_display:
  * @obj: #MixVideoConfigParamsEnc object
  * @need_display: Flag to indicates whether MixVideoFrames suitable for displaying
- *                need to be enqueued for retrieval using mix_video_get_frame()
+ * need to be enqueued for retrieval using mix_video_get_frame()
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Set the flag used to indicate whether MixVideoFrames suitable for displaying
  * need to be enqueued for retrieval using mix_video_get_frame()
  */
 MIX_RESULT mix_videoconfigparamsenc_set_need_display (
-        MixVideoConfigParamsEnc * obj, gboolean need_display);
+    MixVideoConfigParamsEnc * obj, bool need_display);
 
 
 /**
  * mix_videoconfigparamsenc_get_need_display:
  * @obj: #MixVideoConfigParamsEnc object
  * @need_display: A flag to be returned to indicates whether MixVideoFrames suitable for displaying
- *                need to be enqueued for retrieval using mix_video_get_frame()
+ * need to be enqueued for retrieval using mix_video_get_frame()
  * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
  *
  * Get the flag used to indicate whether MixVideoFrames suitable for displaying
  * need to be enqueued for retrieval using mix_video_get_frame()
  */
-MIX_RESULT mix_videoconfigparamsenc_get_need_display(MixVideoConfigParamsEnc * obj,
-		gboolean *need_display);
+MIX_RESULT mix_videoconfigparamsenc_get_need_display(
+    MixVideoConfigParamsEnc * obj, bool *need_display);
 
 /**
  * mix_videoconfigparamsenc_set_rate_control:
@@ -545,8 +534,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_need_display(MixVideoConfigParamsEnc * o
  *
  * Set Rate control mode
  */
-MIX_RESULT mix_videoconfigparamsenc_set_rate_control(MixVideoConfigParamsEnc * obj,
-		MixRateControl rcmode);
+MIX_RESULT mix_videoconfigparamsenc_set_rate_control(
+    MixVideoConfigParamsEnc * obj, MixRateControl rcmode);
 
 /**
  * mix_videoconfigparamsenc_set_rate_control:
@@ -556,8 +545,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_rate_control(MixVideoConfigParamsEnc * o
  *
  * Get Rate control mode
  */
-MIX_RESULT mix_videoconfigparamsenc_get_rate_control(MixVideoConfigParamsEnc * obj,
-		MixRateControl * rcmode);
+MIX_RESULT mix_videoconfigparamsenc_get_rate_control(
+    MixVideoConfigParamsEnc * obj, MixRateControl * rcmode);
 
 /**
  * mix_videoconfigparamsenc_set_raw_format:
@@ -567,8 +556,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_rate_control(MixVideoConfigParamsEnc * o
  *
  * Set Raw format to be encoded
  */
-MIX_RESULT mix_videoconfigparamsenc_set_raw_format (MixVideoConfigParamsEnc * obj,
-		MixRawTargetFormat raw_format);
+MIX_RESULT mix_videoconfigparamsenc_set_raw_format (
+    MixVideoConfigParamsEnc * obj, MixRawTargetFormat raw_format);
 
 /**
  * mix_videoconfigparamsenc_get_raw_format:
@@ -578,8 +567,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_raw_format (MixVideoConfigParamsEnc * ob
  *
  * Get Raw format
  */
-MIX_RESULT mix_videoconfigparamsenc_get_raw_format (MixVideoConfigParamsEnc * obj,
-		MixRawTargetFormat * raw_format);
+MIX_RESULT mix_videoconfigparamsenc_get_raw_format (
+    MixVideoConfigParamsEnc * obj, MixRawTargetFormat * raw_format);
 
 /**
  * mix_videoconfigparamsenc_set_profile:
@@ -589,8 +578,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_raw_format (MixVideoConfigParamsEnc * ob
  *
  * Set Encoding profile
  */
-MIX_RESULT mix_videoconfigparamsenc_set_profile (MixVideoConfigParamsEnc * obj,
-		MixProfile profile);
+MIX_RESULT mix_videoconfigparamsenc_set_profile (
+    MixVideoConfigParamsEnc * obj, MixProfile profile);
 
 /**
  * mix_videoconfigparamsenc_get_profile:
@@ -600,8 +589,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_profile (MixVideoConfigParamsEnc * obj,
  *
  * Get Encoding profile
  */
-MIX_RESULT mix_videoconfigparamsenc_get_profile (MixVideoConfigParamsEnc * obj,
-		MixProfile * profile);
+MIX_RESULT mix_videoconfigparamsenc_get_profile (
+    MixVideoConfigParamsEnc * obj, MixProfile * profile);
 
 
 /**
@@ -612,8 +601,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_profile (MixVideoConfigParamsEnc * obj,
  *
  * Set Encoding level
  */
-MIX_RESULT mix_videoconfigparamsenc_set_level (MixVideoConfigParamsEnc * obj,
-		guint8 level);
+MIX_RESULT mix_videoconfigparamsenc_set_level (
+    MixVideoConfigParamsEnc * obj, uint8 level);
 
 
 /**
@@ -625,8 +614,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_level (MixVideoConfigParamsEnc * obj,
  * Get Encoding level
  */
 
-MIX_RESULT mix_videoconfigparamsenc_get_level (MixVideoConfigParamsEnc * obj,
-		guint8 * level);
+MIX_RESULT mix_videoconfigparamsenc_get_level (
+    MixVideoConfigParamsEnc * obj, uint8 * level);
 
 
 /**
@@ -637,8 +626,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_level (MixVideoConfigParamsEnc * obj,
  *
  * Set Encoding CIR frame count
  */
-MIX_RESULT mix_videoconfigparamsenc_set_CIR_frame_cnt (MixVideoConfigParamsEnc * obj,
-		guint CIR_frame_cnt);
+MIX_RESULT mix_videoconfigparamsenc_set_CIR_frame_cnt (
+    MixVideoConfigParamsEnc * obj, uint CIR_frame_cnt);
 
 /**
  * mix_videoconfigparamsenc_set_CIR_frame_cnt:
@@ -649,8 +638,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_CIR_frame_cnt (MixVideoConfigParamsEnc *
  * Get Encoding CIR frame count
  */
 
-MIX_RESULT mix_videoconfigparamsenc_get_CIR_frame_cnt (MixVideoConfigParamsEnc * obj,
-		guint * CIR_frame_cnt);
+MIX_RESULT mix_videoconfigparamsenc_get_CIR_frame_cnt (
+    MixVideoConfigParamsEnc * obj, uint * CIR_frame_cnt);
 
 
 /**
@@ -661,8 +650,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_CIR_frame_cnt (MixVideoConfigParamsEnc *
  *
  * Set Maximum encoded slice size
  */
-MIX_RESULT mix_videoconfigparamsenc_set_max_slice_size (MixVideoConfigParamsEnc * obj,
-		guint max_slice_size);
+MIX_RESULT mix_videoconfigparamsenc_set_max_slice_size (
+    MixVideoConfigParamsEnc * obj, uint max_slice_size);
 
 /**
  * mix_videoconfigparamsenc_get_max_slice_size:
@@ -673,8 +662,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_max_slice_size (MixVideoConfigParamsEnc 
  * Get Maximum encoded slice size
  */
 
-MIX_RESULT mix_videoconfigparamsenc_get_max_slice_size (MixVideoConfigParamsEnc * obj,
-		guint * max_slice_size);
+MIX_RESULT mix_videoconfigparamsenc_get_max_slice_size (
+    MixVideoConfigParamsEnc * obj, uint * max_slice_size);
 
 
 /**
@@ -685,8 +674,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_max_slice_size (MixVideoConfigParamsEnc 
  *
  * Set Intra Refresh Type
  */
-MIX_RESULT mix_videoconfigparamsenc_set_refresh_type (MixVideoConfigParamsEnc * obj,
-		MixVideoIntraRefreshType refresh_type);
+MIX_RESULT mix_videoconfigparamsenc_set_refresh_type (
+    MixVideoConfigParamsEnc * obj, MixVideoIntraRefreshType refresh_type);
 
 /**
  * mix_videoconfigparamsenc_get_refresh_type:
@@ -697,8 +686,8 @@ MIX_RESULT mix_videoconfigparamsenc_set_refresh_type (MixVideoConfigParamsEnc * 
  * Get Intra Refresh Type
  */
 
-MIX_RESULT mix_videoconfigparamsenc_get_refresh_type (MixVideoConfigParamsEnc * obj,
-		MixVideoIntraRefreshType * refresh_type);
+MIX_RESULT mix_videoconfigparamsenc_get_refresh_type (
+    MixVideoConfigParamsEnc * obj, MixVideoIntraRefreshType * refresh_type);
 
 /**
  * mix_videoconfigparamsenc_set_AIR_params:
@@ -708,8 +697,8 @@ MIX_RESULT mix_videoconfigparamsenc_get_refresh_type (MixVideoConfigParamsEnc * 
  *
  * Set AIR parameters
  */
-MIX_RESULT mix_videoconfigparamsenc_set_AIR_params (MixVideoConfigParamsEnc * obj,
-		MixAIRParams air_params);
+MIX_RESULT mix_videoconfigparamsenc_set_AIR_params (
+    MixVideoConfigParamsEnc * obj, MixAIRParams air_params);
 
 /**
  * mix_videoconfigparamsenc_get_AIR_params:
@@ -720,11 +709,57 @@ MIX_RESULT mix_videoconfigparamsenc_set_AIR_params (MixVideoConfigParamsEnc * ob
  * Get AIR parameters
  */
 
-MIX_RESULT mix_videoconfigparamsenc_get_AIR_params (MixVideoConfigParamsEnc * obj,
-		MixAIRParams * air_params);
+MIX_RESULT mix_videoconfigparamsenc_get_AIR_params (
+    MixVideoConfigParamsEnc * obj, MixAIRParams * air_params);
+
+/**
+ * mix_videoconfigparamsenc_set_buffer_mode:
+ * @obj: #MixVideoConfigParamsEnc object
+ * @buffer_mode: Buffer allocation mode
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set buffer allocation mode
+ */
+MIX_RESULT mix_videoconfigparamsenc_set_buffer_mode (
+    MixVideoConfigParamsEnc * obj, MixBufferAllocationMode buffer_mode);
+
+/**
+ * mix_videoconfigparamsenc_get_buffer_mode:
+ * @obj: #MixVideoConfigParamsEnc object
+ * @buffer_mode: Buffer allocation mode
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get buffer allocation mode
+ */
+MIX_RESULT mix_videoconfigparamsenc_get_buffer_mode (
+    MixVideoConfigParamsEnc * obj, MixBufferAllocationMode * buffer_mode);
+
+
+/**
+ * mix_videoconfigparamsenc_set_upstream_buffer_info:
+ * @obj: #MixVideoConfigParamsEnc object
+ * @buffer_mode: Buffer allocation mode
+ * @buf_info: Buffer information
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set buffer information according to the buffer mode
+ */
+
+MIX_RESULT mix_videoconfigparamsenc_set_upstream_buffer_info (
+    MixVideoConfigParamsEnc * obj, MixBufferAllocationMode buffer_mode, void * buf_info);
+
+/**
+ * mix_videoconfigparamsenc_get_upstream_buffer_info:
+ * @obj: #MixVideoConfigParamsEnc object
+ * @buffer_mode: Buffer allocation mode
+ * @buf_info: Buffer information
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get buffer information according to the buffer mode
+ */
+MIX_RESULT mix_videoconfigparamsenc_get_upstream_buffer_info (
+    MixVideoConfigParamsEnc * obj, MixBufferAllocationMode buffer_mode, void ** buf_info);
 
 /* TODO: Add getters and setters for other properties */
-
-
 #endif /* __MIX_VIDEOCONFIGPARAMSENC_H__ */
 

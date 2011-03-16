@@ -4,7 +4,7 @@
 /**
  * viddec_mpeg2.h
  * --------------
- * This header file contains all the necessary state information and function 
+ * This header file contains all the necessary state information and function
  * prototypes for the MPEG2 parser. This header also defines the debug macros
  * used by the MPEG2 parser to emit debug messages in host mode.
  */
@@ -98,7 +98,7 @@ typedef enum {
 } mpeg2_wl_status_codes;
 
 /* MPEG2 Parser Workload types */
-typedef enum 
+typedef enum
 {
     /* MPEG2 Decoder Specific data */
     VIDDEC_WORKLOAD_MPEG2_DMEM = VIDDEC_WORKLOAD_DECODER_SPECIFIC,
@@ -124,16 +124,16 @@ struct mpeg2_workitems
 {
     /* Core Sequence Info 1 */
     uint32_t csi1;
-    
+
     /* Core Sequence Info 2 */
     uint32_t csi2;
-    
+
     /* Core Picture Info 1 */
     uint32_t cpi1;
-    
+
     /* Core Picture Coding Extension Info 1 */
     uint32_t cpce1;
-    
+
     /* Quantization Matrices */
     /*  0-15: Intra Quantization Matrix */
     /* 16-31: Non-Intra Quantization Matrix */

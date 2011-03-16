@@ -9,13 +9,13 @@
 #ifndef VBP_H264_PARSER_H
 #define VBP_H264_PARSER_H
 
-/* 
+/*
  * setup parser's entry points
  */
 uint32 vbp_init_parser_entries_h264(vbp_context *pcontext);
 
 /*
- * allocate query data 
+ * allocate query data
  */
 uint32 vbp_allocate_query_data_h264(vbp_context *pcontext);
 
@@ -31,7 +31,7 @@ uint32 vbp_parse_init_data_h264(vbp_context *pcontext);
 
 /*
  * parse start code. Only support lenght prefixed mode. Start
- * code prefixed is not supported. 
+ * code prefixed is not supported.
  */
 uint32 vbp_parse_start_code_h264(vbp_context *pcontext);
 

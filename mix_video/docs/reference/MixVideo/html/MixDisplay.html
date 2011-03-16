@@ -46,24 +46,24 @@
 #define             <a class="link" href="MixDisplay.html#MIX-DISPLAY-CLASS--CAPS" title="MIX_DISPLAY_CLASS()">MIX_DISPLAY_CLASS</a>                   (klass)
 #define             <a class="link" href="MixDisplay.html#MIX-DISPLAY-CAST--CAPS" title="MIX_DISPLAY_CAST()">MIX_DISPLAY_CAST</a>                    (obj)
 <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        (<a class="link" href="MixDisplay.html#MixDisplayDupFunction" title="MixDisplayDupFunction ()">*MixDisplayDupFunction</a>)            (const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
-gboolean            (<a class="link" href="MixDisplay.html#MixDisplayCopyFunction" title="MixDisplayCopyFunction ()">*MixDisplayCopyFunction</a>)           (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
+bool            (<a class="link" href="MixDisplay.html#MixDisplayCopyFunction" title="MixDisplayCopyFunction ()">*MixDisplayCopyFunction</a>)           (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
                                                          const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *src);
 void                (<a class="link" href="MixDisplay.html#MixDisplayFinalizeFunction" title="MixDisplayFinalizeFunction ()">*MixDisplayFinalizeFunction</a>)       (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
-gboolean            (<a class="link" href="MixDisplay.html#MixDisplayEqualFunction" title="MixDisplayEqualFunction ()">*MixDisplayEqualFunction</a>)          (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
+bool            (<a class="link" href="MixDisplay.html#MixDisplayEqualFunction" title="MixDisplayEqualFunction ()">*MixDisplayEqualFunction</a>)          (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
                                                          <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *second);
 #define             <a class="link" href="MixDisplay.html#MIX-VALUE-HOLDS-DISPLAY--CAPS" title="MIX_VALUE_HOLDS_DISPLAY()">MIX_VALUE_HOLDS_DISPLAY</a>             (value)
 #define             <a class="link" href="MixDisplay.html#MIX-DISPLAY-REFCOUNT--CAPS" title="MIX_DISPLAY_REFCOUNT()">MIX_DISPLAY_REFCOUNT</a>                (obj)
 #define             <a class="link" href="MixDisplay.html#MIX-DISPLAY-REFCOUNT-VALUE--CAPS" title="MIX_DISPLAY_REFCOUNT_VALUE()">MIX_DISPLAY_REFCOUNT_VALUE</a>          (obj)
                     <a class="link" href="MixDisplay.html#MixDisplay-struct" title="MixDisplay">MixDisplay</a>;
 <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        <a class="link" href="MixDisplay.html#mix-display-new" title="mix_display_new ()">mix_display_new</a>                     ();
-gboolean            <a class="link" href="MixDisplay.html#mix-display-copy" title="mix_display_copy ()">mix_display_copy</a>                    (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
+bool            <a class="link" href="MixDisplay.html#mix-display-copy" title="mix_display_copy ()">mix_display_copy</a>                    (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
                                                          const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *src);
 <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        <a class="link" href="MixDisplay.html#mix-display-ref" title="mix_display_ref ()">mix_display_ref</a>                     (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
 void                <a class="link" href="MixDisplay.html#mix-display-unref" title="mix_display_unref ()">mix_display_unref</a>                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
 void                <a class="link" href="MixDisplay.html#mix-display-replace" title="mix_display_replace ()">mix_display_replace</a>                 (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> **olddata,
                                                          <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *newdata);
 <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *        <a class="link" href="MixDisplay.html#mix-display-dup" title="mix_display_dup ()">mix_display_dup</a>                     (const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *obj);
-gboolean            <a class="link" href="MixDisplay.html#mix-display-equal" title="mix_display_equal ()">mix_display_equal</a>                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
+bool            <a class="link" href="MixDisplay.html#mix-display-equal" title="mix_display_equal ()">mix_display_equal</a>                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
                                                          <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *second);
 #define             <a class="link" href="MixDisplay.html#MIX-TYPE-PARAM-DISPLAY--CAPS" title="MIX_TYPE_PARAM_DISPLAY">MIX_TYPE_PARAM_DISPLAY</a>
 #define             <a class="link" href="MixDisplay.html#MIX-IS-PARAM-SPEC-DISPLAY--CAPS" title="MIX_IS_PARAM_SPEC_DISPLAY()">MIX_IS_PARAM_SPEC_DISPLAY</a>           (pspec)
@@ -133,7 +133,7 @@ Virtual function prototype for methods to create duplicate of instance.</p>
 <hr>
 <div class="refsect2" title="MixDisplayCopyFunction ()">
 <a name="MixDisplayCopyFunction"></a><h3>MixDisplayCopyFunction ()</h3>
-<pre class="programlisting">gboolean            (*MixDisplayCopyFunction)           (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
+<pre class="programlisting">bool            (*MixDisplayCopyFunction)           (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
                                                          const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *src);</pre>
 <p>
 Virtual function prototype for methods to create copies of instance.</p>
@@ -177,7 +177,7 @@ object.</p>
 <hr>
 <div class="refsect2" title="MixDisplayEqualFunction ()">
 <a name="MixDisplayEqualFunction"></a><h3>MixDisplayEqualFunction ()</h3>
-<pre class="programlisting">gboolean            (*MixDisplayEqualFunction)          (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
+<pre class="programlisting">bool            (*MixDisplayEqualFunction)          (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
                                                          <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *second);</pre>
 </div>
 <hr>
@@ -232,7 +232,7 @@ Get the reference count value of the object</p>
 <div class="refsect2" title="MixDisplay">
 <a name="MixDisplay-struct"></a><h3>MixDisplay</h3>
 <pre class="programlisting">typedef struct {
-  gint refcount;
+  int refcount;
 } MixDisplay;
 </pre>
 <p>
@@ -240,7 +240,7 @@ Base class for a refcounted parameter objects.</p>
 <div class="variablelist"><table border="0">
 <col align="left" valign="top">
 <tbody><tr>
-<td><p><span class="term">gint <em class="structfield"><code>refcount</code></em>;</span></p></td>
+<td><p><span class="term">int <em class="structfield"><code>refcount</code></em>;</span></p></td>
 <td> atomic refcount
 </td>
 </tr></tbody>
@@ -264,7 +264,7 @@ Create new instance of the object.</p>
 <hr>
 <div class="refsect2" title="mix_display_copy ()">
 <a name="mix-display-copy"></a><h3>mix_display_copy ()</h3>
-<pre class="programlisting">gboolean            mix_display_copy                    (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
+<pre class="programlisting">bool            mix_display_copy                    (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *target,
                                                          const <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *src);</pre>
 <p>
 Copy data from one instance to the other. This method internally invoked the <span class="type">"copy"</span> method such that derived object will be copied correctly.</p>
@@ -374,7 +374,7 @@ Duplicate the given <a class="link" href="MixDisplay.html" title="MixDisplay"><s
 <hr>
 <div class="refsect2" title="mix_display_equal ()">
 <a name="mix-display-equal"></a><h3>mix_display_equal ()</h3>
-<pre class="programlisting">gboolean            mix_display_equal                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
+<pre class="programlisting">bool            mix_display_equal                   (<a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *first,
                                                          <a class="link" href="MixDisplay.html" title="MixDisplay">MixDisplay</a> *second);</pre>
 <p>
 Note that the parameter comparison compares the values that are hold inside the object, not for checking if the 2 pointers are of the same instance.</p>

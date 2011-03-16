@@ -57,18 +57,18 @@ vc1_Status vc1_VOPDQuant(void* ctxt, vc1_Info *pInfo)
             }
             else if (picLayerHeader->DQPROFILE == VC1_DQPROFILE_DBLEDGES)
             {
-#ifdef VBP            	
+#ifdef VBP
                 VC1_GET_BITS9(2, picLayerHeader->DQDBEDGE);
 #else
-      			VC1_GET_BITS9(2, picLayerHeader->DQSBEDGE); /* DQDBEDGE. */
-#endif      		                
+                VC1_GET_BITS9(2, picLayerHeader->DQSBEDGE); /* DQDBEDGE. */
+#endif
             }
             else if (picLayerHeader->DQPROFILE == VC1_DQPROFILE_ALLMBLKS)
             {
                 VC1_GET_BITS9(1, picLayerHeader->DQBILEVEL);
             }
             if (! (picLayerHeader->DQPROFILE == VC1_DQPROFILE_ALLMBLKS &&
-                   picLayerHeader->DQBILEVEL == 0))
+                    picLayerHeader->DQBILEVEL == 0))
             {
                 VC1_GET_BITS9(3, picLayerHeader->PQDIFF);
                 if (picLayerHeader->PQDIFF == 7)
@@ -79,17 +79,17 @@ vc1_Status vc1_VOPDQuant(void* ctxt, vc1_Info *pInfo)
         }
     }
 #ifdef VBP
-	if ((picLayerHeader->DQUANTFRM == 1 && md->DQUANT == 1) || (md->DQUANT == 2))
-	{
-		if (picLayerHeader->PQDIFF == 7)
-		{
-			picLayerHeader->ALTPQUANT = picLayerHeader->ABSPQ;
-		}
-		else
-		{
-			picLayerHeader->ALTPQUANT = picLayerHeader->PQUANT + picLayerHeader->PQDIFF + 1;
-		}
-	}
+    if ((picLayerHeader->DQUANTFRM == 1 && md->DQUANT == 1) || (md->DQUANT == 2))
+    {
+        if (picLayerHeader->PQDIFF == 7)
+        {
+            picLayerHeader->ALTPQUANT = picLayerHeader->ABSPQ;
+        }
+        else
+        {
+            picLayerHeader->ALTPQUANT = picLayerHeader->PQUANT + picLayerHeader->PQDIFF + 1;
+        }
+    }
 #endif
     return status;
 }

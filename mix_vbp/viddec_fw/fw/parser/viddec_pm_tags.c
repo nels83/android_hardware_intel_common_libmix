@@ -20,7 +20,7 @@
   or has a sc prefix its associated to next decodable frame(based on first slice or header depending on codec).
   We use three state variables to determine where the frame starts and ends.
     frame_start_found: Indicates we saw the beggining of frame in current list of ES buffers(which represent current acces unit).
-                       This is decremented on workload done since it normally means we detected frame end. 
+                       This is decremented on workload done since it normally means we detected frame end.
     found_fm_st_in_current_au:Indicates we saw the first slice in current access unit. Its mainly used to decide whether the first buffer
                               belongs to current frame or next frame. Its reset after its use.
     Frame Done: Indicates we detected end of frame pointed by current workload.
@@ -42,24 +42,24 @@
 uint32_t viddec_pm_generic_generate_contribution_tags(void *parent, uint32_t ignore_partial)
 {
     uint32_t ret = PM_SUCCESS;
-    viddec_pm_cxt_t *cxt = (viddec_pm_cxt_t *)parent; 
+    viddec_pm_cxt_t *cxt = (viddec_pm_cxt_t *)parent;
     viddec_pm_utils_list_t *list = &(cxt->list);
 
-    if(list->num_items != 0)
+    if (list->num_items != 0)
     {
-        if(!cxt->late_frame_detect)
+        if (!cxt->late_frame_detect)
         {
             uint32_t num_items = 0;
-            while((num_items < list->num_items) && (list->data[num_items].edpos <= (uint32_t)list->total_bytes))
+            while ((num_items < list->num_items) && (list->data[num_items].edpos <= (uint32_t)list->total_bytes))
             {/* Walkthrough Consumed buffers and dump the tags */
                 viddec_emit_contr_tag(&(cxt->emitter), &(list->sc_ibuf[num_items]), false, false);
                 num_items++;
             }
             /* Dump incomplete tags if required */
-            if(!ignore_partial)
+            if (!ignore_partial)
             {/* check to see if last item is not consumed and dump continued flag */
-                if((num_items < list->num_items)
-                   && (list->data[num_items].edpos >= (uint32_t)list->total_bytes))
+                if ((num_items < list->num_items)
+                        && (list->data[num_items].edpos >= (uint32_t)list->total_bytes))
                 {
                     viddec_emit_contr_tag(&(cxt->emitter), &(list->sc_ibuf[num_items]), true, false);
                 }
@@ -85,19 +85,19 @@ uint32_t viddec_pm_generic_generate_contribution_tags(void *parent, uint32_t ign
 uint32_t viddec_pm_lateframe_generate_contribution_tags(void *parent, uint32_t ignore_partial)
 {
     uint32_t ret = PM_SUCCESS;
-    viddec_pm_cxt_t *cxt = (viddec_pm_cxt_t *)parent; 
+    viddec_pm_cxt_t *cxt = (viddec_pm_cxt_t *)parent;
     viddec_pm_utils_list_t *list = &(cxt->list);
 
-    if(list->num_items != 0)
+    if (list->num_items != 0)
     {
         uint32_t num_items = 0;
         /* If start offset is not 0 then it was partially used in last access unit. !ignore_partial means frame done*/
-        if((list->start_offset!= 0) && !ignore_partial)
+        if ((list->start_offset!= 0) && !ignore_partial)
         {/* Emit continue in current if necessary. */
             viddec_emit_contr_tag(&(cxt->emitter), &(list->sc_ibuf[num_items]), true, false);
         }
-        
-        while((num_items < list->num_items) && (list->data[num_items].edpos <= (uint32_t)list->total_bytes))
+
+        while ((num_items < list->num_items) && (list->data[num_items].edpos <= (uint32_t)list->total_bytes))
         {  /* Walkthrough Consumed buffers and dump the tags to current or Next*/
             viddec_emit_contr_tag(&(cxt->emitter), &(list->sc_ibuf[num_items]), false, !ignore_partial);
             num_items++;
@@ -113,7 +113,7 @@ uint32_t viddec_pm_generate_missed_association_tags(viddec_pm_cxt_t *cxt, uint32
 {
     uint32_t i=0, ret = PM_SUCCESS;
 
-    while((i < MAX_IBUFS_PER_SC) && (cxt->pending_tags.pending_tags[i] != INVALID_ENTRY))
+    while ((i < MAX_IBUFS_PER_SC) && (cxt->pending_tags.pending_tags[i] != INVALID_ENTRY))
     {
         viddec_emit_assoc_tag(&(cxt->emitter), cxt->pending_tags.pending_tags[i], using_next);
         cxt->pending_tags.pending_tags[i] = INVALID_ENTRY;
@@ -131,7 +131,7 @@ void viddec_pm_add_tags_to_pendinglist(viddec_pm_cxt_t *cxt, uint32_t ignore_fir
     vidded_pm_pending_tags_t *pend = &(cxt->pending_tags);
     uint32_t index=0, t_index=0;
 
-    if(!ignore_first && (list->start_offset == 0))
+    if (!ignore_first && (list->start_offset == 0))
     {/* If start offset is 0 we are saying that first buffer in list starts with start code */
         pend->first_buf_aligned = true;
     }
@@ -141,12 +141,13 @@ void viddec_pm_add_tags_to_pendinglist(viddec_pm_cxt_t *cxt, uint32_t ignore_fir
         pend->first_buf_aligned  = false;
     }
 
-    while( (index < list->num_items) && (list->data[index].edpos <= (uint32_t)list->total_bytes))
+    while ( (index < list->num_items) && (list->data[index].edpos <= (uint32_t)list->total_bytes))
     {/* walk through consumed buffers and buffer id's in pending list */
         pend->pending_tags[t_index] = list->sc_ibuf[index].id;
-        index++;t_index++;
+        index++;
+        t_index++;
     }
-    if( (index < list->num_items) && (list->data[index].stpos < (uint32_t)list->total_bytes))
+    if ( (index < list->num_items) && (list->data[index].stpos < (uint32_t)list->total_bytes))
     {/* If last item is partially consumed still add it to pending tags since tag association is based on start of ES buffer */
         pend->pending_tags[t_index] = list->sc_ibuf[index].id;
     }
@@ -175,7 +176,7 @@ static inline void viddec_pm_emit_pending_tag_item(viddec_emitter *emit, vidded_
 uint32_t viddec_mpeg2_add_association_tags(void *parent)
 {
     uint32_t ret = PM_SUCCESS;
-    viddec_pm_cxt_t *cxt = (viddec_pm_cxt_t *)parent; 
+    viddec_pm_cxt_t *cxt = (viddec_pm_cxt_t *)parent;
     vidded_pm_pending_tags_t *pend = &(cxt->pending_tags);
     uint32_t first_slice = false, index = 0;
     /* check to see if we found a frame start in current access unit */
@@ -183,13 +184,13 @@ uint32_t viddec_mpeg2_add_association_tags(void *parent)
     cxt->found_fm_st_in_current_au = false;
     /* If we found frame start and first item in pending tags is start with start code
        then it needs to go to current frame. */
-    if(first_slice && pend->first_buf_aligned && (pend->pending_tags[index] != INVALID_ENTRY))
+    if (first_slice && pend->first_buf_aligned && (pend->pending_tags[index] != INVALID_ENTRY))
     {
         viddec_pm_emit_pending_tag_item(&(cxt->emitter), pend, index, false);
         index++;
     }
     /* rest of list goes to current if frame start is not found else next frame */
-    while((index < MAX_IBUFS_PER_SC) && (pend->pending_tags[index] != INVALID_ENTRY))
+    while ((index < MAX_IBUFS_PER_SC) && (pend->pending_tags[index] != INVALID_ENTRY))
     {
         viddec_pm_emit_pending_tag_item(&(cxt->emitter), pend, index, cxt->frame_start_found);
         index++;
@@ -211,7 +212,7 @@ uint32_t viddec_mpeg2_add_association_tags(void *parent)
 uint32_t viddec_h264_add_association_tags(void *parent)
 {
     uint32_t ret = PM_SUCCESS;
-    viddec_pm_cxt_t *cxt = (viddec_pm_cxt_t *)parent; 
+    viddec_pm_cxt_t *cxt = (viddec_pm_cxt_t *)parent;
     viddec_pm_utils_list_t *list = &(cxt->list);
     vidded_pm_pending_tags_t *pend = &(cxt->pending_tags);
     uint32_t first_slice = false, index = 0;
@@ -221,7 +222,7 @@ uint32_t viddec_h264_add_association_tags(void *parent)
     first_slice = cxt->frame_start_found && cxt->found_fm_st_in_current_au;
     cxt->found_fm_st_in_current_au = false;
     /* If we saw frame start and first buffer is aligned to start code throw it into next */
-    if(first_slice && (list->start_offset == 0))
+    if (first_slice && (list->start_offset == 0))
     {
         viddec_emit_assoc_tag(&(cxt->emitter), list->sc_ibuf[index].id, cxt->frame_start_found && cxt->pending_tags.frame_done);
         index++;
@@ -254,19 +255,19 @@ uint32_t viddec_generic_add_association_tags(void *parent)
     /* We check to see if this access unit is not the first one with frame start. This evaluates to true in that case */
     not_first_slice = cxt->frame_start_found && !cxt->found_fm_st_in_current_au;
     cxt->found_fm_st_in_current_au = false;
-    if(list->start_offset == 0)
+    if (list->start_offset == 0)
     {/* If start offset is 0, we have start code at beggining of buffer. If frame start was detected in this
         access unit we put the tag in current else it goes to next */
         viddec_emit_assoc_tag(&(cxt->emitter), list->sc_ibuf[index].id, not_first_slice);
     }
     /* Skip first item always, for start_offset=0 its already been handled above*/
     index++;
-    while( (index < list->num_items) && (list->data[index].edpos <= (uint32_t)list->total_bytes))
+    while ( (index < list->num_items) && (list->data[index].edpos <= (uint32_t)list->total_bytes))
     {/* Walkthrough Consumed buffers and dump the tags to current or next*/
         viddec_emit_assoc_tag(&(cxt->emitter), list->sc_ibuf[index].id, cxt->frame_start_found);
         index++;
     }
-    if( (index < list->num_items) && (list->data[index].stpos < (uint32_t)list->total_bytes))
+    if ( (index < list->num_items) && (list->data[index].stpos < (uint32_t)list->total_bytes))
     {/* Dump last item if it was partially consumed */
         viddec_emit_assoc_tag(&(cxt->emitter), list->sc_ibuf[index].id, cxt->frame_start_found);
     }
@@ -284,16 +285,16 @@ void viddec_pm_generate_tags_for_unused_buffers_to_flush(viddec_pm_cxt_t *cxt)
     list = &(cxt->list);
     /* Generate association tags from temporary pending array */
     viddec_pm_generate_missed_association_tags(cxt, false);
-    if(list->num_items > 0)
+    if (list->num_items > 0)
     {
         /* Throw contribution flag for first item as done */
         viddec_emit_contr_tag(&(cxt->emitter), &(list->sc_ibuf[index]), false, false);
-        if(cxt->list.start_offset == 0)
+        if (cxt->list.start_offset == 0)
         {/* Throw association for first item if it was not done already */
             viddec_emit_assoc_tag(&(cxt->emitter), list->sc_ibuf[index].id, false);
         }
         index++;
-        while(index < list->num_items)
+        while (index < list->num_items)
         {/* Walk through list and throw contribution and association flags */
             viddec_emit_contr_tag(&(cxt->emitter), &(list->sc_ibuf[index]), false, false);
             viddec_emit_assoc_tag(&(cxt->emitter), list->sc_ibuf[index].id, false);

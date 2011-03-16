@@ -1,4 +1,4 @@
-/* 
+/*
  INTEL CONFIDENTIAL
  Copyright 2009 Intel Corporation All Rights Reserved.
  The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
@@ -36,29 +36,29 @@ class MixVideoConfigParamsDecMP42 : public MixVideoConfigParamsDec {
 public:
     MixVideoConfigParamsDecMP42();
     ~MixVideoConfigParamsDecMP42();
-    virtual gboolean copy(MixParams *target) const;
-    virtual gboolean equal(MixParams* obj) const;
+    virtual bool copy(MixParams *target) const;
+    virtual bool equal(MixParams* obj) const;
     virtual MixParams* dup() const;
 public:
-	/*< public > */
+    /*< public > */
 
-	/* MPEG version */
-	guint mpegversion;
-	
-	/* DivX version */
-	guint divxversion;
+    /* MPEG version */
+    uint mpegversion;
 
-	/* Reserved for future use */
-	void *reserved1;
-	
-	/* Reserved for future use */
-	void *reserved2;
-	
-	/* Reserved for future use */	
-	void *reserved3;
-	
-	/* Reserved for future use */	
-	void *reserved4;
+    /* DivX version */
+    uint divxversion;
+
+    /* Reserved for future use */
+    void *reserved1;
+
+    /* Reserved for future use */
+    void *reserved2;
+
+    /* Reserved for future use */
+    void *reserved3;
+
+    /* Reserved for future use */
+    void *reserved4;
 };
 
 /**
@@ -108,7 +108,7 @@ MixVideoConfigParamsDecMP42
  * Set MPEG version
  */
 MIX_RESULT mix_videoconfigparamsdec_mp42_set_mpegversion(
-		MixVideoConfigParamsDecMP42 *obj, guint version);
+    MixVideoConfigParamsDecMP42 *obj, uint version);
 
 /**
  * mix_videoconfigparamsdec_mp42_get_mpegversion:
@@ -119,7 +119,7 @@ MIX_RESULT mix_videoconfigparamsdec_mp42_set_mpegversion(
  * Get MPEG version
  */
 MIX_RESULT mix_videoconfigparamsdec_mp42_get_mpegversion(
-		MixVideoConfigParamsDecMP42 *obj, guint *version);
+    MixVideoConfigParamsDecMP42 *obj, uint *version);
 
 /**
  * mix_videoconfigparamsdec_mp42_set_divxversion:
@@ -130,7 +130,7 @@ MIX_RESULT mix_videoconfigparamsdec_mp42_get_mpegversion(
  * Set DivX version
  */
 MIX_RESULT mix_videoconfigparamsdec_mp42_set_divxversion(
-		MixVideoConfigParamsDecMP42 *obj, guint version);
+    MixVideoConfigParamsDecMP42 *obj, uint version);
 
 /**
  * mix_videoconfigparamsdec_mp42_set_divxversion:
@@ -141,7 +141,7 @@ MIX_RESULT mix_videoconfigparamsdec_mp42_set_divxversion(
  * Get DivX version
  */
 MIX_RESULT mix_videoconfigparamsdec_mp42_get_divxversion(
-		MixVideoConfigParamsDecMP42 *obj, guint *version);
+    MixVideoConfigParamsDecMP42 *obj, uint *version);
 
 
 

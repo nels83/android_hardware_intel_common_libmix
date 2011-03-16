@@ -22,15 +22,15 @@ void mfd_trap_handler()
     uint32_t reg=0, temp=0;
     temp = reg_read(INT_STATUS);
     //DEBUG_WRITE(0xff, temp, timer, 0, 0, 0);
-    if(temp & INT_WDOG_ENABLE)
+    if (temp & INT_WDOG_ENABLE)
     {
         timer++;
         set_wdog(VIDDEC_WATCHDOG_COUNTER_MAX);
         reg = reg_read(INT_STATUS);
     }
-    if(temp & 0x4)
+    if (temp & 0x4)
     {
-        
+
         temp = temp & (~0x4);
         reg_write(INT_REG, temp);
         //val = reg_read(DMA_CONTROL_STATUS);
@@ -38,14 +38,14 @@ void mfd_trap_handler()
         //reg_write(DMA_CONTROL_STATUS, val);
         //reg = reg_read(INT_STATUS);
     }
-    if(temp & 0x2)
+    if (temp & 0x2)
     {
-        
+
         temp = temp & (~0x2);
         reg_write(INT_REG, temp);
     }
-   
-    if(temp & 0x1)
+
+    if (temp & 0x1)
     {
         temp = temp & (~0x1);
         reg_write(INT_REG, temp);

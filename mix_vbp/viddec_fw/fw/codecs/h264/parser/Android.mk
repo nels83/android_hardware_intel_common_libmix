@@ -18,9 +18,6 @@ LOCAL_SRC_FILES :=			\
 LOCAL_CFLAGS := -DVBP -DHOST_ONLY
 
 LOCAL_C_INCLUDES :=							   \
-	$(GLIB_TOP)							   \
-	$(GLIB_TOP)/android						   \
-	$(GLIB_TOP)/glib						   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/include		   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/include		   \
 	$(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/parser/include	   \
@@ -30,7 +27,6 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libmixvbp_h264
 
 LOCAL_SHARED_LIBRARIES :=		\
-	libglib-2.0			\
 	libmixvbp
 
 include $(BUILD_SHARED_LIBRARY)

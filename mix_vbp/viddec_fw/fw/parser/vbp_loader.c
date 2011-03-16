@@ -6,7 +6,7 @@
  No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
  */
 
-#include <glib.h>
+//#include <glib.h>
 
 #include "vbp_loader.h"
 #include "vbp_utils.h"
@@ -16,30 +16,30 @@
  */
 uint32 vbp_open(uint32 parser_type, Handle *hcontext)
 {
-	vbp_context **ppcontext;
-	uint32 error;
+    vbp_context **ppcontext;
+    uint32 error;
 
-	if (NULL == hcontext)
-	{
-		return VBP_PARM;
-	}
-	
-	*hcontext = NULL;  /* prepare for failure. */
+    if (NULL == hcontext)
+    {
+        return VBP_PARM;
+    }
 
-	ppcontext = (vbp_context **)hcontext;
+    *hcontext = NULL;  /* prepare for failure. */
 
-	/**
-	* TO DO:
-	* check if vbp context has been created.
-	*/
+    ppcontext = (vbp_context **)hcontext;
 
-	error = vbp_utils_create_context(parser_type, ppcontext);
-	if (VBP_OK != error)
-	{
-		ETRACE("Failed to create context: %d.", error);
-	}
+    /**
+    * TO DO:
+    * check if vbp context has been created.
+    */
 
-	return error;
+    error = vbp_utils_create_context(parser_type, ppcontext);
+    if (VBP_OK != error)
+    {
+        ETRACE("Failed to create context: %d.", error);
+    }
+
+    return error;
 }
 
 /**
@@ -47,28 +47,28 @@ uint32 vbp_open(uint32 parser_type, Handle *hcontext)
  */
 uint32 vbp_close(Handle hcontext)
 {
-	uint32 error;
+    uint32 error;
 
-	if (NULL == hcontext)
-	{
-		return VBP_PARM;
-	}
+    if (NULL == hcontext)
+    {
+        return VBP_PARM;
+    }
 
-	vbp_context *pcontext = (vbp_context *)hcontext;
+    vbp_context *pcontext = (vbp_context *)hcontext;
 
-	if (MAGIC_NUMBER != pcontext->identifier)
-	{
-		/* not a valid vbp context. */
-		ETRACE("context is not initialized");
-		return VBP_INIT;
-	}
-	error = vbp_utils_destroy_context(pcontext);
-	if (VBP_OK != error)
-	{
-		ETRACE("Failed to destroy context: %d.", error);
-	}
+    if (MAGIC_NUMBER != pcontext->identifier)
+    {
+        /* not a valid vbp context. */
+        ETRACE("context is not initialized");
+        return VBP_INIT;
+    }
+    error = vbp_utils_destroy_context(pcontext);
+    if (VBP_OK != error)
+    {
+        ETRACE("Failed to destroy context: %d.", error);
+    }
 
-	return error;
+    return error;
 }
 
 
@@ -77,30 +77,30 @@ uint32 vbp_close(Handle hcontext)
  */
 uint32 vbp_parse(Handle hcontext, uint8 *data, uint32 size, uint8 init_data_flag)
 {
-	vbp_context *pcontext;
-	uint32 error = VBP_OK;
+    vbp_context *pcontext;
+    uint32 error = VBP_OK;
 
-	if ((NULL == hcontext) || (NULL == data) || (0 == size))
-	{
-		ETRACE("Invalid input parameters.");
-		return VBP_PARM;
-	}
+    if ((NULL == hcontext) || (NULL == data) || (0 == size))
+    {
+        ETRACE("Invalid input parameters.");
+        return VBP_PARM;
+    }
 
-	pcontext = (vbp_context *)hcontext;
+    pcontext = (vbp_context *)hcontext;
 
-	if (MAGIC_NUMBER != pcontext->identifier)
-	{
-		ETRACE("context is not initialized");
-		return VBP_INIT;
-	}
+    if (MAGIC_NUMBER != pcontext->identifier)
+    {
+        ETRACE("context is not initialized");
+        return VBP_INIT;
+    }
 
-	error = vbp_utils_parse_buffer(pcontext, data, size, init_data_flag);
-	
-	if (VBP_OK != error)
-	{
-		ETRACE("Failed to parse buffer: %d.", error);
-	}
-	return error;
+    error = vbp_utils_parse_buffer(pcontext, data, size, init_data_flag);
+
+    if (VBP_OK != error)
+    {
+        ETRACE("Failed to parse buffer: %d.", error);
+    }
+    return error;
 }
 
 /**
@@ -108,30 +108,30 @@ uint32 vbp_parse(Handle hcontext, uint8 *data, uint32 size, uint8 init_data_flag
  */
 uint32 vbp_query(Handle hcontext, void **data)
 {
-	vbp_context *pcontext;
-	uint32 error = VBP_OK;
+    vbp_context *pcontext;
+    uint32 error = VBP_OK;
 
-	if ((NULL == hcontext) || (NULL == data))
-	{
-		ETRACE("Invalid input parameters.");
-		return VBP_PARM;
-	}
+    if ((NULL == hcontext) || (NULL == data))
+    {
+        ETRACE("Invalid input parameters.");
+        return VBP_PARM;
+    }
 
-	pcontext = (vbp_context *)hcontext;
+    pcontext = (vbp_context *)hcontext;
 
-	if (MAGIC_NUMBER != pcontext->identifier)
-	{
-		ETRACE("context is not initialized");
-		return VBP_INIT;
-	}
+    if (MAGIC_NUMBER != pcontext->identifier)
+    {
+        ETRACE("context is not initialized");
+        return VBP_INIT;
+    }
 
-	error = vbp_utils_query(pcontext, data);
+    error = vbp_utils_query(pcontext, data);
 
-	if (VBP_OK != error)
-	{
-		ETRACE("Failed to query parsing result: %d.", error);
-	}
-		return error;
+    if (VBP_OK != error)
+    {
+        ETRACE("Failed to query parsing result: %d.", error);
+    }
+    return error;
 }
 
 /**
@@ -139,24 +139,24 @@ uint32 vbp_query(Handle hcontext, void **data)
  */
 uint32 vbp_flush(Handle hcontext)
 {
-	vbp_context *pcontext;
-	uint32 error = VBP_OK;
+    vbp_context *pcontext;
+    uint32 error = VBP_OK;
 
-	if (NULL == hcontext)
-	{
-		ETRACE("Invalid input parameters.");
-		return VBP_PARM;
-	}
+    if (NULL == hcontext)
+    {
+        ETRACE("Invalid input parameters.");
+        return VBP_PARM;
+    }
 
-	pcontext = (vbp_context *)hcontext;
+    pcontext = (vbp_context *)hcontext;
 
-	if (MAGIC_NUMBER != pcontext->identifier)
-	{
-		ETRACE("context is not initialized");
-		return VBP_INIT;
-	}
+    if (MAGIC_NUMBER != pcontext->identifier)
+    {
+        ETRACE("context is not initialized");
+        return VBP_INIT;
+    }
 
-	error = vbp_utils_flush(pcontext);
+    error = vbp_utils_flush(pcontext);
 
-	return error;
+    return error;
 }

@@ -16,7 +16,7 @@ static void viddec_fw_parser_peekmessages(viddec_pm_cxt_t *pm, ipc_msg_data *wkl
        of message but won't actually pull it out of queue*/
 
     *ret_cur = FwIPC_PeekReadMessage(fwipc, &(fwipc->wkld_q[stream_id]), (char *)wkld_cur, sizeof(ipc_msg_data), 0);
-    *ret_next = FwIPC_PeekReadMessage(fwipc, &(fwipc->wkld_q[stream_id]), (char *)wkld_next, sizeof(ipc_msg_data), 1);    
+    *ret_next = FwIPC_PeekReadMessage(fwipc, &(fwipc->wkld_q[stream_id]), (char *)wkld_next, sizeof(ipc_msg_data), 1);
     /* NOTE: I am passing length of current workload as size for next, since next workload might not exist. This is safe since in flush we always append to current workload */
     viddec_emit_update(&(pm->emitter), wkld_cur->phys, wkld_next->phys, wkld_cur->len, wkld_cur->len);
 }
@@ -48,10 +48,10 @@ int viddec_fw_parser_flush(unsigned int stream_id, unsigned int flush_type)
     workloads_in_input_q = ipc_mq_read_avail(&fwipc->wkld_q[stream_id].mq, (int32_t *)&pos);
     pos = 0;
     /* Check to see if output queue has space for next message */
-    if(ipc_mq_write_avail(&fwipc->snd_q[stream_id].mq,&pos) >= workloads_in_input_q)
+    if (ipc_mq_write_avail(&fwipc->snd_q[stream_id].mq,&pos) >= workloads_in_input_q)
     {
         /* Check how many free workloads are available. Need at least 1 */
-        if(workloads_in_input_q  >= CONFIG_IPC_MESSAGE_MAX_SIZE)
+        if (workloads_in_input_q  >= CONFIG_IPC_MESSAGE_MAX_SIZE)
         {
             ipc_msg_data wkld_cur, wkld_next, cur_es;
             int32_t ret_cur=0,ret_next=0;
@@ -61,7 +61,7 @@ int viddec_fw_parser_flush(unsigned int stream_id, unsigned int flush_type)
             }
 
             viddec_fw_parser_peekmessages(pm, &wkld_cur, &wkld_next, &ret_cur, &ret_next, stream_id);
-            if(workloads_in_input_q >= (CONFIG_IPC_MESSAGE_MAX_SIZE << 1))
+            if (workloads_in_input_q >= (CONFIG_IPC_MESSAGE_MAX_SIZE << 1))
             {/* If we have more than 2 workloads, most likely current workload has partial data. To avoid overflow
                 lets push current and use next which is most likely empty .If there's only one workload it was
                 next for previous frame so most likely its empty in which case we don't do this logic*/
@@ -74,7 +74,7 @@ int viddec_fw_parser_flush(unsigned int stream_id, unsigned int flush_type)
                since we will guaranteed succesful writes for all es buffers */
             viddec_pm_generate_tags_for_unused_buffers_to_flush(pm);
             /* Check the number of ES buffers and append them to current wkld */
-            while(FwIPC_ReadMessage(fwipc, &(fwipc->rcv_q[stream_id]), (char *)&cur_es, sizeof(ipc_msg_data)) != 0)
+            while (FwIPC_ReadMessage(fwipc, &(fwipc->rcv_q[stream_id]), (char *)&cur_es, sizeof(ipc_msg_data)) != 0)
             {
                 /* NOTE(Assumption): Again we have to define workload size to be big enough to make sure we can fit
                    all the es buffers into current workload */
@@ -85,27 +85,27 @@ int viddec_fw_parser_flush(unsigned int stream_id, unsigned int flush_type)
             do
             {/* Read until no workloads left */
                 viddec_fw_parser_peekmessages(pm, &wkld_cur, &wkld_next, &ret_cur, &ret_next, stream_id);
-                if(ret_cur == 0)
+                if (ret_cur == 0)
                 {
                     break;
                 }
                 viddec_fw_parser_push_error_workload(pm, &wkld_cur, stream_id);
-            }while(1);
-            switch(flush_type)
+            } while (1);
+            switch (flush_type)
             {
-                case VIDDEC_STREAM_FLUSH_DISCARD:
-                {
-                    /* Reset pm_context */
-                    viddec_fw_init_swap_memory(stream_id, 0, 1);
-                }
+            case VIDDEC_STREAM_FLUSH_DISCARD:
+            {
+                /* Reset pm_context */
+                viddec_fw_init_swap_memory(stream_id, 0, 1);
+            }
+            break;
+            case VIDDEC_STREAM_FLUSH_PRESERVE:
+            {
+                /* Reset just stream information */
+                viddec_fw_init_swap_memory(stream_id, 0, 0);
+            }
+            default:
                 break;
-                case VIDDEC_STREAM_FLUSH_PRESERVE:
-                {
-                        /* Reset just stream information */
-                    viddec_fw_init_swap_memory(stream_id, 0, 0);
-                }
-                default:
-                    break;
             }
             {/* swap context into DDR */
                 cp_using_dma(cxt_swap->ddr_cxt, (uint32_t) pm, sizeof(viddec_pm_cxt_t), true, false);
@@ -115,7 +115,7 @@ int viddec_fw_parser_flush(unsigned int stream_id, unsigned int flush_type)
         {
             pos = 0;
             /* check to see if I have any es buffers on input queue. If none are present we don't have to do anything */
-            if(ipc_mq_read_avail(&fwipc->rcv_q[stream_id].mq, (int32_t *)&pos)  != 0)
+            if (ipc_mq_read_avail(&fwipc->rcv_q[stream_id].mq, (int32_t *)&pos)  != 0)
                 ret = VIDDEC_FW_NEED_FREE_WKLD;
         }
     }

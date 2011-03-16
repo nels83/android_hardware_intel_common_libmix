@@ -61,9 +61,9 @@ typedef enum
     MP4_SC_SYTEM_MIN                 = 0xC6, /* Unsupported */
     MP4_SC_SYTEM_MAX                 = 0xFF, /* Unsupported */
     MP4_SC_INVALID                   = 0x100, /* Invalid */
-}mp4_start_code_values_t;
+} mp4_start_code_values_t;
 
-/* MPEG-4 code values 
+/* MPEG-4 code values
    ISO/IEC 14496-2:2004 table 6-6 */
 enum
 {
@@ -263,7 +263,7 @@ typedef struct
     uint8_t     top_field_first;
     uint8_t     alternate_vertical_scan_flag;
     uint8_t     sprite_transmit_mode;
-    
+
     int32_t     brightness_change_factor;
     uint16_t    vop_quant;
     uint8_t     vop_fcode_forward;
@@ -323,7 +323,7 @@ typedef struct
     uint16_t                  sprite_warping_accuracy;
     uint16_t                  sprite_brightness_change;
     uint16_t                  low_latency_sprite_enable;
-}mp4_VOLSpriteInfo_t;
+} mp4_VOLSpriteInfo_t;
 
 typedef struct
 {
@@ -332,7 +332,7 @@ typedef struct
     uint16_t                 align_dummy1;
     uint8_t                  intra_quant_mat[64];
     uint8_t                  nonintra_quant_mat[64];
-}mp4_VOLQuant_mat_t;
+} mp4_VOLQuant_mat_t;
 
 /* Video Object Layer Info */
 typedef struct
@@ -461,15 +461,15 @@ enum
 
 typedef enum
 {
-   VIDDEC_MP4_INDX_0 = 0,
-   VIDDEC_MP4_INDX_1 = 1,
-   VIDDEC_MP4_INDX_2 = 2,
-   VIDDEC_MP4_INDX_MAX = 3,
+    VIDDEC_MP4_INDX_0 = 0,
+    VIDDEC_MP4_INDX_1 = 1,
+    VIDDEC_MP4_INDX_2 = 2,
+    VIDDEC_MP4_INDX_MAX = 3,
 } viddec_fw_mp4_ref_index_t;
 
 typedef struct
 {
-   uint8_t is_field;
+    uint8_t is_field;
 } viddec_mp4_ref_info_t;
 
 typedef struct
@@ -477,10 +477,10 @@ typedef struct
     // The relevant bitstream data for current stream
     mp4_Info_t info;
 
-    // The previous start code (without the prefix) 
+    // The previous start code (without the prefix)
     uint32_t   prev_sc;
 
-    // The current start code (without the prefix) 
+    // The current start code (without the prefix)
     // TODO: Revisit for SVH
     uint32_t   current_sc;
 
@@ -504,10 +504,10 @@ typedef struct
     // Indicates bitstream errors if any
     uint16_t    bitstream_error;
 
-   // Reference frame information
-   viddec_mp4_ref_info_t ref_frame[VIDDEC_MP4_INDX_MAX];
+    // Reference frame information
+    viddec_mp4_ref_info_t ref_frame[VIDDEC_MP4_INDX_MAX];
 
-}viddec_mp4_parser_t;
+} viddec_mp4_parser_t;
 
 #define BREAK_GETBITS_FAIL(x, ret) {            \
         if(x == -1){                            \

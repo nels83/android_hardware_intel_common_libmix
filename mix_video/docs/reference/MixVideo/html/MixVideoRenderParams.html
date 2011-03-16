@@ -62,11 +62,11 @@ MIX_RESULT          <a class="link" href="MixVideoRenderParams.html#mix-videoren
 MIX_RESULT          <a class="link" href="MixVideoRenderParams.html#mix-videorenderparams-set-clipping-rects" title="mix_videorenderparams_set_clipping_rects ()">mix_videorenderparams_set_clipping_rects</a>
                                                         (<a class="link" href="MixVideoRenderParams.html" title="MixVideoRenderParams">MixVideoRenderParams</a> *obj,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixRect" title="MixRect">MixRect</a> *clipping_rects,
-                                                         guint number_of_clipping_rects);
+                                                         uint number_of_clipping_rects);
 MIX_RESULT          <a class="link" href="MixVideoRenderParams.html#mix-videorenderparams-get-clipping-rects" title="mix_videorenderparams_get_clipping_rects ()">mix_videorenderparams_get_clipping_rects</a>
                                                         (<a class="link" href="MixVideoRenderParams.html" title="MixVideoRenderParams">MixVideoRenderParams</a> *obj,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixRect" title="MixRect">MixRect</a> **clipping_rects,
-                                                         guint *number_of_clipping_rects);
+                                                         uint *number_of_clipping_rects);
 </pre>
 </div>
 <div class="refsect1" title="Object Hierarchy">
@@ -109,25 +109,25 @@ and provided to <a class="link" href="MixVideo.html" title="MixVideo"><span clas
 	
 	/* Number of clipping rectangles 
 	 * in clipping_rects */
-	guint number_of_clipping_rects;
+	uint number_of_clipping_rects;
 
 	/* Post processing parameters */
-	guint post_proc;
+	uint post_proc;
 
 	/* Reserved */
-	gpointer reserved;
+	void* reserved;
 	
 	/* Reserved for future use */
-	gpointer reserved1;
+	void* reserved1;
 	
 	/* Reserved for future use */	
-	gpointer reserved2;
+	void* reserved2;
 	
 	/* Reserved for future use */	
-	gpointer reserved3;
+	void* reserved3;
 	
 	/* Reserved for future use */	
-	gpointer reserved4;
+	void* reserved4;
 } MixVideoRenderParams;
 </pre>
 <p>
@@ -338,7 +338,7 @@ Get destination rectangle</p>
 <pre class="programlisting">MIX_RESULT          mix_videorenderparams_set_clipping_rects
                                                         (<a class="link" href="MixVideoRenderParams.html" title="MixVideoRenderParams">MixVideoRenderParams</a> *obj,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixRect" title="MixRect">MixRect</a> *clipping_rects,
-                                                         guint number_of_clipping_rects);</pre>
+                                                         uint number_of_clipping_rects);</pre>
 <p>
 Set clipping rectangles</p>
 <div class="variablelist"><table border="0">
@@ -373,7 +373,7 @@ Set clipping rectangles</p>
 <pre class="programlisting">MIX_RESULT          mix_videorenderparams_get_clipping_rects
                                                         (<a class="link" href="MixVideoRenderParams.html" title="MixVideoRenderParams">MixVideoRenderParams</a> *obj,
                                                          <a class="link" href="MixVideo-mixvideodef.html#MixRect" title="MixRect">MixRect</a> **clipping_rects,
-                                                         guint *number_of_clipping_rects);</pre>
+                                                         uint *number_of_clipping_rects);</pre>
 <p>
 Get clipping rectangles
 </p>

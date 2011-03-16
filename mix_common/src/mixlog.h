@@ -6,14 +6,15 @@
  No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
  */
 
-#include <glib.h>
+#include "mixtypes.h"
 
 #ifndef __MIX_LOG_H__
 #define __MIX_LOG_H__
 
 /* Warning: don't call these functions */
-void mix_log_func(const gchar* comp, gint level, const gchar *file,
-		const gchar *func, gint line, const gchar *format, ...);
+void mix_log_func(
+    const char* comp, int level, const char *file,
+    const char *func, int line, const char *format, ...);
 
 /* Components */
 #define MIX_VIDEO_COMP 		"mixvideo"

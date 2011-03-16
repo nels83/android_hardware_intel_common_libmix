@@ -1,25 +1,25 @@
-/* 
+/*
 
-  This file is provided under a dual BSD/GPLv2 license.  When using or 
+  This file is provided under a dual BSD/GPLv2 license.  When using or
   redistributing this file, you may do so under either license.
 
   GPL LICENSE SUMMARY
 
   Copyright(c) 2005-2008 Intel Corporation. All rights reserved.
 
-  This program is free software; you can redistribute it and/or modify 
+  This program is free software; you can redistribute it and/or modify
   it under the terms of version 2 of the GNU General Public License as
   published by the Free Software Foundation.
 
-  This program is distributed in the hope that it will be useful, but 
-  WITHOUT ANY WARRANTY; without even the implied warranty of 
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
+  This program is distributed in the hope that it will be useful, but
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   General Public License for more details.
 
-  You should have received a copy of the GNU General Public License 
-  along with this program; if not, write to the Free Software 
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-  The full GNU General Public License is included in this distribution 
+  The full GNU General Public License is included in this distribution
   in the file called LICENSE.GPL.
 
   Contact Information:
@@ -27,34 +27,34 @@
     2200 Mission College Blvd.
     Santa Clara, CA  97052
 
-  BSD LICENSE 
+  BSD LICENSE
 
   Copyright(c) 2005-2008 Intel Corporation. All rights reserved.
 
-  Redistribution and use in source and binary forms, with or without 
-  modification, are permitted provided that the following conditions 
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
   are met:
 
-    * Redistributions of source code must retain the above copyright 
+    * Redistributions of source code must retain the above copyright
       notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright 
-      notice, this list of conditions and the following disclaimer in 
-      the documentation and/or other materials provided with the 
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in
+      the documentation and/or other materials provided with the
       distribution.
-    * Neither the name of Intel Corporation nor the names of its 
-      contributors may be used to endorse or promote products derived 
+    * Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived
       from this software without specific prior written permission.
 
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR 
-  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
@@ -79,7 +79,7 @@ typedef struct
 {
     unsigned int state;
     unsigned int priority;
-}FW_IPC_stream_info;
+} FW_IPC_stream_info;
 
 /* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
@@ -95,7 +95,7 @@ typedef struct
     /** WARNING: EACH OF THESE STRUCTS MUST BE 8 BYTE ALIGNED */
     FW_IPC_ReceiveQue      rcv_q[CONFIG_IPC_FW_MAX_RX_QUEUES];
     /** WARNING: EACH OF THESE STRUCTS MUST BE 8 BYTE ALIGNED */
-    FW_IPC_ReceiveQue      wkld_q[CONFIG_IPC_FW_MAX_RX_QUEUES];    
+    FW_IPC_ReceiveQue      wkld_q[CONFIG_IPC_FW_MAX_RX_QUEUES];
 
     /** FIRMWARE_TO_HOST Message Queues (outbound) */
     struct _IPC_QueueHeader        *snd_q_shared[CONFIG_IPC_HOST_MAX_RX_QUEUES];
@@ -141,7 +141,7 @@ This function writes the message of message_size into queue(host_rx_queue).
 @retval 0                : if write fails.
 @retval 1                : if write succeeds.
 */
-int FwIPC_SendMessage(FW_IPC_Handle *fwipc, unsigned int host_rx_queue, const char *message, unsigned int message_size );    
+int FwIPC_SendMessage(FW_IPC_Handle *fwipc, unsigned int host_rx_queue, const char *message, unsigned int message_size );
 
 /**
 This function reads a message(which is <= max_message_size) from rcv_queue of firmware into input parameter message.
@@ -157,7 +157,7 @@ int FwIPC_ReadMessage(FW_IPC_Handle *fwipc, FW_IPC_ReceiveQue *rcv_q, char *mess
 This function Initialises shared queue headers and sync command buffer for IPC.
 @param[in] fwipc                       : Ipc handle.
 @param[in] synchronous_command_buffer : update handle with pointer to shared memory
-                                        between host and FW. 
+                                        between host and FW.
 @retval 0                             : if write succeeds.
 */
 int FwIPC_Initialize(FW_IPC_Handle *fwipc, volatile char *synchronous_command_buffer );
@@ -166,7 +166,7 @@ int FwIPC_Initialize(FW_IPC_Handle *fwipc, volatile char *synchronous_command_bu
 This function Initialises Sendqueue with circular buffer which has actual data.
 @param[in] fwipc                       : Ipc handle.
 @param[in] snd_q                       : Send queue that needs to be initialized.
-@param[in] snd_circbuf                 : Address of circular buffer. 
+@param[in] snd_circbuf                 : Address of circular buffer.
 */
 void FWIPC_SendQueue_Init(FW_IPC_Handle *fwipc, FW_IPC_SendQue *snd_q, void *snd_circbuf );
 
@@ -174,12 +174,12 @@ void FWIPC_SendQueue_Init(FW_IPC_Handle *fwipc, FW_IPC_SendQue *snd_q, void *snd
 This function Initialises Recvqueue with circular buffer which has actual data.
 @param[in] fwipc                       : Ipc handle.
 @param[in] rcv_q                       : Receive queue that needs to be initialized.
-@param[in] rcv_circbuf                 : Address of circular buffer. 
+@param[in] rcv_circbuf                 : Address of circular buffer.
 */
 void FwIPC_ReceiveQueue_Init(FW_IPC_Handle *fwipc, FW_IPC_ReceiveQue *rcv_q, void *rcv_circbuf );
 
 /**
-This function reads the nth(index) message(which is <= max_message_size ) from rcv_queue of firmware into input parameter message 
+This function reads the nth(index) message(which is <= max_message_size ) from rcv_queue of firmware into input parameter message
 by peeking the queue.
 @param[in] fwipc             : Ipc handle.
 @param[in] rcv_q            : Send queue to read from.

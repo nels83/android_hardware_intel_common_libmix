@@ -8,12 +8,12 @@ mp4_Status_t mp4_DecodeVideoObjectPlane(mp4_Info_t* pInfo)
     mp4_VideoObjectLayer_t *vol = &(pInfo->VisualObject.VideoObject);
     mp4_GroupOfVideoObjectPlane_t *gvop = &(pInfo->VisualObject.VideoObject.GroupOfVideoObjectPlane);
     mp4_VideoObjectPlane_t *vop = &(pInfo->VisualObject.VideoObject.VideoObjectPlane);
-    
+
     // set VOP time
     if (vol->short_video_header)
     {
         vop_time = vol->vop_sync_time +
-            pInfo->VisualObject.VideoObject.VideoObjectPlaneH263.temporal_reference * 1001;
+                   pInfo->VisualObject.VideoObject.VideoObjectPlaneH263.temporal_reference * 1001;
 
 //        if (vo->currentFrame.time > vop_time)
         {
@@ -42,29 +42,29 @@ mp4_Status_t mp4_DecodeVideoObjectPlane(mp4_Info_t* pInfo)
         }
     }
 
-    if(vop->vop_coded)
+    if (vop->vop_coded)
     {
         switch (vop->vop_coding_type)
         {
-            case MP4_VOP_TYPE_S:
-                if (vol->sprite_enable != MP4_SPRITE_GMC)
-                    break;
-                // Deliberate fall-through from this case
-            case MP4_VOP_TYPE_I:
-            case MP4_VOP_TYPE_P:
-                // set past and future time for B-VOP
-                vol->pastFrameTime = vol->futureFrameTime;
-                vol->futureFrameTime = vop_time;
+        case MP4_VOP_TYPE_S:
+            if (vol->sprite_enable != MP4_SPRITE_GMC)
                 break;
-            default:
-                break;
+            // Deliberate fall-through from this case
+        case MP4_VOP_TYPE_I:
+        case MP4_VOP_TYPE_P:
+            // set past and future time for B-VOP
+            vol->pastFrameTime = vol->futureFrameTime;
+            vol->futureFrameTime = vop_time;
+            break;
+        default:
+            break;
         }
     }
 
     if (vop->vop_coded)
 //     || (vop_time != vo->currentFrame.time && vop_time != vo->pastFrame.time && vop_time != vo->futureFrame.time) )
     {
-        if(vop->vop_coding_type == MP4_VOP_TYPE_B)
+        if (vop->vop_coding_type == MP4_VOP_TYPE_B)
         {
             if (!vol->Tframe)
                 vol->Tframe = (int) (vop_time); // - vo->pastFrame.time);
@@ -73,7 +73,7 @@ mp4_Status_t mp4_DecodeVideoObjectPlane(mp4_Info_t* pInfo)
             {
                 vol->TRB = (int) (vop_time - vol->pastFrameTime);
                 vol->TRD = (int) (vol->futureFrameTime - vol->pastFrameTime);
-                    
+
                 // defense from bad streams when B-VOPs are before Past and/or Future
                 if (vol->TRB <= 0)
                     vol->TRB = 1;
@@ -93,6 +93,6 @@ mp4_Status_t mp4_DecodeVideoObjectPlane(mp4_Info_t* pInfo)
         }
     }
 
-    return status;    
+    return status;
 } // mp4_DecodeVideoObjectPlane
 

@@ -2,18 +2,18 @@
 
 void vc1_start_new_frame (void *parent, vc1_viddec_parser_t   *parser )
 {
-  return;
+    return;
 }
 
 void vc1_end_frame (vc1_viddec_parser_t *parser)
 {
-  return;
+    return;
 }
 
 
 int32_t vc1_parse_emit_current_frame( void *parent,  vc1_viddec_parser_t   *parser )
 {
-   return(0);
+    return(0);
 }
 
 

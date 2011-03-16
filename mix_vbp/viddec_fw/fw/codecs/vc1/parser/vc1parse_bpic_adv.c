@@ -34,16 +34,16 @@ vc1_Status vc1_ParsePictureHeader_ProgressiveBpicture_Adv(void* ctxt, vc1_Info *
 
     VC1_GET_BITS9(1, picLayerHeader->MVMODE);
     picLayerHeader->MVMODE = (picLayerHeader->MVMODE == 1) ?
-        VC1_MVMODE_1MV : VC1_MVMODE_HPELBI_1MV;
+                             VC1_MVMODE_1MV : VC1_MVMODE_HPELBI_1MV;
 
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-        md->widthMB, md->heightMB, BPP_DIRECTMB)) != VC1_STATUS_OK)
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, md->heightMB, BPP_DIRECTMB)) != VC1_STATUS_OK)
     {
         return status;
     }
 
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-        md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
     {
         return status;
     }
@@ -94,7 +94,7 @@ vc1_Status vc1_ParsePictureHeader_InterlaceBpicture_Adv(void* ctxt, vc1_Info *pI
 
     if ((status = vc1_DecodeHuffmanPair(ctxt, VC1_BFRACTION_TBL,
                                         &picLayerHeader->BFRACTION_NUM, &picLayerHeader->BFRACTION_DEN)) !=
-        VC1_STATUS_OK)
+            VC1_STATUS_OK)
     {
         return status;
     }
@@ -107,14 +107,14 @@ vc1_Status vc1_ParsePictureHeader_InterlaceBpicture_Adv(void* ctxt, vc1_Info *pI
 
     VC1_GET_BITS9(1, picLayerHeader->INTCOMP);
 
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-        md->widthMB, md->heightMB, BPP_DIRECTMB)) != VC1_STATUS_OK)
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, md->heightMB, BPP_DIRECTMB)) != VC1_STATUS_OK)
     {
         return status;
     }
 
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-        md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, md->heightMB, BPP_SKIPMB)) != VC1_STATUS_OK)
     {
         return status;
     }
@@ -214,12 +214,12 @@ vc1_Status vc1_ParseFieldHeader_InterlaceBpicture_Adv(void* ctxt, vc1_Info *pInf
         bit_count++;
     picLayerHeader->MVMODE = table[bit_count];
 
-    if ((status = vc1_DecodeBitplane(ctxt, pInfo, 
-	md->widthMB, (md->heightMB+1)/2, BPP_FORWARDMB)) !=
-	VC1_STATUS_OK)
+    if ((status = vc1_DecodeBitplane(ctxt, pInfo,
+                                     md->widthMB, (md->heightMB+1)/2, BPP_FORWARDMB)) !=
+            VC1_STATUS_OK)
     {
         return status;
-    } 
+    }
 
     VC1_GET_BITS9(3, picLayerHeader->MBMODETAB);
     VC1_GET_BITS9(3, picLayerHeader->MVTAB); /* IMVTAB. */

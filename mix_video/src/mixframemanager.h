@@ -9,14 +9,15 @@
 #ifndef __MIX_FRAMEMANAGER_H__
 #define __MIX_FRAMEMANAGER_H__
 
-#include <glib-object.h>
+#include <mixtypes.h>
 #include "mixvideodef.h"
 #include "mixvideoframe.h"
 #include "mixvideothread.h"
+#include <j_slist.h>
 
-/* 
-* MIX_FRAMEORDER_MODE_DECODEORDER is here interpreted as 
-* MIX_DISPLAY_ORDER_FIFO,  a special case of display order mode. 
+/*
+* MIX_FRAMEORDER_MODE_DECODEORDER is here interpreted as
+* MIX_DISPLAY_ORDER_FIFO,  a special case of display order mode.
 */
 typedef enum
 {
@@ -30,32 +31,27 @@ typedef enum
 
 
 class MixFrameManager {
-	/*< private > */
 public:
-	gboolean initialized;
-	gboolean flushing;
-	gboolean eos;
+    MixFrameManager();
+    ~MixFrameManager();
 
-	MixVideoMutex mLock;
-	GSList* frame_list;
-
-	gint framerate_numerator;
-	gint framerate_denominator;
-	guint64 frame_timestamp_delta;
-
-	MixDisplayOrderMode mode;
-
-	gboolean is_first_frame;
-	guint64 last_frame_timestamp;
-	guint64 next_frame_timestamp;
-	guint32 next_frame_picnumber;
-	gint    max_enqueue_size;
-	guint32 max_picture_number;
-
-	guint32 ref_count;
 public:
-	MixFrameManager();
-	~MixFrameManager();
+    bool initialized;
+    bool flushing;
+    bool eos;
+    MixVideoMutex mLock;
+    JSList* frame_list;
+    int framerate_numerator;
+    int framerate_denominator;
+    uint64 frame_timestamp_delta;
+    MixDisplayOrderMode mode;
+    bool is_first_frame;
+    uint64 last_frame_timestamp;
+    uint64 next_frame_timestamp;
+    uint32 next_frame_picnumber;
+    int    max_enqueue_size;
+    uint32 max_picture_number;
+    uint32 ref_count;
 };
 
 
@@ -89,9 +85,9 @@ MixFrameManager* mix_framemanager_unref(MixFrameManager* fm);
 /*
  * Initialize FM
  */
-MIX_RESULT mix_framemanager_initialize(MixFrameManager *fm,
-		MixDisplayOrderMode mode, gint framerate_numerator,
-		gint framerate_denominator);
+MIX_RESULT mix_framemanager_initialize(
+    MixFrameManager *fm, MixDisplayOrderMode mode,
+    int framerate_numerator, int framerate_denominator);
 /*
  * Deinitialize FM
  */
@@ -100,33 +96,35 @@ MIX_RESULT mix_framemanager_deinitialize(MixFrameManager *fm);
 /*
  * Set new framerate
  */
-MIX_RESULT mix_framemanager_set_framerate(MixFrameManager *fm,
-						gint framerate_numerator, gint framerate_denominator);
+MIX_RESULT mix_framemanager_set_framerate(
+    MixFrameManager *fm, int framerate_numerator, int framerate_denominator);
 
 /*
  * Get framerate
  */
-MIX_RESULT mix_framemanager_get_framerate(MixFrameManager *fm,
-						gint *framerate_numerator, gint *framerate_denominator);
+MIX_RESULT mix_framemanager_get_framerate(
+    MixFrameManager *fm, int *framerate_numerator, int *framerate_denominator);
 
 
 /*
  * Set miximum size of queue
  */
-MIX_RESULT mix_framemanager_set_max_enqueue_size(MixFrameManager *fm, gint size);
-						
+MIX_RESULT mix_framemanager_set_max_enqueue_size(
+    MixFrameManager *fm, int size);
+
 
 /*
  * Set miximum picture number
  */
-MIX_RESULT mix_framemanager_set_max_picture_number(MixFrameManager *fm, guint32 num);
+MIX_RESULT mix_framemanager_set_max_picture_number(
+    MixFrameManager *fm, uint32 num);
 
 
 /*
  * Get Display Order Mode
  */
-MIX_RESULT mix_framemanager_get_display_order_mode(MixFrameManager *fm,
-													MixDisplayOrderMode *mode);
+MIX_RESULT mix_framemanager_get_display_order_mode(
+    MixFrameManager *fm, MixDisplayOrderMode *mode);
 
 /*
  * For discontiunity, reset FM

@@ -4,23 +4,28 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES :=		\
 	mixlog.cpp		\
 	mixparams.cpp		\
-	mixdrmparams.cpp
+	mixdrmparams.cpp		\
+	j_slist.cpp		\
+	j_queue.cpp		\
+	j_hashtable.cpp
+
 
 LOCAL_C_INCLUDES :=		\
-	$(LOCAL_PATH)		\
-	$(GLIB_TOP)			\
-	$(GLIB_TOP)/android	\
-	$(GLIB_TOP)/glib
+	$(LOCAL_PATH)
+
+LOCAL_SHARED_LIBRARIES :=	\
+	libcutils
 
 LOCAL_CFLAGS := -DANDROID
 
-LOCAL_SHARED_LIBRARIES := 	\
-	libglib-2.0
-#	libgmodule-2.0
 
 LOCAL_COPY_HEADERS_TO := libmixcommon
 
 LOCAL_COPY_HEADERS :=		\
+	mixtypes.h		\
+	j_slist.h		\
+	j_queue.h		\
+	j_hashtable.h	\
 	mixlog.h		\
 	mixresult.h		\
 	mixparams.h		\
