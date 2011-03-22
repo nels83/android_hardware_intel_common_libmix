@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-MIXVIDEO_LOG_ENABLE := true
+MIXVIDEO_LOG_ENABLE := false
 
 LOCAL_SRC_FILES := 			\
 	mixvideothread.cpp			\

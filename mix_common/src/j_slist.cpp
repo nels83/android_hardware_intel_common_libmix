@@ -137,7 +137,7 @@ JSList* j_slist_find_custom(JSList *list, void* data, JCompareFunc func)
 {
     JSList *traverse_item = list;
     while (traverse_item != NULL) {
-        if (func(traverse_item->data, data) != 0) break;
+        if (func(traverse_item->data, data) == 0) break;
         traverse_item = traverse_item->next;
     }
 

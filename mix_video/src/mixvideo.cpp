@@ -2042,16 +2042,11 @@ MIX_RESULT mix_video_get_new_userptr_for_surface_buffer_default (MixVideo * mix,
         goto cleanup;
     }
 
-#if 1
-    va_status = vaCreateSurfaces(priv->va_display, width,
-                                 height, VA_RT_FORMAT_YUV420,
-                                 1, &surface);
-#else
     va_status = vaCreateSurfacesForUserPtr (
                     priv->va_display, width, height, VA_RT_FORMAT_YUV420, 1,
                     &surface, expected_size, VA_FOURCC_NV12, width, width, width,
                     0, width * height, width * height);
-#endif
+
 
     if (va_status != VA_STATUS_SUCCESS) {
         LOG_E("Failed vaCreateSurfaces\n");

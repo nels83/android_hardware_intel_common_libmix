@@ -2696,7 +2696,7 @@ MixVideoFormatEnc_H264::_send_seq_params () {
     //h264_seq_param.seq_parameter_set_id = 176;
 
     // This is a temporary fix suggested by Binglin for bad encoding quality issue
-    //h264_seq_param.max_num_ref_frames = 1; // TODO: We need a long term design for this field
+    h264_seq_param.max_num_ref_frames = 1; // TODO: We need a long term design for this field
 
     LOG_V(
         "===h264 sequence params===\n");
@@ -2902,8 +2902,8 @@ MixVideoFormatEnc_H264::_send_slice_parameter () {
         = this->disable_deblocking_filter_idc;
 
         // This is a temporary fix suggested by Binglin for bad encoding quality issue
-        //current_slice->slice_flags.bits.uses_long_term_ref = 0; // TODO: We need a long term design for this field
-        //current_slice->slice_flags.bits.is_long_term_ref = 0;   // TODO: We need a long term design for this field
+        current_slice->slice_flags.bits.uses_long_term_ref = 0; // TODO: We need a long term design for this field
+        current_slice->slice_flags.bits.is_long_term_ref = 0;   // TODO: We need a long term design for this field
 
         LOG_V(
             "======h264 slice params======\n");
