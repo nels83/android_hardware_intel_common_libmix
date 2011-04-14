@@ -3,6 +3,9 @@
 
 #include "h264.h"
 #include "h264parse.h"
+#ifdef VBP
+#include<math.h>
+#endif
 
 
 /// SPS extension unit (unit_type = 13)
@@ -300,11 +303,20 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
     //SPS->constraint_set2_flag = h264_GetBits(pInfo, 1, "constraint_set2_flag");
     //SPS->constraint_set3_flag = h264_GetBits(pInfo, 1, "constraint_set3_flag");
 
+#ifdef VBP
+    viddec_pm_get_bits(parent, &code, 5);	 //constraint flag set0...set4 (h.264 Spec v2009)
+    SPS->constraint_set_flags = (uint8_t)code;
+
+    //// reserved_zero_3bits
+    viddec_pm_get_bits(parent, (uint32_t *)&code, 3); //3bits zero reserved (h.264 Spec v2009)
+#else
+
     viddec_pm_get_bits(parent, &code, 4);
     SPS->constraint_set_flags = (uint8_t)code;
 
     //// reserved_zero_4bits
     viddec_pm_get_bits(parent, (uint32_t *)&code, 4);
+#endif
 
     viddec_pm_get_bits(parent, &code, 8);
     SPS->level_idc = (uint8_t)code;
@@ -338,6 +350,9 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         //// seq_parameter_set_id ---[0,31]
         if (SPS->seq_parameter_set_id > MAX_NUM_SPS -1)
             break;
+#ifdef VBP
+        SPS->sps_disp.separate_colour_plane_flag = 0;
+#endif
 
         if ((SPS->profile_idc == h264_ProfileHigh) || (SPS->profile_idc == h264_ProfileHigh10) ||
                 (SPS->profile_idc == h264_ProfileHigh422) || (SPS->profile_idc == h264_ProfileHigh444)   )
@@ -349,6 +364,12 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
             SPS->sps_disp.chroma_format_idc = (uint8_t)data;
             //if(SPS->sps_disp.chroma_format_idc == H264_CHROMA_444) {}
 
+#ifdef VBP
+            if(SPS->sps_disp.chroma_format_idc == H264_CHROMA_444) {
+                viddec_pm_get_bits(parent, &code, 1);
+                SPS->sps_disp.separate_colour_plane_flag = (uint8_t)data;
+            }
+#endif
             //// bit_depth_luma_minus8 ---[0,4], -----only support 8-bit pixel
             data = h264_GetVLCElement(parent, pInfo, false);
             if ( data)
@@ -502,13 +523,112 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
 
         if (SPS->sps_disp.vui_parameters_present_flag)
         {
-#ifndef VBP		// Ignore VUI parsing result 	
-            ret =
+#ifndef VBP
+            ret = h264_Parse_Vui_Parameters(parent, pInfo, SPS, pVUI_Seq_Not_Used);
+#else
+            // Ignore VUI parsing result
+            h264_Parse_Vui_Parameters(parent, pInfo, SPS, pVUI_Seq_Not_Used);
+            if (SPS->sps_disp.vui_seq_parameters.nal_hrd_parameters_present_flag)
+            {
+                i = SPS->sps_disp.vui_seq_parameters.nal_hrd_cpb_cnt_minus1;
+                uint32_t bit_rate_value = 0;
+                bit_rate_value = pVUI_Seq_Not_Used->nal_hrd_parameters.bit_rate_value_minus1[i] + 1;
+                bit_rate_value *= pow(2, 6 + pVUI_Seq_Not_Used->nal_hrd_bit_rate_scale);
+                SPS->sps_disp.vui_seq_parameters.bit_rate_value = bit_rate_value;
+            }
+            /*
+            else if (SPS->sps_disp.vui_seq_parameters.vcl_hrd_parameters_present_flag)
+            {
+                i = SPS->sps_disp.vui_seq_parameters.vcl_hrd_cpb_cnt_minus1;
+                uint32_t bit_rate_value = 0;
+                bit_rate_value = pVUI_Seq_Not_Used->vcl_hrd_parameters.bit_rate_value_minus1[i] + 1;
+                bit_rate_value *= pow(2, 6 + pVUI_Seq_Not_Used->vcl_hrd_bit_rate_scale);
+                SPS->sps_disp.vui_seq_parameters.bit_rate_value = bit_rate_value;
+             }*/
+
 #endif
-                h264_Parse_Vui_Parameters(parent, pInfo, SPS, pVUI_Seq_Not_Used);
+        }
+    } while (0);
+#ifdef VBP
+    if (SPS->sps_disp.vui_seq_parameters.bit_rate_value == 0)
+    {
+        int maxBR = 0;
+        switch(SPS->level_idc)
+        {
+        case h264_Level1:
+            maxBR = 64;
+            break;
+
+        case h264_Level1b:
+            maxBR = 128;
+            break;
+
+        case h264_Level11:
+            maxBR = 192;
+            break;
+
+        case h264_Level12:
+            maxBR = 384;
+            break;
+
+        case h264_Level13:
+            maxBR = 768;
+            break;
+
+        case h264_Level2:
+            maxBR = 2000;
+            break;
+
+        case h264_Level21:
+        case h264_Level22:
+            maxBR = 4000;
+            break;
+
+        case h264_Level3:
+            maxBR = 10000;
+            break;
+
+        case h264_Level31:
+            maxBR = 14000;
+            break;
+
+        case h264_Level32:
+        case h264_Level4:
+            maxBR = 20000;
+            break;
+
+        case h264_Level41:
+        case h264_Level42:
+            maxBR = 50000;
+            break;
+
+        case h264_Level5:
+            maxBR = 135000;
+            break;
+
+        case h264_Level51:
+            maxBR = 240000;
+            break;
         }
 
-    } while (0);
+        uint32_t cpbBrVclFactor = 1200;
+        if (SPS->profile_idc == 100)
+        {
+            cpbBrVclFactor = 1500; // HIGH
+        }
+        else if (SPS->profile_idc == 110)
+        {
+            cpbBrVclFactor = 3600; // HIGH 10
+        }
+        else if (SPS->profile_idc == 122 ||
+                 SPS->profile_idc == 144)
+        {
+            cpbBrVclFactor = 4800; // HIGH 4:2:2 and HIGH 4:4:4
+        }
+
+        SPS->sps_disp.vui_seq_parameters.bit_rate_value = maxBR *  cpbBrVclFactor;
+    }
+#endif
 
     //h264_Parse_rbsp_trailing_bits(pInfo);
 

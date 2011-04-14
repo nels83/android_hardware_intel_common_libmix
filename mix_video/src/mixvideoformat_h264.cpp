@@ -13,10 +13,17 @@
 
 #include "mixvideolog.h"
 #include "mixvideoformat_h264.h"
+#include "mixvideoconfigparamsdec_h264.h"
 
 #ifdef MIX_LOG_ENABLE
 static int mix_video_h264_counter = 0;
 #endif /* MIX_LOG_ENABLE */
+
+#define HACK_DPB
+#ifdef HACK_DPB
+static inline MIX_RESULT mix_videofmt_h264_hack_dpb( MixVideoFormat *mix, vbp_picture_data_h264* pic_data);
+#endif
+
 
 // Local Help Funcs
 
@@ -74,6 +81,9 @@ MIX_RESULT MixVideoFormat_H264::Initialize(
     vbp_data_h264 *data = NULL;
     MixIOVec *header = NULL;
 
+    MixVideoConfigParamsDecH264 *config_params_h264 = NULL;
+    bool va_setup_flag = FALSE;
+
     if (config_params == NULL || frame_mgr == NULL ||
             input_buf_pool == NULL || va_display == NULL) {
         LOG_E( "NUll pointer passed in\n");
@@ -118,6 +128,28 @@ MIX_RESULT MixVideoFormat_H264::Initialize(
         goto CLEAN_UP;
     }
 
+    ret = mix_videoconfigparamsdec_get_error_concealment(
+              config_params,
+              &this->error_concealment);
+
+    if (ret != MIX_RESULT_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Cannot get error_concealment flag\n");
+        goto CLEAN_UP;
+    }
+
+    config_params_h264 = MIX_VIDEOCONFIGPARAMSDEC_H264(config_params);
+    ret = mix_videoconfigparamsenc_h264_get_va_setup_flag(config_params_h264, &va_setup_flag);
+    if (ret != MIX_RESULT_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Failed to get va_setup_flag\n");
+        return ret;
+    }
+
+    LOG_V("va_setup_flag = %d\n", va_setup_flag);
+
     LOG_V( "Before vbp_open\n");
     //Load the bitstream parser
     pret = vbp_open(ptype, &(this->parser_handle));
@@ -129,6 +161,17 @@ MIX_RESULT MixVideoFormat_H264::Initialize(
         goto CLEAN_UP;
     }
     LOG_V( "Opened parser\n");
+
+    if(va_setup_flag) {
+        LOG_V("calling to mix_videofmt_h264_initialize_va(mix, NULL)\n");
+        ret = _initialize_va( NULL);
+        LOG_V("ret = 0x%x\n", ret);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_E( "Error initializing va. \n");
+        }
+        goto CLEAN_UP;
+    }
 
     ret = mix_videoconfigparamsdec_get_header(config_params, &header);
 
@@ -143,7 +186,7 @@ MIX_RESULT MixVideoFormat_H264::Initialize(
 
     pret = vbp_parse(this->parser_handle, header->data, header->data_size, TRUE);
 
-    if ((VBP_OK != pret) && (VBP_DONE != pret)) {
+    if (VBP_OK != pret) {
         ret = MIX_RESULT_FAIL;
         LOG_E( "Error parsing header data\n");
         goto CLEAN_UP;
@@ -154,7 +197,7 @@ MIX_RESULT MixVideoFormat_H264::Initialize(
     //Get the header data and save
     pret = vbp_query(this->parser_handle, (void **)&data);
 
-    if ((VBP_OK != pret) || (NULL == data)) {
+    if (VBP_OK != pret) {
         ret = MIX_RESULT_FAIL;
         LOG_E( "Error reading parsed header data\n");
         goto CLEAN_UP;
@@ -236,7 +279,13 @@ MIX_RESULT MixVideoFormat_H264::Decode(
     for (i = 0; i < bufincnt; i++) {
         LOG_V( "Decoding a buf %x, size %d\n", (uint)bufin[i]->data, bufin[i]->size);
         // decode a buffer at a time
-        ret = _decode_a_buffer(bufin[i], ts, discontinuity, decode_params);
+        ret = _decode_a_buffer(
+                  bufin[i],
+                  ts,
+                  discontinuity,
+                  decode_params,
+                  (i == bufincnt-1 ? decode_params->complete_frame : 0));
+
         if (MIX_RESULT_SUCCESS != ret) {
             LOG_E("mix_videofmt_h264_decode_a_buffer failed.\n");
             goto CLEAN_UP;
@@ -361,6 +410,17 @@ MIX_RESULT MixVideoFormat_H264::_update_config_params(vbp_data_h264 *data) {
         data->codec_data->sar_height);
     mix_videoconfigparamsdec_set_bit_rate(
         this->config_params, data->codec_data->bit_rate);
+
+    LOG_V("crop_left = %d crop_right = %d crop_top = %d crop_bottom = %d\n",
+          data->codec_data->crop_left, data->codec_data->crop_right,
+          data->codec_data->crop_top, data->codec_data->crop_bottom);
+
+    mix_videoconfigparamsdec_set_cropping_info(
+        this->config_params,
+        data->codec_data->crop_left,
+        data->codec_data->crop_right,
+        data->codec_data->crop_top,
+        data->codec_data->crop_bottom);
     return MIX_RESULT_SUCCESS;
 }
 
@@ -379,20 +439,50 @@ MIX_RESULT MixVideoFormat_H264::_initialize_va(vbp_data_h264 *data) {
     attrib.value = VA_RT_FORMAT_YUV420;
 
     //Initialize and save the VA config ID
-    //We use high profile for all kinds of H.264 profiles (baseline, main and high)
-    vret = vaCreateConfig(this->va_display, VAProfileH264High,
-                          VAEntrypointVLD, &attrib, 1, &(this->va_config));
-
+#ifdef ANDROID
+    if((this->error_concealment == TRUE) && (data == NULL || (data != NULL && ((data->codec_data->profile_idc == 66) || (data->codec_data->constraint_set0_flag == 1)) &&
+            (data->codec_data->constraint_set1_flag == 1))))
+    {
+        //it is constrained baseline profile according to subclause A.2.1.1 in H.264 Spec v200903
+        vret = vaCreateConfig(
+                   this->va_display,
+                   VAProfileH264ConstrainedBaseline,
+                   VAEntrypointVLD,
+                   &attrib,
+                   1,
+                   &(this->va_config));
+    }
+    else
+    {
+#endif
+        //We use high profile for all kinds of H.264 profiles (baseline, main and high) except for constrained baseline
+        vret = vaCreateConfig(
+                   this->va_display,
+                   VAProfileH264High,
+                   VAEntrypointVLD,
+                   &attrib,
+                   1,
+                   &(this->va_config));
+#ifdef ANDROID
+    }
+#endif
     if (VA_STATUS_SUCCESS != vret) {
         ret = MIX_RESULT_NO_MEMORY; // MIX_RESULT_FAIL;
         LOG_E("vaCreateConfig failed\n");
         return ret;
     }
 
-    LOG_V( "Codec data says num_ref_frames is %d\n", data->codec_data->num_ref_frames);
+#ifdef MIX_LOG_ENABLE
+    if(data) {
+        LOG_V( "Codec data says num_ref_frames is %d\n", data->codec_data->num_ref_frames);
+    }
+#endif
 
     // handle both frame and field coding for interlaced content
-    int num_ref_pictures = data->codec_data->num_ref_frames;
+    int num_ref_pictures = 0;
+    if(data) {
+        num_ref_pictures = data->codec_data->num_ref_frames;
+    }
 
     //Adding 1 to work around VBLANK issue, and another 1 to compensate cached frame that
     // will not start decoding until a new frame is received.
@@ -407,10 +497,14 @@ MIX_RESULT MixVideoFormat_H264::_initialize_va(vbp_data_h264 *data) {
         return ret;
     }
 
-    LOG_V( "Codec data says picture size is %d x %d\n",
-           (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16,
-           (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16);
-    LOG_V( "getcaps says picture size is %d x %d\n", this->picture_width, this->picture_height);
+#ifdef MIX_LOG_ENABLE
+    if(data) {
+        LOG_V( "Codec data says picture size is %d x %d\n",
+               (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * 16,
+               (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * 16);
+        LOG_V( "getcaps says picture size is %d x %d\n", this->picture_width, this->picture_height);
+    }
+#endif
 
     vret = vaCreateSurfaces(
                this->va_display,
@@ -445,11 +539,13 @@ MIX_RESULT MixVideoFormat_H264::_initialize_va(vbp_data_h264 *data) {
         return ret;
         break;
     }
+#if 0 // NOTE: We don't use the value in frame manager, comment out the following lines
 
     if (data->codec_data->pic_order_cnt_type == 0) {
         int max = (int)pow(2, data->codec_data->log2_max_pic_order_cnt_lsb_minus4 + 4);
         mix_framemanager_set_max_picture_number(this->framemgr, max);
     }
+#endif
 
     //Initialize and save the VA context ID
     //Note: VA_PROGRESSIVE libva flag is only relevant to MPEG2
@@ -601,7 +697,7 @@ MIX_RESULT MixVideoFormat_H264::_decode_a_slice(
         if (ret != MIX_RESULT_SUCCESS) {
             LOG_E( "Error reference frame not found\n");
             //Need to remove the frame we inserted in _handle_ref_frames above, since we are not going to decode it
-            _cleanup_ref_frame(pic_params, this->frame);
+            _cleanup_ref_frame(pic_params, this->video_frame);
             LOG_V( "End\n");
             return ret;
         }
@@ -1004,7 +1100,8 @@ MIX_RESULT MixVideoFormat_H264::_decode_a_buffer(
     MixBuffer * bufin,
     uint64 ts,
     bool discontinuity,
-    MixVideoDecodeParams * decode_params) {
+    MixVideoDecodeParams * decode_params,
+    bool complete_frame) {
     uint32 pret = 0;
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
     vbp_data_h264 *data = NULL;
@@ -1017,7 +1114,7 @@ MIX_RESULT MixVideoFormat_H264::_decode_a_buffer(
                      FALSE);
 
     LOG_V( "Called parse for current frame\n");
-    if ((pret != VBP_DONE) &&(pret != VBP_OK)) {
+    if (pret != VBP_OK) {
         ret = MIX_RESULT_ERROR_PROCESS_STREAM; // MIX_RESULT_DROPFRAME;
         LOG_E( "vbp_parse failed.\n");
         LOG_V("End\n");
@@ -1108,6 +1205,16 @@ MIX_RESULT MixVideoFormat_H264::_decode_a_buffer(
             return ret;
         }
     }
+    if (complete_frame)
+    {
+        // finish decoding current frame
+        ret = _decode_end(FALSE);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_V("mix_videofmt_h264_decode_end failed.\n");
+            return ret;
+        }
+    }
 
     LOG_V("End\n");
     return ret;
@@ -1115,7 +1222,6 @@ MIX_RESULT MixVideoFormat_H264::_decode_a_buffer(
 
 
 
-#define HACK_DPB
 #ifdef HACK_DPB
 static inline MIX_RESULT mix_videofmt_h264_hack_dpb(MixVideoFormat *mix,
         vbp_picture_data_h264* pic_data

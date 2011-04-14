@@ -141,6 +141,27 @@ extern "C" {
         uint32_t *databits;
     } vc1_Bitplane;
 
+#ifdef VBP
+#define VC1_MAX_HRD_NUM_LEAKY_BUCKETS   32
+
+    typedef struct
+    {
+        uint32_t	 HRD_RATE;				 /** Maximum bit rate in bits per second */
+        uint32_t	 HRD_BUFFER;			 /** Buffer size in bits */
+        uint32_t	 HRD_FULLNESS;			 /** Buffer fullness in complete bits */
+        uint32_t	 HRD_FULLFRACTION;		 /** Numerator of fractional bit buffer fullness count */
+        uint32_t	 HRD_FULLDENOMINATOR;	 /** Denominator of fractional bit buffer fullness count */
+    } vc1_leaky_bucket;
+
+    typedef struct _vc1_hrd_state
+    {
+        uint8_t 		 BIT_RATE_EXPONENT; 							  /** Buckets
+																			(0 if none specified) */
+        uint8_t 		 BUFFER_SIZE_EXPONENT;
+        vc1_leaky_bucket sLeakyBucket[VC1_MAX_HRD_NUM_LEAKY_BUCKETS];	/** Per-bucket information */
+    } vc1_hrd_state, *vc1_hrd_state_ptr;
+#endif
+
     /** This structure represents all bitstream metadata needed for register programming. */
     typedef struct
     {
@@ -214,7 +235,7 @@ extern "C" {
         uint8_t ASPECT_RATIO;
         uint8_t ASPECT_HORIZ_SIZE;
         uint8_t ASPECT_VERT_SIZE;
-
+        vc1_hrd_state hrd_initial_state;
 #endif
 
     } vc1_metadata_t;

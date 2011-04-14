@@ -392,9 +392,9 @@ MIX_RESULT mix_surfacepool_get_frame_with_ci_frameidx (MixSurfacePool * obj, Mix
 
         obj->mLock.unlock();
 
-        LOG_E( "Element is null\n");
+        LOG_E( "Element associated with the given frame index is null\n");
 
-        return MIX_RESULT_FAIL;
+        return MIX_RESULT_DROPFRAME;
     } else {
         //Concat the element to the in_use_list
         obj->in_use_list = j_slist_concat(obj->in_use_list, element);

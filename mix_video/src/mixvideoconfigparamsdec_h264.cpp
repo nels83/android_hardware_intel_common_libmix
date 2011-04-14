@@ -16,10 +16,11 @@ No license under any patent, copyright, trade secret or other intellectual prope
 #include "mixvideoconfigparamsdec_h264.h"
 
 MixVideoConfigParamsDecH264::MixVideoConfigParamsDecH264()
-        :reserved1(NULL)
-        ,reserved2(NULL)
-        ,reserved3(NULL)
-        ,reserved4(NULL) {
+    :va_setup_flag(FALSE)
+    ,reserved1(NULL)
+    ,reserved2(NULL)
+    ,reserved3(NULL)
+    ,reserved4(NULL) {
 }
 MixVideoConfigParamsDecH264::~MixVideoConfigParamsDecH264() {
 }
@@ -27,6 +28,8 @@ MixVideoConfigParamsDecH264::~MixVideoConfigParamsDecH264() {
 bool MixVideoConfigParamsDecH264::copy(MixParams *target) const {
     bool ret = FALSE;
     MixVideoConfigParamsDecH264 * this_target = MIX_VIDEOCONFIGPARAMSDEC_H264(target);
+
+    this_target->va_setup_flag = this->va_setup_flag;
     if (NULL != this_target)
         ret = MixVideoConfigParamsDec::copy(target);
     return ret;
@@ -35,6 +38,18 @@ bool MixVideoConfigParamsDecH264::copy(MixParams *target) const {
 bool MixVideoConfigParamsDecH264::equal(MixParams* obj) const {
     bool ret = FALSE;
     MixVideoConfigParamsDecH264 * this_obj = MIX_VIDEOCONFIGPARAMSDEC_H264(obj);
+
+    if (this->va_setup_flag != this_obj->va_setup_flag) {
+        goto not_equal;
+    }
+
+    ret = TRUE;
+
+not_equal:
+
+    if (ret != TRUE) {
+        return ret;
+    }
     if (NULL != this_obj)
         ret = MixVideoConfigParamsDec::equal(this_obj);
     return ret;
@@ -63,4 +78,28 @@ mix_videoconfigparamsdec_h264_ref (MixVideoConfigParamsDecH264 * mix) {
     return mix;
 }
 
-/* TODO: Add getters and setters for properties if any */
+#define MIX_VIDEOCONFIGPARAMSDEC_H264_SETTER_CHECK_INPUT(obj) \
+	if(!obj) return MIX_RESULT_NULL_PTR; \
+	if(!MIX_IS_VIDEOCONFIGPARAMSDEC_H264(obj)) return MIX_RESULT_FAIL; \
+
+#define MIX_VIDEOCONFIGPARAMSDEC_H264_GETTER_CHECK_INPUT(obj, prop) \
+	if(!obj || !prop) return MIX_RESULT_NULL_PTR; \
+	if(!MIX_IS_VIDEOCONFIGPARAMSDEC_H264(obj)) return MIX_RESULT_FAIL; \
+
+
+MIX_RESULT mix_videoconfigparamsdec_h264_set_va_setup_flag (MixVideoConfigParamsDecH264 * obj,
+        bool va_setup_flag) {
+
+    MIX_VIDEOCONFIGPARAMSDEC_H264_SETTER_CHECK_INPUT (obj);
+    obj->va_setup_flag = va_setup_flag;
+    return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsenc_h264_get_va_setup_flag (MixVideoConfigParamsDecH264 * obj,
+        bool *va_setup_flag) {
+
+    MIX_VIDEOCONFIGPARAMSDEC_H264_GETTER_CHECK_INPUT (obj, va_setup_flag);
+    *va_setup_flag = obj->va_setup_flag;
+    return MIX_RESULT_SUCCESS;
+}
+

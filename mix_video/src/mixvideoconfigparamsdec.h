@@ -92,13 +92,21 @@ public:
     uint8  color_matrix;
 
     /* bit rate in bps, output only */
-    uint8 bit_rate;
+    uint bit_rate;
 
     /* Pixel aspect ratio numerator value */
     uint par_num;
 
     /* Pixel aspect ratio  denominator value */
     uint par_denom;
+
+    uint crop_left;
+    uint crop_right;
+    uint crop_top;
+    uint crop_bottom;
+
+    /* Error concealment enabled/disabled */
+    bool error_concealment;
 
     /* Reserved for future use */
     void *reserved1;
@@ -451,6 +459,57 @@ MIX_RESULT mix_videoconfigparamsdec_set_pixel_aspect_ratio(MixVideoConfigParamsD
  */
 MIX_RESULT mix_videoconfigparamsdec_get_pixel_aspect_ratio(MixVideoConfigParamsDec * obj,
         uint * par_num, uint * par_denom);
+
+/**
+ * mix_videoconfigparamsdec_set_cropping_info:
+ * @obj: #MixVideoConfigParamsDec object
+ * @crop_left: left cropping value
+ * @crop_right: right cropping value
+ * @crop_top: top cropping value
+ * @crop_bottom: bottom cropping value
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set cropping information
+ */
+MIX_RESULT mix_videoconfigparamsdec_set_cropping_info(MixVideoConfigParamsDec * obj,
+        uint crop_left, uint crop_right, uint crop_top, uint crop_bottom);
+
+/**
+ * mix_videoconfigparamsdec_get_cropping_info:
+ * @obj: #MixVideoConfigParamsDec object
+ * @crop_left: left cropping value
+ * @crop_right: right cropping value
+ * @crop_top: top cropping value
+ * @crop_bottom: bottom cropping value
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get cropping information
+ */
+MIX_RESULT mix_videoconfigparamsdec_get_cropping_info(MixVideoConfigParamsDec * obj,
+        uint *crop_left, uint *crop_right, uint *crop_top, uint *crop_bottom);
+
+
+/**
+ * mix_videoconfigparamsdec_set_error_concealment:
+ * @obj: #MixVideoConfigParamsDec object
+ * @error_concealment: A flag to indicate whether error concealment is enabled for decoder
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set the flag that indicates whether error concealment is enabled
+ */
+MIX_RESULT mix_videoconfigparamsdec_set_error_concealment (MixVideoConfigParamsDec * obj,
+        bool error_concealment);
+
+/**
+ * mix_videoconfigparamsdec_get_error_concealment:
+ * @obj: #MixVideoConfigParamsDec object
+ * @error_concealment: the flag to be returned that indicates error concealment is enabled for decoder
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get the flag that indicates whether error concealment is enabled
+ */
+MIX_RESULT mix_videoconfigparamsdec_get_error_concealment(MixVideoConfigParamsDec * obj,
+        bool *error_concealment);
 
 
 /* TODO: Add getters and setters for other properties */

@@ -72,6 +72,7 @@ typedef struct _MixIOVec {
     uchar *data;
     int buffer_size;
     int data_size;
+    bool is_key_frame;
 } MixIOVec;
 
 typedef struct _MixRect {

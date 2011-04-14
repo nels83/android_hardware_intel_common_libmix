@@ -505,6 +505,7 @@ extern "C" {
 #ifdef VBP
         uint8_t   video_full_range_flag;                           // u(1)
         uint8_t   matrix_coefficients;                              // u(8)
+        uint32_t  bit_rate_value;
 #endif
 
         uint8_t   colour_description_present_flag;                 // u(1)
@@ -785,6 +786,9 @@ extern "C" {
         uint8_t mb_adaptive_frame_field_flag;
         uint8_t direct_8x8_inference_flag;
         uint8_t frame_cropping_flag;
+#ifdef VBP
+        uint8_t separate_colour_plane_flag;
+#endif
 
         uint16_t vui_parameters_present_flag;
         uint16_t chroma_format_idc;

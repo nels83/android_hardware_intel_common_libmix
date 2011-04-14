@@ -44,6 +44,7 @@ public:
     /*< public > */
 
     /* TODO: Add H.264 configuration paramters */
+    bool va_setup_flag;
 
     /* Reserved for future use */
     void *reserved1;
@@ -95,5 +96,26 @@ MixVideoConfigParamsDecH264
 
 /* Class Methods */
 
-/* TODO: Add getters and setters for other properties */
+/**
+ * mix_videoconfigparamsenc_h264_set_va_setup_flag:
+ * @obj: #MixVideoConfigParamsDecH264 object
+ * @va_setup_flag: The flag to enable/disable setup va directly
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set the The flag to enable/disable setup va directly
+ */
+MIX_RESULT mix_videoconfigparamsdec_h264_set_va_setup_flag (MixVideoConfigParamsDecH264 * obj,
+        bool va_setup_flag);
+
+/**
+ * mix_videoconfigparamsenc_h264_get_va_setup_flag:
+ * @obj: #MixVideoConfigParamsDecH264 object
+ * @va_setup_flag: The flag to enable/disable setup va directly
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get the The flag to enable/disable setup va directly
+ */
+MIX_RESULT mix_videoconfigparamsenc_h264_get_va_setup_flag (MixVideoConfigParamsDecH264 * obj,
+        bool *va_setup_flag);
+
 #endif /* __MIX_VIDEOCONFIGPARAMSDEC_H264_H__ */

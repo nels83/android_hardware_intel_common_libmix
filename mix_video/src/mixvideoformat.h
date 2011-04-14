@@ -121,8 +121,9 @@ public:
     bool end_picture_pending;
     MixVideoFrame* video_frame;
     uint extra_surfaces;
+    bool error_concealment;
     MixVideoConfigParamsDec * config_params;
-    uint ref_count ;
+    int ref_count;
 };
 
 

@@ -53,6 +53,9 @@ public:
     /* output only, indicate if stream contains a new sequence */
     bool new_sequence;
 
+    /* Indicates a complete frame */
+    bool complete_frame;
+
     /* Reserved for future use */
     void *reserved1;
 
@@ -163,6 +166,30 @@ MIX_RESULT mix_videodecodeparams_set_new_sequence(MixVideoDecodeParams * obj,
  */
 MIX_RESULT mix_videodecodeparams_get_new_sequence(MixVideoDecodeParams * obj,
         bool *new_sequence);
+
+/**
+ * mix_videodecodeparams_get_complete_frame:
+ * @obj: #MixVideoDecodeParams object
+ * @complete_frame: complete_frame flag to be returned
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Get complete_frame flag
+ */
+MIX_RESULT mix_videodecodeparams_get_complete_frame(MixVideoDecodeParams * obj,
+        bool *complete_frame);
+
+
+/**
+ * mix_videodecodeparams_set_complete_frame:
+ * @obj: #MixVideoDecodeParams object
+ * @complete_frame: Flag to indicate if frame is a complete frame or not
+ * @returns: <link linkend="MixVideo-mixvideodef">Common Video Error Return Codes</link>
+ *
+ * Set new_sequence flag
+ */
+MIX_RESULT mix_videodecodeparams_set_complete_frame(MixVideoDecodeParams * obj,
+        bool complete_frame);
+
 
 
 #endif /* __MIX_VIDEODECODEPARAMS_H__ */

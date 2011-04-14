@@ -37,6 +37,13 @@ vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo)
     result = viddec_pm_get_bits(ctxt, &rcv.struct_a_rcv, 32);
     md->width = rcv.struct_a.HORIZ_SIZE;
     md->height = rcv.struct_a.VERT_SIZE;
+#ifdef VBP
+    //The HRD rate and HRD buffer size may be encoded according to a 64 bit sequence header data structure B
+    //if there is no data strcuture B metadata contained in the bitstream, we will not be able to get the
+    //bitrate data, hence we set it to 0 for now
+    md->HRD_NUM_LEAKY_BUCKETS = 0;
+    md->hrd_initial_state.sLeakyBucket[0].HRD_RATE = 0;
+#endif
 
     result = viddec_pm_get_bits(ctxt, &rcv.struct_c_rcv, 32);
     md->PROFILE = rcv.struct_c.PROFILE >> 2;
@@ -203,11 +210,44 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
         result = viddec_pm_get_bits(ctxt, &tempValue, 5);
         sh.HRD_NUM_LEAKY_BUCKETS = tempValue;
         md->HRD_NUM_LEAKY_BUCKETS = sh.HRD_NUM_LEAKY_BUCKETS;
+#ifndef VBP
         // Skip the rest of the parsing - hrdinfo is not required for decode or for attributes
+#else
+        {
+            uint8_t count;
+            uint8_t bitRateExponent;
+            uint8_t bufferSizeExponent;
+
+            /* bit_rate_exponent */
+            result = viddec_pm_get_bits(ctxt, &tempValue, 4);
+            bitRateExponent = (uint8_t)(tempValue + 6);
+
+            /* buffer_size_exponent */
+            result = viddec_pm_get_bits(ctxt, &tempValue, 4);
+            bufferSizeExponent = (uint8_t)(tempValue + 4);
+            md->hrd_initial_state.BUFFER_SIZE_EXPONENT = bufferSizeExponent;
+
+            for(count = 0; count < sh.HRD_NUM_LEAKY_BUCKETS; count++)
+            {
+                /* hrd_rate */
+                result = viddec_pm_get_bits(ctxt, &tempValue, 16);
+                md->hrd_initial_state.sLeakyBucket[count].HRD_RATE =
+                    (uint32_t)(tempValue + 1) << bitRateExponent;
+
+                /* hrd_buffer */
+                result = viddec_pm_get_bits(ctxt, &tempValue, 16);
+                md->hrd_initial_state.sLeakyBucket[count].HRD_BUFFER =
+                    (uint32_t)(tempValue + 1) << bufferSizeExponent;
+            }
+        }
+#endif
     }
     else
     {
         md->HRD_NUM_LEAKY_BUCKETS = 0;
+#ifdef VBP
+        md->hrd_initial_state.sLeakyBucket[0].HRD_RATE = 0;
+#endif
     }
 
     md->widthMB = (((md->width + 1) * 2) + 15) / VC1_PIXEL_IN_LUMA;

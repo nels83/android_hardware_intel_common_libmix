@@ -692,6 +692,14 @@ uint32 vbp_populate_query_data_vc1(vbp_context *pcontext)
 
     /* first we get the SH/EP data.  Can we cut down on this? */
     vbp_codec_data_vc1 *se_data = query_data->se_data;
+
+
+    uint32_t curHrdNum = seqLayerHeader->HRD_NUM_LEAKY_BUCKETS;
+
+    se_data->bit_rate = curHrdNum ?
+                        seqLayerHeader->hrd_initial_state.sLeakyBucket[curHrdNum -1].HRD_RATE :
+                        seqLayerHeader->hrd_initial_state.sLeakyBucket[0].HRD_RATE;
+
     se_data->PROFILE = seqLayerHeader->PROFILE;
     se_data->LEVEL = seqLayerHeader->LEVEL;
     se_data->POSTPROCFLAG = seqLayerHeader->POSTPROCFLAG;

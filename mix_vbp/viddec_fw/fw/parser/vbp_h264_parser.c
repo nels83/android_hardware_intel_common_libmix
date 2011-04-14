@@ -792,8 +792,12 @@ static void vbp_set_codec_data_h264(
     codec_data->level_idc = parser->info.active_SPS.level_idc;
 
 
-    codec_data->constraint_set1_flag = (parser->info.active_SPS.constraint_set_flags & 0x4) >> 2;
-
+    /*constraint flag sets (h.264 Spec v2009)*/
+    codec_data->constraint_set0_flag = (parser->info.active_SPS.constraint_set_flags & 0x10) >> 4;
+    codec_data->constraint_set1_flag = (parser->info.active_SPS.constraint_set_flags & 0x8) >> 3;
+    codec_data->constraint_set2_flag = (parser->info.active_SPS.constraint_set_flags & 0x4) >> 2;
+    codec_data->constraint_set3_flag = (parser->info.active_SPS.constraint_set_flags & 0x2) >> 1;
+    codec_data->constraint_set4_flag = parser->info.active_SPS.constraint_set_flags & 0x1;
 
     /* reference frames */
     codec_data->num_ref_frames = parser->info.active_SPS.num_ref_frames;
@@ -817,6 +821,41 @@ static void vbp_set_codec_data_h264(
     codec_data->frame_height = (2 - parser->info.active_SPS.sps_disp.frame_mbs_only_flag) *
                                (parser->info.active_SPS.sps_disp.pic_height_in_map_units_minus1 + 1) * 16;
 
+    /* cropping information */
+    codec_data->crop_left = 0;
+    codec_data->crop_right = 0;
+    codec_data->crop_top = 0;
+    codec_data->crop_bottom = 0;
+    if(parser->info.active_SPS.sps_disp.frame_cropping_flag) {
+        int CropUnitX = 0,	CropUnitY = 0, SubWidthC = 0, SubHeightC = 0;
+        int ChromaArrayType = 0;
+        if(parser->info.active_SPS.sps_disp.separate_colour_plane_flag == 0) {
+            if(parser->info.active_SPS.sps_disp.chroma_format_idc == 1) {
+                SubWidthC = 2;
+                SubHeightC = 2;
+            } else if( parser->info.active_SPS.sps_disp.chroma_format_idc == 2) {
+                SubWidthC = 2;
+                SubHeightC = 1;
+            } else if( parser->info.active_SPS.sps_disp.chroma_format_idc == 3) {
+                SubWidthC = 1;
+                SubHeightC = 1;
+            }
+            ChromaArrayType = parser->info.active_SPS.sps_disp.chroma_format_idc;
+        }
+
+        if(ChromaArrayType == 0) {
+            CropUnitX = 1;
+            CropUnitY = 2 - parser->info.active_SPS.sps_disp.frame_mbs_only_flag;
+        } else {
+            CropUnitX = SubWidthC;
+            CropUnitY = SubHeightC * ( 2 - parser->info.active_SPS.sps_disp.frame_mbs_only_flag);
+        }
+
+        codec_data->crop_left = CropUnitX * parser->info.active_SPS.sps_disp.frame_crop_rect_left_offset;
+        codec_data->crop_right = CropUnitX * parser->info.active_SPS.sps_disp.frame_crop_rect_right_offset; //	+ 1;
+        codec_data->crop_top = CropUnitY * parser->info.active_SPS.sps_disp.frame_crop_rect_top_offset;
+        codec_data->crop_bottom = CropUnitY * parser->info.active_SPS.sps_disp.frame_crop_rect_bottom_offset; // + 1;
+    }
 
     /* aspect ratio */
     if (parser->info.active_SPS.sps_disp.vui_seq_parameters.aspect_ratio_info_present_flag)
@@ -878,6 +917,7 @@ static void vbp_set_codec_data_h264(
         codec_data->matrix_coefficients = 2;
     }
 
+    codec_data->bit_rate = parser->info.active_SPS.sps_disp.vui_seq_parameters.bit_rate_value;
 
     /* picture order type and count */
     codec_data->log2_max_pic_order_cnt_lsb_minus4 = parser->info.active_SPS.log2_max_pic_order_cnt_lsb_minus4;
@@ -1340,6 +1380,9 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
     int i = 0;
     viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
 
+    //Enable emulation prevention
+    cxt->getbits.is_emul_reqd = 1;
+
     /* check if configuration data is start code prefix */
     viddec_sc_parse_cubby_cxt_t cubby = cxt->parse_cubby;
     viddec_parser_ops_t *ops = pcontext->parser_ops;
@@ -1725,17 +1768,15 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
         break;
 
     case h264_NAL_UNIT_TYPE_SPS:
-        if (query_data->has_sps)
-            query_data->new_sps = 1;
+
+        query_data->new_sps = 1;
         query_data->has_sps = 1;
         query_data->has_pps = 0;
         ITRACE("SPS header is parsed.");
         break;
 
     case h264_NAL_UNIT_TYPE_PPS:
-        if (query_data->has_pps || query_data->new_sps)
-            query_data->new_pps = 1;
-
+        query_data->new_pps = 1;
         query_data->has_pps = 1;
         ITRACE("PPS header is parsed.");
         break;

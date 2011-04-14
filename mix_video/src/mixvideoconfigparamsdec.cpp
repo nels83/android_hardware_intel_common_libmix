@@ -32,25 +32,30 @@
  
 
 MixVideoConfigParamsDec::MixVideoConfigParamsDec()
-        :frame_order_mode(MIX_FRAMEORDER_MODE_DISPLAYORDER)
-        ,mime_type(NULL)
-        ,frame_rate_num(0)
-        ,frame_rate_denom(0)
-        ,picture_width(0)
-        ,picture_height(0)
-        ,raw_format(0)
-        ,rate_control(0)
-        ,mixbuffer_pool_size(0)
-        ,extra_surface_allocation(0)
-        ,video_range(0)
-        ,color_matrix(0)
-        ,bit_rate(0)
-        ,par_num(0)
-        ,par_denom(0)
-        ,reserved1(NULL)
-        ,reserved2(NULL)
-        ,reserved3(NULL)
-        ,reserved4(NULL)
+    :frame_order_mode(MIX_FRAMEORDER_MODE_DISPLAYORDER)
+    ,mime_type(NULL)
+    ,frame_rate_num(1)
+    ,frame_rate_denom(1)
+    ,picture_width(0)
+    ,picture_height(0)
+    ,raw_format(0)
+    ,rate_control(0)
+    ,mixbuffer_pool_size(0)
+    ,extra_surface_allocation(0)
+    ,video_range(0)
+    ,color_matrix(0)
+    ,bit_rate(0)
+    ,par_num(0)
+    ,par_denom(0)
+    ,crop_left(0)
+    ,crop_right(0)
+    ,crop_top(0)
+    ,crop_bottom(0)
+    ,error_concealment(TRUE)
+    ,reserved1(NULL)
+    ,reserved2(NULL)
+    ,reserved3(NULL)
+    ,reserved4(NULL)
 
 {
     memset(&this->header, 0, sizeof(header));
@@ -91,6 +96,11 @@ bool MixVideoConfigParamsDec::copy(MixParams *target) const {
         this_target->bit_rate = this->bit_rate;
         this_target->par_num = this->par_num;
         this_target->par_denom = this->par_denom;
+        this_target->crop_left = this->crop_left;
+        this_target->crop_right = this->crop_right;
+        this_target->crop_top = this->crop_top;
+        this_target->crop_bottom = this->crop_bottom;
+        this_target->error_concealment = this->error_concealment;
 
         /* copy properties of non-primitive */
 
@@ -212,6 +222,27 @@ bool MixVideoConfigParamsDec::equal(MixParams* obj) const {
         }
 
         if (this->par_denom != this_obj->par_denom) {
+            goto not_equal;
+        }
+
+        if (this->crop_left != this_obj->crop_left)
+        {
+            goto not_equal;
+        }
+        if (this->crop_right != this_obj->crop_right)
+        {
+            goto not_equal;
+        }
+        if (this->crop_top != this_obj->crop_top)
+        {
+            goto not_equal;
+        }
+        if (this->crop_bottom != this_obj->crop_bottom)
+        {
+            goto not_equal;
+        }
+        if (this->error_concealment != this_obj->error_concealment)
+        {
             goto not_equal;
         }
         ret = TRUE;
@@ -502,4 +533,44 @@ MIX_RESULT mix_videoconfigparamsdec_get_pixel_aspect_ratio(
     return MIX_RESULT_SUCCESS;
 }
 
+MIX_RESULT mix_videoconfigparamsdec_set_cropping_info(MixVideoConfigParamsDec * obj,
+        uint crop_left, uint crop_right, uint crop_top, uint crop_bottom)
+{
+    MIX_VIDEOCONFIGPARAMSDEC_SETTER_CHECK_INPUT (obj);
+    obj->crop_left = crop_left;
+    obj->crop_right = crop_right;
+    obj->crop_top = crop_top;
+    obj->crop_bottom = crop_bottom;
+    return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_get_cropping_info(MixVideoConfigParamsDec * obj,
+        uint *crop_left, uint *crop_right, uint *crop_top, uint *crop_bottom)
+{
+    MIX_VIDEOCONFIGPARAMSDEC_GETTER_CHECK_INPUT_PAIR (obj, crop_left, crop_right);
+    if(!crop_top || !crop_bottom ) {
+        return MIX_RESULT_NULL_PTR;
+    }
+    *crop_left = obj->crop_left;
+    *crop_right = obj->crop_right;
+    *crop_top = obj->crop_top;
+    *crop_bottom = obj->crop_bottom;
+    return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_set_error_concealment (
+    MixVideoConfigParamsDec * obj, bool error_concealment) {
+    MIX_VIDEOCONFIGPARAMSDEC_SETTER_CHECK_INPUT (obj);
+
+    obj->error_concealment = error_concealment;
+    return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videoconfigparamsdec_get_error_concealment(
+    MixVideoConfigParamsDec * obj, bool *error_concealment) {
+    MIX_VIDEOCONFIGPARAMSDEC_GETTER_CHECK_INPUT (obj, error_concealment);
+
+    *error_concealment = obj->error_concealment;
+    return MIX_RESULT_SUCCESS;
+}
 

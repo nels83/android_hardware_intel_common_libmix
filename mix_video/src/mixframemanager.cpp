@@ -236,10 +236,13 @@ MIX_RESULT mix_framemanager_enqueue(MixFrameManager *fm, MixVideoFrame *mvf) {
     if (fm->mode == MIX_DISPLAY_ORDER_PICNUMBER) {
         uint32 num;
         mix_videoframe_get_displayorder(mvf, &num);
-        LOG_V("pic %d is enqueued.\n", num);
+        uint64 ts;
+        mix_videoframe_get_timestamp(mvf, &ts);
+        LOG_V("pic %d is enqueued, ts = %"INT64_FORMAT"\n", num, ts);
     }
 
-    if (fm->mode == MIX_DISPLAY_ORDER_TIMESTAMP) {
+    else// if (fm->mode == MIX_DISPLAY_ORDER_TIMESTAMP) {
+    {
         uint64 ts;
         mix_videoframe_get_timestamp(mvf, &ts);
         LOG_V("ts %"UINT64_FORMAT" is enqueued.\n", ts);
@@ -337,6 +340,11 @@ MIX_RESULT mix_framemanager_pictype_based_dequeue(MixFrameManager *fm, MixVideoF
         {
             first_i_or_p = p;
         }
+
+        // When there are more than 1 i or p frame in queue,
+        // we shouldn't update the B frame's time stamp again.
+        if (num_i_or_p > 1)
+            break;
     }
 
     // if there are more than one reference frame in the list, the first one is dequeued.
@@ -461,12 +469,17 @@ MIX_RESULT mix_framemanager_picnumber_based_dequeue(MixFrameManager *fm, MixVide
     uint32 picnum;
     uint32 next_picnum_pending;
 
+    int least_poc_index;
+    uint32 least_poc;
+
     len = j_slist_length(fm->frame_list);
 
 retry:
     next_picnum_pending = (uint32)-1;
+    least_poc_index = -1;
+    least_poc = (uint32)-1;
 
-    for (i = 0; i < len; i++)
+    for (i = 0; i < len; )
     {
         p = (MixVideoFrame*)j_slist_nth_data(fm->frame_list, i);
         mix_videoframe_get_displayorder(p, &picnum);
@@ -481,6 +494,23 @@ retry:
             //    fm->next_frame_picnumber = 0;
             return MIX_RESULT_SUCCESS;
         }
+
+        if(picnum == 0) {
+            if(i == 0) {
+                fm->next_frame_picnumber = 0;
+            } else {
+                fm->next_frame_picnumber = least_poc;
+                i = least_poc_index;
+            }
+            continue;
+        }
+        if(picnum < least_poc) {
+            least_poc = picnum;
+            least_poc_index = i;
+            LOG_V("least_poc_index = %d\n", least_poc_index);
+        }
+
+        ++i;
 
         if (picnum > fm->next_frame_picnumber &&
                 picnum < next_picnum_pending)

@@ -13,13 +13,9 @@
 #include <va/va_x11.h>
 #endif
 
-#ifdef YUVDUMP
-//TODO Complete YUVDUMP code and move into base class
-#include <stdio.h>
-#endif /* YUVDUMP */
 
 #include <string.h>
-#include <stdlib.h>
+
 
 #ifdef MIX_LOG_ENABLE
 static int mix_video_vc1_counter = 0;
@@ -32,7 +28,6 @@ MixVideoFormat_VC1::MixVideoFormat_VC1() {
 }
 
 MixVideoFormat_VC1::~MixVideoFormat_VC1() {
-    int32 pret = VBP_OK;
     /* clean up here. */
     Lock();
     //surfacepool is deallocated by parent
@@ -54,10 +49,10 @@ MixVideoFormat_VC1::~MixVideoFormat_VC1() {
     this->current_timestamp = (uint64)-1;
 
     //Close the parser
-    pret = vbp_close(this->parser_handle);
-    this->parser_handle = NULL;
-    if (pret != VBP_OK) {
-        LOG_E( "Error closing parser\n");
+    if (this->parser_handle)
+    {
+        vbp_close(this->parser_handle);
+        this->parser_handle = NULL;
     }
 
     Unlock();
@@ -176,7 +171,153 @@ MIX_RESULT MixVideoFormat_VC1::_update_config_params(vbp_data_vc1 *data) {
         this->config_params,
         data->se_data->ASPECT_HORIZ_SIZE,
         data->se_data->ASPECT_VERT_SIZE);
+
+    mix_videoconfigparamsdec_set_bit_rate(
+        this->config_params,
+        data->se_data->bit_rate);
     return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT MixVideoFormat_VC1::_initialize_va(vbp_data_vc1 *data) {
+    MIX_RESULT ret = MIX_RESULT_SUCCESS;
+    VAStatus vret = VA_STATUS_SUCCESS;
+    VAConfigAttrib attrib;
+    VAProfile va_profile;
+
+    LOG_V( "Begin\n");
+    if (this->va_initialized) {
+        LOG_W("va already initialized.\n");
+        return MIX_RESULT_SUCCESS;
+    }
+
+    //We are requesting RT attributes
+    attrib.type = VAConfigAttribRTFormat;
+    attrib.value = VA_RT_FORMAT_YUV420;
+
+    //Initialize and save the VA config ID
+    switch (data->se_data->PROFILE) {
+    case 0:
+        va_profile = VAProfileVC1Simple;
+        break;
+    case 1:
+        va_profile = VAProfileVC1Main;
+        break;
+
+    default:
+        va_profile = VAProfileVC1Advanced;
+        break;
+    }
+
+    vret = vaCreateConfig(
+               this->va_display,
+               va_profile,
+               VAEntrypointVLD,
+               &attrib,
+               1,
+               &(this->va_config));
+
+    if (vret != VA_STATUS_SUCCESS) {
+        ret = MIX_RESULT_FAIL;
+        LOG_E("vaCreateConfig failed\n");
+        goto cleanup;
+    }
+
+
+    //Check for loop filtering
+    if (data->se_data->LOOPFILTER == 1)
+        this->loopFilter = TRUE;
+    else
+        this->loopFilter = FALSE;
+
+    LOG_V( "loop filter is %d, TFCNTRFLAG is %d\n", data->se_data->LOOPFILTER, data->se_data->TFCNTRFLAG);
+
+    if ((data->se_data->MAXBFRAMES > 0) || (data->se_data->PROFILE == 3) || (data->se_data->PROFILE == 1)) {
+        //If Advanced profile, have to assume B frames may be present, since MAXBFRAMES is not valid for this prof
+        this->haveBframes = TRUE;
+    }
+    else {
+        this->haveBframes = FALSE;
+    }
+
+    //Calculate VC1 numSurfaces based on max number of B frames or
+    // MIX_VIDEO_VC1_SURFACE_NUM, whichever is less
+
+    //Adding 1 to work around VBLANK issue
+    this->va_num_surfaces = 1 + this->extra_surfaces + ((3 + (this->haveBframes ? 1 : 0) <
+                            MIX_VIDEO_VC1_SURFACE_NUM) ?
+                            (3 + (this->haveBframes ? 1 : 0))
+                                : MIX_VIDEO_VC1_SURFACE_NUM);
+
+    this->va_surfaces = new VASurfaceID[this->va_num_surfaces];
+    if (this->va_surfaces == NULL) {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "parent->va_surfaces == NULL. \n");
+        goto cleanup;
+    }
+
+    vret = vaCreateSurfaces(
+               this->va_display,
+               this->picture_width,
+               this->picture_height,
+               VA_RT_FORMAT_YUV420,
+               this->va_num_surfaces,
+               this->va_surfaces);
+
+    if (vret != VA_STATUS_SUCCESS) {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Error allocating surfaces\n");
+        goto cleanup;
+    }
+
+    LOG_V( "Created %d libva surfaces\n", this->va_num_surfaces);
+
+    //Initialize the surface pool
+    ret = mix_surfacepool_initialize(
+              this->surfacepool,
+              this->va_surfaces,
+              this->va_num_surfaces,
+              this->va_display);
+
+    switch (ret) {
+    case MIX_RESULT_SUCCESS:
+        break;
+    case MIX_RESULT_ALREADY_INIT:  //This case is for future use when we can be  initialized multiple times.  It is to detect when we have not been reset before re-initializing.
+    default:
+        ret = MIX_RESULT_ALREADY_INIT;
+        LOG_E( "Error init surface pool\n");
+        goto cleanup;
+        break;
+    }
+
+    //Initialize and save the VA context ID
+    //Note: VA_PROGRESSIVE libva flag is only relevant to MPEG2
+    vret = vaCreateContext(
+               this->va_display,
+               this->va_config,
+               this->picture_width,
+               this->picture_height,
+               0,
+               this->va_surfaces,
+               this->va_num_surfaces,
+               &(this->va_context));
+
+    if (vret != VA_STATUS_SUCCESS) {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Error initializing video driver\n");
+        goto cleanup;
+    }
+
+    LOG_V( "mix_video vinfo:  Content type	%s\n", (data->se_data->INTERLACE) ? "interlaced" : "progressive");
+    LOG_V( "mix_video vinfo:  Content width %d, height %d\n", this->picture_width, this->picture_height);
+    LOG_V( "mix_video vinfo:  MAXBFRAMES %d (note that for Advanced profile, MAXBFRAMES can be zero and there still can be B frames in the content)\n", data->se_data->MAXBFRAMES);
+    LOG_V( "mix_video vinfo:  PROFILE %d, LEVEL %d\n", data->se_data->PROFILE, data->se_data->LEVEL);
+
+    this->va_initialized = TRUE;
+cleanup:
+    /* nothing to clean up */
+
+    return ret;
+
 }
 
 MIX_RESULT MixVideoFormat_VC1::Initialize(
@@ -191,18 +332,6 @@ MIX_RESULT MixVideoFormat_VC1::Initialize(
     enum _vbp_parser_type ptype = VBP_VC1;
     vbp_data_vc1 *data = NULL;
     MixIOVec *header = NULL;
-    int numprofs = 0, numactualprofs = 0;
-    int numentrypts = 0, numactualentrypts = 0;
-    VADisplay vadisplay = NULL;
-    VAProfile *profiles = NULL;
-    VAEntrypoint *entrypts = NULL;
-    VAConfigAttrib attrib;
-    VAStatus vret = VA_STATUS_SUCCESS;
-    uint extra_surfaces = 0;
-    VASurfaceID *surfaces = NULL;
-    uint numSurfaces = 0;
-    int vaentrypt = 0;
-    int vaprof = 0;
 
     //TODO Partition this method into smaller methods
     if (config_params == NULL || frame_mgr == NULL ||
@@ -223,13 +352,34 @@ MIX_RESULT MixVideoFormat_VC1::Initialize(
     //From now on, we exit this function through cleanup:
     Lock();
 
+    this->surfacepool = mix_surfacepool_new();
+    *surface_pool = this->surfacepool;
+
+    if (this->surfacepool == NULL)
+    {
+        ret = MIX_RESULT_NO_MEMORY;
+        LOG_E( "parent->surfacepool == NULL.\n");
+        goto cleanup;
+    }
+
+    ret = mix_videoconfigparamsdec_get_extra_surface_allocation(config_params,
+            &this->extra_surfaces);
+
+    if (ret != MIX_RESULT_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Cannot get extra surface allocation setting\n");
+        goto cleanup;
+    }
+
+
     //Load the bitstream parser
     pret = vbp_open(ptype, &(this->parser_handle));
 
     if (!(pret == VBP_OK)) {
         ret = MIX_RESULT_FAIL;
         LOG_E( "Error opening parser\n");
-        goto CLEAN_UP;
+        goto cleanup;
     }
 
     LOG_V( "Opened parser\n");
@@ -238,36 +388,29 @@ MIX_RESULT MixVideoFormat_VC1::Initialize(
             &header);
 
     if ((ret != MIX_RESULT_SUCCESS) || (header == NULL)) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Cannot get header data\n");
-        goto CLEAN_UP;
-    }
+        ret = MIX_RESULT_SUCCESS;
+        LOG_W( "Codec data is not available in the configuration parameter.\n");
 
-    ret = mix_videoconfigparamsdec_get_extra_surface_allocation(config_params,
-            &extra_surfaces);
-
-    if (ret != MIX_RESULT_SUCCESS) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Cannot get extra surface allocation setting\n");
-        goto CLEAN_UP;
+        goto cleanup;
     }
 
     LOG_V( "Calling parse on header data, handle %d\n", (int)this->parser_handle);
+    LOG_V( "mix_video vinfo:  Content type %s, %s\n", (header->data_size > 8) ? "VC-1" : "WMV", (data->se_data->INTERLACE) ? "interlaced" : "progressive");
 
     ret = _update_seq_header(config_params, header);
     if (ret != MIX_RESULT_SUCCESS) {
         ret = MIX_RESULT_FAIL;
         LOG_E( "Error updating sequence header\n");
-        goto CLEAN_UP;
+        goto cleanup;
     }
 
     pret = vbp_parse(this->parser_handle, header->data,
                      header->data_size, TRUE);
 
-    if (!((pret == VBP_OK) || (pret == VBP_DONE))) {
+    if ((pret != VBP_OK)) {
         ret = MIX_RESULT_FAIL;
         LOG_E( "Error parsing header data, size %d\n", header->data_size);
-        goto CLEAN_UP;
+        goto cleanup;
     }
 
 
@@ -278,207 +421,19 @@ MIX_RESULT MixVideoFormat_VC1::Initialize(
     if ((pret != VBP_OK) || (data == NULL)) {
         ret = MIX_RESULT_FAIL;
         LOG_E( "Error reading parsed header data\n");
-        goto CLEAN_UP;
+        goto cleanup;
     }
     LOG_V( "Queried parser for header data\n");
 
     _update_config_params(data);
 
-    //Time for libva initialization
-    vadisplay = this->va_display;
-    numprofs = vaMaxNumProfiles(vadisplay);
-    profiles = reinterpret_cast<VAProfile*>(malloc(numprofs*sizeof(VAProfile)));
-
-    if (!profiles) {
-        ret = MIX_RESULT_NO_MEMORY;
-        LOG_E( "Error allocating memory\n");
-        goto CLEAN_UP;
+    ret = _initialize_va(data);
+    if (ret != MIX_RESULT_SUCCESS) {
+        LOG_E( "Error initializing va. \n");
+        goto cleanup;
     }
 
-    vret = vaQueryConfigProfiles(vadisplay, profiles,
-                                 &numactualprofs);
-    if (!(vret == VA_STATUS_SUCCESS)) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Error initializing video driver\n");
-        goto CLEAN_UP;
-    }
-
-    //check the desired profile support
-
-    VAProfile profile;
-    switch (data->se_data->PROFILE) {
-    case 0:
-        profile = VAProfileVC1Simple;
-        break;
-    case 1:
-        profile = VAProfileVC1Main;
-        break;
-    default:
-        profile = VAProfileVC1Advanced;
-        break;
-    }
-
-    for (; vaprof < numactualprofs; vaprof++) {
-        if (profiles[vaprof] == profile)
-            break;
-    }
-    if (vaprof >= numprofs || profiles[vaprof] != profile) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Profile not supported by driver\n");
-        goto CLEAN_UP;
-    }
-
-    numentrypts = vaMaxNumEntrypoints(vadisplay);
-    entrypts = reinterpret_cast<VAEntrypoint*>(malloc(numentrypts*sizeof(VAEntrypoint)));
-
-    if (!entrypts) {
-        ret = MIX_RESULT_NO_MEMORY;
-        LOG_E( "Error allocating memory\n");
-        goto CLEAN_UP;
-    }
-
-    vret = vaQueryConfigEntrypoints(vadisplay, profiles[vaprof],
-                                    entrypts, &numactualentrypts);
-
-    if (!(vret == VA_STATUS_SUCCESS)) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Error initializing driver\n");
-        goto CLEAN_UP;
-    }
-
-    for (; vaentrypt < numactualentrypts; vaentrypt++) {
-        if (entrypts[vaentrypt] == VAEntrypointVLD)
-            break;
-    }
-    if (vaentrypt >= numentrypts || entrypts[vaentrypt] != VAEntrypointVLD) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Entry point not supported by driver\n");
-        goto CLEAN_UP;
-    }
-
-    //We are requesting RT attributes
-    attrib.type = VAConfigAttribRTFormat;
-
-    vret = vaGetConfigAttributes(vadisplay, profiles[vaprof],
-                                 entrypts[vaentrypt], &attrib, 1);
-
-    //TODO Handle other values returned for RT format
-    // and check with requested format provided in config params
-    //Right now only YUV 4:2:0 is supported by libva
-    // and this is our default
-    if (((attrib.value & VA_RT_FORMAT_YUV420) == 0) || vret != VA_STATUS_SUCCESS) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Error initializing driver\n");
-        goto CLEAN_UP;
-    }
-
-    //Initialize and save the VA config ID
-    vret = vaCreateConfig(vadisplay, profiles[vaprof],
-                          entrypts[vaentrypt], &attrib, 1, &(this->va_config));
-
-    if (!(vret == VA_STATUS_SUCCESS)) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Error initializing driver\n");
-        goto CLEAN_UP;
-    }
-
-    LOG_V( "Created libva config with profile %d\n", vaprof);
-
-    //Check for loop filtering
-    if (data->se_data->LOOPFILTER == 1)
-        this->loopFilter = TRUE;
-    else
-        this->loopFilter = FALSE;
-
-    LOG_V( "loop filter is %d, TFCNTRFLAG is %d\n",
-           data->se_data->LOOPFILTER, data->se_data->TFCNTRFLAG);
-
-    //Initialize the surface pool
-    if ((data->se_data->MAXBFRAMES > 0) ||
-            (data->se_data->PROFILE == 3) ||
-            (data->se_data->PROFILE == 1))
-        //If Advanced profile, have to assume B frames may be present, since MAXBFRAMES is not valid for this prof
-        this->haveBframes = TRUE;
-    else
-        this->haveBframes = FALSE;
-
-    //Calculate VC1 numSurfaces based on max number of B frames or
-    // MIX_VIDEO_VC1_SURFACE_NUM, whichever is less
-
-    //Adding 1 to work around VBLANK issue
-    this->va_num_surfaces = 1 + extra_surfaces +
-                            ((3 + (this->haveBframes ? 1 : 0) < MIX_VIDEO_VC1_SURFACE_NUM) ?
-                             (3 + (this->haveBframes ? 1 : 0)) : MIX_VIDEO_VC1_SURFACE_NUM);
-    numSurfaces = this->va_num_surfaces;
-    this->va_surfaces = reinterpret_cast<VASurfaceID*>(malloc(sizeof(VASurfaceID)*numSurfaces));
-    surfaces = this->va_surfaces;
-
-    if (surfaces == NULL) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Cannot allocate temporary data\n");
-        goto CLEAN_UP;
-    }
-
-    vret = vaCreateSurfaces(
-               vadisplay, this->picture_width,
-               this->picture_height, entrypts[vaentrypt],
-               numSurfaces, surfaces);
-    if (!(vret == VA_STATUS_SUCCESS)) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Error allocating surfaces\n");
-        goto CLEAN_UP;
-    }
-
-    this->surfacepool = mix_surfacepool_new();
-    *surface_pool = this->surfacepool;
-    if (this->surfacepool == NULL) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Error initializing surface pool\n");
-        goto CLEAN_UP;
-    }
-
-
-    ret = mix_surfacepool_initialize(this->surfacepool,
-                                     surfaces, numSurfaces, vadisplay);
-
-    switch (ret) {
-    case MIX_RESULT_SUCCESS:
-        break;
-    case MIX_RESULT_ALREADY_INIT:
-    default:
-        ret = MIX_RESULT_ALREADY_INIT;
-        LOG_E( "Error init failure\n");
-        goto CLEAN_UP;
-        break;
-    }
-
-    LOG_V( "Created %d libva surfaces, MAXBFRAMES is %d\n",
-           numSurfaces, data->se_data->MAXBFRAMES);
-
-    //Initialize and save the VA context ID
-    //Note: VA_PROGRESSIVE libva flag is only relevant to MPEG2
-    vret = vaCreateContext(vadisplay, this->va_config,
-                           this->picture_width, this->picture_height,
-                           0, surfaces, numSurfaces,
-                           &(this->va_context));
-    if (!(vret == VA_STATUS_SUCCESS)) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Error initializing video driver\n");
-        goto CLEAN_UP;
-    }
-
-    LOG_V( "Created libva context width %d, height %d\n",
-           this->picture_width, this->picture_height);
-    LOG_V( "mix_video vinfo:  Content type %s, %s\n",
-           (header->data_size > 8) ? "VC-1" : "WMV", (data->se_data->INTERLACE) ? "interlaced" : "progressive");
-    LOG_V( "mix_video vinfo:  Content width %d, height %d\n",
-           this->picture_width, this->picture_height);
-    LOG_V( "mix_video vinfo:  MAXBFRAMES %d (note that for Advanced profile, MAXBFRAMES can be zero and there still can be B frames in the content)\n",
-           data->se_data->MAXBFRAMES);
-    LOG_V( "mix_video vinfo:  PROFILE %d, LEVEL %d\n",
-           data->se_data->PROFILE, data->se_data->LEVEL);
-
-CLEAN_UP:
+cleanup:
     if (ret != MIX_RESULT_SUCCESS) {
         pret = vbp_close(this->parser_handle);
         this->parser_handle = NULL;
@@ -486,14 +441,14 @@ CLEAN_UP:
     } else {
         this->initialized = TRUE;
     }
+
     if (header != NULL) {
         if (header->data != NULL)
-            free(header->data);
-        free(header);
+            delete[](header->data);
+        delete(header);
         header = NULL;
     }
-    free(profiles);
-    free(entrypts);
+
     this->lastFrame = NULL;
     LOG_V( "Unlocking\n");
     Unlock();
@@ -511,7 +466,6 @@ MIX_RESULT MixVideoFormat_VC1::Decode(
     uint64 ts = 0;
     vbp_data_vc1 *data = NULL;
     bool discontinuity = FALSE;
-    MixInputBufferEntry *bufentry = NULL;
     if (bufin == NULL || decode_params == NULL) {
         LOG_E( "NUll pointer passed in\n");
         return MIX_RESULT_NULL_PTR;
@@ -542,29 +496,6 @@ MIX_RESULT MixVideoFormat_VC1::Decode(
     LOG_V( "Locking\n");
     Lock();
 
-    //If this is a new frame and we haven't retrieved parser
-    //  workload data from previous frame yet, do so
-    if ((ts != this->current_timestamp) &&
-            (this->parse_in_progress)) {
-        //query for data
-        pret = vbp_query(this->parser_handle, (void **) &data);
-        if ((pret != VBP_OK) || (data == NULL)) {
-            ret = MIX_RESULT_FAIL;
-            LOG_E( "Error initializing parser\n");
-            goto CLEAN_UP;
-        }
-        LOG_V( "Queried for last frame data\n");
-        //process and decode data
-        ret = _process_decode(data, this->current_timestamp, this->discontinuity_frame_in_progress);
-
-        if (ret != MIX_RESULT_SUCCESS) {
-            //We log this but need to process the new frame data, so do not return
-            LOG_E( "process_decode failed.\n");
-        }
-        LOG_V( "Called process and decode for last frame\n");
-        this->parse_in_progress = FALSE;
-    }
-
     this->current_timestamp = ts;
     this->discontinuity_frame_in_progress = discontinuity;
     LOG_V( "Starting current frame %d, timestamp %"UINT64_FORMAT"\n", mix_video_vc1_counter++, ts);
@@ -574,74 +505,42 @@ MIX_RESULT MixVideoFormat_VC1::Decode(
                (int)this->parser_handle, (uint)bufin[i]->data, bufin[i]->size);
         pret = vbp_parse(this->parser_handle, bufin[i]->data, bufin[i]->size, FALSE);
         LOG_V( "Called parse for current frame\n");
-        if (pret == VBP_DONE) {
-            //query for data
-            pret = vbp_query(this->parser_handle, (void **) &data);
-            if ((pret != VBP_OK) || (data == NULL)) {
-                ret = MIX_RESULT_FAIL;
-                LOG_E( "Error getting parser data\n");
-                goto CLEAN_UP;
-            }
-            LOG_V( "Called query for current frame\n");
-            //Increase the ref count of this input buffer
-            mix_buffer_ref(bufin[i]);
-            //Create a new MixInputBufferEntry
-            //TODO make this from a pool to optimize
-            bufentry = reinterpret_cast<MixInputBufferEntry*>(malloc(sizeof(
-                           MixInputBufferEntry)));
-            if (bufentry == NULL) {
-                ret = MIX_RESULT_NO_MEMORY;
-                LOG_E( "Error allocating bufentry\n");
-                goto CLEAN_UP;
-            }
-
-            bufentry->buf = bufin[i];
-            LOG_V( "Setting bufentry %x for mixbuffer %x ts to %"UINT64_FORMAT"\n",
-                   (uint)bufentry, (uint)bufentry->buf, ts);
-            bufentry->timestamp = ts;
-
-            LOG_V( "Enqueue this input buffer for current frame\n");
-            LOG_V( "bufentry->timestamp %"UINT64_FORMAT"\n", bufentry->timestamp);
-
-            //Enqueue this input buffer
-            j_queue_push_tail(this->inputbufqueue,
-                              (void*)bufentry);
-
-            //process and decode data
-            ret = _process_decode(data, ts, discontinuity);
-
-            if (ret != MIX_RESULT_SUCCESS) {
-                //We log this but continue since we need to complete our processing of input buffers
-                LOG_E( "Process_decode failed.\n");
-            }
-
-            LOG_V( "Called process and decode for current frame\n");
-            this->parse_in_progress = FALSE;
-        } else if (pret != VBP_OK) {
-            //We log this but continue since we need to complete our processing of input buffers
-            LOG_E( "Parsing failed.\n");
+        if (pret != VBP_OK) {
             ret = MIX_RESULT_FAIL;
-        } else {
-            LOG_V( "Enqueuing buffer and going on to next (if any) for this frame\n");
-            //Increase the ref count of this input buffer
-            mix_buffer_ref(bufin[i]);
-            //Create a new MixInputBufferEntry
-            //TODO make this from a pool to optimize
-            bufentry = reinterpret_cast<MixInputBufferEntry*>(malloc(sizeof(MixInputBufferEntry)));
-            if (bufentry == NULL) {
-                ret = MIX_RESULT_NO_MEMORY;
-                LOG_E( "Error allocating bufentry\n");
+            LOG_E( "Error parsing data\n");
+            goto CLEAN_UP;
+        }
+        //query for data
+        pret = vbp_query(this->parser_handle, (void **) &data);
+        if ((pret != VBP_OK) || (data == NULL)) {
+            ret = MIX_RESULT_FAIL;
+            LOG_E( "Error getting parser data\n");
+            goto CLEAN_UP;
+        }
+        if (this->va_initialized == FALSE) {
+            _update_config_params(data);
+
+            LOG_V("try initializing VA...\n");
+            ret = _initialize_va(data);
+            if (ret != MIX_RESULT_SUCCESS) {
+                LOG_V("mix_videofmt_vc1_initialize_va failed.\n");
                 goto CLEAN_UP;
             }
-            bufentry->buf = bufin[i];
-            bufentry->timestamp = ts;
-
-            //Enqueue this input buffer
-            j_queue_push_tail(this->inputbufqueue,
-                              (void*)bufentry);
-            this->parse_in_progress = TRUE;
         }
+
+        LOG_V( "Called query for current frame\n");
+
+        //process and decode data
+        ret = _process_decode(data, ts, discontinuity);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            //We log this but continue since we need to complete our processing of input buffers
+            LOG_E( "Process_decode failed.\n");
+            goto CLEAN_UP;
+        }
+
     }
+
 CLEAN_UP:
     LOG_V( "Unlocking\n");
     Unlock();
@@ -649,81 +548,6 @@ CLEAN_UP:
     return ret;
 }
 
-
-#ifdef YUVDUMP
-//TODO Complete this YUVDUMP code and move into base class
-MIX_RESULT MixVideoFormat_VC1::_get_Img_from_surface (MixVideoFrame * frame) {
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAImageFormat va_image_format;
-    VAImage va_image;
-    unsigned char* pBuffer;
-    unsigned int ui32SrcWidth = this->picture_width;
-    unsigned int ui32SrcHeight = this->picture_height;
-    unsigned int ui32Stride;
-    unsigned int ui32ChromaOffset;
-    FILE *fp = NULL;
-    int r = 0;
-    int i;
-    g_print ("_get_Img_from_surface   \n");
-
-    if (NULL == frame) {
-        LOG_E( "Null pointer passed in\n");
-        return MIX_RESULT_NULL_PTR;
-    }
-    fp = fopen("yuvdump.yuv", "a+");
-
-    static int have_va_image = 0;
-
-    if (!have_va_image) {
-        va_image_format.fourcc = VA_FOURCC_NV12;
-        //va_image_format.fourcc = VA_FOURCC_YV12;
-        vaStatus = vaCreateImage(
-                       this->va_display, &va_image_format,
-                       ui32SrcWidth, ui32SrcHeight, &va_image);
-        have_va_image = 1;
-    }
-
-    vaStatus = vaGetImage(
-                   this->va_display, frame->frame_id, 0, 0,
-                   ui32SrcWidth, ui32SrcHeight, va_image.image_id );
-    vaStatus = vaMapBuffer(this->va_display, va_image.buf, (void **) &pBuffer);
-    ui32ChromaOffset = va_image.offsets[1];
-    ui32Stride = va_image.pitches[0];
-
-    if (VA_STATUS_SUCCESS != vaStatus) {
-        g_print ("VideoProcessBlt: Unable to copy surface\n\r");
-        return vaStatus;
-    }
-
-    {
-        g_print ("before copy memory....\n");
-        g_print ("width = %d, height = %d\n", ui32SrcWidth, ui32SrcHeight);
-        g_print ("data_size = %d\n", va_image.data_size);
-        g_print ("num_planes = %d\n", va_image.num_planes);
-        g_print ("va_image.pitches[0] = %d\n", va_image.pitches[0]);
-        g_print ("va_image.pitches[1] = %d\n", va_image.pitches[1]);
-        g_print ("va_image.pitches[2] = %d\n", va_image.pitches[2]);
-        g_print ("va_image.offsets[0] = %d\n", va_image.offsets[0]);
-        g_print ("va_image.offsets[1] = %d\n", va_image.offsets[1]);
-        g_print ("va_image.offsets[2] = %d\n", va_image.offsets[2]);
-        //      r = fwrite (pBuffer, 1, va_image.offsets[1], fp);
-
-        r = fwrite (pBuffer, va_image.offsets[1], 1, fp);
-
-        for (i = 0; i < ui32SrcWidth * ui32SrcHeight / 2; i +=2)
-            r = fwrite (pBuffer + va_image.offsets[1] + i / 2, 1, 1, fp);
-
-        for (i = 0; i < ui32SrcWidth * ui32SrcHeight / 2; i +=2)
-            r = fwrite (pBuffer + va_image.offsets[1] +  i / 2 + 1, 1, 1, fp);
-
-        g_print ("ui32ChromaOffset = %d, ui32Stride = %d\n", ui32ChromaOffset, ui32Stride);
-
-    }
-
-    vaStatus = vaUnmapBuffer(this->va_display, va_image.buf);
-    return vaStatus;
-}
-#endif /* YUVDUMP */
 
 MIX_RESULT MixVideoFormat_VC1::_decode_a_picture(
     vbp_data_vc1 *data, int pic_index, MixVideoFrame *frame) {
@@ -792,7 +616,8 @@ MIX_RESULT MixVideoFormat_VC1::_decode_a_picture(
         case VC1_PTYPE_BI: // BI frame type
             ret = mix_videoframe_set_frame_type(frame, TYPE_B);
             break;
-            //Not indicated here	case VC1_PTYPE_SKIPPED:
+            //Not indicated here
+        case VC1_PTYPE_SKIPPED:
         default:
             break;
         }
@@ -913,6 +738,17 @@ MIX_RESULT MixVideoFormat_VC1::_decode_a_picture(
     //Libva buffer set up
     vadisplay = this->va_display;
     vacontext = this->va_context;
+    LOG_V( "Calling vaBeginPicture\n");
+
+    //Now we can begin the picture
+    vret = vaBeginPicture(vadisplay, vacontext, surface);
+
+    if (vret != VA_STATUS_SUCCESS)
+    {
+        ret = MIX_RESULT_FAIL;
+        LOG_E( "Video driver returned error from vaBeginPicture\n");
+        goto CLEAN_UP;
+    }
 
     LOG_V( "Creating libva picture parameter buffer\n");
 
@@ -1003,18 +839,6 @@ MIX_RESULT MixVideoFormat_VC1::_decode_a_picture(
         }
     }
 
-
-    LOG_V( "Calling vaBeginPicture\n");
-
-    //Now we can begin the picture
-    vret = vaBeginPicture(vadisplay, vacontext, surface);
-
-    if (vret != VA_STATUS_SUCCESS) {
-        ret = MIX_RESULT_FAIL;
-        LOG_E( "Video driver returned error from vaBeginPicture\n");
-        goto CLEAN_UP;
-    }
-
     LOG_V( "Calling vaRenderPicture\n");
 
     //Render the picture
@@ -1065,7 +889,6 @@ MIX_RESULT MixVideoFormat_VC1::Flush() {
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
     LOG_V( "Begin\n");
     uint32 pret = 0;
-    MixInputBufferEntry *bufentry = NULL;
     /* Chainup parent method.
     	We are not chaining up to parent method for now.
      */
@@ -1078,16 +901,7 @@ MIX_RESULT MixVideoFormat_VC1::Flush() {
     Lock();
 
     //Clear the contents of inputbufqueue
-    while (!j_queue_is_empty(this->inputbufqueue)) {
-        bufentry = (MixInputBufferEntry *) j_queue_pop_head(this->inputbufqueue);
-        if (bufentry == NULL)
-            continue;
-        mix_buffer_unref(bufentry->buf);
-        free(bufentry);
-    }
 
-    //Clear parse_in_progress flag and current timestamp
-    this->parse_in_progress = FALSE;
     this->discontinuity_frame_in_progress = FALSE;
     this->current_timestamp = (uint64)-1;
 
@@ -1111,8 +925,7 @@ MIX_RESULT MixVideoFormat_VC1::Flush() {
 
 MIX_RESULT MixVideoFormat_VC1::EndOfStream() {
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
-    vbp_data_vc1 *data = NULL;
-    uint32 pret = 0;
+
     LOG_V( "Begin\n");
     /* Chainup parent method.
     	We are not chaining up to parent method for now.
@@ -1123,27 +936,8 @@ MIX_RESULT MixVideoFormat_VC1::EndOfStream() {
         return parent_class->eos(mix, msg);
     }
 #endif
-    Lock();
-    //if a frame is in progress, process the frame
-    if (this->parse_in_progress) {
-        //query for data
-        pret = vbp_query(this->parser_handle, (void **) &data);
-        if ((pret != VBP_OK) || (data == NULL)) {
-            ret = MIX_RESULT_FAIL;
-            LOG_E( "Error getting last parse data\n");
-            goto CLEAN_UP;
-        }
 
-        //process and decode data
-        ret = _process_decode(data, this->current_timestamp, this->discontinuity_frame_in_progress);
-        this->parse_in_progress = FALSE;
-        if (ret != MIX_RESULT_SUCCESS) {
-            LOG_E( "Error processing last frame\n");
-            goto CLEAN_UP;
-        }
-    }
-CLEAN_UP:
-    Unlock();
+    //Call Frame Manager with _eos()
     ret = mix_framemanager_eos(this->framemgr);
     LOG_V( "End\n");
     return ret;
@@ -1306,12 +1100,6 @@ MIX_RESULT MixVideoFormat_VC1::_process_decode(
         _handle_ref_frames(frame_type, frame);
     }
 
-//TODO Complete YUVDUMP code and move into base class
-#ifdef YUVDUMP
-    if (mix_video_vc1_counter < 10)
-        ret = _get_Img_from_surface(frame);
-    //g_usleep(5000000);
-#endif /* YUVDUMP */
 
     LOG_V( "Enqueueing the frame with frame manager, timestamp %"UINT64_FORMAT"\n", timestamp);
 
@@ -1325,7 +1113,7 @@ MIX_RESULT MixVideoFormat_VC1::_process_decode(
     unrefVideoFrame = FALSE;
 
 CLEAN_UP:
-    _release_input_buffers(timestamp);
+
     if (unrefVideoFrame)
         mix_videoframe_unref(frame);
     LOG_V( "End\n");
@@ -1333,32 +1121,11 @@ CLEAN_UP:
 }
 
 MIX_RESULT MixVideoFormat_VC1::_release_input_buffers(uint64 timestamp) {
-    MixInputBufferEntry *bufentry = NULL;
-    bool done = FALSE;
+
     LOG_V( "Begin\n");
 
-    //Dequeue and release all input buffers for this frame
-    LOG_V( "Releasing all the MixBuffers for this frame\n");
-    //While the head of the queue has timestamp == current ts
-    //dequeue the entry, unref the MixBuffer, and free the struct
-    done = FALSE;
-    while (!done) {
-        bufentry = (MixInputBufferEntry *) j_queue_peek_head(this->inputbufqueue);
-        if (bufentry == NULL)
-            break;
-        LOG_V( "head of queue buf %x, timestamp %"UINT64_FORMAT", buffer timestamp %"UINT64_FORMAT"\n",
-               (uint)bufentry->buf, timestamp, bufentry->timestamp);
-        if (bufentry->timestamp != timestamp) {
-            LOG_V( "buf %x, timestamp %"UINT64_FORMAT", buffer timestamp %"UINT64_FORMAT"\n",
-                   (uint)bufentry->buf, timestamp, bufentry->timestamp);
-            done = TRUE;
-            break;
-        }
-        bufentry = (MixInputBufferEntry *) j_queue_pop_head(this->inputbufqueue);
-        LOG_V( "Unref this MixBuffers %x\n", (uint)bufentry->buf);
-        mix_buffer_unref(bufentry->buf);
-        free(bufentry);
-    }
+    // Nothing to release. Deprecated.
+
     LOG_V( "End\n");
     return MIX_RESULT_SUCCESS;
 }

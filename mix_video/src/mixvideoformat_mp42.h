@@ -50,7 +50,7 @@ private:
     MIX_RESULT _decode_continue(vbp_data_mp42 *data);
     MIX_RESULT _decode_begin(vbp_data_mp42* data);
     MIX_RESULT _decode_a_buffer(
-        MixBuffer * bufin, uint64 ts, bool discontinuity);
+        MixBuffer * bufin, uint64 ts, bool discontinuity,bool complete_frame);
 
 public:
     /*< public > */

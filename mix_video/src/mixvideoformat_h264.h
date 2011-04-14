@@ -47,7 +47,7 @@ private:
     MIX_RESULT _update_config_params(vbp_data_h264 *data);
     MIX_RESULT _initialize_va(vbp_data_h264 *data);
     MIX_RESULT _decode_a_buffer(MixBuffer * bufin, uint64 ts,
-                                bool discontinuity, MixVideoDecodeParams * decode_params);
+                                bool discontinuity, MixVideoDecodeParams * decode_params,bool complete_frame);
     MIX_RESULT _decode_end(bool drop_picture);
     MIX_RESULT _handle_new_sequence(vbp_data_h264 *data);
     MIX_RESULT _decode_begin(vbp_data_h264 *data);

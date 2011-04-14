@@ -61,6 +61,8 @@ typedef struct _vbp_codec_data_mp42
     uint8   par_width;
     uint8   par_height;
 
+    // bit rate
+    int bit_rate;
 } vbp_codec_data_mp42;
 
 typedef struct _vbp_slice_data_mp42
@@ -108,7 +110,12 @@ typedef struct _vbp_codec_data_h264
 
     uint8 		profile_idc;
     uint8 		level_idc;
+    /*constraint flag sets (h.264 Spec v2009)*/
+    uint8		constraint_set0_flag;
     uint8		constraint_set1_flag;
+    uint8		constraint_set2_flag;
+    uint8		constraint_set3_flag;
+    uint8		constraint_set4_flag;
 
     uint8	 	num_ref_frames;
     uint8	 	gaps_in_frame_num_value_allowed_flag;
@@ -125,6 +132,12 @@ typedef struct _vbp_codec_data_h264
     uint8  		aspect_ratio_idc;
     uint16		sar_width;
     uint16		sar_height;
+
+    /* cropping information */
+    int 			crop_top;
+    int 			crop_bottom;
+    int 			crop_left;
+    int 			crop_right;
 
     /* video fromat */
 
@@ -254,7 +267,8 @@ typedef struct _vbp_codec_data_vc1
 
     uint8 ASPECT_HORIZ_SIZE;
     uint8 ASPECT_VERT_SIZE;
-
+    // bit rate
+    int bit_rate;
 } vbp_codec_data_vc1;
 
 typedef struct _vbp_slice_data_vc1

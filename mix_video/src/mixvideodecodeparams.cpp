@@ -26,13 +26,14 @@
  
 
 MixVideoDecodeParams::MixVideoDecodeParams()
-        :timestamp(0)
-        ,discontinuity(FALSE)
-        ,new_sequence(FALSE)
-        ,reserved1(NULL)
-        ,reserved2(NULL)
-        ,reserved3(NULL)
-        ,reserved4(NULL) {
+    :timestamp(0)
+    ,discontinuity(FALSE)
+    ,new_sequence(FALSE)
+    ,complete_frame(FALSE)
+    ,reserved1(NULL)
+    ,reserved2(NULL)
+    ,reserved3(NULL)
+    ,reserved4(NULL) {
 }
 
 MixVideoDecodeParams::~MixVideoDecodeParams() {
@@ -122,4 +123,19 @@ MIX_RESULT mix_videodecodeparams_get_new_sequence(
     *new_sequence = obj->new_sequence;
     return MIX_RESULT_SUCCESS;
 }
+
+MIX_RESULT mix_videodecodeparams_set_complete_frame(MixVideoDecodeParams * obj,
+        bool complete_frame) {
+    MIX_VIDEODECODEPARAMS_SETTER_CHECK_INPUT (obj);
+    obj->complete_frame = complete_frame;
+    return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_videodecodeparams_get_complete_frame(MixVideoDecodeParams * obj,
+        bool *complete_frame) {
+    MIX_VIDEODECODEPARAMS_GETTER_CHECK_INPUT (obj, complete_frame);
+    *complete_frame = obj->complete_frame;
+    return MIX_RESULT_SUCCESS;
+}
+
 

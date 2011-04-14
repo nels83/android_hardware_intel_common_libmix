@@ -50,6 +50,7 @@ private:
     MIX_RESULT _update_config_params(vbp_data_vc1 *data);
     MIX_RESULT _decode_a_picture(
         vbp_data_vc1 *data, int pic_index, MixVideoFrame *frame);
+    MIX_RESULT _initialize_va(vbp_data_vc1 *data);
 #ifdef YUVDUMP
     MIX_RESULT _get_Img_from_surface (MixVideoFrame * frame);
 #endif

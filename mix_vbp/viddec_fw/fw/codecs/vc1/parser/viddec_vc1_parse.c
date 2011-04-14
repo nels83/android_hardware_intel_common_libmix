@@ -119,6 +119,55 @@ static uint32_t viddec_vc1_parse(void *parent, void *ctxt)
         parser->sc_seen_since_last_wkld |= VC1_SC_SEQ;
 #ifdef VBP
         parser->start_code = VC1_SC_SEQ;
+        if (parser->info.metadata.HRD_NUM_LEAKY_BUCKETS == 0)
+        {
+            if (parser->info.metadata.PROFILE == VC1_PROFILE_SIMPLE)
+            {
+                switch(parser->info.metadata.LEVEL)
+                {
+                case 0:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 96000;
+                    break;
+                case 1:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 384000;
+                    break;
+                }
+            }
+            else if (parser->info.metadata.PROFILE == VC1_PROFILE_MAIN)
+            {
+                switch(parser->info.metadata.LEVEL)
+                {
+                case 0:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 2000000;
+                    break;
+                case 1:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 10000000;
+                    break;
+                case 2:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 20000000;
+                    break;
+                }
+            }
+            else if (parser->info.metadata.PROFILE == VC1_PROFILE_ADVANCED)
+            {
+                switch(parser->info.metadata.LEVEL)
+                {
+                case 0:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 2000000;
+                    break;
+                case 1:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 10000000;
+                    break;
+                case 2:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 20000000;
+                    break;
+                case 3:
+                    parser->info.metadata.hrd_initial_state.sLeakyBucket[0].HRD_RATE = 45000000;
+                    break;
+                }
+            }
+        }
+
 #endif
         break;
     }

@@ -120,6 +120,11 @@ MIX_RESULT MixVideoFormat_MP42::_update_config_params(
 
     mix_videoconfigparamsdec_set_pixel_aspect_ratio(
         this->config_params, data->codec_data.par_width, data->codec_data.par_height);
+
+    mix_videoconfigparamsdec_set_bit_rate(
+        this->config_params,
+        data->codec_data.bit_rate);
+
     return MIX_RESULT_SUCCESS;
 }
 
@@ -717,7 +722,7 @@ MIX_RESULT MixVideoFormat_MP42::_decode_begin(vbp_data_mp42* data) {
 }
 
 MIX_RESULT MixVideoFormat_MP42::_decode_a_buffer(
-    MixBuffer * bufin, uint64 ts, bool discontinuity) {
+    MixBuffer * bufin, uint64 ts, bool discontinuity,bool complete_frame) {
     uint32 pret = 0;
     MIX_RESULT ret = MIX_RESULT_SUCCESS;
     vbp_data_mp42 *data = NULL;
@@ -788,6 +793,16 @@ MIX_RESULT MixVideoFormat_MP42::_decode_a_buffer(
         ret = _decode_continue(data);
         if (ret != MIX_RESULT_SUCCESS) {
             LOG_V("mix_videofmt_mp42_decode_continue failed.\n");
+            goto CLEAN_UP;
+        }
+    }
+    if (complete_frame)
+    {
+        // finish decoding current frame
+        ret = _decode_end(FALSE);
+        if (ret != MIX_RESULT_SUCCESS)
+        {
+            LOG_V("mix_videofmt_mp42_decode_end failed.\n");
             goto CLEAN_UP;
         }
     }
@@ -964,7 +979,11 @@ MIX_RESULT MixVideoFormat_MP42::Decode(
     for (int i = 0; i < bufincnt; i++) {
         LOG_V("decode buffer %d in total %d \n", i, bufincnt);
         // decode a buffer at a time
-        ret = _decode_a_buffer(bufin[i], ts, discontinuity);
+        ret = _decode_a_buffer(
+                  bufin[i],
+                  ts,
+                  discontinuity,
+                  ((i == bufincnt - 1) ? decode_params->complete_frame : 0));
         if (ret != MIX_RESULT_SUCCESS) {
             LOG_E("mix_videofmt_mp42_decode_a_buffer failed.\n");
             break;

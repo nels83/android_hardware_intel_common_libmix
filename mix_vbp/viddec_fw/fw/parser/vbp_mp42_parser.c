@@ -346,6 +346,8 @@ void vbp_fill_codec_data(vbp_context *pcontext)
     vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
     vbp_codec_data_mp42* codec_data = &(query_data->codec_data);
 
+    codec_data->bit_rate = parser->info.VisualObject.VideoObject.VOLControlParameters.bit_rate;
+
     codec_data->profile_and_level_indication
     = parser->info.profile_and_level_indication;
 
