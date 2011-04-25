@@ -606,9 +606,9 @@ void vbp_fill_iq_matrix_buffer(vbp_context *pcontext)
 
     iq_matrix = &(query_data->iq_matrix_buffer);
 
-    iq_matrix->load_intra_quant_mat = quant_mat_info->load_intra_quant_mat;
-    iq_matrix->load_non_intra_quant_mat
-    = quant_mat_info->load_nonintra_quant_mat;
+    iq_matrix->load_intra_quant_mat = 1; //quant_mat_info->load_intra_quant_mat;
+    iq_matrix->load_non_intra_quant_mat = 1;
+   // = quant_mat_info->load_nonintra_quant_mat;
     memcpy(iq_matrix->intra_quant_mat, quant_mat_info->intra_quant_mat, 64);
     memcpy(iq_matrix->non_intra_quant_mat, quant_mat_info->nonintra_quant_mat, 64);
 }
