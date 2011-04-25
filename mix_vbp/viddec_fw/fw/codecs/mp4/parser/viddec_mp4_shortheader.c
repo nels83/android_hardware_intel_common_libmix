@@ -25,6 +25,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane_svh(void *parent, viddec_mp4_parser_t *p
     mp4_VideoObjectPlaneH263 *svh = &(parser->info.VisualObject.VideoObject.VideoObjectPlaneH263);
     int32_t getbits = 0;
     uint8_t pei = 0;
+    uint8_t optional_indicators_8bits = 0;
 
     do
     {
@@ -116,11 +117,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane_svh(void *parent, viddec_mp4_parser_t *p
                 //optional indicators
                 getbits = viddec_pm_get_bits(parent, &data, 8);
                 BREAK_GETBITS_REQD_MISSING(getbits, ret);
-                if ( 0 != (data & 0xff))
-                {
-                    ret = MP4_STATUS_PARSE_ERROR;
-                    break;
-                }
+                optional_indicators_8bits = data;
                 //reserved zero bits
                 getbits = viddec_pm_get_bits(parent, &data, 3);
                 BREAK_GETBITS_REQD_MISSING(getbits, ret);
@@ -224,6 +221,12 @@ mp4_Status_t mp4_Parse_VideoObjectPlane_svh(void *parent, viddec_mp4_parser_t *p
                 BREAK_GETBITS_REQD_MISSING(getbits, ret);
                 svh->picture_height_indication = (data & 0x1ff);
             }
+
+            if (optional_indicators_8bits & 0x80) {
+                viddec_pm_get_bits(parent, &data, 8);
+                viddec_pm_get_bits(parent, &data, 2);
+            }
+
             viddec_pm_get_bits(parent, &data, 5);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             svh->vop_quant = (data & 0x1f);
