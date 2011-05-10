@@ -710,10 +710,16 @@ MIX_RESULT MixVideoFormat_MP42::_decode_begin(vbp_data_mp42* data) {
                 return MIX_RESULT_DROPFRAME;
             }
         } else if (frame_type == MP4_VOP_TYPE_P || frame_type == MP4_VOP_TYPE_S) {
+#if 0
+        /*
+        * For special clips using P frame (special P frame with all MB intra coded) as key frame
+        * Need to skip the reference check to enable the seek
+        */
             if (this->reference_frames[0] == NULL) {
                 LOG_W("Reference frames for P/S frame is missing\n");
                 return MIX_RESULT_DROPFRAME;
             }
+#endif
         }
         // all sanity check passes, continue decoding through mix_videofmt_mp42_decode_continue
         ret = _decode_continue(data);
