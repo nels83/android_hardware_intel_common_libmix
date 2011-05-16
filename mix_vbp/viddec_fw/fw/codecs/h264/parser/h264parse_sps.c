@@ -294,6 +294,11 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
     case h264_ProfileHigh:
         break;
     default:
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        pInfo->sw_bail = 1;
+#endif
+#endif
         return H264_SPS_INVALID_PROFILE;
         break;
     }
@@ -317,7 +322,14 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
     //// reserved_zero_4bits
     viddec_pm_get_bits(parent, (uint32_t *)&code, 4);
 #endif
-
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+    if (code != 0)
+    {
+        pInfo->sw_bail = 1;
+    }
+#endif
+#endif
     viddec_pm_get_bits(parent, &code, 8);
     SPS->level_idc = (uint8_t)code;
 
@@ -341,6 +353,11 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
     case h264_Level51:
         break;
     default:
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        pInfo->sw_bail = 1;
+#endif
+#endif
         return H264_SPS_INVALID_LEVEL;
     }
 
@@ -349,7 +366,14 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
 
         //// seq_parameter_set_id ---[0,31]
         if (SPS->seq_parameter_set_id > MAX_NUM_SPS -1)
+        {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             break;
+        }
 #ifdef VBP
         SPS->sps_disp.separate_colour_plane_flag = 0;
 #endif
@@ -422,13 +446,27 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         //// log2_max_frame_num_minus4 ---[0,12]
         data = (h264_GetVLCElement(parent, pInfo, false));
         if ( data > 12)
+        {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             break;
+        }
         SPS->log2_max_frame_num_minus4 = (uint8_t)data;
 
         //// pic_order_cnt_type ---- [0,2]
         data = h264_GetVLCElement(parent, pInfo, false);
         if ( data > 2)
+        {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             break;
+        }
         SPS->pic_order_cnt_type = (uint8_t)data;
 
 
@@ -445,7 +483,14 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
             //// num_ref_frames_in_pic_order_cnt_cycle ---- [0,255]
             data = h264_GetVLCElement(parent, pInfo, false);
             if ( data > 255)
+            {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+                pInfo->sw_bail = 1;
+#endif
+#endif
                 break;
+            }
             SPS->num_ref_frames_in_pic_order_cnt_cycle = (uint8_t)data;
 
 
@@ -468,7 +513,14 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         //// num_ref_frames ---[0,16]
         data = h264_GetVLCElement(parent, pInfo, false);
         if ( data > 16)
+        {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             break;
+        }
         SPS->num_ref_frames = (uint8_t)data;
 
         viddec_pm_get_bits(parent, &code, 1);

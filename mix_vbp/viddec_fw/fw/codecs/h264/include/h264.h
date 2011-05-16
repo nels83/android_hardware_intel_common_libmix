@@ -26,6 +26,9 @@
 #include "viddec_fw_workload.h"
 #include "h264parse_sei.h"
 
+#ifdef VBP
+//#define SW_ERROR_CONCEALEMNT
+#endif
 
 #ifdef WIN32
 #define mfd_printf OS_INFO
@@ -1022,7 +1025,11 @@ extern "C" {
 
         uint32_t		wl_err_curr;
         uint32_t		wl_err_next;
-
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        uint32_t                sw_bail;
+#endif
+#endif
     } h264_Info;
 
 

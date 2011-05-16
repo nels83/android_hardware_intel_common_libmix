@@ -25,6 +25,14 @@ h264_Status h264_Parse_Slice_Header_1(void *parent,h264_Info* pInfo, h264_Slice_
 
         ///// slice_type
         slice_type = h264_GetVLCElement(parent, pInfo, false);
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if (slice_type > 9)
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
         SliceHeader->slice_type = (slice_type%5);
 
         if (SliceHeader->slice_type > h264_PtypeI)	{
@@ -36,6 +44,11 @@ h264_Status h264_Parse_Slice_Header_1(void *parent,h264_Info* pInfo, h264_Slice_
         ////// pic_parameter_id
         data = h264_GetVLCElement(parent, pInfo, false);
         if (data > MAX_PIC_PARAMS) {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             ret = H264_PPS_INVALID_PIC_ID;
             break;
         }
@@ -109,6 +122,14 @@ h264_Status h264_Parse_Slice_Header_2(void *parent, h264_Info* pInfo, h264_Slice
         if (pInfo->nal_unit_type == h264_NAL_UNIT_TYPE_IDR)
         {
             SliceHeader->idr_pic_id = h264_GetVLCElement(parent, pInfo, false);
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            if (SliceHeader->idr_pic_id > 65535)
+            {
+                pInfo->sw_bail = 1;
+            }
+#endif
+#endif
         }
 
         if (pInfo->active_SPS.pic_order_cnt_type == 0)
@@ -276,13 +297,24 @@ h264_Status h264_Parse_Slice_Header_3(void *parent, h264_Info* pInfo, h264_Slice
 
         if (SliceHeader->cabac_init_idc > 2)
         {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             break;
         }
 
         SliceHeader->slice_qp_delta = h264_GetVLCElement(parent, pInfo, true);
         if ( (SliceHeader->slice_qp_delta > (25-pInfo->active_PPS.pic_init_qp_minus26)) || (SliceHeader->slice_qp_delta < -(26+pInfo->active_PPS.pic_init_qp_minus26)))
+        {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             break;
-
+        }
 
         if ((SliceHeader->slice_type == h264_PtypeSP)|| (SliceHeader->slice_type == h264_PtypeSI) )
         {
@@ -295,9 +327,15 @@ h264_Status h264_Parse_Slice_Header_3(void *parent, h264_Info* pInfo, h264_Slice
             SliceHeader->slice_qs_delta = h264_GetVLCElement(parent, pInfo, true);
 
             if ( (SliceHeader->slice_qs_delta > (25-pInfo->active_PPS.pic_init_qs_minus26)) || (SliceHeader->slice_qs_delta < -(26+pInfo->active_PPS.pic_init_qs_minus26)) )
+            {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+                pInfo->sw_bail = 1;
+#endif
+#endif
                 break;
+            }
         }
-
         if (pInfo->active_PPS.deblocking_filter_control_present_flag)
         {
             SliceHeader->disable_deblocking_filter_idc = h264_GetVLCElement(parent, pInfo, false);
@@ -305,13 +343,25 @@ h264_Status h264_Parse_Slice_Header_3(void *parent, h264_Info* pInfo, h264_Slice
             {
                 SliceHeader->slice_alpha_c0_offset_div2 = h264_GetVLCElement(parent, pInfo, true);
                 slice_alpha_c0_offset = SliceHeader->slice_alpha_c0_offset_div2 << 1;
-                if (slice_alpha_c0_offset < -12 || slice_alpha_c0_offset > 12) {
+                if (slice_alpha_c0_offset < -12 || slice_alpha_c0_offset > 12)
+                {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+                    pInfo->sw_bail = 1;
+#endif
+#endif
                     break;
                 }
 
                 SliceHeader->slice_beta_offset_div2 = h264_GetVLCElement(parent, pInfo, true);
                 slice_beta_offset = SliceHeader->slice_beta_offset_div2 << 1;
-                if (slice_beta_offset < -12 || slice_beta_offset > 12) {
+                if (slice_beta_offset < -12 || slice_beta_offset > 12)
+                {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+                    pInfo->sw_bail = 1;
+#endif
+#endif
                     break;
                 }
             }
@@ -430,16 +480,38 @@ h264_Status h264_Parse_Pred_Weight_Table(void *parent, h264_Info* pInfo,h264_Sli
 
     SliceHeader->sh_predwttbl.luma_log2_weight_denom = h264_GetVLCElement(parent, pInfo, false);
 
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+    if (SliceHeader->sh_predwttbl.luma_log2_weight_denom > 7)
+    {
+        pInfo->sw_bail = 1;
+    }
+#endif
+#endif
     if (pInfo->active_SPS.sps_disp.chroma_format_idc != 0)
     {
         SliceHeader->sh_predwttbl.chroma_log2_weight_denom = h264_GetVLCElement(parent,pInfo, false);
     }
-
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+    if (SliceHeader->sh_predwttbl.chroma_log2_weight_denom > 7)
+    {
+        pInfo->sw_bail = 1;
+    }
+#endif
+#endif
     for (i=0; i< SliceHeader->num_ref_idx_l0_active; i++)
     {
         viddec_pm_get_bits(parent, (uint32_t *)&flag, 1);
         SliceHeader->sh_predwttbl.luma_weight_l0_flag = flag;
-
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if ((-128 > flag) || (127 < flag))
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
         if (SliceHeader->sh_predwttbl.luma_weight_l0_flag)
         {
             SliceHeader->sh_predwttbl.luma_weight_l0[i] = h264_GetVLCElement(parent, pInfo, true);
@@ -455,7 +527,14 @@ h264_Status h264_Parse_Pred_Weight_Table(void *parent, h264_Info* pInfo,h264_Sli
         {
             viddec_pm_get_bits(parent, (uint32_t *)&flag, 1);
             SliceHeader->sh_predwttbl.chroma_weight_l0_flag = flag;
-
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            if ((-128 > flag) || (127 < flag))
+            {
+                pInfo->sw_bail = 1;
+            }
+#endif
+#endif
             if (SliceHeader->sh_predwttbl.chroma_weight_l0_flag)
             {
                 for (j=0; j <2; j++)
@@ -482,7 +561,14 @@ h264_Status h264_Parse_Pred_Weight_Table(void *parent, h264_Info* pInfo,h264_Sli
         {
             viddec_pm_get_bits(parent, (uint32_t *)&flag, 1);
             SliceHeader->sh_predwttbl.luma_weight_l1_flag = flag;
-
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            if ((-128 > flag) || (127 < flag))
+            {
+                pInfo->sw_bail = 1;
+            }
+#endif
+#endif
             if (SliceHeader->sh_predwttbl.luma_weight_l1_flag)
             {
                 SliceHeader->sh_predwttbl.luma_weight_l1[i] = h264_GetVLCElement(parent, pInfo, true);
@@ -498,7 +584,14 @@ h264_Status h264_Parse_Pred_Weight_Table(void *parent, h264_Info* pInfo,h264_Sli
             {
                 viddec_pm_get_bits(parent, (uint32_t *)&flag, 1);
                 SliceHeader->sh_predwttbl.chroma_weight_l1_flag = flag;
-
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+                if ((-128 > flag) || (127 < flag))
+                {
+                    pInfo->sw_bail = 1;
+                }
+#endif
+#endif
                 if (SliceHeader->sh_predwttbl.chroma_weight_l1_flag)
                 {
                     for (j=0; j <2; j++)

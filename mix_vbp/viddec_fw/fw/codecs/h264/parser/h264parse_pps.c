@@ -21,6 +21,14 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
         }
         PictureParameterSet->pic_parameter_set_id = (uint8_t)code;
 
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if (code > 255)
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
 
         code = h264_GetVLCElement(parent, pInfo, false);
         if (code > MAX_NUM_SPS-1) {
@@ -28,6 +36,14 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
         }
         PictureParameterSet->seq_parameter_set_id = (uint8_t)code;
 
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if (code > 31)
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
         ///// entropy_coding_mode_flag
         viddec_pm_get_bits(parent, &code, 1);
         PictureParameterSet->entropy_coding_mode_flag = (uint8_t)code;
@@ -37,6 +53,14 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
 
         PictureParameterSet->num_slice_groups_minus1 = h264_GetVLCElement(parent, pInfo, false);
 
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if (PictureParameterSet->num_slice_groups_minus1 > 8)
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
         //
         // In main profile, FMO is excluded and num_slice_groups_minus1 should be 0
         //
@@ -49,6 +73,11 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
         //// PPS->num_ref_idx_l0_active --- [0,32]
         if (((PictureParameterSet->num_ref_idx_l0_active) > MAX_NUM_REF_FRAMES) || ((PictureParameterSet->num_ref_idx_l1_active) > MAX_NUM_REF_FRAMES))
         {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             break;
         }
 
@@ -56,6 +85,14 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
         viddec_pm_get_bits(parent, &code, 1);
         PictureParameterSet->weighted_pred_flag = (uint8_t)code;
 
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if (code > 2)
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
         viddec_pm_get_bits(parent, &code, 2);
         PictureParameterSet->weighted_bipred_idc = (uint8_t)code;
 
@@ -63,9 +100,24 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
         PictureParameterSet->pic_init_qp_minus26 = h264_GetVLCElement(parent, pInfo, true);
         PictureParameterSet->pic_init_qs_minus26 = h264_GetVLCElement(parent, pInfo, true);
         if (((PictureParameterSet->pic_init_qp_minus26+26) > MAX_QP) || ((PictureParameterSet->pic_init_qs_minus26+26) > MAX_QP))
+        {
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            pInfo->sw_bail = 1;
+#endif
+#endif
             break;
+        }
         PictureParameterSet->chroma_qp_index_offset = h264_GetVLCElement(parent, pInfo, true);
 
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if ((12 < PictureParameterSet->chroma_qp_index_offset) || (-12 > PictureParameterSet->chroma_qp_index_offset) )
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
         //// Deblocking ctl parameters
         viddec_pm_get_bits(parent, &code, 1);
         PictureParameterSet->deblocking_filter_control_present_flag = (uint8_t)code;
@@ -77,6 +129,14 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
             break;
         PictureParameterSet->redundant_pic_cnt_present_flag = (uint8_t)code;
 
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if (code && (pInfo->active_SPS.profile_idc != h264_ProfileBaseline))
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
         //// Check if have more RBSP Data for additional parameters
         if (h264_More_RBSP_Data(parent, pInfo))
         {
@@ -107,8 +167,14 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
             }
 
             PictureParameterSet->second_chroma_qp_index_offset = h264_GetVLCElement(parent, pInfo, true); //fix
-            //if((PictureParameterSet->second_chroma_qp_index_offset>12) || (PictureParameterSet->second_chroma_qp_index_offset < -12))
-            //	break;
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            if((PictureParameterSet->second_chroma_qp_index_offset>12) || (PictureParameterSet->second_chroma_qp_index_offset < -12))
+            {
+                pInfo->sw_bail = 1;
+            }
+#endif
+#endif
         }
         else
         {

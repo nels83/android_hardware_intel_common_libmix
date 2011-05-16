@@ -28,6 +28,11 @@ static void viddec_h264_init(void *ctxt, uint32_t *persist_mem, uint32_t preserv
     }
     /* picture level info which will always be initialized */
     h264_init_Info_under_sps_pps_level(pInfo);
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+   pInfo->sw_bail = 0;
+#endif
+#endif
     return;
 }
 
@@ -252,6 +257,14 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
 
         h264_dpb_update_ref_lists( pInfo);
 
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        if ((pInfo->dpb.ltref_frames_in_buffer + pInfo->dpb.ref_frames_in_buffer ) > pInfo->active_SPS.num_ref_frames)
+        {
+            pInfo->sw_bail = 1;
+        }
+#endif
+#endif
 #ifdef DUMP_HEADER_INFO
         dump_ref_list(pInfo);
 #endif

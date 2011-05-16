@@ -2487,7 +2487,11 @@ void h264_dpb_gaps_in_frame_num_mem_management(h264_Info * pInfo)
         // only invoke following process for a conforming bitstream
         // when gaps_in_frame_num_value_allowed_flag is equal to 1
         pInfo->img.gaps_in_frame_num = 0;
-
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+        pInfo->sw_bail = 1;
+#endif
+#endif
         //mfd_printf("ERROR STREAM??\n");
         ////// Error handling here----
     }
@@ -4003,6 +4007,14 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
         if (pInfo->SliceHeader.idr_flag)
         {
             pInfo->img.FrameNumOffset         = 0;
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            if (pInfo->img.frame_num)
+            {
+                pInfo->sw_bail = 1;
+            }
+#endif
+#endif
         }
         else
         {
@@ -4103,6 +4115,14 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
             pInfo->img.toppoc = 0;
             pInfo->img.bottompoc = 0;
             pInfo->img.ThisPOC = 0;
+#ifdef VBP
+#ifdef SW_ERROR_CONCEALEMNT
+            if (pInfo->img.frame_num)
+            {
+                pInfo->sw_bail = 1;
+            }
+#endif
+#endif
         }
         else
         {
