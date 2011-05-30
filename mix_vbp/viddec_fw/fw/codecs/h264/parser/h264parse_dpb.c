@@ -2908,6 +2908,10 @@ void h264_dpb_idr_memory_management (h264_Info * pInfo,seq_param_set_used_ptr ac
         if (active_sps->sps_disp.vui_seq_parameters.max_dec_frame_buffering > p_dpb->BumpLevel) {
             //MFD_PARSER_DEBUG(ERROR_H264_DPB);
             //// err handling here
+
+            //// For some ilegal clips, the max dpb length described in vui might exceed the sps's value
+            //// To guarantee normal playback, just select the vui value to override
+            p_dpb->BumpLevel = active_sps->sps_disp.vui_seq_parameters.max_dec_frame_buffering;
         }
         else {
             p_dpb->BumpLevel = (active_sps->sps_disp.vui_seq_parameters.max_dec_frame_buffering > 1) ?
