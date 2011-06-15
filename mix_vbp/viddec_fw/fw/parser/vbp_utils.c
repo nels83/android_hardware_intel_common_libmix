@@ -1,12 +1,28 @@
-/*
- INTEL CONFIDENTIAL
- Copyright 2009 Intel Corporation All Rights Reserved.
- The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
+/* INTEL CONFIDENTIAL
+* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+*
+* The source code contained or described herein and all documents
+* related to the source code ("Material") are owned by Intel
+* Corporation or its suppliers or licensors.  Title to the
+* Material remains with Intel Corporation or its suppliers and
+* licensors.  The Material contains trade secrets and proprietary
+* and confidential information of Intel or its suppliers and
+* licensors. The Material is protected by worldwide copyright and
+* trade secret laws and treaty provisions.  No part of the Material
+* may be used, copied, reproduced, modified, published, uploaded,
+* posted, transmitted, distributed, or disclosed in any way without
+* Intel's prior express written permission.
+*
+* No license under any patent, copyright, trade secret or other
+* intellectual property right is granted to or conferred upon you
+* by disclosure or delivery of the Materials, either expressly, by
+* implication, inducement, estoppel or otherwise. Any license
+* under such intellectual property rights must be express and
+* approved by Intel in writing.
+*
+*/
 
- No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
- */
 
-//#include <glib.h>
 #include <dlfcn.h>
 
 #include "vc1.h"
@@ -18,16 +34,16 @@
 #include "vbp_mp42_parser.h"
 
 
-void* g_try_malloc0(uint32 size) {
+/* buffer counter */
+uint32 buffer_counter = 0;
+
+
+void* vbp_try_malloc0(uint32 size) {
     void* pMem = malloc(size);
     if (pMem)
         memset(pMem, 0, size);
     return pMem;
 }
-
-/* buffer counter */
-uint32 buffer_counter = 0;
-
 
 /**
  *
@@ -101,7 +117,7 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
         break;
 
     default:
-        //g_warning ("Warning!  Unsupported parser type!");
+        WTRACE("Unsupported parser type!");
         return VBP_TYPE;
     }
 
@@ -113,7 +129,7 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
         goto cleanup;
     }
 
-    pcontext->parser_ops = g_try_new(viddec_parser_ops_t, 1);
+    pcontext->parser_ops = vbp_malloc(viddec_parser_ops_t, 1);
     if (NULL == pcontext->parser_ops)
     {
         ETRACE("Failed to allocate memory");
@@ -122,15 +138,15 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
     }
 
 #define SET_FUNC_POINTER(X, Y)\
-	case X:\
-	pcontext->func_init_parser_entries = vbp_init_parser_entries_##Y;\
-	pcontext->func_allocate_query_data = vbp_allocate_query_data_##Y;\
-	pcontext->func_free_query_data = vbp_free_query_data_##Y;\
-	pcontext->func_parse_init_data = vbp_parse_init_data_##Y;\
-	pcontext->func_parse_start_code = vbp_parse_start_code_##Y;\
-	pcontext->func_process_parsing_result = vbp_process_parsing_result_##Y;\
-	pcontext->func_populate_query_data = vbp_populate_query_data_##Y;\
-	break;
+    case X:\
+    pcontext->func_init_parser_entries = vbp_init_parser_entries_##Y;\
+    pcontext->func_allocate_query_data = vbp_allocate_query_data_##Y;\
+    pcontext->func_free_query_data = vbp_free_query_data_##Y;\
+    pcontext->func_parse_init_data = vbp_parse_init_data_##Y;\
+    pcontext->func_parse_start_code = vbp_parse_start_code_##Y;\
+    pcontext->func_process_parsing_result = vbp_process_parsing_result_##Y;\
+    pcontext->func_populate_query_data = vbp_populate_query_data_##Y;\
+    break;
 
     switch (pcontext->parser_type)
     {
@@ -204,7 +220,7 @@ static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
     uint32 error = VBP_OK;
     viddec_parser_memory_sizes_t sizes;
 
-    pcontext->parser_cxt = g_try_new(viddec_pm_cxt_t, 1);
+    pcontext->parser_cxt = vbp_malloc(viddec_pm_cxt_t, 1);
     if (NULL == pcontext->parser_cxt)
     {
         ETRACE("Failed to allocate memory");
@@ -219,7 +235,7 @@ static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
     /* allocate persistent memory for parser */
     if (sizes.persist_size)
     {
-        pcontext->persist_mem = g_try_malloc(sizes.persist_size);
+        pcontext->persist_mem = malloc(sizes.persist_size);
         if (NULL == pcontext->persist_mem)
         {
             ETRACE("Failed to allocate memory");
@@ -231,8 +247,8 @@ static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
     {
         /* OK for VC-1, MPEG2 and MPEG4. */
         if ((VBP_VC1 == pcontext->parser_type) ||
-                (VBP_MPEG2 == pcontext->parser_type) ||
-                (VBP_MPEG4 == pcontext->parser_type))
+            (VBP_MPEG2 == pcontext->parser_type) ||
+            (VBP_MPEG4 == pcontext->parser_type))
         {
             pcontext->persist_mem = NULL;
         }
@@ -246,7 +262,7 @@ static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
     }
 
     /* allocate a new workload with 1000 items. */
-    pcontext->workload1 = g_try_malloc(sizeof(viddec_workload_t) +
+    pcontext->workload1 = malloc(sizeof(viddec_workload_t) +
                                        (MAX_WORKLOAD_ITEMS * sizeof(viddec_workload_item_t)));
     if (NULL == pcontext->workload1)
     {
@@ -256,7 +272,7 @@ static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
     }
 
     /* allocate a second workload with 1000 items. */
-    pcontext->workload2 = g_try_malloc(sizeof(viddec_workload_t) +
+    pcontext->workload2 = malloc(sizeof(viddec_workload_t) +
                                        (MAX_WORKLOAD_ITEMS * sizeof(viddec_workload_item_t)));
     if (NULL == pcontext->workload2)
     {
@@ -336,10 +352,7 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
     /* setup buffer pointer */
     cxt->getbits.bstrm_buf.buf = cxt->parse_cubby.buf;
 
-    /*
-    * TO DO:
-    * check if cxt->getbits.is_emul_reqd is set properly
-    */
+    // TODO: check if cxt->getbits.is_emul_reqd is set properly
 
     for (i = 0; i < cxt->list.num_items; i++)
     {
@@ -364,16 +377,15 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
         error = ops->parse_syntax((void *)cxt, (void *)&(cxt->codec_data[0]));
 
         /* can't return error for now. Neet further investigation */
-
-        /*if (0 != error)
+#if 0
+        if (0 != error)
         {
-        	ETRACE("failed to parse the syntax: %d!", error);
-        	return error;
-        }*/
+            ETRACE("failed to parse the syntax: %d!", error);
+            return error;
+        }
+#endif
 
-        /*
-         * process parsing result
-         */
+        /* process parsing result */
         error = pcontext->func_process_parsing_result(pcontext, i);
 
         if (0 != error)
@@ -400,7 +412,7 @@ uint32 vbp_utils_create_context(uint32 parser_type, vbp_context **ppcontext)
     /* prevention from the failure */
     *ppcontext =  NULL;
 
-    pcontext = g_try_new0(vbp_context, 1);
+    pcontext = vbp_malloc_set0(vbp_context, 1);
     if (NULL == pcontext)
     {
         error = VBP_MEM;

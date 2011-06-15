@@ -22,46 +22,29 @@
 *
 */
 
+#ifndef VIDEO_DECODER_VP8_H_
+#define VIDEO_DECODER_VP8_H_
 
-#ifndef VBP_H264_PARSER_H
-#define VBP_H264_PARSER_H
+#include "VideoDecoderBase.h"
 
-/*
- * setup parser's entry points
- */
-uint32 vbp_init_parser_entries_h264(vbp_context *pcontext);
 
-/*
- * allocate query data
- */
-uint32 vbp_allocate_query_data_h264(vbp_context *pcontext);
+class VideoDecoderVP8 : public VideoDecoderBase {
+public:
+    VideoDecoderVP8(const char *mimeType);
+    virtual ~VideoDecoderVP8();
 
-/*
- * free query data
- */
-uint32 vbp_free_query_data_h264(vbp_context *pcontext);
+    virtual Decode_Status start(VideoConfigBuffer *buffer);
+    virtual void stop(void);
+    virtual void flush(void);
+    virtual Decode_Status decode(VideoDecodeBuffer *buffer);
 
-/*
- * parse initialization data
- */
-uint32 vbp_parse_init_data_h264(vbp_context *pcontext);
 
-/*
- * parse start code. Only support lenght prefixed mode. Start
- * code prefixed is not supported.
- */
-uint32 vbp_parse_start_code_h264(vbp_context *pcontext);
-
-/*
- * process parsing result
- */
-uint32 vbp_process_parsing_result_h264(vbp_context *pcontext, int list_index);
-
-/*
- * query parsing result
- */
-uint32 vbp_populate_query_data_h264(vbp_context *pcontext);
+private:
+    enum {
+        VP8_SURFACE_NUMBER = 10,
+    };
+};
 
 
 
-#endif /*VBP_H264_PARSER_H*/
+#endif /* VIDEO_DECODER_VP8_H_ */

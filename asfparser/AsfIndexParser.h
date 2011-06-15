@@ -23,45 +23,39 @@
 */
 
 
-#ifndef VBP_H264_PARSER_H
-#define VBP_H264_PARSER_H
-
-/*
- * setup parser's entry points
- */
-uint32 vbp_init_parser_entries_h264(vbp_context *pcontext);
-
-/*
- * allocate query data
- */
-uint32 vbp_allocate_query_data_h264(vbp_context *pcontext);
-
-/*
- * free query data
- */
-uint32 vbp_free_query_data_h264(vbp_context *pcontext);
-
-/*
- * parse initialization data
- */
-uint32 vbp_parse_init_data_h264(vbp_context *pcontext);
-
-/*
- * parse start code. Only support lenght prefixed mode. Start
- * code prefixed is not supported.
- */
-uint32 vbp_parse_start_code_h264(vbp_context *pcontext);
-
-/*
- * process parsing result
- */
-uint32 vbp_process_parsing_result_h264(vbp_context *pcontext, int list_index);
-
-/*
- * query parsing result
- */
-uint32 vbp_populate_query_data_h264(vbp_context *pcontext);
 
 
+#ifndef ASF_INDEX_PARSER_H_
+#define ASF_INDEX_PARSER_H_
 
-#endif /*VBP_H264_PARSER_H*/
+#include "AsfParserDefs.h"
+
+class AsfSimpleIndexParser {
+public:
+    AsfSimpleIndexParser(void);
+    ~AsfSimpleIndexParser(void);
+
+public:
+    AsfSimpleIndexInfo* getIndexInfo() const;
+
+    // buffer must contain a complete simple index object
+    int parse(uint8_t *buffer, uint32_t size);
+    // seek to the closest previous or next sync packet. time stamp is in 100-nanosecond units
+    int seek(uint64_t seekTime, bool nextSync, uint32_t& packetNumber, uint64_t& targetTime);
+    // return maximum video packet count per object, readable when simple index object is parsed.
+    // If simple index object is not parsed or is not available, 0 is returned
+    uint32_t getMaximumPacketCount();
+
+private:
+    void resetIndexInfo();
+
+private:
+    enum {
+        // 4 bytes of "packet number" plus 2 bytes of "packet count"
+        INDEX_ENTRY_SIZE = 6,
+    };
+    AsfSimpleIndexInfo *mIndexInfo;
+};
+
+#endif
+

@@ -1,10 +1,27 @@
-/*
- INTEL CONFIDENTIAL
- Copyright 2009 Intel Corporation All Rights Reserved.
- The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
+/* INTEL CONFIDENTIAL
+* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+*
+* The source code contained or described herein and all documents
+* related to the source code ("Material") are owned by Intel
+* Corporation or its suppliers or licensors.  Title to the
+* Material remains with Intel Corporation or its suppliers and
+* licensors.  The Material contains trade secrets and proprietary
+* and confidential information of Intel or its suppliers and
+* licensors. The Material is protected by worldwide copyright and
+* trade secret laws and treaty provisions.  No part of the Material
+* may be used, copied, reproduced, modified, published, uploaded,
+* posted, transmitted, distributed, or disclosed in any way without
+* Intel's prior express written permission.
+*
+* No license under any patent, copyright, trade secret or other
+* intellectual property right is granted to or conferred upon you
+* by disclosure or delivery of the Materials, either expressly, by
+* implication, inducement, estoppel or otherwise. Any license
+* under such intellectual property rights must be express and
+* approved by Intel in writing.
+*
+*/
 
- No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
- */
 
 #ifndef VBP_UTILS_H
 #define VBP_UTILS_H
@@ -24,17 +41,14 @@
 /* maximum two pictures per sample buffer */
 #define MAX_NUM_PICTURES 2
 
-#define free free
-#define g_try_malloc malloc
 
-#define g_try_new(struct_type, n_structs)		\
-    ((struct_type *) g_try_malloc (sizeof (struct_type) * n_structs))
-#define g_try_new0(struct_type, n_structs)		\
-    ((struct_type *) g_try_malloc0 (sizeof (struct_type) * n_structs))
+#define vbp_malloc(struct_type, n_structs) \
+    ((struct_type *) malloc(sizeof(struct_type) * n_structs))
 
+#define vbp_malloc_set0(struct_type, n_structs) \
+    ((struct_type *) vbp_try_malloc0(sizeof(struct_type) * n_structs))
 
 
-void* g_try_malloc0(uint32 size);
 
 extern uint32 viddec_parse_sc(void *in, void *pcxt, void *sc_state);
 
@@ -79,16 +93,21 @@ struct vbp_context_t
     /* format specific query data */
     void *query_data;
 
+    /* parser type specific data*/
+    void *parser_private;
 
-    function_init_parser_entries 	func_init_parser_entries;
-    function_allocate_query_data 	func_allocate_query_data;
-    function_free_query_data 		func_free_query_data;
-    function_parse_init_data 		func_parse_init_data;
-    function_parse_start_code 		func_parse_start_code;
+    function_init_parser_entries func_init_parser_entries;
+    function_allocate_query_data func_allocate_query_data;
+    function_free_query_data func_free_query_data;
+    function_parse_init_data func_parse_init_data;
+    function_parse_start_code func_parse_start_code;
     function_process_parsing_result func_process_parsing_result;
-    function_populate_query_data 	func_populate_query_data;
+    function_populate_query_data func_populate_query_data;
 
 };
+
+
+void* vbp_try_malloc0(uint32 size);
 
 /**
  * create VBP context

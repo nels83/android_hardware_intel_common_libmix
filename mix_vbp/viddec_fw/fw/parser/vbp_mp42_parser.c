@@ -1,13 +1,29 @@
-/*
- INTEL CONFIDENTIAL
- Copyright 2009 Intel Corporation All Rights Reserved.
- The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
+/* INTEL CONFIDENTIAL
+* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+*
+* The source code contained or described herein and all documents
+* related to the source code ("Material") are owned by Intel
+* Corporation or its suppliers or licensors.  Title to the
+* Material remains with Intel Corporation or its suppliers and
+* licensors.  The Material contains trade secrets and proprietary
+* and confidential information of Intel or its suppliers and
+* licensors. The Material is protected by worldwide copyright and
+* trade secret laws and treaty provisions.  No part of the Material
+* may be used, copied, reproduced, modified, published, uploaded,
+* posted, transmitted, distributed, or disclosed in any way without
+* Intel's prior express written permission.
+*
+* No license under any patent, copyright, trade secret or other
+* intellectual property right is granted to or conferred upon you
+* by disclosure or delivery of the Materials, either expressly, by
+* implication, inducement, estoppel or otherwise. Any license
+* under such intellectual property rights must be express and
+* approved by Intel in writing.
+*
+*/
 
- No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
- */
 
 
-//#include <glib.h>
 #include <dlfcn.h>
 
 #include <string.h>
@@ -18,7 +34,12 @@
 
 
 
-static bool short_video_header = TRUE;
+typedef struct vbp_mp42_parser_private_t vbp_mp42_parser_private;
+
+struct vbp_mp42_parser_private_t
+{
+    bool short_video_header;
+};
 
 static uint8 mp4_aspect_ratio_table[][2] =
 {
@@ -131,6 +152,7 @@ uint32 vbp_process_parsing_result_mp42(vbp_context *pcontext, int list_index)
     vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
     viddec_mp4_parser_t *parser =
         (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
+    vbp_mp42_parser_private *parser_private = (vbp_mp42_parser_private *)pcontext->parser_private;
 
     uint8 is_svh = 0;
     uint32 current_sc = parser->current_sc;
@@ -145,21 +167,21 @@ uint32 vbp_process_parsing_result_mp42(vbp_context *pcontext, int list_index)
         case MP4_SC_VISUAL_OBJECT_SEQUENCE:
             VTRACE ("Visual Object Sequence is parsed.\n");
             query_data->codec_data.profile_and_level_indication
-            = parser->info.profile_and_level_indication;
+                    = parser->info.profile_and_level_indication;
             VTRACE ("profile_and_level_indication = 0x%x\n", parser->info.profile_and_level_indication);
             break;
 
         case MP4_SC_VIDEO_OBJECT_PLANE:
-            VTRACE ("Video Object Plane is parsed.\n");
+            //VTRACE ("Video Object Plane is parsed.\n");
             vbp_on_vop_mp42(pcontext, list_index);
             break;
 
         default:
             if ((current_sc >= MP4_SC_VIDEO_OBJECT_LAYER_MIN) &&
-                    (current_sc <= MP4_SC_VIDEO_OBJECT_LAYER_MAX))
+                (current_sc <= MP4_SC_VIDEO_OBJECT_LAYER_MAX))
             {
                 VTRACE ("Video Object Layer is parsed\n");
-                short_video_header = FALSE;
+                parser_private->short_video_header = FALSE;
                 vbp_fill_codec_data(pcontext);
             }
             else if (current_sc <= MP4_SC_VIDEO_OBJECT_MAX &&
@@ -179,7 +201,7 @@ uint32 vbp_process_parsing_result_mp42(vbp_context *pcontext, int list_index)
     {
         if (parser->sc_seen == MP4_SC_SEEN_SVH)
         {
-            VTRACE ("Short video header is parsed.\n");
+            //VTRACE ("Short video header is parsed.\n");
             vbp_on_vop_svh_mp42(pcontext, list_index);
         }
     }
@@ -224,6 +246,7 @@ uint32 vbp_parse_start_code_mp42(vbp_context *pcontext)
     uint32 bytes_parsed = 0;
     viddec_mp4_parser_t *pinfo = NULL;
     vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
+    vbp_mp42_parser_private *parser_private = (vbp_mp42_parser_private *)pcontext->parser_private;
 
 
     // reset query data for the new sample buffer
@@ -249,21 +272,20 @@ uint32 vbp_parse_start_code_mp42(vbp_context *pcontext)
 
     while (1)
     {
-        found_sc = vbp_get_sc_pos_mp42(buf + bytes_parsed, size- bytes_parsed,
-                                       &sc_end_pos, &is_normal_sc, &resync_marker,short_video_header);
-
-        VTRACE("buf=%x, bytes_parsed=%d, unparsed=%d", (uint32)buf, bytes_parsed, size- bytes_parsed);
-        VTRACE("found_sc=%d, cxt->list.num_items=%d, resync_marker=%d, ",
-               found_sc, cxt->list.num_items, resync_marker);
+        found_sc = vbp_get_sc_pos_mp42(
+                        buf + bytes_parsed,
+                        size - bytes_parsed,
+                        &sc_end_pos,
+                        &is_normal_sc,
+                        &resync_marker,
+                        parser_private->short_video_header);
 
         if (found_sc)
         {
-            cxt->list.data[cxt->list.num_items].stpos = bytes_parsed
-                    + sc_end_pos - 3;
+            cxt->list.data[cxt->list.num_items].stpos = bytes_parsed + sc_end_pos - 3;
             if (cxt->list.num_items != 0)
             {
-                cxt->list.data[cxt->list.num_items - 1].edpos = bytes_parsed
-                        + sc_end_pos - 3;
+                cxt->list.data[cxt->list.num_items - 1].edpos = bytes_parsed + sc_end_pos - 3;
             }
             bytes_parsed += sc_end_pos;
 
@@ -274,8 +296,7 @@ uint32 vbp_parse_start_code_mp42(vbp_context *pcontext)
         {
             if (cxt->list.num_items != 0)
             {
-                cxt->list.data[cxt->list.num_items - 1].edpos
-                = cxt->parse_cubby.size;
+                cxt->list.data[cxt->list.num_items - 1].edpos = cxt->parse_cubby.size;
                 break;
             }
             else
@@ -288,7 +309,7 @@ uint32 vbp_parse_start_code_mp42(vbp_context *pcontext)
                 if (resync_marker)
                 {
                     // either the first slice (GOB) is lost or parser receives a single slice (GOB)
-                    if (short_video_header)
+                    if (parser_private->short_video_header)
                     {
                         // TODO: revisit if HW supportd GOB layer decoding for h.263
                         WTRACE("Partial frame: GOB buffer.\n");
@@ -342,25 +363,26 @@ vbp_picture_data_mp42* vbp_get_mp42_picture_data(vbp_data_mp42 * query_data)
 void vbp_fill_codec_data(vbp_context *pcontext)
 {
     viddec_mp4_parser_t *parser =
-        (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
+            (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
     vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
     vbp_codec_data_mp42* codec_data = &(query_data->codec_data);
+    vbp_mp42_parser_private *parser_private = (vbp_mp42_parser_private *)pcontext->parser_private;
 
     codec_data->bit_rate = parser->info.VisualObject.VideoObject.VOLControlParameters.bit_rate;
 
     codec_data->profile_and_level_indication
-    = parser->info.profile_and_level_indication;
+            = parser->info.profile_and_level_indication;
 
     codec_data->video_object_layer_width =
-        parser->info.VisualObject.VideoObject.video_object_layer_width;
+            parser->info.VisualObject.VideoObject.video_object_layer_width;
 
     codec_data->video_object_layer_height =
-        parser->info.VisualObject.VideoObject.video_object_layer_height;
+            parser->info.VisualObject.VideoObject.video_object_layer_height;
 
     if (parser->info.VisualObject.VideoSignalType.is_video_signal_type)
     {
         codec_data->video_format =
-            parser->info.VisualObject.VideoSignalType.video_format;
+                parser->info.VisualObject.VideoSignalType.video_format;
     }
     else
     {
@@ -369,14 +391,14 @@ void vbp_fill_codec_data(vbp_context *pcontext)
     }
 
     codec_data->video_range =
-        parser->info.VisualObject.VideoSignalType.video_range;
+            parser->info.VisualObject.VideoSignalType.video_range;
 
     if (parser->info.VisualObject.VideoSignalType.is_colour_description)
     {
         codec_data->matrix_coefficients =
-            parser->info.VisualObject.VideoSignalType.matrix_coefficients;
+                parser->info.VisualObject.VideoSignalType.matrix_coefficients;
     }
-    else if (short_video_header)
+    else if (parser_private->short_video_header)
     {
         // SMPTE 170M
         codec_data->matrix_coefficients = 6;
@@ -387,7 +409,7 @@ void vbp_fill_codec_data(vbp_context *pcontext)
         codec_data->matrix_coefficients = 1;
     }
 
-    codec_data->short_video_header = short_video_header;
+    codec_data->short_video_header = parser_private->short_video_header;
 
     // aspect ratio
     codec_data->aspect_ratio_info = parser->info.VisualObject.VideoObject.aspect_ratio_info;
@@ -411,7 +433,7 @@ void vbp_fill_codec_data(vbp_context *pcontext)
 void vbp_fill_slice_data(vbp_context *pcontext, int list_index)
 {
     viddec_mp4_parser_t *parser =
-        (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
+            (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
 
     if (!parser->info.VisualObject.VideoObject.short_video_header)
     {
@@ -426,7 +448,7 @@ void vbp_fill_slice_data(vbp_context *pcontext, int list_index)
 void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
 {
     viddec_mp4_parser_t *parser =
-        (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
+            (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
     vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
 
     vbp_picture_data_mp42 *picture_data = NULL;
@@ -443,7 +465,7 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
         // first entry
         if (picture_data == NULL)
         {
-            picture_data = (vbp_picture_data_mp42*)g_try_new0(vbp_picture_data_mp42, 1);
+            picture_data = vbp_malloc_set0(vbp_picture_data_mp42, 1);
             query_data->picture_data = picture_data;
         }
         query_data->number_picture_data = 1;
@@ -459,7 +481,7 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
         }
         if (picture_data->next_picture_data == NULL)
         {
-            picture_data->next_picture_data = g_try_new0(vbp_picture_data_mp42, 1);
+            picture_data->next_picture_data = vbp_malloc_set0(vbp_picture_data_mp42, 1);
         }
 
         query_data->number_picture_data++;
@@ -474,13 +496,12 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
     picture_data->new_picture_flag = new_picture_flag;
 
     picture_data->vop_coded
-    = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coded;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coded;
 
-    VTRACE ("vop_coded = %d\n", picture_data->vop_coded);
 
 
     picture_data->vop_time_increment =
-        parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_time_increment;
+            parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_time_increment;
 
     // fill picture_param
 
@@ -490,9 +511,9 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
      * to VOL->video_object_layer_width and VOL->video_object_layer_height
      */
     picture_param->vop_width
-    = parser->info.VisualObject.VideoObject.video_object_layer_width;
+            = parser->info.VisualObject.VideoObject.video_object_layer_width;
     picture_param->vop_height
-    = parser->info.VisualObject.VideoObject.video_object_layer_height;
+            = parser->info.VisualObject.VideoObject.video_object_layer_height;
 
     picture_param->forward_reference_picture = VA_INVALID_SURFACE;
     picture_param->backward_reference_picture = VA_INVALID_SURFACE;
@@ -500,45 +521,44 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
     // Fill VAPictureParameterBufferMPEG4::vol_fields
 
     picture_param->vol_fields.bits.short_video_header
-    = parser->info.VisualObject.VideoObject.short_video_header;
+            = parser->info.VisualObject.VideoObject.short_video_header;
     picture_param->vol_fields.bits.chroma_format
-    = parser->info.VisualObject.VideoObject.VOLControlParameters.chroma_format;
+            = parser->info.VisualObject.VideoObject.VOLControlParameters.chroma_format;
 
-    /* TODO: find out why testsuite always set this value to be 0 */
+    // TODO: find out why testsuite always set this value to be 0
     picture_param->vol_fields.bits.chroma_format = 0;
 
     picture_param->vol_fields.bits.interlaced
-    = parser->info.VisualObject.VideoObject.interlaced;
+            = parser->info.VisualObject.VideoObject.interlaced;
     picture_param->vol_fields.bits.obmc_disable
-    = parser->info.VisualObject.VideoObject.obmc_disable;
+            = parser->info.VisualObject.VideoObject.obmc_disable;
     picture_param->vol_fields.bits.sprite_enable
-    = parser->info.VisualObject.VideoObject.sprite_enable;
+            = parser->info.VisualObject.VideoObject.sprite_enable;
     picture_param->vol_fields.bits.sprite_warping_accuracy
-    = parser->info.VisualObject.VideoObject.sprite_info.sprite_warping_accuracy;
+            = parser->info.VisualObject.VideoObject.sprite_info.sprite_warping_accuracy;
     picture_param->vol_fields.bits.quant_type
-    = parser->info.VisualObject.VideoObject.quant_type;
+            = parser->info.VisualObject.VideoObject.quant_type;
     picture_param->vol_fields.bits.quarter_sample
-    = parser->info.VisualObject.VideoObject.quarter_sample;
+            = parser->info.VisualObject.VideoObject.quarter_sample;
     picture_param->vol_fields.bits.data_partitioned
-    = parser->info.VisualObject.VideoObject.data_partitioned;
+            = parser->info.VisualObject.VideoObject.data_partitioned;
     picture_param->vol_fields.bits.reversible_vlc
-    = parser->info.VisualObject.VideoObject.reversible_vlc;
+            = parser->info.VisualObject.VideoObject.reversible_vlc;
     picture_param->vol_fields.bits.resync_marker_disable
-    = parser->info.VisualObject.VideoObject.resync_marker_disable;
-
+            = parser->info.VisualObject.VideoObject.resync_marker_disable;
     picture_param->no_of_sprite_warping_points
-    = parser->info.VisualObject.VideoObject.sprite_info.no_of_sprite_warping_points;
+            = parser->info.VisualObject.VideoObject.sprite_info.no_of_sprite_warping_points;
 
     for (idx = 0; idx < 3; idx++)
     {
         picture_param->sprite_trajectory_du[idx]
-        = parser->info.VisualObject.VideoObject.VideoObjectPlane.warping_mv_code_du[idx];
+                = parser->info.VisualObject.VideoObject.VideoObjectPlane.warping_mv_code_du[idx];
         picture_param->sprite_trajectory_dv[idx]
-        = parser->info.VisualObject.VideoObject.VideoObjectPlane.warping_mv_code_dv[idx];
+                = parser->info.VisualObject.VideoObject.VideoObjectPlane.warping_mv_code_dv[idx];
     }
 
     picture_param->quant_precision
-    = parser->info.VisualObject.VideoObject.quant_precision;
+            = parser->info.VisualObject.VideoObject.quant_precision;
 
     // fill VAPictureParameterBufferMPEG4::vop_fields
 
@@ -546,47 +566,44 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
     if (!parser->info.VisualObject.VideoObject.short_video_header)
     {
         picture_param->vop_fields.bits.vop_coding_type
-        = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coding_type;
+                = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_coding_type;
     }
     else
     {
         picture_param->vop_fields.bits.vop_coding_type
-        = parser->info.VisualObject.VideoObject.VideoObjectPlaneH263.picture_coding_type;
+                = parser->info.VisualObject.VideoObject.VideoObjectPlaneH263.picture_coding_type;
     }
 
-    /*
-      * TODO:
-     * fill picture_param->vop_fields.bits.backward_reference_vop_coding_type
-     * This shall be done in mixvideoformat_mp42. See M42 spec 7.6.7
-     */
+      // TODO: fill picture_param->vop_fields.bits.backward_reference_vop_coding_type
+      // This shall be done in mixvideoformat_mp42. See M42 spec 7.6.7
 
     if (picture_param->vop_fields.bits.vop_coding_type != MP4_VOP_TYPE_B)
     {
         picture_param->vop_fields.bits.backward_reference_vop_coding_type
-        = picture_param->vop_fields.bits.vop_coding_type;
+                = picture_param->vop_fields.bits.vop_coding_type;
     }
 
     picture_param->vop_fields.bits.vop_rounding_type
-    = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_rounding_type;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_rounding_type;
     picture_param->vop_fields.bits.intra_dc_vlc_thr
-    = parser->info.VisualObject.VideoObject.VideoObjectPlane.intra_dc_vlc_thr;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlane.intra_dc_vlc_thr;
     picture_param->vop_fields.bits.top_field_first
-    = parser->info.VisualObject.VideoObject.VideoObjectPlane.top_field_first;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlane.top_field_first;
     picture_param->vop_fields.bits.alternate_vertical_scan_flag
-    = parser->info.VisualObject.VideoObject.VideoObjectPlane.alternate_vertical_scan_flag;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlane.alternate_vertical_scan_flag;
 
     picture_param->vop_fcode_forward
-    = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_fcode_forward;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_fcode_forward;
     picture_param->vop_fcode_backward
-    = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_fcode_backward;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlane.vop_fcode_backward;
     picture_param->vop_time_increment_resolution
-    = parser->info.VisualObject.VideoObject.vop_time_increment_resolution;
+            = parser->info.VisualObject.VideoObject.vop_time_increment_resolution;
 
     // short header related
     picture_param->num_gobs_in_vop
-    = parser->info.VisualObject.VideoObject.VideoObjectPlaneH263.num_gobs_in_vop;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlaneH263.num_gobs_in_vop;
     picture_param->num_macroblocks_in_gob
-    = parser->info.VisualObject.VideoObject.VideoObjectPlaneH263.num_macroblocks_in_gob;
+            = parser->info.VisualObject.VideoObject.VideoObjectPlaneH263.num_macroblocks_in_gob;
 
     // for direct mode prediction
     picture_param->TRB = parser->info.VisualObject.VideoObject.TRB;
@@ -596,19 +613,18 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
 void vbp_fill_iq_matrix_buffer(vbp_context *pcontext)
 {
     viddec_mp4_parser_t *parser =
-        (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
+            (viddec_mp4_parser_t *) &(pcontext->parser_cxt->codec_data[0]);
     vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
 
     mp4_VOLQuant_mat_t *quant_mat_info =
-        &(parser->info.VisualObject.VideoObject.quant_mat_info);
+            &(parser->info.VisualObject.VideoObject.quant_mat_info);
 
     VAIQMatrixBufferMPEG4 *iq_matrix = NULL;
 
     iq_matrix = &(query_data->iq_matrix_buffer);
 
     iq_matrix->load_intra_quant_mat = 1; //quant_mat_info->load_intra_quant_mat;
-    iq_matrix->load_non_intra_quant_mat = 1;
-   // = quant_mat_info->load_nonintra_quant_mat;
+    iq_matrix->load_non_intra_quant_mat = 1; // = quant_mat_info->load_nonintra_quant_mat;
     memcpy(iq_matrix->intra_quant_mat, quant_mat_info->intra_quant_mat, 64);
     memcpy(iq_matrix->non_intra_quant_mat, quant_mat_info->nonintra_quant_mat, 64);
 }
@@ -636,7 +652,7 @@ uint32 vbp_get_sc_pos_mp42(
     uint32 *sc_end_pos,
     uint8 *is_normal_sc,
     uint8 *resync_marker,
-	const bool svh_search)
+    const bool svh_search)
 {
     uint8 *ptr = buf;
     uint32 size;
@@ -717,9 +733,10 @@ uint32 vbp_get_sc_pos_mp42(
                 if (phase == 2)
                 {
                     normal_sc = (*ptr == THIRD_STARTCODE_BYTE);
-		    if (svh_search) {
+                    if (svh_search)
+                    {
                        short_sc = (SHORT_THIRD_STARTCODE_BYTE == (*ptr & 0xFC));
-		    }
+                    }
                     *is_normal_sc = normal_sc;
 
                     // at least 16-bit 0, may be GOB start code or
@@ -778,7 +795,7 @@ uint32 vbp_parse_video_packet_header_mp42(
     mp4_Info_t *pInfo = &(parser_cxt->info);
     mp4_VideoObjectLayer_t *vidObjLay = &(pInfo->VisualObject.VideoObject);
     mp4_VideoObjectPlane_t *vidObjPlane =
-        &(pInfo->VisualObject.VideoObject.VideoObjectPlane);
+            &(pInfo->VisualObject.VideoObject.VideoObjectPlane);
 
     uint32 code = 0;
     int32_t getbits = 0;
@@ -867,20 +884,19 @@ uint32 vbp_parse_video_packet_header_mp42(
 
                 vidObjPlane->intra_dc_vlc_thr = code;
                 if ((vidObjLay->sprite_enable == MP4_SPRITE_GMC) &&
-                        (vop_coding_type == MP4_VOP_TYPE_S) &&
-                        (vidObjLay->sprite_info.no_of_sprite_warping_points> 0))
+                    (vop_coding_type == MP4_VOP_TYPE_S) &&
+                    (vidObjLay->sprite_info.no_of_sprite_warping_points> 0))
                 {
-                    if (vbp_sprite_trajectory_mp42(parent, vidObjLay,
-                                                   vidObjPlane) != VBP_OK)
+                    if (vbp_sprite_trajectory_mp42(parent, vidObjLay, vidObjPlane) != VBP_OK)
                     {
                         break;
                     }
                 }
 
                 if (vidObjLay->reduced_resolution_vop_enable &&
-                        (vidObjLay->video_object_layer_shape == MP4_SHAPE_TYPE_RECTANGULAR) &&
-                        ((vop_coding_type == MP4_VOP_TYPE_I) ||
-                         (vop_coding_type == MP4_VOP_TYPE_P)))
+                   (vidObjLay->video_object_layer_shape == MP4_SHAPE_TYPE_RECTANGULAR) &&
+                   ((vop_coding_type == MP4_VOP_TYPE_I) ||
+                    (vop_coding_type == MP4_VOP_TYPE_P)))
                 {
                     // vop_reduced_resolution
                     getbits = viddec_pm_get_bits(parent, &code, 1);
@@ -925,7 +941,7 @@ uint32 vbp_resync_marker_Length_mp42(viddec_mp4_parser_t *parser_cxt)
 {
     mp4_Info_t *pInfo = &(parser_cxt->info);
     mp4_VideoObjectPlane_t *vidObjPlane =
-        &(pInfo->VisualObject.VideoObject.VideoObjectPlane);
+            &(pInfo->VisualObject.VideoObject.VideoObjectPlane);
 
     uint32 resync_marker_length = 0;
     if (vidObjPlane->vop_coding_type == MP4_VOP_TYPE_I)
@@ -959,7 +975,7 @@ uint32 vbp_process_slices_svh_mp42(vbp_context *pcontext, int list_index)
     vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
     viddec_pm_cxt_t *parent = pcontext->parser_cxt;
     viddec_mp4_parser_t *parser_cxt =
-        (viddec_mp4_parser_t *) &(parent->codec_data[0]);
+            (viddec_mp4_parser_t *) &(parent->codec_data[0]);
 
     vbp_picture_data_mp42 *picture_data = vbp_get_mp42_picture_data(query_data);
     vbp_slice_data_mp42 *slice_data = &(picture_data->slice_data);
@@ -974,10 +990,10 @@ uint32 vbp_process_slices_svh_mp42(vbp_context *pcontext, int list_index)
 
     slice_data->buffer_addr = parent->parse_cubby.buf;
 
-    slice_data->slice_offset = byte_offset
-                               + parent->list.data[list_index].stpos;
-    slice_data->slice_size = parent->list.data[list_index].edpos
-                             - parent->list.data[list_index].stpos - byte_offset;
+    slice_data->slice_offset =
+            byte_offset + parent->list.data[list_index].stpos;
+    slice_data->slice_size =
+            parent->list.data[list_index].edpos - parent->list.data[list_index].stpos - byte_offset;
 
     slice_param->slice_data_size = slice_data->slice_size;
     slice_param->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
@@ -985,7 +1001,7 @@ uint32 vbp_process_slices_svh_mp42(vbp_context *pcontext, int list_index)
     slice_param->macroblock_offset = bit_offset;
     slice_param->macroblock_number = 0;
     slice_param->quant_scale
-    = parser_cxt->info.VisualObject.VideoObject.VideoObjectPlaneH263.vop_quant;
+            = parser_cxt->info.VisualObject.VideoObject.VideoObjectPlaneH263.vop_quant;
 
     return ret;
 }
@@ -1010,28 +1026,8 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
     int32_t getbits = 0;
     uint32 resync_marker_length = 0;
 
-#ifdef VBP_TRACE
-    uint32 list_size_at_index = parent->list.data[list_index].edpos
-                                - parent->list.data[list_index].stpos;
-
-    VTRACE ("list_index = %d list_size_at_index = %d\n", list_index,
-            list_size_at_index);
-
-    VTRACE ("list_index = %d edpos = %d stpos = %d\n", list_index,
-            parent->list.data[list_index].edpos,
-            parent->list.data[list_index].stpos);
-#endif
-
     /* The offsets are relative to parent->parse_cubby.buf */
     viddec_pm_get_au_pos(parent, &bit_offset, &byte_offset, &is_emul);
-
-#if 0
-    if (is_emul) {
-        g_print("*** emul != 0\n");
-        /*byte_offset += 1;*/
-    }
-#endif
-
 
     picture_data = vbp_get_mp42_picture_data(query_data);
     slice_data = &(picture_data->slice_data);
@@ -1039,10 +1035,9 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
 
     slice_data->buffer_addr = parent->parse_cubby.buf;
 
-    slice_data->slice_offset = byte_offset
-                               + parent->list.data[list_index].stpos;
-    slice_data->slice_size = parent->list.data[list_index].edpos
-                             - parent->list.data[list_index].stpos - byte_offset;
+    slice_data->slice_offset = byte_offset + parent->list.data[list_index].stpos;
+    slice_data->slice_size =
+            parent->list.data[list_index].edpos - parent->list.data[list_index].stpos - byte_offset;
 
     slice_param->slice_data_size = slice_data->slice_size;
     slice_param->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
@@ -1050,7 +1045,7 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
     slice_param->macroblock_offset = bit_offset;
     slice_param->macroblock_number = 0;
     slice_param->quant_scale
-    = parser_cxt->info.VisualObject.VideoObject.VideoObjectPlane.vop_quant;
+            = parser_cxt->info.VisualObject.VideoObject.VideoObjectPlane.vop_quant;
 
     if (parser_cxt->info.VisualObject.VideoObject.resync_marker_disable)
     {
@@ -1094,8 +1089,8 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
         viddec_pm_get_au_pos(parent, &bit_offset, &byte_offset, &is_emul);
 
         // update slice data as we found resync_marker
-        slice_data->slice_size -= (parent->list.data[list_index].edpos
-                                   - parent->list.data[list_index].stpos - byte_offset);
+        slice_data->slice_size -=
+                (parent->list.data[list_index].edpos - parent->list.data[list_index].stpos - byte_offset);
         slice_param->slice_data_size = slice_data->slice_size;
 
         // skip resync marker
@@ -1126,10 +1121,10 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
 
         slice_data->buffer_addr = parent->parse_cubby.buf;
 
-        slice_data->slice_offset = byte_offset
-                                   + parent->list.data[list_index].stpos;
-        slice_data->slice_size = parent->list.data[list_index].edpos
-                                 - parent->list.data[list_index].stpos - byte_offset;
+        slice_data->slice_offset =
+                    byte_offset + parent->list.data[list_index].stpos;
+        slice_data->slice_size =
+                    parent->list.data[list_index].edpos - parent->list.data[list_index].stpos - byte_offset;
 
         slice_param->slice_data_size = slice_data->slice_size;
         slice_param->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
@@ -1221,8 +1216,7 @@ uint32 vbp_process_video_packet_mp42(vbp_context *pcontext)
     uint32 macroblock_number = 0;
 
     // parse video_packet_header
-    vbp_parse_video_packet_header_mp42(parent, parser_cxt,
-                                       &quant_scale, &macroblock_number);
+    vbp_parse_video_packet_header_mp42(parent, parser_cxt, &quant_scale, &macroblock_number);
 
     // new_picture_flag = 0, this is not the first slice of a picture
     vbp_fill_picture_param(pcontext, 0);
@@ -1376,6 +1370,11 @@ uint32 vbp_free_query_data_mp42(vbp_context *pcontext)
     vbp_picture_data_mp42* current = NULL;
     vbp_picture_data_mp42* next = NULL;
 
+    if (pcontext->parser_private)
+    {
+        free(pcontext->parser_private);
+        pcontext->parser_private = NULL;
+    }
     if (query_data)
     {
         current = query_data->picture_data;
@@ -1401,7 +1400,7 @@ uint32 vbp_allocate_query_data_mp42(vbp_context *pcontext)
     vbp_data_mp42 *query_data;
     pcontext->query_data = NULL;
 
-    query_data = g_try_new0(vbp_data_mp42, 1);
+    query_data = vbp_malloc_set0(vbp_data_mp42, 1);
     if (query_data == NULL)
     {
         goto cleanup;
@@ -1412,6 +1411,20 @@ uint32 vbp_allocate_query_data_mp42(vbp_context *pcontext)
     query_data->number_picture_data = 0;
     query_data->number_pictures = 0;
 
+    pcontext->parser_private = NULL;
+    vbp_mp42_parser_private *parser_private = NULL;
+
+    parser_private = vbp_malloc_set0(vbp_mp42_parser_private, 1);
+    if (NULL == parser_private)
+    {
+        goto cleanup;
+    }
+
+    /* assign the pointer */
+    pcontext->parser_private = (void *)parser_private;
+
+    /* init the pointer */
+    parser_private->short_video_header = TRUE;
     return VBP_OK;
 
 cleanup:

@@ -1,12 +1,27 @@
-/*
- INTEL CONFIDENTIAL
- Copyright 2009 Intel Corporation All Rights Reserved.
- The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
+/* INTEL CONFIDENTIAL
+* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+*
+* The source code contained or described herein and all documents
+* related to the source code ("Material") are owned by Intel
+* Corporation or its suppliers or licensors.  Title to the
+* Material remains with Intel Corporation or its suppliers and
+* licensors.  The Material contains trade secrets and proprietary
+* and confidential information of Intel or its suppliers and
+* licensors. The Material is protected by worldwide copyright and
+* trade secret laws and treaty provisions.  No part of the Material
+* may be used, copied, reproduced, modified, published, uploaded,
+* posted, transmitted, distributed, or disclosed in any way without
+* Intel's prior express written permission.
+*
+* No license under any patent, copyright, trade secret or other
+* intellectual property right is granted to or conferred upon you
+* by disclosure or delivery of the Materials, either expressly, by
+* implication, inducement, estoppel or otherwise. Any license
+* under such intellectual property rights must be express and
+* approved by Intel in writing.
+*
+*/
 
- No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
- */
-
-//#include <glib.h>
 #include <dlfcn.h>
 #include <string.h>
 
@@ -122,7 +137,7 @@ uint32 vbp_allocate_query_data_vc1(vbp_context *pcontext)
     pcontext->query_data = NULL;
 
     vbp_data_vc1 *query_data = NULL;
-    query_data = g_try_new0(vbp_data_vc1, 1);
+    query_data = vbp_malloc_set0(vbp_data_vc1, 1);
     if (NULL == query_data)
     {
         return VBP_MEM;
@@ -131,12 +146,12 @@ uint32 vbp_allocate_query_data_vc1(vbp_context *pcontext)
     /* assign the pointer */
     pcontext->query_data = (void *)query_data;
 
-    query_data->se_data = g_try_new0(vbp_codec_data_vc1, 1);
+    query_data->se_data = vbp_malloc_set0(vbp_codec_data_vc1, 1);
     if (NULL == query_data->se_data)
     {
         goto cleanup;
     }
-    query_data->pic_data = g_try_new0(vbp_picture_data_vc1, MAX_NUM_PICTURES);
+    query_data->pic_data = vbp_malloc_set0(vbp_picture_data_vc1, MAX_NUM_PICTURES);
     if (NULL == query_data->pic_data)
     {
         goto cleanup;
@@ -145,19 +160,19 @@ uint32 vbp_allocate_query_data_vc1(vbp_context *pcontext)
     int i;
     for (i = 0; i < MAX_NUM_PICTURES; i++)
     {
-        query_data->pic_data[i].pic_parms = g_try_new0(VAPictureParameterBufferVC1, 1);
+        query_data->pic_data[i].pic_parms = vbp_malloc_set0(VAPictureParameterBufferVC1, 1);
         if (NULL == query_data->pic_data[i].pic_parms)
         {
             goto cleanup;
         }
 
-        query_data->pic_data[i].packed_bitplanes = g_try_malloc0(MAX_BITPLANE_SIZE);
+        query_data->pic_data[i].packed_bitplanes = vbp_try_malloc0(MAX_BITPLANE_SIZE);
         if (NULL == query_data->pic_data[i].packed_bitplanes)
         {
             goto cleanup;
         }
 
-        query_data->pic_data[i].slc_data = g_try_malloc0(MAX_NUM_SLICES * sizeof(vbp_slice_data_vc1));
+        query_data->pic_data[i].slc_data = vbp_try_malloc0(MAX_NUM_SLICES * sizeof(vbp_slice_data_vc1));
         if (NULL == query_data->pic_data[i].slc_data)
         {
             goto cleanup;
@@ -421,8 +436,7 @@ uint32_t vbp_parse_start_code_vc1(vbp_context *pcontext)
     }
     else
     {
-        /* WMV: vc1 simple or main profile. No start code present.
-        */
+        /* WMV: vc1 simple or main profile. No start code present. */
 
         /* must set is_emul_reqd to 0! */
         cxt->getbits.is_emul_reqd = 0;
@@ -875,7 +889,7 @@ static void vbp_pack_picture_params_vc1(
         break;
 
     default:
-        /* to do: handle this case */
+        // TODO: handle this case
         break;
     }
     pic_parms->picture_fields.bits.frame_coding_mode = picLayerHeader->FCM;
@@ -1043,8 +1057,9 @@ uint32_t vbp_process_parsing_result_vc1(vbp_context *pcontext, int index)
     uint32 error = VBP_OK;
 
     vc1_viddec_parser_t *parser = (vc1_viddec_parser_t *)cxt->codec_data;
-    if (parser->start_code != VC1_SC_FRM && parser->start_code != VC1_SC_FLD &&
-            parser->start_code != VC1_SC_SLC)
+    if (parser->start_code != VC1_SC_FRM && 
+        parser->start_code != VC1_SC_FLD &&
+        parser->start_code != VC1_SC_SLC)
     {
         /* only handle frame data, field data and slice data here
          */

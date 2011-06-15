@@ -23,45 +23,23 @@
 */
 
 
-#ifndef VBP_H264_PARSER_H
-#define VBP_H264_PARSER_H
 
-/*
- * setup parser's entry points
- */
-uint32 vbp_init_parser_entries_h264(vbp_context *pcontext);
+#include "VideoDecoderTrace.h"
 
-/*
- * allocate query data
- */
-uint32 vbp_allocate_query_data_h264(vbp_context *pcontext);
+#ifdef ENABLE_VIDEO_DECODER_TRACE
 
-/*
- * free query data
- */
-uint32 vbp_free_query_data_h264(vbp_context *pcontext);
+void TraceVideoDecoder(const char* cat, const char* fun, int line, const char* format, ...)
+{
+    if (NULL == cat || NULL == fun || NULL == format)
+        return;
 
-/*
- * parse initialization data
- */
-uint32 vbp_parse_init_data_h264(vbp_context *pcontext);
+    printf("%s %s(#%d): ", cat, fun, line);
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+    printf("\n");
+}
 
-/*
- * parse start code. Only support lenght prefixed mode. Start
- * code prefixed is not supported.
- */
-uint32 vbp_parse_start_code_h264(vbp_context *pcontext);
+#endif
 
-/*
- * process parsing result
- */
-uint32 vbp_process_parsing_result_h264(vbp_context *pcontext, int list_index);
-
-/*
- * query parsing result
- */
-uint32 vbp_populate_query_data_h264(vbp_context *pcontext);
-
-
-
-#endif /*VBP_H264_PARSER_H*/

@@ -1,12 +1,28 @@
-/*
- INTEL CONFIDENTIAL
- Copyright 2009 Intel Corporation All Rights Reserved.
- The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
+/* INTEL CONFIDENTIAL
+* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+*
+* The source code contained or described herein and all documents
+* related to the source code ("Material") are owned by Intel
+* Corporation or its suppliers or licensors.  Title to the
+* Material remains with Intel Corporation or its suppliers and
+* licensors.  The Material contains trade secrets and proprietary
+* and confidential information of Intel or its suppliers and
+* licensors. The Material is protected by worldwide copyright and
+* trade secret laws and treaty provisions.  No part of the Material
+* may be used, copied, reproduced, modified, published, uploaded,
+* posted, transmitted, distributed, or disclosed in any way without
+* Intel's prior express written permission.
+*
+* No license under any patent, copyright, trade secret or other
+* intellectual property right is granted to or conferred upon you
+* by disclosure or delivery of the Materials, either expressly, by
+* implication, inducement, estoppel or otherwise. Any license
+* under such intellectual property rights must be express and
+* approved by Intel in writing.
+*
+*/
 
- No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
- */
 
-//#include <glib.h>
 #include <dlfcn.h>
 
 #include "h264.h"
@@ -14,6 +30,7 @@
 #include "vbp_utils.h"
 #include "vbp_h264_parser.h"
 
+typedef struct vbp_h264_parser_private_t vbp_h264_parser_private;
 
 typedef enum
 {
@@ -22,16 +39,18 @@ typedef enum
     H264_BS_SINGLE_NAL
 } H264_BS_PATTERN;
 
-/* number of bytes used to encode length of NAL payload.  If parser does not receive configuration data
-and NAL_length_size is equal to zero when bitstream parsing begins, we assume bitstream is in AnnexB
-byte stream format. */
-static int NAL_length_size = 0;
+struct vbp_h264_parser_private_t
+{
+    /* number of bytes used to encode length of NAL payload.  If parser does not receive configuration data
+    and NAL_length_size is equal to zero when bitstream parsing begins, we assume bitstream is in AnnexB
+    byte stream format. */
+    int NAL_length_size;
 
-/* indicate if stream is length prefixed */
-static int length_prefix_verified = 0;
+    /* indicate if stream is length prefixed */
+    int length_prefix_verified;
 
-static H264_BS_PATTERN bitstream_pattern = H264_BS_SC_PREFIXED;
-
+    H264_BS_PATTERN bitstream_pattern;
+};
 
 /* default scaling list table */
 unsigned char Default_4x4_Intra[16] =
@@ -185,7 +204,7 @@ uint32 vbp_allocate_query_data_h264(vbp_context *pcontext)
     pcontext->query_data = NULL;
     vbp_data_h264 *query_data = NULL;
 
-    query_data = g_try_new0(vbp_data_h264, 1);
+    query_data = vbp_malloc_set0(vbp_data_h264, 1);
     if (NULL == query_data)
     {
         goto cleanup;
@@ -194,7 +213,7 @@ uint32 vbp_allocate_query_data_h264(vbp_context *pcontext)
     /* assign the pointer */
     pcontext->query_data = (void *)query_data;
 
-    query_data->pic_data = g_try_new0(vbp_picture_data_h264, MAX_NUM_PICTURES);
+    query_data->pic_data = vbp_malloc_set0(vbp_picture_data_h264, MAX_NUM_PICTURES);
     if (NULL == query_data->pic_data)
     {
         goto cleanup;
@@ -203,13 +222,13 @@ uint32 vbp_allocate_query_data_h264(vbp_context *pcontext)
     int i;
     for (i = 0; i < MAX_NUM_PICTURES; i++)
     {
-        query_data->pic_data[i].pic_parms = g_try_new0(VAPictureParameterBufferH264, 1);
+        query_data->pic_data[i].pic_parms = vbp_malloc_set0(VAPictureParameterBufferH264, 1);
         if (NULL == query_data->pic_data[i].pic_parms)
         {
             goto cleanup;
         }
         query_data->pic_data[i].num_slices = 0;
-        query_data->pic_data[i].slc_data = g_try_new0(vbp_slice_data_h264, MAX_NUM_SLICES);
+        query_data->pic_data[i].slc_data = vbp_malloc_set0(vbp_slice_data_h264, MAX_NUM_SLICES);
         if (NULL == query_data->pic_data[i].slc_data)
         {
             goto cleanup;
@@ -217,18 +236,36 @@ uint32 vbp_allocate_query_data_h264(vbp_context *pcontext)
     }
 
 
-    query_data->IQ_matrix_buf = g_try_new0(VAIQMatrixBufferH264, 1);
+    query_data->IQ_matrix_buf = vbp_malloc_set0(VAIQMatrixBufferH264, 1);
     if (NULL == query_data->IQ_matrix_buf)
     {
         goto cleanup;
     }
 
-    query_data->codec_data = g_try_new0(vbp_codec_data_h264, 1);
+    query_data->codec_data = vbp_malloc_set0(vbp_codec_data_h264, 1);
     if (NULL == query_data->codec_data)
     {
         goto cleanup;
     }
 
+    pcontext->parser_private = NULL;
+    vbp_h264_parser_private *parser_private = NULL;
+
+    parser_private = vbp_malloc_set0(vbp_h264_parser_private, 1);
+    if (NULL == parser_private)
+    {
+        goto cleanup;
+    }
+
+    /* assign the pointer */
+    pcontext->parser_private = (void *)parser_private;
+
+    /* init the pointer */
+    parser_private->NAL_length_size = 0;
+
+    parser_private->length_prefix_verified = 0;
+
+    parser_private->bitstream_pattern = H264_BS_SC_PREFIXED;
     return VBP_OK;
 
 cleanup:
@@ -239,6 +276,12 @@ cleanup:
 
 uint32 vbp_free_query_data_h264(vbp_context *pcontext)
 {
+    if (NULL != pcontext->parser_private)
+    {
+        free(pcontext->parser_private);
+        pcontext->parser_private = NULL;
+    }
+
     if (NULL == pcontext->query_data)
     {
         return VBP_OK;
@@ -263,10 +306,6 @@ uint32 vbp_free_query_data_h264(vbp_context *pcontext)
     free(query_data);
 
     pcontext->query_data = NULL;
-
-    NAL_length_size = 0;
-    length_prefix_verified = 0;
-    bitstream_pattern = H264_BS_SC_PREFIXED;
 
     return VBP_OK;
 }
@@ -354,8 +393,8 @@ static inline void vbp_set_slice_ref_list_h264(
         refPicListX = (i == 0) ? &(slc_parms->RefPicList0[0]) : &(slc_parms->RefPicList1[0]);
 
         if ((i == 0) &&
-                ((h264_PtypeB == slice_header->slice_type) ||
-                 (h264_PtypeP == slice_header->slice_type)))
+            ((h264_PtypeB == slice_header->slice_type) ||
+             (h264_PtypeP == slice_header->slice_type)))
         {
             num_ref_idx_active = slice_header->num_ref_idx_l0_active;
             if (slice_header->sh_refpic_l0.ref_pic_list_reordering_flag)
@@ -412,10 +451,10 @@ static inline void vbp_set_pre_weight_table_h264(
     int i, j;
 
     if ((((h264_PtypeP == slice_header->slice_type) ||
-            (h264_PtypeB == slice_header->slice_type)) &&
-            h264_parser->info.active_PPS.weighted_pred_flag) ||
-            ((h264_PtypeB == slice_header->slice_type) &&
-             (1 == h264_parser->info.active_PPS.weighted_bipred_idc)))
+          (h264_PtypeB == slice_header->slice_type)) &&
+          h264_parser->info.active_PPS.weighted_pred_flag) ||
+         ((h264_PtypeB == slice_header->slice_type) &&
+         (1 == h264_parser->info.active_PPS.weighted_bipred_idc)))
     {
         slc_parms->luma_log2_weight_denom = slice_header->sh_predwttbl.luma_log2_weight_denom;
         slc_parms->chroma_log2_weight_denom = slice_header->sh_predwttbl.chroma_log2_weight_denom;
@@ -803,7 +842,7 @@ static void vbp_set_codec_data_h264(
     codec_data->num_ref_frames = parser->info.active_SPS.num_ref_frames;
 
     if (!parser->info.active_SPS.sps_disp.frame_mbs_only_flag &&
-            !parser->info.active_SPS.sps_disp.mb_adaptive_frame_field_flag)
+        !parser->info.active_SPS.sps_disp.mb_adaptive_frame_field_flag)
     {
         /* no longer necessary: two fields share the same interlaced surface */
         /* codec_data->num_ref_frames *= 2; */
@@ -1074,148 +1113,6 @@ static uint32_t vbp_add_pic_data_h264(vbp_context *pcontext, int list_index)
     return VBP_OK;
 }
 
-#if 0
-static inline void vbp_update_reference_frames_h264_methodA(vbp_picture_data_h264* pic_data)
-{
-    VAPictureParameterBufferH264* pic_parms = pic_data->pic_parms;
-
-    char is_used[16];
-    memset(is_used, 0, sizeof(is_used));
-
-    int ref_list;
-    int slice_index;
-    int i, j;
-    VAPictureH264* pRefList = NULL;
-
-    for (slice_index = 0; slice_index < pic_data->num_slices; slice_index++)
-    {
-        VASliceParameterBufferH264* slice_parms =
-            &(pic_data->slc_data[slice_index].slc_parms);
-
-        for (ref_list = 0; ref_list < 2; ref_list++)
-        {
-            if (0 == ref_list)
-                pRefList = slice_parms->RefPicList0;
-            else
-                pRefList = slice_parms->RefPicList1;
-
-            for (i = 0; i < 32; i++, pRefList++)
-            {
-                if (VA_PICTURE_H264_INVALID == pRefList->flags)
-                    break;
-
-                for (j = 0; j < 16; j++)
-                {
-                    if (pic_parms->ReferenceFrames[j].TopFieldOrderCnt ==
-                            pRefList->TopFieldOrderCnt)
-                    {
-                        is_used[j] = 1;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    int frame_idx = 0;
-    VAPictureH264* pRefFrame = pic_parms->ReferenceFrames;
-    for (i = 0; i < 16; i++)
-    {
-        if (is_used[i])
-        {
-            memcpy(pRefFrame,
-                   &(pic_parms->ReferenceFrames[i]),
-                   sizeof(VAPictureH264));
-
-            pRefFrame++;
-            frame_idx++;
-        }
-    }
-    pic_parms->num_ref_frames = frame_idx;
-
-    for (; frame_idx < 16; frame_idx++)
-    {
-        pRefFrame->picture_id = VA_INVALID_SURFACE;
-        pRefFrame->frame_idx = -1;
-        pRefFrame->flags = VA_PICTURE_H264_INVALID;
-        pRefFrame->TopFieldOrderCnt = -1;
-        pRefFrame->BottomFieldOrderCnt = -1;
-        pRefFrame++;
-    }
-}
-#endif
-
-#if 0
-static inline void vbp_update_reference_frames_h264_methodB(vbp_picture_data_h264* pic_data)
-{
-    VAPictureParameterBufferH264* pic_parms = pic_data->pic_parms;
-    int i;
-    VAPictureH264* pRefFrame = pic_parms->ReferenceFrames;
-    for (i = 0; i < 16; i++)
-    {
-        pRefFrame->picture_id = VA_INVALID_SURFACE;
-        pRefFrame->frame_idx = -1;
-        pRefFrame->flags = VA_PICTURE_H264_INVALID;
-        pRefFrame->TopFieldOrderCnt = -1;
-        pRefFrame->BottomFieldOrderCnt = -1;
-        pRefFrame++;
-    }
-
-    pic_parms->num_ref_frames = 0;
-
-
-    int ref_list;
-    int slice_index;
-    int j;
-    VAPictureH264* pRefList = NULL;
-
-    for (slice_index = 0; slice_index < pic_data->num_slices; slice_index++)
-    {
-        VASliceParameterBufferH264* slice_parms =
-            &(pic_data->slc_data[slice_index].slc_parms);
-
-        for (ref_list = 0; ref_list < 2; ref_list++)
-        {
-            if (0 == ref_list)
-                pRefList = slice_parms->RefPicList0;
-            else
-                pRefList = slice_parms->RefPicList1;
-
-            for (i = 0; i < 32; i++, pRefList++)
-            {
-                if (VA_PICTURE_H264_INVALID == pRefList->flags)
-                    break;
-
-                for (j = 0; j < 16; j++)
-                {
-                    if (pic_parms->ReferenceFrames[j].TopFieldOrderCnt ==
-                            pRefList->TopFieldOrderCnt)
-                    {
-                        pic_parms->ReferenceFrames[j].flags |=
-                            pRefList->flags;
-
-                        if ((pic_parms->ReferenceFrames[j].flags & VA_PICTURE_H264_TOP_FIELD) &&
-                                (pic_parms->ReferenceFrames[j].flags & VA_PICTURE_H264_BOTTOM_FIELD))
-                        {
-                            pic_parms->ReferenceFrames[j].flags = 0;
-                        }
-                        break;
-                    }
-                }
-                if (j == 16)
-                {
-                    memcpy(&(pic_parms->ReferenceFrames[pic_parms->num_ref_frames++]),
-                           pRefList,
-                           sizeof(VAPictureH264));
-                }
-
-            }
-        }
-    }
-}
-#endif
-
-
 static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
 {
     viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
@@ -1380,6 +1277,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
     int i = 0;
     viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
 
+    vbp_h264_parser_private *parser_private = (vbp_h264_parser_private *)pcontext->parser_private;
     //Enable emulation prevention
     cxt->getbits.is_emul_reqd = 1;
 
@@ -1392,7 +1290,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
     if (ret == 1)
     {
         WTRACE("configuration data is start-code prefixed.\n");
-        bitstream_pattern = H264_BS_SC_PREFIXED;
+        parser_private->bitstream_pattern = H264_BS_SC_PREFIXED;
         return vbp_parse_start_code_h264(pcontext);
     }
 
@@ -1423,7 +1321,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
         WTRACE("length size (%d) is not equal to 4.", length_size_minus_one + 1);
     }
 
-    NAL_length_size = length_size_minus_one + 1;
+    parser_private->NAL_length_size = length_size_minus_one + 1;
 
     cur_data++;
 
@@ -1525,13 +1423,13 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
                cxt->parse_cubby.size, (cur_data - cxt->parse_cubby.buf));
     }
 
-    bitstream_pattern = H264_BS_LENGTH_PREFIXED;
+    parser_private->bitstream_pattern = H264_BS_LENGTH_PREFIXED;
     return VBP_OK;
 }
 
-static inline uint32_t vbp_get_NAL_length_h264(uint8_t* p)
+static inline uint32_t vbp_get_NAL_length_h264(uint8_t* p, int *NAL_length_size)
 {
-    switch (NAL_length_size)
+    switch (*NAL_length_size)
     {
     case 4:
         return vbp_utils_ntohl(p);
@@ -1551,7 +1449,7 @@ static inline uint32_t vbp_get_NAL_length_h264(uint8_t* p)
     default:
         WTRACE("invalid NAL_length_size: %d.", NAL_length_size);
         /* default to 4 bytes for length */
-        NAL_length_size = 4;
+        *NAL_length_size = 4;
         return vbp_utils_ntohl(p);
     }
 }
@@ -1564,6 +1462,7 @@ static inline uint32_t vbp_get_NAL_length_h264(uint8_t* p)
 uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
 {
     viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
+    vbp_h264_parser_private *parser_private = (vbp_h264_parser_private *)pcontext->parser_private;
 
     /* reset query data for the new sample buffer */
     vbp_data_h264* query_data = (vbp_data_h264*)pcontext->query_data;
@@ -1593,7 +1492,7 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
     /* start code emulation prevention byte is present in NAL */
     cxt->getbits.is_emul_reqd = 1;
 
-    if (bitstream_pattern == H264_BS_LENGTH_PREFIXED)
+    if (parser_private->bitstream_pattern == H264_BS_LENGTH_PREFIXED)
     {
         viddec_sc_parse_cubby_cxt_t* cubby = NULL;
         int32_t size_left = 0;
@@ -1604,11 +1503,16 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
 
         size_left = cubby->size;
 
-        while (size_left >= NAL_length_size)
+        while (size_left >= parser_private->NAL_length_size)
         {
-            NAL_length = vbp_get_NAL_length_h264(cubby->buf + size_parsed);
+            NAL_length = vbp_get_NAL_length_h264(cubby->buf + size_parsed, &parser_private->NAL_length_size);
+            if (NAL_length <= 0 || NAL_length > size_left - parser_private->NAL_length_size)
+            {
+                ETRACE("Invalid NAL_length parsed.");
+                break;
+            }
 
-            size_parsed += NAL_length_size;
+            size_parsed += parser_private->NAL_length_size;
             cxt->list.data[cxt->list.num_items].stpos = size_parsed;
             size_parsed += NAL_length; /* skip NAL bytes */
             /* end position is exclusive */
@@ -1623,14 +1527,14 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
             size_left = cubby->size - size_parsed;
         }
 
-        if (size_left != 0 && length_prefix_verified == 0)
+        if (size_left != 0 && parser_private->length_prefix_verified == 0)
         {
             WTRACE("Elementary stream is not aligned (%d).", size_left);
 
             /* attempt to correct length prefix to start-code prefix only once, if it succeeds, we will
                     * alway treat bit stream as start-code prefixed; otherwise, treat bit stream as length prefixed
                     */
-            length_prefix_verified = 1;
+            parser_private->length_prefix_verified = 1;
             viddec_sc_parse_cubby_cxt_t temp_cubby = cxt->parse_cubby;
 
             viddec_parser_ops_t *ops = pcontext->parser_ops;
@@ -1642,8 +1546,8 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
             if (ret == 1)
             {
                 WTRACE("Stream was supposed to be length prefixed, but actually is start-code prefixed.");
-                NAL_length_size = 0;
-                bitstream_pattern = H264_BS_SC_PREFIXED;
+                parser_private->NAL_length_size = 0;
+                parser_private->bitstream_pattern = H264_BS_SC_PREFIXED;
                 /* reset parsing data */
                 for (i = 0; i < MAX_NUM_PICTURES; i++)
                 {
@@ -1656,7 +1560,7 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
     }
 
 
-    if (bitstream_pattern == H264_BS_SC_PREFIXED)
+    if (parser_private->bitstream_pattern == H264_BS_SC_PREFIXED)
     {
         viddec_sc_parse_cubby_cxt_t cubby;
         /*  memory copy without updating cxt->parse_cubby */
@@ -1705,7 +1609,7 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
                 if (cxt->list.num_items == 0)
                 {
                     cxt->list.num_items = 1;
-                    bitstream_pattern = H264_BS_SINGLE_NAL;
+                    parser_private->bitstream_pattern = H264_BS_SINGLE_NAL;
                     WTRACE("Stream was supposed to be SC prefixed, but actually contains a single NAL.");
                 }
                 cxt->list.data[cxt->list.num_items - 1].edpos = cxt->parse_cubby.size;
@@ -1715,7 +1619,7 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
 
     }
 
-    if (bitstream_pattern == H264_BS_SINGLE_NAL)
+    if (parser_private->bitstream_pattern == H264_BS_SINGLE_NAL)
     {
         cxt->list.num_items = 1;
         cxt->list.data[0].stpos = 0;

@@ -1,10 +1,27 @@
-/*
- INTEL CONFIDENTIAL
- Copyright 2009 Intel Corporation All Rights Reserved.
- The source code contained or described herein and all documents related to the source code ("Material") are owned by Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its suppliers and licensors. The Material contains trade secrets and proprietary and confidential information of Intel or its suppliers and licensors. The Material is protected by worldwide copyright and trade secret laws and treaty provisions. No part of the Material may be used, copied, reproduced, modified, published, uploaded, posted, transmitted, distributed, or disclosed in any way without Intel’s prior express written permission.
+/* INTEL CONFIDENTIAL
+* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+*
+* The source code contained or described herein and all documents
+* related to the source code ("Material") are owned by Intel
+* Corporation or its suppliers or licensors.  Title to the
+* Material remains with Intel Corporation or its suppliers and
+* licensors.  The Material contains trade secrets and proprietary
+* and confidential information of Intel or its suppliers and
+* licensors. The Material is protected by worldwide copyright and
+* trade secret laws and treaty provisions.  No part of the Material
+* may be used, copied, reproduced, modified, published, uploaded,
+* posted, transmitted, distributed, or disclosed in any way without
+* Intel's prior express written permission.
+*
+* No license under any patent, copyright, trade secret or other
+* intellectual property right is granted to or conferred upon you
+* by disclosure or delivery of the Materials, either expressly, by
+* implication, inducement, estoppel or otherwise. Any license
+* under such intellectual property rights must be express and
+* approved by Intel in writing.
+*
+*/
 
- No license under any patent, copyright, trade secret or other intellectual property right is granted to or conferred upon you by disclosure or delivery of the Materials, either expressly, by implication, inducement, estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel in writing.
- */
 
 #ifndef VBP_LOADER_H
 #define VBP_LOADER_H
@@ -105,53 +122,53 @@ typedef struct _vbp_data_mp42
 
 typedef struct _vbp_codec_data_h264
 {
-    uint8		pic_parameter_set_id;
-    uint8	 	seq_parameter_set_id;
+    uint8 pic_parameter_set_id;
+    uint8 seq_parameter_set_id;
 
-    uint8 		profile_idc;
-    uint8 		level_idc;
+    uint8 profile_idc;
+    uint8 level_idc;
     /*constraint flag sets (h.264 Spec v2009)*/
-    uint8		constraint_set0_flag;
-    uint8		constraint_set1_flag;
-    uint8		constraint_set2_flag;
-    uint8		constraint_set3_flag;
-    uint8		constraint_set4_flag;
+    uint8 constraint_set0_flag;
+    uint8 constraint_set1_flag;
+    uint8 constraint_set2_flag;
+    uint8 constraint_set3_flag;
+    uint8 constraint_set4_flag;
 
-    uint8	 	num_ref_frames;
-    uint8	 	gaps_in_frame_num_value_allowed_flag;
+    uint8 num_ref_frames;
+    uint8 gaps_in_frame_num_value_allowed_flag;
 
-    uint8	 	frame_mbs_only_flag;
-    uint8	 	mb_adaptive_frame_field_flag;
+    uint8 frame_mbs_only_flag;
+    uint8 mb_adaptive_frame_field_flag;
 
-    int			frame_width;
-    int			frame_height;
+    int frame_width;
+    int frame_height;
 
-    uint8	 	vui_parameters_present_flag;
+    uint8 vui_parameters_present_flag;
 
     /* aspect ratio */
-    uint8  		aspect_ratio_idc;
-    uint16		sar_width;
-    uint16		sar_height;
+    uint8 aspect_ratio_idc;
+    uint16 sar_width;
+    uint16 sar_height;
 
     /* cropping information */
-    int 			crop_top;
-    int 			crop_bottom;
-    int 			crop_left;
-    int 			crop_right;
+    int crop_top;
+    int crop_bottom;
+    int crop_left;
+    int crop_right;
 
     /* video fromat */
 
     // default 5 unspecified
-    uint8  		video_format;
-    uint8       video_full_range_flag;
+    uint8 video_format;
+    uint8 video_full_range_flag;
 
     // default 2 unspecified
-    uint8       matrix_coefficients;
+    uint8 matrix_coefficients;
 
-    uint8       pic_order_cnt_type;
-    int         log2_max_pic_order_cnt_lsb_minus4;
+    uint8 pic_order_cnt_type;
+    int log2_max_pic_order_cnt_lsb_minus4;
 
-    int         bit_rate;
+    int bit_rate;
 
 } vbp_codec_data_h264;
 
