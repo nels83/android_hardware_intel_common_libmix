@@ -532,8 +532,8 @@ MIX_RESULT MixVideoFormat_MP42::_decode_continue(vbp_data_mp42 *data) {
                     ts_inc = ts_inc % pic_params->vop_time_increment_resolution;
                     LOG_V("timestamp is incremented by %"UINT64_FORMAT" at %d resolution.\n",
                           ts_inc, pic_params->vop_time_increment_resolution);
-                    // convert to nano-second
-                    ts_inc = ts_inc * 1e9 / pic_params->vop_time_increment_resolution;
+                    // convert to macrosecond, timestamp takes microsecond as basic unit.
+                    ts_inc = ts_inc * 1e6 / pic_params->vop_time_increment_resolution;
                     LOG_V("timestamp of P frame in packed frame is updated from %"UINT64_FORMAT"  to %"UINT64_FORMAT".\n",
                           ts, ts + ts_inc);
                     ts += ts_inc;
