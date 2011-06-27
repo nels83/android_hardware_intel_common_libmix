@@ -33,6 +33,12 @@ LOCAL_SHARED_LIBRARIES := \
 
 #LOCAL_SHARED_LIBRARIES += liblog
 
+LOCAL_COPY_HEADERS_TO  := libmix_videodecoder
+
+LOCAL_COPY_HEADERS := \
+    VideoDecoderHost.h \
+    VideoDecoderInterface.h \
+    VideoDecoderDefs.h
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva_videodecoder
