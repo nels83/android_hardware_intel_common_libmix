@@ -163,5 +163,17 @@ typedef int32_t Decode_Status;
 #define NULL 0
 #endif
 
+inline bool checkFatalDecoderError(Decode_Status status) {
+    if (status == DECODE_NOT_STARTED ||
+        status == DECODE_NEED_RESTART ||
+        status == DECODE_NO_PARSER ||
+        status == DECODE_INVALID_DATA ||
+        status == DECODE_MEMORY_FAIL ||
+        status == DECODE_FAIL) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
 #endif  // VIDEO_DECODER_DEFS_H_
