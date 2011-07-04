@@ -1102,6 +1102,15 @@ static uint32_t vbp_add_pic_data_h264(vbp_context *pcontext, int list_index)
     vbp_set_reference_frames_h264(parser, pic_parms);
     if (parser->info.nal_unit_type == h264_NAL_UNIT_TYPE_IDR)
     {
+        int frame_idx;
+        for (frame_idx = 0; frame_idx < 16; frame_idx++)
+        {
+            pic_parms->ReferenceFrames[frame_idx].picture_id = VA_INVALID_SURFACE;
+            pic_parms->ReferenceFrames[frame_idx].frame_idx = 0;
+            pic_parms->ReferenceFrames[frame_idx].flags = VA_PICTURE_H264_INVALID;
+            pic_parms->ReferenceFrames[frame_idx].TopFieldOrderCnt = 0;
+            pic_parms->ReferenceFrames[frame_idx].BottomFieldOrderCnt = 0;
+        }
         /* num of reference frame is 0 if current picture is IDR */
         pic_parms->num_ref_frames = 0;
     }
