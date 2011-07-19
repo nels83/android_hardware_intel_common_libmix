@@ -349,6 +349,7 @@ MIX_RESULT MixVideoFormat_H264::EndOfStream() {
     Unlock();
     //Call Frame Manager with _eos()
     ret = mix_framemanager_eos(this->framemgr);
+    mix_framemanager_set_dpb_size(this->framemgr, -1);
     LOG_V( "End\n");
     return ret;
 }
@@ -484,10 +485,94 @@ MIX_RESULT MixVideoFormat_H264::_initialize_va(vbp_data_h264 *data) {
         num_ref_pictures = data->codec_data->num_ref_frames;
     }
 
+    int pic_size;
+    int size = 3;
+    if (data)
+    {
+        pic_size = (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) * (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) * (data->codec_data->frame_mbs_only_flag?1:2) * 384;
+
+        switch (data->codec_data->level_idc)
+        {
+        case 9:
+        size = 152064;
+        break;
+        case 10:
+        size = 152064;
+        break;
+        case 11:
+            size = 345600;
+        break;
+        case 12:
+        size = 912384;
+        break;
+        case 13:
+        size = 912384;
+        break;
+        case 20:
+        size = 912384;
+        break;
+        case 21:
+        size = 1824768;
+        break;
+        case 22:
+        size = 3110400;
+        break;
+        case 30:
+        size = 3110400;
+        break;
+        case 31:
+        size = 6912000;
+        break;
+        case 32:
+        size = 7864320;
+        break;
+        case 40:
+        size = 12582912;
+        break;
+        case 41:
+        size = 12582912;
+        break;
+        case 42:
+        size = 13369344;
+        break;
+        case 50:
+        size = 42393600;
+        break;
+        case 51:
+        size = 70778880;
+        break;
+        default:
+        //error ("undefined level", 500);
+        break;
+        }
+
+        if (pic_size)
+        {
+            size /= pic_size;
+            if (size == 0)
+            {
+                size = 3;
+            }
+            else if (size > 16)
+            {
+                size = 15;
+            }
+        }
+        else
+        {
+            size = 3;
+        }
+    }
+
+    mix_framemanager_set_dpb_size(this->framemgr, size);
+
     //Adding 1 to work around VBLANK issue, and another 1 to compensate cached frame that
     // will not start decoding until a new frame is received.
-    this->va_num_surfaces = 1 + 1 + this->extra_surfaces +
-                            (((num_ref_pictures + 3) < MIX_VIDEO_H264_SURFACE_NUM) ? (num_ref_pictures + 3) : MIX_VIDEO_H264_SURFACE_NUM);
+    this->va_num_surfaces = 1 + 1 + this->extra_surfaces + (((size + 3) <
+        MIX_VIDEO_H264_SURFACE_NUM) ?
+        (size + 3)
+        : MIX_VIDEO_H264_SURFACE_NUM);
+    this->va_num_surfaces = this->va_num_surfaces > 24 ? 24 : this->va_num_surfaces; 
 
     this->va_surfaces =
         reinterpret_cast<VASurfaceID*>(malloc(sizeof(VASurfaceID)*this->va_num_surfaces));

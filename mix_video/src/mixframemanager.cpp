@@ -44,6 +44,7 @@ MixFrameManager::MixFrameManager()
         ,next_frame_picnumber(0)
         ,max_enqueue_size(MIX_MAX_ENQUEUE_SIZE)
         ,max_picture_number((uint32)-1)
+        ,dpb_size((uint32)-1)
         ,ref_count(1) {
 }
 
@@ -182,6 +183,15 @@ MIX_RESULT mix_framemanager_set_max_picture_number(
     fm->max_picture_number = num;
     LOG_V("max picture number is %d\n", num);
 
+    fm->mLock.unlock();
+    return MIX_RESULT_SUCCESS;
+}
+
+MIX_RESULT mix_framemanager_set_dpb_size(
+    MixFrameManager *fm, uint32 num) {
+    fm->mLock.lock();
+    fm->dpb_size = num < MIX_MAX_ENQUEUE_SIZE ? num : MIX_MAX_ENQUEUE_SIZE;
+    LOG_V("dpb is %d\n", fm->dpb_size);
     fm->mLock.unlock();
     return MIX_RESULT_SUCCESS;
 }
@@ -466,11 +476,15 @@ MIX_RESULT mix_framemanager_picnumber_based_dequeue(MixFrameManager *fm, MixVide
 {
     int i, len;
     MixVideoFrame* p;
+    MixVideoFrame* outp;
+    int outpicnum;
+    int prevpicnum;
     uint32 picnum;
     uint32 next_picnum_pending;
 
     int least_poc_index;
     uint32 least_poc;
+    uint32 maxframeinqueue;
 
     len = j_slist_length(fm->frame_list);
 
@@ -479,61 +493,56 @@ retry:
     least_poc_index = -1;
     least_poc = (uint32)-1;
 
-    for (i = 0; i < len; )
+    if ((fm->dpb_size == -1) || (fm->dpb_size == len))
     {
-        p = (MixVideoFrame*)j_slist_nth_data(fm->frame_list, i);
-        mix_videoframe_get_displayorder(p, &picnum);
-        if (picnum == fm->next_frame_picnumber)
-        {
-            fm->frame_list = j_slist_remove(fm->frame_list, p);
-            mix_framemanager_update_timestamp(fm, p);
-            *mvf = p;
-            LOG_V("frame is dequeued, poc = %d.\n", fm->next_frame_picnumber);
-            fm->next_frame_picnumber++;
-            //if (fm->next_frame_picnumber == fm->max_picture_number)
-            //    fm->next_frame_picnumber = 0;
-            return MIX_RESULT_SUCCESS;
-        }
-
-        if(picnum == 0) {
-            if(i == 0) {
-                fm->next_frame_picnumber = 0;
-            } else {
-                fm->next_frame_picnumber = least_poc;
-                i = least_poc_index;
-            }
-            continue;
-        }
-        if(picnum < least_poc) {
-            least_poc = picnum;
-            least_poc_index = i;
-            LOG_V("least_poc_index = %d\n", least_poc_index);
-        }
-
-        ++i;
-
-        if (picnum > fm->next_frame_picnumber &&
-                picnum < next_picnum_pending)
-        {
-            next_picnum_pending = picnum;
-        }
-
-        if (picnum < fm->next_frame_picnumber &&
-                fm->next_frame_picnumber - picnum < 8)
-        {
-            // the smallest value of "max_pic_order_cnt_lsb_minus4" is 16. If the distance of "next frame pic number"
-            // to the pic number  in the list is less than half of 16, it is safe to assume that pic number
-            // is reset when a new IDR is encoded. (where pic numbfer of top or bottom field must be 0, subclause 8.2.1).
-            LOG_V("picture number is reset to %d, next pic number is %d, next pending number is %d.\n",
-                  picnum, fm->next_frame_picnumber, next_picnum_pending);
-            break;
-        }
+        maxframeinqueue = len;
+        maxframeinqueue = (maxframeinqueue < (MIX_MAX_ENQUEUE_SIZE + 1)) ? maxframeinqueue : (MIX_MAX_ENQUEUE_SIZE + 1);
+    }
+    else
+    {
+        maxframeinqueue = 0;
     }
 
+    if (maxframeinqueue)
+    {
+        p = (MixVideoFrame*)j_slist_nth_data(fm->frame_list, 0);
+        mix_videoframe_get_displayorder(p, &picnum);
+        outpicnum = picnum;
+        prevpicnum = picnum;
+        outp = p;
+
+        for (i = 1; i < maxframeinqueue;i++ )
+        {
+            p = (MixVideoFrame*)j_slist_nth_data(fm->frame_list, i);
+            mix_videoframe_get_displayorder(p, &picnum);
+
+            if (picnum ==0)
+            {
+                break;
+            }
+            else if (picnum < outpicnum)
+            {
+                outpicnum = picnum;
+                outp = p;
+                prevpicnum = picnum;
+            }
+            else //(picnum >= outpicnum)
+            {
+                prevpicnum = picnum;
+            }
+        }
+
+        fm->frame_list = j_slist_remove(fm->frame_list, (void *)outp);
+        mix_framemanager_update_timestamp(fm, outp);
+        *mvf = outp;
+
+
+        return MIX_RESULT_SUCCESS;
+    }
     if (len <= fm->max_enqueue_size && fm->eos == FALSE)
     {
         LOG_V("No frame is dequeued. Expected POC = %d, next pending POC = %d. (List size = %d)\n",
-              fm->next_frame_picnumber, next_picnum_pending, len);
+                fm->next_frame_picnumber, next_picnum_pending, len);
         return MIX_RESULT_FRAME_NOTAVAIL;
     }
 
@@ -541,7 +550,7 @@ retry:
     if (next_picnum_pending != (uint32)-1)
     {
         LOG_V("picture number has gap, jumping from %d to %d.\n",
-              fm->next_frame_picnumber, next_picnum_pending);
+                fm->next_frame_picnumber, next_picnum_pending);
 
         fm->next_frame_picnumber = next_picnum_pending;
         goto retry;
@@ -549,7 +558,7 @@ retry:
 
     // picture number roll-over
     LOG_V("picture number is rolled over, resetting next picnum from %d to 0.\n",
-          fm->next_frame_picnumber);
+        fm->next_frame_picnumber);
 
     fm->next_frame_picnumber = 0;
     goto retry;

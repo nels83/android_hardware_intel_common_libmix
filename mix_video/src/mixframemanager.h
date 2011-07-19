@@ -52,6 +52,7 @@ public:
     int    max_enqueue_size;
     uint32 max_picture_number;
     uint32 ref_count;
+    int    dpb_size;
 };
 
 
@@ -119,6 +120,8 @@ MIX_RESULT mix_framemanager_set_max_enqueue_size(
 MIX_RESULT mix_framemanager_set_max_picture_number(
     MixFrameManager *fm, uint32 num);
 
+MIX_RESULT mix_framemanager_set_dpb_size(
+    MixFrameManager *fm, uint32 num);
 
 /*
  * Get Display Order Mode
