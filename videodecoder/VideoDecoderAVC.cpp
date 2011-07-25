@@ -124,7 +124,7 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
 
     // Don't remove the following codes, it can be enabled for debugging DPB.
 #if 0
-    for (int i = 0; i < data->num_pictures; i++) {
+    for (unsigned int i = 0; i < data->num_pictures; i++) {
         VAPictureH264 &pic = data->pic_data[i].pic_parms->CurrPic;
         VTRACE("%d: decoding frame %.2f, poc top = %d, poc bottom = %d, flags = %d,  reference = %d",
                 i,
@@ -201,7 +201,7 @@ Decode_Status VideoDecoderAVC::beginDecodingFrame(vbp_data_h264 *data) {
     // TODO: Set the discontinuity flag
     mAcquiredBuffer->renderBuffer.flag = 0;
     mAcquiredBuffer->renderBuffer.timeStamp = mCurrentPTS;
-    mAcquiredBuffer->pictureOrder = picture->TopFieldOrderCnt;
+    mAcquiredBuffer->pictureOrder = getPOC(picture);
 
     status  = continueDecodingFrame(data);
     // surface buffer is released if decode fails
@@ -262,7 +262,10 @@ Decode_Status VideoDecoderAVC::decodeSlice(vbp_data_h264 *data, uint32_t picInde
             CHECK_VA_STATUS("vaEndPicture");
 
             // for interlace content, top field may be valid only after the second field is parsed
-            mAcquiredBuffer->pictureOrder= picParam->CurrPic.TopFieldOrderCnt;
+            int32_t poc = getPOC(&(picParam->CurrPic));
+            if (poc < mAcquiredBuffer->pictureOrder) {
+                mAcquiredBuffer->pictureOrder = poc;
+            }
         }
 
         // Check there is no reference frame loss before decoding a frame
@@ -568,6 +571,7 @@ void VideoDecoderAVC::clearAsReference(int toggle) {
 }
 
 Decode_Status VideoDecoderAVC::startVA(vbp_data_h264 *data) {
+    int32_t DPBSize = getDPBSize(data);
     updateFormatInfo(data);
 
     //Use high profile for all kinds of H.264 profiles (baseline, main and high) except for constrained baseline
@@ -580,10 +584,8 @@ Decode_Status VideoDecoderAVC::startVA(vbp_data_h264 *data) {
             vaProfile = VAProfileH264ConstrainedBaseline;
         }
     }
-    // TODO: use maxDPBSize to set window size
-    // 1024 * MaxDPB / ( PicWidthInMbs * FrameHeightInMbs * 384 ), 16
-    //VideoDecoderBase::setOutputWindowSize(getDPBSize(data));
-    return VideoDecoderBase::setupVA(data->codec_data->num_ref_frames + AVC_EXTRA_SURFACE_NUMBER, vaProfile);
+    VideoDecoderBase::setOutputWindowSize(DPBSize);
+    return VideoDecoderBase::setupVA(DPBSize + AVC_EXTRA_SURFACE_NUMBER, vaProfile);
 }
 
 void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
@@ -673,13 +675,13 @@ Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
 
 bool VideoDecoderAVC::isNewFrame(vbp_data_h264 *data) {
     if (data->num_pictures == 0) {
-        LOGE("num_pictures == 0");
+        ETRACE("num_pictures == 0");
         return true;
     }
 
     vbp_picture_data_h264* picData = data->pic_data;
     if (picData->num_slices == 0) {
-        LOGE("num_slices == 0");
+        ETRACE("num_slices == 0");
         return true;
     }
 
@@ -689,17 +691,17 @@ bool VideoDecoderAVC::isNewFrame(vbp_data_h264 *data) {
     if (picData->slc_data[0].slc_parms.first_mb_in_slice != 0) {
         // not the first slice, assume it is continuation of a partial frame
         // TODO: check if it is new frame boundary as the first slice may get lost in streaming case.
-        LOGW("first_mb_in_slice != 0");
+        WTRACE("first_mb_in_slice != 0");
     } else {
         if ((picData->pic_parms->CurrPic.flags & fieldFlags) == fieldFlags) {
-            LOGE("Current picture has both odd field and even field.");
+            ETRACE("Current picture has both odd field and even field.");
         }
         // current picture is a field or a frame, and buffer conains the first slice, check if the current picture and
         // the last picture form an opposite field pair
         if (((mLastPictureFlags | picData->pic_parms->CurrPic.flags) & fieldFlags) == fieldFlags) {
             // opposite field
             newFrame = false;
-            LOGW("current picture is not at frame boundary.");
+            WTRACE("current picture is not at frame boundary.");
             mLastPictureFlags = 0;
         } else {
             newFrame = true;
@@ -718,6 +720,7 @@ bool VideoDecoderAVC::isNewFrame(vbp_data_h264 *data) {
 }
 
 int32_t VideoDecoderAVC::getDPBSize(vbp_data_h264 *data) {
+    // 1024 * MaxDPB / ( PicWidthInMbs * FrameHeightInMbs * 384 ), 16
     struct DPBTable {
         int32_t level;
         float maxDPB;
@@ -753,7 +756,6 @@ int32_t VideoDecoderAVC::getDPBSize(vbp_data_h264 *data) {
     int32_t maxDPBSize = maxDPB * 1024 / (
         (data->pic_data[0].pic_parms->picture_width_in_mbs_minus1 + 1) *
         (data->pic_data[0].pic_parms->picture_height_in_mbs_minus1 + 1) *
-        (data->codec_data->frame_mbs_only_flag ? 1 : 2) *
         384);
 
     if (maxDPBSize > 16) {
@@ -761,8 +763,13 @@ int32_t VideoDecoderAVC::getDPBSize(vbp_data_h264 *data) {
     } else if (maxDPBSize == 0) {
         maxDPBSize = 3;
     }
+    if(maxDPBSize < data->codec_data->num_ref_frames) {
+        maxDPBSize = data->codec_data->num_ref_frames;
+    }
 
-    LOGI("maxDPBSize is %d", maxDPBSize);
+    // add one extra frame for current frame.
+    maxDPBSize += 1;
+    ITRACE("maxDPBSize = %d, num_ref_frame = %d", maxDPBSize, data->codec_data->num_ref_frames);
     return maxDPBSize;
 }
 

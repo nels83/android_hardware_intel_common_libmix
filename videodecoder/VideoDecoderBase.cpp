@@ -29,7 +29,8 @@
 #include <va/va_tpi.h>
 
 #define INVALID_PTS ((uint64_t)-1)
-#define INVALID_POC ((uint32_t)-1)
+#define MAXIMUM_POC  0x7FFFFFFF
+#define MINIMUM_POC  0x80000000
 #define ANDROID_DISPLAY_HANDLE 0x18C34078
 
 // TODO: check what is the best number. Must be at least 2 to support one backward reference frame.
@@ -55,11 +56,10 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
       mSizeChanged(false),
 
       // private member variables
-      mFirstFrame(true),
       mLowDelay(false),
       mRawOutput(false),
       mManageReference(true),
-      mOutputMethod (OUTPUT_BY_PCT),
+      mOutputMethod(OUTPUT_BY_PCT),
       mOutputWindowSize(OUTPUT_WINDOW_SIZE),
       mNumSurfaces(0),
       mSurfaceBuffers(NULL),
@@ -68,7 +68,7 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
       mSurfaces(NULL),
       mSurfaceUserPtr(NULL),
       mSurfaceAcquirePos(0),
-      mNextOutputPOC(0),
+      mNextOutputPOC(MINIMUM_POC),
       mParserType(type),
       mParserHandle(NULL) {
 
@@ -125,12 +125,11 @@ void VideoDecoderBase::stop(void) {
     mSizeChanged = false;
 
     // private variables
-    mFirstFrame = true;
     mLowDelay = false;
     mRawOutput = false;
     mNumSurfaces = 0;
     mSurfaceAcquirePos = 0;
-    mNextOutputPOC = 0;
+    mNextOutputPOC = MINIMUM_POC;
 
     mVideoFormatInfo.valid = false;
     if (mParserHandle){
@@ -150,7 +149,7 @@ void VideoDecoderBase::flush(void) {
     // avoid setting mSurfaceAcquirePos  to 0 as it may cause tearing
     // (surface is still being rendered)
     mSurfaceAcquirePos = (mSurfaceAcquirePos  + 1) % mNumSurfaces;
-    mNextOutputPOC = 0;
+    mNextOutputPOC = MINIMUM_POC;
     mCurrentPTS = INVALID_PTS;
     mAcquiredBuffer = NULL;
     mLastReference = NULL;
@@ -160,7 +159,6 @@ void VideoDecoderBase::flush(void) {
     mDecodingFrame = false;
     mSizeChanged = false;
 
-    mFirstFrame = true;
     // initialize surface buffer without resetting mapped/raw data
     initSurfaceBuffer(false);
 }
@@ -186,143 +184,244 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
     // output by position (the first buffer)
     VideoSurfaceBuffer *outputByPos = mOutputHead;
 
-    if (mLowDelay || mFirstFrame) {
+    if (mLowDelay) {
         mOutputHead = mOutputHead->next;
         if (mOutputHead == NULL) {
             mOutputTail = NULL;
         }
-        mFirstFrame = false;
-        mNextOutputPOC = outputByPos->pictureOrder + 1;
-
-        //VTRACE("Output POC %u for display (pts = %.2f)", outputByPos->pictureOrder, outputByPos->renderBuffer.timeStamp/1E6);
         return &(outputByPos->renderBuffer);
     }
 
     // output by presentation time stamp (the smallest pts)
-    VideoSurfaceBuffer *outputByPts = NULL;
+    VideoSurfaceBuffer *outputByPts = findOutputByPts(draining);
 
-    // output by picture coding type (PCT) or by picture order count (POC)
-    // for output by PCT:
-    // if there is more than one reference frame, the first reference frame is ouput, otherwise,
-    // output non-reference frame if any.
-    // for output by POC:
-    //
     VideoSurfaceBuffer *output = NULL;
+    if (mOutputMethod == OUTPUT_BY_POC) {
+        output = findOutputByPoc(draining);
+    } else if (mOutputMethod == OUTPUT_BY_PCT) {
+        output = findOutputByPct(draining);
+    } else {
+        ETRACE("Invalid output method.");
+        return NULL;
+    }
 
+    if (output == NULL) {
+        return NULL;
+    }
+
+    if (output != outputByPts) {
+        // swap time stamp
+        uint64_t ts = output->renderBuffer.timeStamp;
+        output->renderBuffer.timeStamp = outputByPts->renderBuffer.timeStamp;
+        outputByPts->renderBuffer.timeStamp = ts;
+    }
+
+    if (output != outputByPos) {
+        // remove this output from middle or end of the list
+        VideoSurfaceBuffer *p = outputByPos;
+        while (p->next != output) {
+            p = p->next;
+        }
+        p->next = output->next;
+        if (mOutputTail == output) {
+            mOutputTail = p;
+        }
+    } else {
+        // remove this output from head of the list
+        mOutputHead = mOutputHead->next;
+        if (mOutputHead == NULL) {
+            mOutputTail = NULL;
+        }
+    }
+    //VTRACE("Output POC %d for display (pts = %.2f)", output->pictureOrder, output->renderBuffer.timeStamp/1E6);
+    return &(output->renderBuffer);
+}
+
+VideoSurfaceBuffer* VideoDecoderBase::findOutputByPts(bool draining) {
+    // output by presentation time stamp - buffer with the smallest time stamp is output
     VideoSurfaceBuffer *p = mOutputHead;
-    int32_t reference = 0;
-    int32_t count = 0;
+    VideoSurfaceBuffer *outputByPts = NULL;
     uint64_t pts = INVALID_PTS;
-    uint32_t poc = INVALID_POC;
     do {
         if ((uint64_t)(p->renderBuffer.timeStamp) <= pts) {
             // find buffer with the smallest PTS
             pts = p->renderBuffer.timeStamp;
             outputByPts = p;
         }
+        p = p->next;
+    } while (p != NULL);
 
-        if (mOutputMethod == OUTPUT_BY_PCT) {
-            if (p->referenceFrame) {
-                reference++;
-            } else if (output == NULL) {
-                // first non-reference frame
-                output = p;
-            }
+    return outputByPts;
+}
 
-            if (reference > 1 && output == NULL) {
-                // first reference frame
-                output = outputByPos;
-            }
-        } else if (mOutputMethod == OUTPUT_BY_POC) {
-            count++;
-            if (p->pictureOrder == 0) {
-                // any picture before this POC (new IDR) must be output
-                if (output == NULL) {
-                    output = p;
-                    mNextOutputPOC = 1;
-                } else {
-                    mNextOutputPOC = output->pictureOrder + 1;
-                }
+VideoSurfaceBuffer* VideoDecoderBase::findOutputByPct(bool draining) {
+    // output by picture coding type (PCT)
+    // if there is more than one reference frame, the first reference frame is ouput, otherwise,
+    // output non-reference frame if there is any.
+
+    VideoSurfaceBuffer *p = mOutputHead;
+    VideoSurfaceBuffer *outputByPct = NULL;
+    int32_t reference = 0;
+    do {
+        if (p->referenceFrame) {
+            reference++;
+            if (reference > 1) {
+                // mOutputHead must be a reference frame
+                outputByPct = mOutputHead;
                 break;
             }
-            if (p->pictureOrder < poc && p->pictureOrder >= mNextOutputPOC) {
-                // this POC meets ouput criteria.
-                poc = p->pictureOrder;
-                output = p;
-            }
-            if (poc == mNextOutputPOC || count == mOutputWindowSize) {
-                if (output != NULL) {
-                    // this indicates two cases:
-                    // 1) the next output POC is found.
-                    // 2) output queue is full and there is at least one buffer meeting the output criteria.
-                    mNextOutputPOC = output->pictureOrder + 1;
-                    break;
-                } else {
-                    // this indicates output queue is full and no buffer in the queue meets the output criteria
-                    // restart processing as queue is FULL and output criteria is changed. (next output POC is 0)
-                    mNextOutputPOC = 0;
-                    count = 0;
-                    reference = 0;
-                    poc = INVALID_POC;
-                    pts = INVALID_PTS;
-                    p = mOutputHead;
-                    continue;
-                }
-            }
-            if (p->next == NULL) {
-                output = NULL;
-            }
-
         } else {
-            ETRACE("Invalid output method.");
-            return NULL;
+            // first non-reference frame
+            outputByPct = p;
+            break;
+        }
+        p = p->next;
+    } while (p != NULL);
+
+    if (outputByPct == NULL && draining) {
+        outputByPct = mOutputHead;
+    }
+    return  outputByPct;
+}
+
+#if 0
+VideoSurfaceBuffer* VideoDecoderBase::findOutputByPoc(bool draining) {
+    // output by picture order count (POC)
+    // Output criteria:
+    // if there is IDR frame (POC == 0), all the frames before IDR must be output;
+    // Otherwise, if draining flag is set or list is full, frame with the least POC is output;
+    // Otherwise, NOTHING is output
+
+    int32_t dpbFullness = 0;
+    for (int32_t i = 0; i < mNumSurfaces; i++) {
+        // count num of reference frames
+        if (mSurfaceBuffers[i].asReferernce) {
+            dpbFullness++;
+        }
+    }
+
+    if (mAcquiredBuffer && mAcquiredBuffer->asReferernce) {
+        // frame is being decoded and is not ready for output yet
+        dpbFullness--;
+    }
+
+    VideoSurfaceBuffer *p = mOutputHead;
+    while (p != NULL) {
+        // count dpbFullness with non-reference frame in the output queue
+        if (p->asReferernce == false) {
+            dpbFullness++;
+        }
+        p = p->next;
+    }
+
+Retry:
+    p = mOutputHead;
+    VideoSurfaceBuffer *outputByPoc = NULL;
+    int32_t count = 0;
+    int32_t poc = MAXIMUM_POC;
+
+    do {
+        if (p->pictureOrder == 0) {
+            // output picture with the least POC before IDR
+            if (outputByPoc != NULL) {
+                mNextOutputPOC = outputByPoc->pictureOrder + 1;
+                return outputByPoc;
+            } else {
+                mNextOutputPOC = MINIMUM_POC;
+            }
+        }
+
+        // POC of  the output candidate must not be less than mNextOutputPOC
+        if (p->pictureOrder < mNextOutputPOC) {
+            break;
+        }
+
+        if (p->pictureOrder < poc) {
+            // update the least POC.
+            poc = p->pictureOrder;
+            outputByPoc = p;
+        }
+        count++;
+        p = p->next;
+    } while (p != NULL && count < mOutputWindowSize);
+
+    if (draining == false && dpbFullness < mOutputWindowSize) {
+        // list is not  full and we are not  in draining state
+        // if DPB is already full, one frame must be output
+        return NULL;
+    }
+
+    if (outputByPoc == NULL) {
+        mNextOutputPOC = MINIMUM_POC;
+        goto Retry;
+    }
+
+    // for debugging purpose
+    if (outputByPoc->pictureOrder != 0 && outputByPoc->pictureOrder < mNextOutputPOC) {
+        ETRACE("Output POC is not incremental, expected %d, actual %d", mNextOutputPOC, outputByPoc->pictureOrder);
+        //gaps_in_frame_num_value_allowed_flag is not currently supported
+    }
+
+    mNextOutputPOC = outputByPoc->pictureOrder + 1;
+
+    return outputByPoc;
+}
+#else
+VideoSurfaceBuffer* VideoDecoderBase::findOutputByPoc(bool draining) {
+    VideoSurfaceBuffer *output = NULL;
+    VideoSurfaceBuffer *p = mOutputHead;
+    int32_t count = 0;
+    int32_t poc = MAXIMUM_POC;
+    VideoSurfaceBuffer *outputleastpoc = mOutputHead;
+    do {
+        count++;
+        if (p->pictureOrder == 0) {
+            // any picture before this POC (new IDR) must be output
+            if (output == NULL) {
+                mNextOutputPOC = MINIMUM_POC;
+                // looking for any POC with negative value
+            } else {
+                mNextOutputPOC = output->pictureOrder + 1;
+                break;
+            }
+        }
+        if (p->pictureOrder < poc && p->pictureOrder >= mNextOutputPOC) {
+            // this POC meets ouput criteria.
+            poc = p->pictureOrder;
+            output = p;
+            outputleastpoc = p;
+        }
+        if (poc == mNextOutputPOC || count == OUTPUT_WINDOW_SIZE) {
+            if (output != NULL) {
+                // this indicates two cases:
+                // 1) the next output POC is found.
+                // 2) output queue is full and there is at least one buffer meeting the output criteria.
+                mNextOutputPOC = output->pictureOrder + 1;
+                break;
+            } else {
+                // this indicates output queue is full and no buffer in the queue meets the output criteria
+                // restart processing as queue is FULL and output criteria is changed. (next output POC is 0)
+                mNextOutputPOC = MINIMUM_POC;
+                count = 0;
+                poc = MAXIMUM_POC;
+                p = mOutputHead;
+                continue;
+            }
+        }
+        if (p->next == NULL) {
+            output = NULL;
         }
 
         p = p->next;
     } while (p != NULL);
 
-    if (output != NULL) {
-        if (output != outputByPts) {
-            // swap time stamp
-            uint64_t ts = output->renderBuffer.timeStamp;
-            output->renderBuffer.timeStamp = outputByPts->renderBuffer.timeStamp;
-            outputByPts->renderBuffer.timeStamp = ts;
-        }
-
-        if (output != outputByPos) {
-            // remove this output from middle or end of the list
-            p = outputByPos;
-            while (p->next != output) {
-                p = p->next;
-            }
-            p->next = output->next;
-            if (mOutputTail == output) {
-                mOutputTail = p;
-            }
-        } else {
-            // remove this output from head of the list
-            mOutputHead = mOutputHead->next;
-            if (mOutputHead == NULL) {
-                mOutputTail = NULL;
-            }
-        }
-
-        //VTRACE("Output POC %u for display (pts = %.2f)", output->pictureOrder, output->renderBuffer.timeStamp/1E6);
-        return &(output->renderBuffer);
+    if (draining == true && output == NULL) {
+        output = outputleastpoc;
     }
 
-    if (draining){
-        // output buffer in the head of list
-        mOutputHead = mOutputHead->next;
-        if (mOutputHead == NULL) {
-            mOutputTail = NULL;
-        }
-        return &(outputByPos->renderBuffer);
-    }
-
-    return NULL;
+    return output;
 }
-
+#endif
 
 Decode_Status VideoDecoderBase::acquireSurfaceBuffer(void) {
     if (mVAStarted == false) {
@@ -404,6 +503,7 @@ Decode_Status VideoDecoderBase::outputSurfaceBuffer(void) {
     }
     // frame is successfly decoded to the current surface,  it is ready for output
     mAcquiredBuffer->renderBuffer.renderDone = false;
+
     // decoder must set "asReference and referenceFrame" flags properly
 
     // update reference frames
@@ -432,7 +532,7 @@ Decode_Status VideoDecoderBase::outputSurfaceBuffer(void) {
     mOutputTail = mAcquiredBuffer;
     mOutputTail->next = NULL;
 
-    //VTRACE("Pushing POC %u to queue (pts = %.2f)", mAcquiredBuffer->pictureOrder, mAcquiredBuffer->renderBuffer.timeStamp/1E6);
+    //VTRACE("Pushing POC %d to queue (pts = %.2f)", mAcquiredBuffer->pictureOrder, mAcquiredBuffer->renderBuffer.timeStamp/1E6);
 
     mAcquiredBuffer = NULL;
     mSurfaceAcquirePos = (mSurfaceAcquirePos  + 1 ) % mNumSurfaces;

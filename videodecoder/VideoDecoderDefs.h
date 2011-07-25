@@ -110,7 +110,7 @@ struct VideoRenderBuffer {
 
 struct VideoSurfaceBuffer {
     VideoRenderBuffer renderBuffer;
-    uint32_t pictureOrder;  // picture order count, valid only for AVC format
+    int32_t pictureOrder;  // picture order count, valid only for AVC format
     bool referenceFrame;  // indicated whether frame associated with this surface is a reference I/P frame
     bool asReferernce; // indicated wheter frame is used as reference (as a result surface can not be used for decoding)
     VideoFrameRawData *mappedData;

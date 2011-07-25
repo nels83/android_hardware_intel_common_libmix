@@ -59,6 +59,9 @@ protected:
     // acquired surface  buffer is not used
     virtual Decode_Status releaseSurfaceBuffer(void);
     virtual Decode_Status endDecodingFrame(bool dropFrame);
+    virtual VideoSurfaceBuffer* findOutputByPoc(bool draining = false);
+    virtual VideoSurfaceBuffer* findOutputByPct(bool draining = false);
+    virtual VideoSurfaceBuffer* findOutputByPts(bool draining = false);
     virtual Decode_Status setupVA(int32_t numSurface, VAProfile profile);
     virtual Decode_Status terminateVA(void);
     virtual Decode_Status parseBuffer(uint8_t *buffer, int32_t size, bool config, void** vbpData);
@@ -106,7 +109,6 @@ protected:
      };
 
 private:
-    bool mFirstFrame;
     bool mLowDelay; // when true, decoded frame is immediately output for rendering
     bool mRawOutput; // whether to output NV12 raw data
     bool mManageReference;  // this should stay true for VC1/MP4 decoder, and stay false for AVC decoder. AVC  handles reference frame using DPB
@@ -120,7 +122,7 @@ private:
     VASurfaceID *mSurfaces; // surfaces array
     uint8_t **mSurfaceUserPtr; // mapped user space pointer
     int32_t mSurfaceAcquirePos; // position of surface to start acquiring
-    uint32_t mNextOutputPOC; // Picture order count of next output
+    int32_t mNextOutputPOC; // Picture order count of next output
     _vbp_parser_type mParserType;
     void *mParserHandle;
 
