@@ -17,9 +17,11 @@
 typedef unsigned int size_t;
 #define LOG(...)
 #else
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
+#ifndef VBP
 enum {
     NONE = 0,
     CRITICAL,
@@ -33,6 +35,7 @@ enum {
 #define LOG( log_lev, format, args ... ) \
       if (vc1_log_level >= log_lev) { OS_INFO("%s[%d]:: " format "\n", __FUNCTION__ , __LINE__ ,  ## args ); }
 #endif
+#endif
 
 #include "viddec_fw_workload.h"
 #include "vc1parse_common_defs.h"
@@ -42,10 +45,17 @@ enum {
 extern "C" {
 #endif
 
+#ifndef VBP
 #define LOG_CRIT(format, args ... )  LOG( CRITICAL, format, ## args)
 #define LOG_WARN(format, args ... )  LOG( WARNING,  format, ## args)
 #define LOG_INFO(format, args ... )  LOG( INFO,     format, ## args)
 #define LOG_DEBUG(format, args ... ) LOG( DEBUG,    format, ## args)
+#else
+#define LOG_CRIT(format, args ... )
+#define LOG_WARN(format, args ... )
+#define LOG_INFO(format, args ... )
+#define LOG_DEBUG(format, args ... )
+#endif
 
 // Seems to be hardware bug: DO NOT TRY TO SWAP BITPLANE0 and BITPLANE2
 // Block Control Register at offset 222C uses Bitplane_raw_ID0 to indicate directmb/fieldtx while

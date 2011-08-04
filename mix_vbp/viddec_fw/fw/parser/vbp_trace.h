@@ -26,20 +26,29 @@ extern void vbp_trace_util(const char* cat, const char* fun, int line, const cha
 #define VBP_TRACE_UTIL(cat, format, ...) \
 vbp_trace_util(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 
-#else
-
-#include <utils/Log.h>
-#define VBP_TRACE_UTIL(cat, format,  ...) \
-__android_log_print(ANDROID_LOG_VERBOSE, "mixvbp : "cat, "%s() : %d: "format, \
-__FUNCTION__, __LINE__, ##__VA_ARGS__)
-
-#endif
-
 
 #define ETRACE(format, ...) VBP_TRACE_UTIL("ERROR:   ",  format, ##__VA_ARGS__)
 #define WTRACE(format, ...) VBP_TRACE_UTIL("WARNING: ",  format, ##__VA_ARGS__)
 #define ITRACE(format, ...) VBP_TRACE_UTIL("INFO:    ",  format, ##__VA_ARGS__)
 #define VTRACE(format, ...) VBP_TRACE_UTIL("VERBOSE: ",  format, ##__VA_ARGS__)
+
+
+#else
+
+// For Android OS
+
+//#define LOG_NDEBUG 0
+
+#define LOG_TAG "MixVBP"
+
+#include <utils/Log.h>
+#define ETRACE(...) LOGE(__VA_ARGS__)
+#define WTRACE(...) LOGW(__VA_ARGS__)
+#define ITRACE(...) LOGI(__VA_ARGS__)
+#define VTRACE(...) LOGV(__VA_ARGS__)
+
+#endif
+
 
 #else /* if VBP_TRACE is not defined */
 

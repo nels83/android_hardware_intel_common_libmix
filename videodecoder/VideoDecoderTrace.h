@@ -42,19 +42,26 @@ extern void TraceVideoDecoder(const char* cat, const char* fun, int line, const 
 #define VIDEO_DECODER_TRACE(cat, format, ...) \
 TraceVideoDecoder(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 
-#else
-
-#include <utils/Log.h>
-#define VIDEO_DECODER_TRACE(cat, format,  ...) \
-__android_log_print(ANDROID_LOG_VERBOSE, "VideoDecoder : "cat,format, ##__VA_ARGS__)
-
-#endif
-
-
 #define ETRACE(format, ...) VIDEO_DECODER_TRACE("ERROR:   ",  format, ##__VA_ARGS__)
 #define WTRACE(format, ...) VIDEO_DECODER_TRACE("WARNING: ",  format, ##__VA_ARGS__)
 #define ITRACE(format, ...) VIDEO_DECODER_TRACE("INFO:    ",  format, ##__VA_ARGS__)
 #define VTRACE(format, ...) VIDEO_DECODER_TRACE("VERBOSE: ",  format, ##__VA_ARGS__)
+
+#else
+// for Android OS
+
+//#define LOG_NDEBUG 0
+
+#define LOG_TAG "VideoDecoder"
+
+#include <utils/Log.h>
+#define ETRACE(...) LOGE(__VA_ARGS__)
+#define WTRACE(...) LOGW(__VA_ARGS__)
+#define ITRACE(...) LOGI(__VA_ARGS__)
+#define VTRACE(...) LOGV(__VA_ARGS__)
+
+#endif
+
 
 #else
 
