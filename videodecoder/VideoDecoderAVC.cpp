@@ -584,6 +584,10 @@ Decode_Status VideoDecoderAVC::startVA(vbp_data_h264 *data) {
             vaProfile = VAProfileH264ConstrainedBaseline;
         }
     }
+   // for 1080p, limit the total surface to 19, according the hardware limitation
+    if(mVideoFormatInfo.height == 1088 && DPBSize + AVC_EXTRA_SURFACE_NUMBER > 19) {
+        DPBSize = 19 - AVC_EXTRA_SURFACE_NUMBER;
+    }
     VideoDecoderBase::setOutputWindowSize(DPBSize);
     return VideoDecoderBase::setupVA(DPBSize + AVC_EXTRA_SURFACE_NUMBER, vaProfile);
 }
