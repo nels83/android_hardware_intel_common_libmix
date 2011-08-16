@@ -157,7 +157,6 @@ void VideoDecoderBase::flush(void) {
     mOutputHead = NULL;
     mOutputTail = NULL;
     mDecodingFrame = false;
-    mSizeChanged = false;
 
     // initialize surface buffer without resetting mapped/raw data
     initSurfaceBuffer(false);
