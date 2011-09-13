@@ -869,8 +869,12 @@ Decode_Status VideoDecoderBase::getRawDataFromSurface(void) {
     } else {
         rawData = mAcquiredBuffer->renderBuffer.rawData;
     }
+
     // size in NV12 format
-    int32_t size = mVideoFormatInfo.width * mVideoFormatInfo.height * 3/2;
+    uint32_t cropWidth = mVideoFormatInfo.width - (mVideoFormatInfo.cropLeft + mVideoFormatInfo.cropRight);
+    uint32_t cropHeight = mVideoFormatInfo.height - (mVideoFormatInfo.cropBottom + mVideoFormatInfo.cropTop);
+    int32_t size = cropWidth  * cropHeight * 3 / 2;
+
     if (rawData->data != NULL && rawData->size != size) {
         delete [] rawData->data;
         rawData->data = NULL;
@@ -883,15 +887,15 @@ Decode_Status VideoDecoderBase::getRawDataFromSurface(void) {
         }
     }
     rawData->own = true; // allocated by this library
-    rawData->width = mVideoFormatInfo.width;
-    rawData->height = mVideoFormatInfo.height;
-    rawData->pitch[0] = mVideoFormatInfo.width;
-    rawData->pitch[1] = mVideoFormatInfo.width;
+    rawData->width = cropWidth;
+    rawData->height = cropHeight;
+    rawData->pitch[0] = cropWidth;
+    rawData->pitch[1] = cropWidth;
     rawData->pitch[2] = 0;  // interleaved U/V, two planes
     rawData->offset[0] = 0;
-    rawData->offset[1] = mVideoFormatInfo.width * mVideoFormatInfo.height;
-    rawData->offset[2] = mVideoFormatInfo.width * mVideoFormatInfo.height * 3/2;
-    rawData->size = size;;
+    rawData->offset[1] = cropWidth * cropHeight;
+    rawData->offset[2] = cropWidth * cropHeight * 3 / 2;
+    rawData->size = size;
     rawData->fourcc = 'NV12';
     if (size == (int32_t)vaImage.data_size) {
         memcpy(rawData->data, pBuf, size);
@@ -900,16 +904,16 @@ Decode_Status VideoDecoderBase::getRawDataFromSurface(void) {
         uint8_t *src = (uint8_t*)pBuf;
         uint8_t *dst = rawData->data;
         int32_t row = 0;
-        for (row = 0; row < mVideoFormatInfo.height; row++) {
-            memcpy(dst, src, mVideoFormatInfo.width);
-            dst += mVideoFormatInfo.width;
+        for (row = 0; row < cropHeight; row++) {
+            memcpy(dst, src, cropWidth);
+            dst += cropWidth;
             src += vaImage.pitches[0];
         }
         // copy interleaved V and  U data
         src = (uint8_t*)pBuf + vaImage.offsets[1];
-        for (row = 0; row < mVideoFormatInfo.height/2; row++) {
-            memcpy(dst, src, mVideoFormatInfo.width);
-            dst += mVideoFormatInfo.width;
+        for (row = 0; row < cropHeight / 2; row++) {
+            memcpy(dst, src, cropWidth);
+            dst += cropWidth;
             src += vaImage.pitches[1];
         }
     }
