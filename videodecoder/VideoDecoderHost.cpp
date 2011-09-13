@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009-2011 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -25,6 +25,7 @@
 #include "VideoDecoderWMV.h"
 #include "VideoDecoderMPEG4.h"
 #include "VideoDecoderAVC.h"
+#include "VideoDecoderPAVC.h"
 #include "VideoDecoderHost.h"
 #include "VideoDecoderTrace.h"
 #include <string.h>
@@ -48,6 +49,9 @@ IVideoDecoder* createVideoDecoder(const char* mimeType) {
                strcasecmp(mimeType, "video/h263") == 0 ||
                strcasecmp(mimeType, "video/3gpp") == 0) {
         VideoDecoderMPEG4 *p = new VideoDecoderMPEG4(mimeType);
+        return (IVideoDecoder *)p;
+    } else if (strcasecmp(mimeType, "video/pavc") == 0) {
+        VideoDecoderAVC *p = new VideoDecoderPAVC(mimeType);
         return (IVideoDecoder *)p;
     } else {
         ETRACE("Unknown mime type: %s", mimeType);

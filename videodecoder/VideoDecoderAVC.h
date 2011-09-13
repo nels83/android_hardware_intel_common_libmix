@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009-2011 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -38,11 +38,11 @@ public:
     virtual void flush(void);
     virtual Decode_Status decode(VideoDecodeBuffer *buffer);
 
-private:
+protected:
     Decode_Status decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h264 *data);
     Decode_Status beginDecodingFrame(vbp_data_h264 *data);
     Decode_Status continueDecodingFrame(vbp_data_h264 *data);
-    Decode_Status decodeSlice(vbp_data_h264 *data, uint32_t picIndex, uint32_t sliceIndex);
+    virtual Decode_Status decodeSlice(vbp_data_h264 *data, uint32_t picIndex, uint32_t sliceIndex);
     Decode_Status setReference(VASliceParameterBufferH264 *sliceParam);
     Decode_Status updateDPB(VAPictureParameterBufferH264 *picParam);
     Decode_Status updateReferenceFrames(vbp_picture_data_h264 *picData);

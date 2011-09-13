@@ -9,6 +9,7 @@ LOCAL_SRC_FILES := \
     VideoDecoderMPEG4.cpp \
     VideoDecoderAVC.cpp \
     VideoDecoderVP8.cpp \
+    VideoDecoderPAVC.cpp \
     VideoDecoderTrace.cpp
 
 # LOCAL_CFLAGS :=

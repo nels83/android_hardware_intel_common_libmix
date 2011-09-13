@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009-2011 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -655,11 +655,17 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         return DECODE_MEMORY_FAIL;
     }
 
+    int32_t format = VA_RT_FORMAT_YUV420;
+    if (mConfigBuffer.flag & WANT_SURFACE_PROTECTION) {
+        format |= VA_RT_FORMAT_PROTECTED;
+        LOGW("Surface is protected.");
+    }
+
     vaStatus = vaCreateSurfaces(
             mVADisplay,
             mVideoFormatInfo.width,
             mVideoFormatInfo.height,
-            VA_RT_FORMAT_YUV420,
+            format,
             mNumSurfaces,
             mSurfaces);
     CHECK_VA_STATUS("vaCreateSurfaces");

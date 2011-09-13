@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009-2011 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -27,6 +27,7 @@
 
 #include <va/va.h>
 #include <stdint.h>
+
 
 // format specific data, for future extension.
 struct VideoFormatSpecificData {
@@ -74,6 +75,16 @@ typedef enum {
 
     // indicate surfaceNumber field is valid and it contains minimum surface number to allocate.
     HAS_MINIMUM_SURFACE_NUMBER = 0x100,
+
+    // indicates surface created will be protected
+    WANT_SURFACE_PROTECTION = 0x400,
+
+    // indicates if extra data is appended at end of buffer
+    HAS_EXTRADATA = 0x800,
+
+    // indicates if buffer contains codec data
+    HAS_CODECDATA = 0x1000,
+
 } VIDEO_BUFFER_FLAG;
 
 struct VideoDecodeBuffer {
