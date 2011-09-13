@@ -180,6 +180,8 @@ int AsfStreamParser::seek(
         return ASF_PARSER_FAILED;
     }
 
+    seekTime += mHeaderParser->getPreroll()*ASF_SCALE_MS_TO_100NANOSEC;  //add preroll start time
+
     return mSimpleIndexParser->seek(seekTime, nextSync, packetNumber, targetTime);
 }
 
