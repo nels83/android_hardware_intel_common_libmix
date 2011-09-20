@@ -337,8 +337,8 @@ static inline void vbp_set_VAPicture_h264(
             WTRACE("Reference picture structure is not frame for current frame picture!");
         }
         pic->flags = 0;
-        pic->TopFieldOrderCnt = store->frame.poc;
-        pic->BottomFieldOrderCnt = store->frame.poc;
+        pic->TopFieldOrderCnt = store->top_field.poc;
+        pic->BottomFieldOrderCnt = store->bottom_field.poc;
     }
     else
     {
@@ -546,8 +546,8 @@ static inline void vbp_set_reference_frames_h264(
             pic_parms->ReferenceFrames[frame_idx].flags = VA_PICTURE_H264_SHORT_TERM_REFERENCE;
             if (FRAME == parser->info.img.structure)
             {
-                pic_parms->ReferenceFrames[frame_idx].TopFieldOrderCnt = store->frame.poc;
-                pic_parms->ReferenceFrames[frame_idx].BottomFieldOrderCnt = store->frame.poc;
+                pic_parms->ReferenceFrames[frame_idx].TopFieldOrderCnt = store->top_field.poc;
+                pic_parms->ReferenceFrames[frame_idx].BottomFieldOrderCnt = store->bottom_field.poc;
             }
             else
             {
