@@ -317,8 +317,8 @@ mp4_Status_t mp4_Parse_VideoObject_svh(void *parent, viddec_mp4_parser_t *parser
             {
                 k = 4;
             }
-            svh->num_macroblocks_in_gob = (vol->video_object_layer_width/16)*k;
-            svh->num_gobs_in_vop = (vol->video_object_layer_height)/(16*k);
+	     svh->num_macroblocks_in_gob = (((vol->video_object_layer_width + 15) & ~15) /16)*k;
+            svh->num_gobs_in_vop = (((vol->video_object_layer_height + 15) & ~15)/(16*k));
             svh->num_rows_in_gob = k;
         }
         else
