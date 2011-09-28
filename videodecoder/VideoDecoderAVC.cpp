@@ -388,7 +388,7 @@ Decode_Status VideoDecoderAVC::updateDPB(VAPictureParameterBufferH264 *picParam)
     picParam->CurrPic.picture_id = mAcquiredBuffer->renderBuffer.surface;
 
     // build new DPB
-    for (int32_t i = 0; i < DPB_SIZE; i++, ref++) {
+    for (int32_t i = 0; i < MAX_REF_NUMBER; i++, ref++) {
         if (ref->flags & VA_PICTURE_H264_INVALID) {
             continue;
         }
