@@ -80,6 +80,7 @@ MIX_RESULT MixVideoFormat_H264::Initialize(
     enum _vbp_parser_type ptype = VBP_H264;
     vbp_data_h264 *data = NULL;
     MixIOVec *header = NULL;
+    missing_idr = true;
 
     MixVideoConfigParamsDecH264 *config_params_h264 = NULL;
     bool va_setup_flag = FALSE;
@@ -1228,6 +1229,7 @@ MIX_RESULT MixVideoFormat_H264::_decode_a_buffer(
 
     if (data->new_sps) {
         decode_params->new_sequence = data->new_sps;
+        missing_idr = true;
 
         ret = _handle_new_sequence(data);
         if (ret != MIX_RESULT_SUCCESS) {
@@ -1256,6 +1258,17 @@ MIX_RESULT MixVideoFormat_H264::_decode_a_buffer(
         LOG_V("slice is not available.\n");
         LOG_V("End\n");
         return ret;
+    }
+
+    // Check if first slice is IDR (5)
+    if (data->pic_data->slc_data->nal_unit_type == 5) {
+       missing_idr = false;
+       LOG_V("Received IDR.\n");
+    }
+    else if (missing_idr) {
+       LOG_V("Missing IDR.\n");
+       LOG_V("End\n");
+       return MIX_RESULT_MISSING_IDR;
     }
 
     uint64 last_ts = this->current_timestamp;

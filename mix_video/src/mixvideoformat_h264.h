@@ -72,6 +72,7 @@ public:
     //Can improve which frame is used for this at a later time
     MixVideoFrame  *last_decoded_frame;  //last surface decoded, to be used as reference frame when reference frames are missing
 #endif
+    bool missing_idr;
 };
 
 
