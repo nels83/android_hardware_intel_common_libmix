@@ -49,6 +49,12 @@ struct vbp_h264_parser_private_t
     /* indicate if stream is length prefixed */
     int length_prefix_verified;
 
+    /* active sequence parameter set id */
+    uint8 seq_parameter_set_id;
+
+    /* active picture parameter set id */
+    uint8 pic_parameter_set_id;
+
     H264_BS_PATTERN bitstream_pattern;
 };
 
@@ -266,6 +272,12 @@ uint32 vbp_allocate_query_data_h264(vbp_context *pcontext)
     parser_private->length_prefix_verified = 0;
 
     parser_private->bitstream_pattern = H264_BS_SC_PREFIXED;
+
+    /* range from 0 to 31 inclusive */
+    parser_private->seq_parameter_set_id = 0xff;
+
+    /* range from 0 to  255 inclusive */
+    parser_private->pic_parameter_set_id = 0xff;
     return VBP_OK;
 
 cleanup:
@@ -1154,33 +1166,8 @@ static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
     /* bit: bits parsed within the current parsing position */
     viddec_pm_get_au_pos(cxt, &bit, &byte, &is_emul);
 
+    slc_data->nal_unit_type = h264_parser->info.nal_unit_type;
 
-#if 0
-    /* add 4 bytes of start code prefix */
-    slc_parms->slice_data_size = slc_data->slice_size =
-                                     pcontext->parser_cxt->list.data[index].edpos -
-                                     pcontext->parser_cxt->list.data[index].stpos + 4;
-
-    slc_data->slice_offset = pcontext->parser_cxt->list.data[index].stpos - 4;
-
-    /* overwrite the "length" bytes to start code (0x00000001) */
-    *(slc_data->buffer_addr + slc_data->slice_offset) = 0;
-    *(slc_data->buffer_addr + slc_data->slice_offset + 1) = 0;
-    *(slc_data->buffer_addr + slc_data->slice_offset + 2) = 0;
-    *(slc_data->buffer_addr + slc_data->slice_offset + 3) = 1;
-
-
-    /* the offset to the NAL start code for this slice */
-    slc_parms->slice_data_offset = 0;
-
-    /* whole slice is in this buffer */
-    slc_parms->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
-
-    /* bit offset from NAL start code to the beginning of slice data */
-    /* slc_parms->slice_data_bit_offset = bit;*/
-    slc_parms->slice_data_bit_offset = (byte + 4)* 8 + bit;
-
-#else
     slc_parms->slice_data_size = slc_data->slice_size =
                                      pcontext->parser_cxt->list.data[index].edpos -
                                      pcontext->parser_cxt->list.data[index].stpos;
@@ -1194,7 +1181,7 @@ static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
 
     /* bit offset from NAL start code to the beginning of slice data */
     slc_parms->slice_data_bit_offset = bit + byte * 8;
-#endif
+
 
     if (is_emul)
     {
@@ -1483,16 +1470,6 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
     }
     query_data->num_pictures = 0;
 
-    if (query_data->new_sps && !query_data->has_pps)
-    {
-        // we are waiting for a new pps, so should net reset new_sps flag
-    }
-    else
-    {
-        query_data->new_sps = 0;
-    }
-    query_data->new_pps = 0;
-
     cxt->list.num_items = 0;
 
     /* reset start position of first item to 0 in case there is only one item */
@@ -1675,22 +1652,15 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
             error = vbp_add_slice_data_h264(pcontext, i);
         }
         break;
-
     case h264_NAL_UNIT_TYPE_SEI:
         //ITRACE("SEI header is parsed.");
         break;
 
     case h264_NAL_UNIT_TYPE_SPS:
-
-        query_data->new_sps = 1;
-        query_data->has_sps = 1;
-        query_data->has_pps = 0;
         ITRACE("SPS header is parsed.");
         break;
 
     case h264_NAL_UNIT_TYPE_PPS:
-        query_data->new_pps = 1;
-        query_data->has_pps = 1;
         ITRACE("PPS header is parsed.");
         break;
 
@@ -1703,7 +1673,7 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
         break;
 
     case h264_NAL_UNIT_TYPE_EOstream:
-        ITRACE("EOStream is parsed.");
+        ITRACE("EOStream is parsed");
         break;
 
     default:
@@ -1722,9 +1692,11 @@ uint32 vbp_populate_query_data_h264(vbp_context *pcontext)
 {
     vbp_data_h264 *query_data = NULL;
     struct h264_viddec_parser *parser = NULL;
+    struct vbp_h264_parser_private_t* private = NULL;
 
     parser = (struct h264_viddec_parser *)pcontext->parser_cxt->codec_data;
     query_data = (vbp_data_h264 *)pcontext->query_data;
+    private = (struct vbp_h264_parser_private_t *)pcontext->parser_private;
 
     vbp_set_codec_data_h264(parser, query_data->codec_data);
 
@@ -1748,6 +1720,21 @@ uint32 vbp_populate_query_data_h264(vbp_context *pcontext)
         */
         vbp_add_pic_data_h264(pcontext, 0);
     }
+
+    query_data->new_pps = 0;
+    query_data->new_sps = 0;
+    if (private->seq_parameter_set_id != 0xff)
+    {
+        query_data->new_pps = (private->pic_parameter_set_id != parser->info.active_PPS.pic_parameter_set_id) ? 1 : 0;
+        query_data->new_sps = (private->seq_parameter_set_id != parser->info.active_PPS.seq_parameter_set_id) ? 1 : 0;
+    }
+
+    private->pic_parameter_set_id = parser->info.active_PPS.pic_parameter_set_id;
+    private->seq_parameter_set_id = parser->info.active_PPS.seq_parameter_set_id;
+
+    query_data->has_sps = parser->info.active_SPS.seq_parameter_set_id != 0xff;
+    query_data->has_pps = parser->info.active_PPS.seq_parameter_set_id != 0xff;
+
     return VBP_OK;
 }
 

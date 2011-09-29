@@ -180,6 +180,8 @@ typedef struct _vbp_slice_data_h264
 
     uint32 slice_size; /* slice data size */
 
+    uint8 nal_unit_type;
+
     VASliceParameterBufferH264 slc_parms;
 
 } vbp_slice_data_h264;
