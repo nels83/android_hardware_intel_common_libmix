@@ -340,6 +340,7 @@ Encode_Status VideoEncoderBase::encode(VideoEncRawBuffer *inBuffer) {
 
     Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
+    uint8_t *buf = NULL;
 
     if (!mInitialized) {
         LOG_E("Encoder has not initialized yet\n");
@@ -389,6 +390,12 @@ Encode_Status VideoEncoderBase::encode(VideoEncRawBuffer *inBuffer) {
 
     mOutCodedBuffer = mLastCodedBuffer;
 
+    // Need map buffer before calling query surface below to get
+    // the right skip frame flag for current frame
+    // It is a requirement of video driver
+    vaStatus = vaMapBuffer (mVADisplay, mOutCodedBuffer, (void **)&buf);
+    vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
+
     if (!((mComParams.rcMode == VA_RC_NONE) || mFirstFrame)) {
         vaStatus = vaEndPicture(mVADisplay, mVAContext);
         CHECK_VA_STATUS_RETURN("vaEndPicture");
@@ -410,7 +417,7 @@ Encode_Status VideoEncoderBase::encode(VideoEncRawBuffer *inBuffer) {
 
     // Query the status of current surface
     VASurfaceStatus vaSurfaceStatus;
-    vaStatus = vaQuerySurfaceStatus(mVADisplay, mLastFrame->surface,  &vaSurfaceStatus);
+    vaStatus = vaQuerySurfaceStatus(mVADisplay, mCurFrame->surface,  &vaSurfaceStatus);
     CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
 
     mPicSkipped = vaSurfaceStatus & VASurfaceSkipped;
