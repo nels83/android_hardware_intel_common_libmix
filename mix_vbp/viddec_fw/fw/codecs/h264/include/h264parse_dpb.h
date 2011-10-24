@@ -46,7 +46,7 @@ extern "C" {
     extern void h264_dpb_mark_dangling_field(h264_DecodedPictureBuffer *p_dpb, int32_t fs_idc);
 
     extern void h264_dpb_update_queue_dangling_field(h264_Info * pInfo);
-    extern void h264_dpb_is_used_for_reference(int32_t * flag);
+    extern void h264_dpb_is_used_for_reference(h264_DecodedPictureBuffer * p_dpb, int32_t * flag);
 
 
     extern void h264_dpb_set_active_fs(h264_DecodedPictureBuffer * p_dpb,int32_t index);
@@ -76,8 +76,8 @@ extern "C" {
                                          int32_t frame_request,
                                          int32_t num_ref_frames);
 
-    extern void h264_dpb_split_field (h264_Info * pInfo);
-    extern void h264_dpb_combine_field(int32_t use_old);
+    extern void h264_dpb_split_field (h264_DecodedPictureBuffer *p_dpb, h264_Info * pInfo);
+    extern void h264_dpb_combine_field(h264_DecodedPictureBuffer *p_dpb, int32_t use_old);
 
     extern void h264_dpb_insert_picture_in_dpb(h264_Info * pInfo,
             int32_t used_for_reference,
@@ -98,8 +98,6 @@ extern "C" {
     extern void h264_dpb_frame_output(h264_Info * pInfo,int32_t fs_idc, int32_t direct, int32_t * existing);
 
 //////////////////////////////////////////////////////////// Globals
-    extern frame_store *active_fs;
-
 
 #ifdef __cplusplus
 }

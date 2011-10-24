@@ -411,6 +411,7 @@ extern "C" {
         int32_t		FrameHeightInMbs;
 
         frame_store	fs[NUM_DPB_FRAME_STORES];
+        frame_store*    active_fs;
 
         uint8_t		fs_ref_idc[16];
         uint8_t		fs_ltref_idc[16];
