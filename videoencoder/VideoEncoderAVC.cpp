@@ -506,7 +506,7 @@ Encode_Status VideoEncoderAVC::outputLengthPrefixed(VideoEncOutputBuffer *outBuf
             mTotalSizeCopied += 4;
 
             memcpy(outBuffer->data + sizeCopiedHere,
-                   (uint8_t *)mCurSegment->buf + mOffsetInSeg + nalOffset, sizeToBeCopied);
+                   (uint8_t *)mCurSegment->buf + mOffsetInSeg + nalOffset, nalSize);
 
             sizeCopiedHere += nalSize;
             mTotalSizeCopied += nalSize;
