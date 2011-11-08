@@ -31,8 +31,8 @@ Encode_Status VideoEncoderAVC::start() {
 
     if (mComParams.rcMode == VA_RC_VCM) {
         // If we are in VCM, we will set slice num to max value
-        mVideoParamsAVC.sliceNum.iSliceNum = (mComParams.resolution.height + 15) / 16;
-        mVideoParamsAVC.sliceNum.pSliceNum = mVideoParamsAVC.sliceNum.iSliceNum;
+        // mVideoParamsAVC.sliceNum.iSliceNum = (mComParams.resolution.height + 15) / 16;
+        // mVideoParamsAVC.sliceNum.pSliceNum = mVideoParamsAVC.sliceNum.iSliceNum;
     }
 
     ret = VideoEncoderBase::start ();
@@ -682,19 +682,22 @@ Encode_Status VideoEncoderAVC::renderAIR() {
 int VideoEncoderAVC::calcLevel(int numMbs) {
     int level = 30;
 
-    if (numMbs < 3600) {
+    if (numMbs < 1620) {
         level = 30;
-    } else if (numMbs < 5120) {
+    } else if (numMbs < 3600) {
         level = 31;
-    } else if (numMbs < 8192) {
+    } else if (numMbs < 5120) {
         level = 32;
+    } else if (numMbs < 8192) {
+        level = 41;
     } else if (numMbs < 8704) {
-        level = 40;
-    } else if (numMbs < 22080) {
         level = 42;
-    } else if (numMbs < 36864) {
+    } else if (numMbs < 22080) {
         level = 50;
+    } else if (numMbs < 36864) {
+        level = 51;
     } else {
+        LOG_W("No such level can support that resolution");
         level = 51;
     }
     return level;
