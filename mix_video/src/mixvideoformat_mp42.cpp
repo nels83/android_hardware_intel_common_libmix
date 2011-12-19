@@ -182,7 +182,8 @@ MIX_RESULT MixVideoFormat_MP42::_initialize_va(vbp_data_mp42 *data) {
                this->picture_height,
                VA_RT_FORMAT_YUV420,
                this->va_num_surfaces,
-               this->va_surfaces);
+               this->va_surfaces,
+               NULL, 0);
 
     if (vret != VA_STATUS_SUCCESS) {
         ret = MIX_RESULT_FAIL;

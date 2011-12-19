@@ -66,18 +66,27 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
       mOutputHead(NULL),
       mOutputTail(NULL),
       mSurfaces(NULL),
+      mVASurfaceAttrib(NULL),
+      mVAExternalMemoryBuffers(NULL),
       mSurfaceUserPtr(NULL),
       mSurfaceAcquirePos(0),
       mNextOutputPOC(MINIMUM_POC),
       mParserType(type),
-      mParserHandle(NULL) {
+      mParserHandle(NULL),
+      initialized(false),
+      mSignalBufferSize(0){
 
     memset(&mVideoFormatInfo, 0, sizeof(VideoFormatInfo));
     memset(&mConfigBuffer, 0, sizeof(mConfigBuffer));
+    for(int i =0 ; i < MAX_GRAPHIC_NUM ; i++) {
+         mSignalBufferPre[i] = NULL;
+    }
+    pthread_mutex_init(&mLock, NULL);
     mVideoFormatInfo.mimeType = strdup(mimeType);
 }
 
 VideoDecoderBase::~VideoDecoderBase() {
+    pthread_mutex_destroy(&mLock);
     stop();
     free(mVideoFormatInfo.mimeType);
 }
@@ -160,6 +169,7 @@ void VideoDecoderBase::flush(void) {
 
     // initialize surface buffer without resetting mapped/raw data
     initSurfaceBuffer(false);
+
 }
 
 const VideoFormatInfo* VideoDecoderBase::getFormatInfo(void) {
@@ -170,6 +180,7 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
     if (mVAStarted == false) {
         return NULL;
     }
+    bool useGraphicBuffer = mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER;
 
     if (draining) {
         // complete decoding the last frame and ignore return
@@ -187,6 +198,9 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
         mOutputHead = mOutputHead->next;
         if (mOutputHead == NULL) {
             mOutputTail = NULL;
+        }
+        if(useGraphicBuffer ) {
+            vaSyncSurface(mVADisplay,outputByPos->renderBuffer.surface);
         }
         return &(outputByPos->renderBuffer);
     }
@@ -231,6 +245,9 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
         if (mOutputHead == NULL) {
             mOutputTail = NULL;
         }
+    }
+    if(useGraphicBuffer ) {
+         vaSyncSurface(mVADisplay,output->renderBuffer.surface);
     }
     //VTRACE("Output POC %d for display (pts = %.2f)", output->pictureOrder, output->renderBuffer.timeStamp/1E6);
     return &(output->renderBuffer);
@@ -601,6 +618,9 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         return DECODE_SUCCESS;
     }
 
+    if(mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER){
+       numSurface = mConfigBuffer.surfaceNumber;
+    }
     // TODO: validate profile
     if (numSurface == 0) {
         return DECODE_FAIL;
@@ -660,14 +680,52 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         format |= VA_RT_FORMAT_PROTECTED;
         LOGW("Surface is protected.");
     }
-
-    vaStatus = vaCreateSurfaces(
+    if(mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER) {
+        mVASurfaceAttrib = new VASurfaceAttrib;
+        if (mVASurfaceAttrib == NULL) {
+            return DECODE_MEMORY_FAIL;
+        }
+        mVAExternalMemoryBuffers = new VAExternalMemoryBuffers;
+        if (mVAExternalMemoryBuffers == NULL) {
+            return DECODE_MEMORY_FAIL;
+        }
+        mVAExternalMemoryBuffers->buffers= (unsigned int *)malloc(sizeof(unsigned int)*mNumSurfaces);
+        if (mVAExternalMemoryBuffers->buffers == NULL) {
+            return DECODE_MEMORY_FAIL;
+        }
+        mVAExternalMemoryBuffers->count = mNumSurfaces;
+        mVAExternalMemoryBuffers->luma_stride= mConfigBuffer.graphicBufferStride;
+        mVAExternalMemoryBuffers->pixel_format = mConfigBuffer.graphicBufferColorFormat;
+        mVAExternalMemoryBuffers->width = mVideoFormatInfo.width;
+        mVAExternalMemoryBuffers->height = mVideoFormatInfo.height;
+        mVAExternalMemoryBuffers->type = VAExternalMemoryAndroidGrallocBuffer;
+        for(int i=0; i < mNumSurfaces; i++) {
+            mVAExternalMemoryBuffers->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
+        }
+        mVASurfaceAttrib->flags = VA_SURFACE_ATTRIB_SETTABLE;
+        mVASurfaceAttrib->type = VASurfaceAttribNativeHandle;
+        mVASurfaceAttrib->value.type =VAGenericValueTypePointer;
+        mVASurfaceAttrib->value.value.p_val= (void *)mVAExternalMemoryBuffers;
+        vaStatus = vaCreateSurfaces(
             mVADisplay,
             mVideoFormatInfo.width,
             mVideoFormatInfo.height,
             format,
             mNumSurfaces,
-            mSurfaces);
+            mSurfaces,
+            mVASurfaceAttrib,
+            1);
+    } else {
+        vaStatus = vaCreateSurfaces(
+            mVADisplay,
+            mVideoFormatInfo.width,
+            mVideoFormatInfo.height,
+            format,
+            mNumSurfaces,
+            mSurfaces,
+            NULL,
+            0);
+    }
     CHECK_VA_STATUS("vaCreateSurfaces");
 
     mVideoFormatInfo.surfaceWidth = mVideoFormatInfo.width;
@@ -721,6 +779,22 @@ Decode_Status VideoDecoderBase::terminateVA(void) {
         delete [] mSurfaceBuffers;
         mSurfaceBuffers = NULL;
     }
+
+
+    if(mVAExternalMemoryBuffers) {
+        if(mVAExternalMemoryBuffers->buffers) {
+            free(mVAExternalMemoryBuffers->buffers);
+            mVAExternalMemoryBuffers->buffers= NULL;
+        }
+        delete mVAExternalMemoryBuffers;
+        mVAExternalMemoryBuffers =  NULL;
+    }
+
+    if(mVASurfaceAttrib) {
+        delete mVASurfaceAttrib;
+        mVASurfaceAttrib = NULL;
+    }
+
 
     if (mSurfaceUserPtr) {
         delete [] mSurfaceUserPtr;
@@ -931,13 +1005,16 @@ Decode_Status VideoDecoderBase::getRawDataFromSurface(void) {
 }
 
 void VideoDecoderBase::initSurfaceBuffer(bool reset) {
+    bool useGraphicBuffer = mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER;
+    if(useGraphicBuffer && reset){
+        pthread_mutex_lock(&mLock);
+     }
     for (int32_t i = 0; i < mNumSurfaces; i++) {
         mSurfaceBuffers[i].renderBuffer.display = mVADisplay;
         mSurfaceBuffers[i].renderBuffer.surface = VA_INVALID_SURFACE;  // set in acquireSurfaceBuffer
         mSurfaceBuffers[i].renderBuffer.flag = 0;
         mSurfaceBuffers[i].renderBuffer.scanFormat = VA_FRAME_PICTURE;
         mSurfaceBuffers[i].renderBuffer.timeStamp = 0;
-        mSurfaceBuffers[i].renderBuffer.renderDone = true;
         mSurfaceBuffers[i].referenceFrame = false;
         mSurfaceBuffers[i].asReferernce= false;
         mSurfaceBuffers[i].pictureOrder = 0;
@@ -946,6 +1023,93 @@ void VideoDecoderBase::initSurfaceBuffer(bool reset) {
             mSurfaceBuffers[i].renderBuffer.rawData = NULL;
             mSurfaceBuffers[i].mappedData = NULL;
         }
+        if (useGraphicBuffer){
+            if(reset){
+               mSurfaceBuffers[i].renderBuffer.graphicBufferHandle = mConfigBuffer.graphicBufferHandler[i];
+               mSurfaceBuffers[i].renderBuffer.renderDone = false; //default false
+               for(int j =0; j < mSignalBufferSize; j++){
+                   if(mSignalBufferPre[j] != NULL && mSignalBufferPre[j] == mSurfaceBuffers[i].renderBuffer.graphicBufferHandle){
+                      mSurfaceBuffers[i].renderBuffer.renderDone = true;
+                      VTRACE("initSurfaceBuffer set renderDone = true index=%d",i);
+                      mSignalBufferPre[j] = NULL;
+                      break;
+                   }
+               }
+            }
+            else{
+               mSurfaceBuffers[i].renderBuffer.renderDone = false;
+            }
+
+        } else {
+            mSurfaceBuffers[i].renderBuffer.graphicBufferHandle= NULL;
+            mSurfaceBuffers[i].renderBuffer.renderDone = true;
+        }
+        mSurfaceBuffers[i].renderBuffer.acquirePos = i;
+    }
+
+    if(useGraphicBuffer && reset){
+        initialized = true;
+        mSignalBufferSize = 0;
+        pthread_mutex_unlock(&mLock);
     }
 }
 
+Decode_Status VideoDecoderBase::SignalRenderDoneFlag(void * graphichandler) {
+
+    if (graphichandler == NULL) {
+        return DECODE_SUCCESS;
+    }
+    pthread_mutex_lock(&mLock);
+    int i = 0;
+    if(!initialized){
+       mSignalBufferPre[mSignalBufferSize++] = graphichandler;
+       VTRACE("SignalRenderDoneFlag initialized = false graphichandler = %p, mSignalBufferSize=%d",graphichandler,mSignalBufferSize);
+       if(mSignalBufferSize > MAX_GRAPHIC_NUM)
+         return DECODE_INVALID_DATA;
+    }
+    else{
+        if (!(mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER)) {
+            return DECODE_SUCCESS;
+        }
+        for (i = 0; i < mNumSurfaces; i++) {
+           if (mSurfaceBuffers[i].renderBuffer.graphicBufferHandle== graphichandler) {
+               mSurfaceBuffers[i].renderBuffer.renderDone = true;
+               VTRACE("SignalRenderDoneFlag initialized = true index =%d",i);
+               break;
+           }
+        }
+    }
+    pthread_mutex_unlock(&mLock);
+
+    return DECODE_SUCCESS;
+
+}
+
+Decode_Status VideoDecoderBase::GetNativeBufferStatus(void * graphichandler, bool* used) {
+    bool inuse = false;
+    if(!initialized) {
+        *used == false;
+        return DECODE_NOT_STARTED;
+    }
+
+    for (int32_t i = 0; i < mNumSurfaces; i++) {
+        if (mSurfaceBuffers[i].renderBuffer.graphicBufferHandle == graphichandler) {
+            if (mSurfaceBuffers[i].asReferernce == true ||mSurfaceBuffers + i == mAcquiredBuffer ) {
+                    inuse = true;
+            }
+            break;
+        }
+    }
+    VideoSurfaceBuffer *p = mOutputHead;
+
+    while (p!=NULL) {
+        if(p ->renderBuffer.graphicBufferHandle == graphichandler) {
+            inuse = true;
+            break;
+        }
+        p = p->next;
+    }
+
+    *used = inuse;
+    return DECODE_SUCCESS;
+}

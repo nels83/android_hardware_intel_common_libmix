@@ -212,7 +212,7 @@ Encode_Status VideoEncoderBase::start() {
 
     vaStatus = vaCreateSurfaces(mVADisplay, mComParams.resolution.width,
             mComParams.resolution.height, VA_RT_FORMAT_YUV420,
-            normalSurfacesCnt, surfaces);
+            normalSurfacesCnt, surfaces, NULL , 0);
     CHECK_VA_STATUS_GOTO_CLEANUP("vaCreateSurfaces");
 
     switch (mBufferMode) {

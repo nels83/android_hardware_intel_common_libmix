@@ -363,7 +363,7 @@ MIX_RESULT MixVideoFormatEnc_Preview::Initialize(
     va_status = vaCreateSurfaces(
                     va_display, this->picture_width,
                     this->picture_height, this->va_format,
-                    normal_surfaces_cnt, surfaces);
+                    normal_surfaces_cnt, surfaces, NULL, 0 );
 
     if (va_status != VA_STATUS_SUCCESS) {
         LOG_E("Failed vaCreateSurfaces\n");

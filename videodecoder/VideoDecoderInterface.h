@@ -37,6 +37,9 @@ public:
     virtual Decode_Status decode(VideoDecodeBuffer *buffer) = 0;
     virtual const VideoRenderBuffer* getOutput(bool draining = false) = 0;
     virtual const VideoFormatInfo* getFormatInfo(void) = 0;
+    virtual Decode_Status SignalRenderDoneFlag(void * graphichandler) = 0;
+    virtual Decode_Status GetNativeBufferStatus(void * graphichandler, bool* used) = 0;
+
 };
 
 #endif /* VIDEO_DECODER_INTERFACE_H_ */

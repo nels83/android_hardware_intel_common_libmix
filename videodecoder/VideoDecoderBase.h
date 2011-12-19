@@ -28,6 +28,8 @@
 #include <va/va.h>
 #include "VideoDecoderDefs.h"
 #include "VideoDecoderInterface.h"
+#include <pthread.h>
+
 
 extern "C" {
 #include "vbp_loader.h"
@@ -48,6 +50,8 @@ public:
     //virtual Decode_Status decode(VideoDecodeBuffer *buffer);
     virtual void flush(void);
     virtual const VideoRenderBuffer* getOutput(bool draining = false);
+    virtual Decode_Status SignalRenderDoneFlag(void * graphichandler);
+    virtual Decode_Status GetNativeBufferStatus(void * graphichandler, bool* used);
     virtual const VideoFormatInfo* getFormatInfo(void);
 
 protected:
@@ -74,6 +78,10 @@ private:
     Decode_Status mapSurface(void);
     Decode_Status getRawDataFromSurface(void);
     void initSurfaceBuffer(bool reset);
+
+    bool initialized;
+    pthread_mutex_t mLock;
+
 
 protected:
     VideoFormatInfo mVideoFormatInfo;
@@ -120,11 +128,15 @@ private:
     VideoSurfaceBuffer *mOutputHead; // head of output buffer list
     VideoSurfaceBuffer *mOutputTail;  // tail of output buffer list
     VASurfaceID *mSurfaces; // surfaces array
+    VASurfaceAttrib *mVASurfaceAttrib;
+    VAExternalMemoryBuffers *mVAExternalMemoryBuffers;
     uint8_t **mSurfaceUserPtr; // mapped user space pointer
     int32_t mSurfaceAcquirePos; // position of surface to start acquiring
     int32_t mNextOutputPOC; // Picture order count of next output
     _vbp_parser_type mParserType;
     void *mParserHandle;
+    void *mSignalBufferPre[MAX_GRAPHIC_NUM];
+    uint32 mSignalBufferSize;
 
 protected:
     void ManageReference(bool enable) {mManageReference = enable;}

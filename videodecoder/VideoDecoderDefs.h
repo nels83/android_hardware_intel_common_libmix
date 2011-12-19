@@ -85,6 +85,9 @@ typedef enum {
     // indicates if buffer contains codec data
     HAS_CODECDATA = 0x1000,
 
+    // indicate if it use graphic buffer.
+    USE_NATIVE_GRAPHIC_BUFFER = 0x2000,
+
 } VIDEO_BUFFER_FLAG;
 
 struct VideoDecodeBuffer {
@@ -96,6 +99,8 @@ struct VideoDecodeBuffer {
 };
 
 
+#define MAX_GRAPHIC_NUM 16+1+6 // max DPB +1+AVC_EXTRA_NUM
+
 struct VideoConfigBuffer {
     uint8_t *data;
     int32_t size;
@@ -104,6 +109,9 @@ struct VideoConfigBuffer {
     int32_t surfaceNumber;
     VAProfile profile;
     uint32_t flag;
+    void *graphicBufferHandler[ MAX_GRAPHIC_NUM ];
+    uint32_t graphicBufferStride;
+    uint32_t graphicBufferColorFormat;
     VideoFormatSpecificData *ext;
 };
 
@@ -114,6 +122,8 @@ struct VideoRenderBuffer {
     int64_t timeStamp;  // presentation time stamp
     mutable volatile bool renderDone;  // indicated whether frame is rendered, this must be set to false by the client of this library once
                                         // surface is rendered. Not setting this flag will lead to DECODE_NO_SURFACE error.
+    void * graphicBufferHandle;
+    int32_t acquirePos;  //the acquirepos in graphichandle array
     uint32_t flag;
     VideoFrameRawData *rawData;
 };
