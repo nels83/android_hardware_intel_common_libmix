@@ -568,6 +568,19 @@ Decode_Status VideoDecoderBase::releaseSurfaceBuffer(void) {
     return DECODE_SUCCESS;
 }
 
+void VideoDecoderBase::flushSurfaceBuffers(void) {
+    endDecodingFrame(true);
+    VideoSurfaceBuffer *p = NULL;
+    while (mOutputHead) {
+        mOutputHead->renderBuffer.renderDone = true;
+        p = mOutputHead;
+        mOutputHead = mOutputHead->next;
+        p->next = NULL;
+    }
+    mOutputHead = NULL;
+    mOutputTail = NULL;
+}
+
 Decode_Status VideoDecoderBase::endDecodingFrame(bool dropFrame) {
     Decode_Status status = DECODE_SUCCESS;
     VAStatus vaStatus;
@@ -731,6 +744,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
     mVideoFormatInfo.surfaceWidth = mVideoFormatInfo.width;
     mVideoFormatInfo.surfaceHeight = mVideoFormatInfo.height;
     mVideoFormatInfo.surfaceNumber = mNumSurfaces;
+    mVideoFormatInfo.ctxSurfaces = mSurfaces;
 
     if ((int32_t)profile != VAProfileSoftwareDecoding) {
         vaStatus = vaCreateContext(

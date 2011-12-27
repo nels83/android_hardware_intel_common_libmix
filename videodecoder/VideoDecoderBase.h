@@ -62,6 +62,8 @@ protected:
     virtual Decode_Status outputSurfaceBuffer(void);
     // acquired surface  buffer is not used
     virtual Decode_Status releaseSurfaceBuffer(void);
+    // flush all decoded but not rendered buffers
+    virtual void flushSurfaceBuffers(void);
     virtual Decode_Status endDecodingFrame(bool dropFrame);
     virtual VideoSurfaceBuffer* findOutputByPoc(bool draining = false);
     virtual VideoSurfaceBuffer* findOutputByPct(bool draining = false);

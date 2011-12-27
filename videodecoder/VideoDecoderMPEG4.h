@@ -64,6 +64,7 @@ private:
     bool mExpectingNVOP; // indicate if future n-vop is a placeholder of a packed frame
     bool mSendIQMatrixBuf; // indicate if iq_matrix_buffer is sent to driver
     int32_t mLastVOPCodingType;
+    bool mIsSyncFrame; // indicate if it is SyncFrame in container
 };
 
 

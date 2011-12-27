@@ -136,7 +136,7 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
                 (pic.flags & VA_PICTURE_H264_LONG_TERM_REFERENCE));
     }
 #endif
-    if (data->new_sps) {
+    if (data->new_sps || data->new_pps) {
         status = handleNewSequence(data);
         CHECK_STATUS("handleNewSequence");
     }
@@ -144,7 +144,9 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
     // first pic_data always exists, check if any slice is parsed
     if (data->pic_data[0].num_slices == 0) {
         ITRACE("No slice available for decoding.");
-        return DECODE_SUCCESS;
+        status = mSizeChanged ? DECODE_FORMAT_CHANGE : DECODE_SUCCESS;
+        mSizeChanged = false;
+        return status;
     }
 
     uint64_t lastPTS = mCurrentPTS;
@@ -674,7 +676,7 @@ Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
     } else {
         WTRACE("Video size changed from %d x %d to %d x %d.", width, height,
                 mVideoFormatInfo.width, mVideoFormatInfo.height);
-        flush();
+        flushSurfaceBuffers();
     }
     return DECODE_SUCCESS;
 }

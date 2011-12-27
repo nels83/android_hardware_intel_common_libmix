@@ -73,6 +73,11 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
     if (buffer == NULL) {
         return DECODE_INVALID_DATA;
     }
+    if (buffer->flag & IS_SYNC_FRAME) {
+        mIsSyncFrame = true;
+    } else {
+        mIsSyncFrame = false;
+    }
     status =  VideoDecoderBase::parseBuffer(
             buffer->data,
             buffer->size,
@@ -209,7 +214,7 @@ Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data) {
                 return DECODE_NO_REFERENCE;
             }
         } else if (codingType == MP4_VOP_TYPE_P || codingType == MP4_VOP_TYPE_S) {
-            if (mLastReference == NULL) {
+            if (mLastReference == NULL&& mIsSyncFrame == false) {
                 return DECODE_NO_REFERENCE;
             }
         }
@@ -412,10 +417,14 @@ Decode_Status VideoDecoderMPEG4::setReference(VAPictureParameterBufferMPEG4 *pic
             picParam->backward_reference_picture = VA_INVALID_SURFACE;
             break;
         case MP4_VOP_TYPE_P:
-            if (mLastReference == NULL) {
+            if (mLastReference == NULL&& mIsSyncFrame == false) {
                 return DECODE_NO_REFERENCE;
             }
-            picParam->forward_reference_picture = mLastReference->renderBuffer.surface;
+            if (mLastReference != NULL) {
+                picParam->forward_reference_picture = mLastReference->renderBuffer.surface;
+            } else {
+                picParam->forward_reference_picture = VA_INVALID_SURFACE;
+            }
             picParam->backward_reference_picture = VA_INVALID_SURFACE;
             break;
         case MP4_VOP_TYPE_B:

@@ -88,6 +88,9 @@ typedef enum {
     // indicate if it use graphic buffer.
     USE_NATIVE_GRAPHIC_BUFFER = 0x2000,
 
+    // indicate whether it is a sync frame in container
+    IS_SYNC_FRAME = 0x4000,
+
 } VIDEO_BUFFER_FLAG;
 
 struct VideoDecodeBuffer {
@@ -146,6 +149,7 @@ struct VideoFormatInfo {
     int32_t surfaceWidth;
     int32_t surfaceHeight;
     int32_t surfaceNumber;
+    VASurfaceID *ctxSurfaces;
     int32_t aspectX;
     int32_t aspectY;
     int32_t cropLeft;
