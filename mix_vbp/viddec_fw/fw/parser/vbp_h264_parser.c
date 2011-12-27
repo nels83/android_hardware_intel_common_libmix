@@ -49,12 +49,6 @@ struct vbp_h264_parser_private_t
     /* indicate if stream is length prefixed */
     int length_prefix_verified;
 
-    /* active sequence parameter set id */
-    uint8 seq_parameter_set_id;
-
-    /* active picture parameter set id */
-    uint8 pic_parameter_set_id;
-
     H264_BS_PATTERN bitstream_pattern;
 };
 
@@ -273,11 +267,6 @@ uint32 vbp_allocate_query_data_h264(vbp_context *pcontext)
 
     parser_private->bitstream_pattern = H264_BS_SC_PREFIXED;
 
-    /* range from 0 to 31 inclusive */
-    parser_private->seq_parameter_set_id = 0xff;
-
-    /* range from 0 to  255 inclusive */
-    parser_private->pic_parameter_set_id = 0xff;
     return VBP_OK;
 
 cleanup:
@@ -832,8 +821,16 @@ static inline void vbp_set_scaling_list_h264(
 
 static void vbp_set_codec_data_h264(
     struct h264_viddec_parser *parser,
-    vbp_codec_data_h264* codec_data)
+     vbp_data_h264 *query_data)
 {
+    vbp_codec_data_h264* codec_data = query_data->codec_data;
+
+    /* The following variables are used to detect if there is new SPS or PPS */
+    uint8 seq_parameter_set_id = codec_data->seq_parameter_set_id;
+    uint8 pic_parameter_set_id = codec_data->pic_parameter_set_id;
+    int frame_width = codec_data->frame_width;
+    int frame_height = codec_data->frame_height;
+
     /* parameter id */
     codec_data->seq_parameter_set_id = parser->info.active_SPS.seq_parameter_set_id;
     codec_data->pic_parameter_set_id = parser->info.active_PPS.pic_parameter_set_id;
@@ -878,7 +875,7 @@ static void vbp_set_codec_data_h264(
     codec_data->crop_top = 0;
     codec_data->crop_bottom = 0;
     if(parser->info.active_SPS.sps_disp.frame_cropping_flag) {
-        int CropUnitX = 0,	CropUnitY = 0, SubWidthC = 0, SubHeightC = 0;
+        int CropUnitX = 0, CropUnitY = 0, SubWidthC = 0, SubHeightC = 0;
         int ChromaArrayType = 0;
         if(parser->info.active_SPS.sps_disp.separate_colour_plane_flag == 0) {
             if(parser->info.active_SPS.sps_disp.chroma_format_idc == 1) {
@@ -903,7 +900,7 @@ static void vbp_set_codec_data_h264(
         }
 
         codec_data->crop_left = CropUnitX * parser->info.active_SPS.sps_disp.frame_crop_rect_left_offset;
-        codec_data->crop_right = CropUnitX * parser->info.active_SPS.sps_disp.frame_crop_rect_right_offset; //	+ 1;
+        codec_data->crop_right = CropUnitX * parser->info.active_SPS.sps_disp.frame_crop_rect_right_offset; // + 1;
         codec_data->crop_top = CropUnitY * parser->info.active_SPS.sps_disp.frame_crop_rect_top_offset;
         codec_data->crop_bottom = CropUnitY * parser->info.active_SPS.sps_disp.frame_crop_rect_bottom_offset; // + 1;
     }
@@ -974,6 +971,17 @@ static void vbp_set_codec_data_h264(
     codec_data->log2_max_pic_order_cnt_lsb_minus4 = parser->info.active_SPS.log2_max_pic_order_cnt_lsb_minus4;
     codec_data->pic_order_cnt_type = parser->info.active_SPS.pic_order_cnt_type;
 
+
+    /* udpate sps and pps status */
+    query_data->new_sps = (seq_parameter_set_id != parser->info.active_PPS.seq_parameter_set_id) ? 1 : 0;
+    query_data->new_pps = (pic_parameter_set_id != parser->info.active_PPS.pic_parameter_set_id) ? 1 : 0;
+    query_data->has_sps = parser->info.active_SPS.seq_parameter_set_id != 0xff;
+    query_data->has_pps = parser->info.active_PPS.seq_parameter_set_id != 0xff;
+    if ( frame_width != codec_data->frame_width || frame_height != codec_data->frame_height)
+    {
+        query_data->new_sps = 1;
+        query_data->new_pps = 1;
+    }
 }
 
 
@@ -1698,7 +1706,7 @@ uint32 vbp_populate_query_data_h264(vbp_context *pcontext)
     query_data = (vbp_data_h264 *)pcontext->query_data;
     private = (struct vbp_h264_parser_private_t *)pcontext->parser_private;
 
-    vbp_set_codec_data_h264(parser, query_data->codec_data);
+    vbp_set_codec_data_h264(parser, query_data);
 
     /* buffer number */
     query_data->buf_number = buffer_counter;
@@ -1720,20 +1728,6 @@ uint32 vbp_populate_query_data_h264(vbp_context *pcontext)
         */
         vbp_add_pic_data_h264(pcontext, 0);
     }
-
-    query_data->new_pps = 0;
-    query_data->new_sps = 0;
-    if (private->seq_parameter_set_id != 0xff)
-    {
-        query_data->new_pps = (private->pic_parameter_set_id != parser->info.active_PPS.pic_parameter_set_id) ? 1 : 0;
-        query_data->new_sps = (private->seq_parameter_set_id != parser->info.active_PPS.seq_parameter_set_id) ? 1 : 0;
-    }
-
-    private->pic_parameter_set_id = parser->info.active_PPS.pic_parameter_set_id;
-    private->seq_parameter_set_id = parser->info.active_PPS.seq_parameter_set_id;
-
-    query_data->has_sps = parser->info.active_SPS.seq_parameter_set_id != 0xff;
-    query_data->has_pps = parser->info.active_PPS.seq_parameter_set_id != 0xff;
 
     return VBP_OK;
 }
