@@ -198,13 +198,7 @@ Encode_Status VideoEncoderAVC::getOutput(VideoEncOutputBuffer *outBuffer) {
     LOG_V("Begin\n");
     CHECK_NULL_RETURN_IFFAIL(outBuffer);
 
-    if (mFrameNum > 2) {
-        if (idrPeroid != 0 && (((mFrameNum - 2) % idrPeroid) == 0)) {
-            mKeyFrame = true;
-        } else {
-            mKeyFrame = false;
-        }
-    }
+    setKeyFrame(idrPeroid);
 
     // prepare for output, map the coded buffer
     ret = VideoEncoderBase::prepareForOutput(outBuffer, &useLocalBuffer);
@@ -279,11 +273,14 @@ CLEAN_UP:
 
 Encode_Status VideoEncoderAVC::getOneNALUnit(
         uint8_t *inBuffer, uint32_t bufSize, uint32_t *nalSize,
-        uint32_t *nalType, uint32_t *nalOffset) {
+        uint32_t *nalType, uint32_t *nalOffset, uint32_t status) {
     uint32_t pos = 0;
     uint32_t zeroByteCount = 0;
     uint32_t prefixLength = 0;
     uint32_t leadingZeroCnt = 0;
+    uint32_t singleByteTable[3][2] = {{1,0},{2,0},{2,3}};
+    uint32_t dataRemaining = 0;
+    uint8_t *dataPtr;
 
     // Don't need to check parameters here as we just checked by caller
     while ((inBuffer[pos++] == 0x00)) {
@@ -303,39 +300,75 @@ Encode_Status VideoEncoderAVC::getOneNALUnit(
     zeroByteCount = 0;
     *nalOffset = pos;
 
-    while (pos < bufSize) {
-
-        while (inBuffer[pos++] == 0) {
-            zeroByteCount ++;
-            if (pos >= bufSize) //to make sure the buffer to be accessed is valid
-                break;
-        }
-
-        if (inBuffer[pos - 1] == 0x01 && zeroByteCount >= 2) {
-            if (zeroByteCount == 2) {
-                prefixLength = 3;
-            } else {
-                prefixLength = 4;
-                leadingZeroCnt = zeroByteCount - 3;
-            }
-
-            LOG_V("leading_zero_count = %d\n", leadingZeroCnt);
-            *nalSize = pos - *nalOffset - prefixLength - leadingZeroCnt;
-            break;
-        } else if (pos == bufSize) {
-            LOG_V ("The last NALU\n");
-            *nalSize = pos - *nalOffset;
-        } else {
-            zeroByteCount = 0;
-            leadingZeroCnt = 0;
-        }
+    if (status & VA_CODED_BUF_STATUS_AVC_SINGLE_NALU) {
+        *nalSize = bufSize - pos;
+        return ENCODE_SUCCESS;
     }
 
+    dataPtr  = inBuffer + pos;
+    dataRemaining = bufSize - pos + 1;
+
+    while ((dataRemaining > 0) && (zeroByteCount < 3)) {
+        if (((((uint32_t)dataPtr) & 0xF ) == 0) && (0 == zeroByteCount)
+               && (dataRemaining > 0xF)) {
+            __asm__(
+                //Data input
+                "movl %1, %%ecx\n\t"//data_ptr=>ecx
+                "movl %0, %%eax\n\t"//data_remaing=>eax
+                //Main compare loop
+                "MATCH_8_ZERO:\n\t"
+                "pxor %%xmm0,%%xmm0\n\t"//set 0=>xmm0
+                "pcmpeqb (%%ecx),%%xmm0\n\t"//data_ptr=xmm0,(byte==0)?0xFF:0x00
+                "pmovmskb %%xmm0, %%edx\n\t"//edx[0]=xmm0[7],edx[1]=xmm0[15],...,edx[15]=xmm0[127]
+                "test $0xAAAA, %%edx\n\t"//edx& 1010 1010 1010 1010b
+                "jnz DATA_RET\n\t"//Not equal to zero means that at least one byte 0x00
+
+                "PREPARE_NEXT_MATCH:\n\t"
+                "sub $0x10, %%eax\n\t"//16 + ecx --> ecx
+                "add $0x10, %%ecx\n\t"//eax-16 --> eax
+                "cmp $0x10, %%eax\n\t"
+                "jge MATCH_8_ZERO\n\t"//search next 16 bytes
+
+                "DATA_RET:\n\t"
+                "movl %%ecx, %1\n\t"//output ecx->data_ptr
+                "movl %%eax, %0\n\t"//output eax->data_remaining
+                : "+m"(dataRemaining), "+m"(dataPtr)
+                :
+                :"eax", "ecx", "edx", "xmm0"
+                );
+
+            if (0 >= dataRemaining) {
+                break;
+            }
+
+        }
+        //check the value of each byte
+        if ((*dataPtr) >= 2) {
+
+            zeroByteCount = 0;
+
+        }
+        else {
+            zeroByteCount = singleByteTable[zeroByteCount][*dataPtr];
+         }
+
+        dataPtr ++;
+        dataRemaining --;
+    }
+
+    if ((3 == zeroByteCount) && (dataRemaining > 0)) {
+
+        *nalSize =  bufSize - dataRemaining - *nalOffset - 3;
+
+    } else if (0 == dataRemaining) {
+
+        *nalSize = bufSize - *nalOffset;
+    }
     return ENCODE_SUCCESS;
 }
 
 Encode_Status VideoEncoderAVC::getHeader(
-        uint8_t *inBuffer, uint32_t bufSize, uint32_t *headerSize) {
+        uint8_t *inBuffer, uint32_t bufSize, uint32_t *headerSize, uint32_t status) {
 
     uint32_t nalType = 0;
     uint32_t nalSize = 0;
@@ -355,7 +388,7 @@ Encode_Status VideoEncoderAVC::getHeader(
 
     while (1) {
         nalType = nalSize = nalOffset = 0;
-        ret = getOneNALUnit(buf, bufSize, &nalSize, &nalType, &nalOffset);
+        ret = getOneNALUnit(buf, bufSize, &nalSize, &nalType, &nalOffset, status);
         CHECK_ENCODE_STATUS_RETURN("getOneNALUnit");
 
         LOG_I("NAL type = %d, NAL size = %d, offset = %d\n", nalType, nalSize, nalOffset);
@@ -382,7 +415,7 @@ Encode_Status VideoEncoderAVC::outputCodecData(
     uint32_t headerSize = 0;
 
     ret = getHeader((uint8_t *)mCurSegment->buf + mOffsetInSeg,
-            mCurSegment->size - mOffsetInSeg, &headerSize);
+            mCurSegment->size - mOffsetInSeg, &headerSize, mCurSegment->status);
     CHECK_ENCODE_STATUS_RETURN("getHeader");
     if (headerSize == 0) {
         outBuffer->dataSize = 0;
@@ -423,7 +456,7 @@ Encode_Status VideoEncoderAVC::outputOneNALU(
     CHECK_NULL_RETURN_IFFAIL(mCurSegment->buf);
 
     ret = getOneNALUnit((uint8_t *)mCurSegment->buf + mOffsetInSeg,
-            mCurSegment->size - mOffsetInSeg, &nalSize, &nalType, &nalOffset);
+            mCurSegment->size - mOffsetInSeg, &nalSize, &nalType, &nalOffset, mCurSegment->status);
     CHECK_ENCODE_STATUS_RETURN("getOneNALUnit");
 
     // check if we need startcode along with the payload
@@ -492,7 +525,7 @@ Encode_Status VideoEncoderAVC::outputLengthPrefixed(VideoEncOutputBuffer *outBuf
         // we need to handle the whole bitstream NAL by NAL
         ret = getOneNALUnit(
                 (uint8_t *)mCurSegment->buf + mOffsetInSeg,
-                mCurSegment->size - mOffsetInSeg, &nalSize, &nalType, &nalOffset);
+                mCurSegment->size - mOffsetInSeg, &nalSize, &nalType, &nalOffset, mCurSegment->status);
         CHECK_ENCODE_STATUS_RETURN("getOneNALUnit");
 
         if (nalSize + 4 <= outBuffer->bufferSize - sizeCopiedHere) {
@@ -549,6 +582,13 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(void) {
     LOG_V( "Begin\n");
 
     if (mFrameNum == 0 || mNewHeader) {
+
+        if (mRenderHrd) {
+            ret = renderHrd();
+            mRenderHrd = false;
+            CHECK_ENCODE_STATUS_RETURN("renderHrd");
+        }
+
         ret = renderSequenceParams();
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
         mNewHeader = false; //Set to require new header filed to false
@@ -730,6 +770,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     avcSeqParams.basic_unit_size = mVideoParamsAVC.basicUnitSize; //for rate control usage
     avcSeqParams.intra_period = mComParams.intraPeriod;
     //avcSeqParams.vui_flag = 248;
+    avcSeqParams.vui_flag = mVideoParamsAVC.VUIFlag;
     avcSeqParams.seq_parameter_set_id = 8;
 
     // This is a temporary fix suggested by Binglin for bad encoding quality issue

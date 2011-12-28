@@ -97,14 +97,7 @@ Encode_Status VideoEncoderMP4::getOutput(VideoEncOutputBuffer *outBuffer) {
     LOG_V("Begin\n");
     CHECK_NULL_RETURN_IFFAIL(outBuffer);
 
-    if (mFrameNum > 2) {
-        if (mComParams.intraPeriod != 0 &&
-                (((mFrameNum - 2) % mComParams.intraPeriod) == 0)) {
-            mKeyFrame = true;
-        } else {
-            mKeyFrame = false;
-        }
-    }
+     setKeyFrame(mComParams.intraPeriod);
 
     // prepare for output, map the coded buffer
     ret = VideoEncoderBase::prepareForOutput(outBuffer, &useLocalBuffer);

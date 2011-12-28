@@ -12,7 +12,6 @@
 #include <va/va.h>
 #include "VideoEncoderDef.h"
 #include "VideoEncoderInterface.h"
-
 class VideoEncoderBase : IVideoEncoder {
 
 public:
@@ -32,14 +31,12 @@ public:
     */
     virtual Encode_Status getOutput(VideoEncOutputBuffer *outBuffer);
 
-
     virtual Encode_Status getParameters(VideoParamConfigSet *videoEncParams);
     virtual Encode_Status setParameters(VideoParamConfigSet *videoEncParams);
     virtual Encode_Status setConfig(VideoParamConfigSet *videoEncConfig);
     virtual Encode_Status getConfig(VideoParamConfigSet *videoEncConfig);
 
     virtual Encode_Status getMaxOutSize(uint32_t *maxSize);
-
 
 protected:
     virtual Encode_Status sendEncodeCommand(void) = 0;
@@ -53,12 +50,17 @@ protected:
     Encode_Status outputAllData(VideoEncOutputBuffer *outBuffer);
     Encode_Status renderDynamicFrameRate();
     Encode_Status renderDynamicBitrate();
+    Encode_Status renderHrd();
+    void setKeyFrame(int32_t keyFramePeriod);
 
 private:
     void setDefaultParams(void);
-    Encode_Status setUpstreamBuffer(VideoBufferSharingMode bufferMode, uint32_t *bufList, uint32_t bufCnt);
+    Encode_Status setUpstreamBuffer(VideoBufferSharingMode bufferMode, uint32_t *bufList, uint32_t bufCnt, VADisplay display);
     Encode_Status getNewUsrptrFromSurface(uint32_t width, uint32_t height, uint32_t format,
             uint32_t expectedSize, uint32_t *outsize, uint32_t *stride, uint8_t **usrptr);
+    Encode_Status generateVideoBufferAndAttachToList(uint32_t index, uint8_t *usrptr);
+    Encode_Status surfaceMappingForSurfaceList();
+    Encode_Status surfaceMappingForCIFrameList();
 
     VideoEncSurfaceBuffer *appendVideoSurfaceBuffer(
             VideoEncSurfaceBuffer *head, VideoEncSurfaceBuffer *buffer);
@@ -71,11 +73,14 @@ private:
     void updateProperities(void);
     void decideFrameType(void);
     Encode_Status uploadDataToSurface(VideoEncRawBuffer *inBuffer);
+    Encode_Status syncEncode(VideoEncRawBuffer *inBuffer);
+    Encode_Status asyncEncode(VideoEncRawBuffer *inBuffer);
 
 protected:
 
     bool mInitialized;
     VADisplay mVADisplay;
+    VADisplay mVADecoderDisplay;
     VAContextID mVAContext;
     VAConfigID mVAConfig;
     VAEntrypoint mVAEntrypoint;
@@ -86,6 +91,7 @@ protected:
     uint32_t mTotalSizeCopied;
 
     VideoParamsCommon mComParams;
+    VideoParamsHRD mHrdParam;
 
     VideoBufferSharingMode mBufferMode;
     uint32_t *mUpstreamBufferList;
@@ -100,6 +106,7 @@ protected:
     bool mRenderAIR;
     bool mRenderFrameRate;
     bool mRenderBitRate;
+    bool mRenderHrd;
 
     VABufferID mVACodedBuffer[2];
     VABufferID mLastCodedBuffer;

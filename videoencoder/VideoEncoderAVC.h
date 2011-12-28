@@ -32,8 +32,8 @@ protected:
 private:
     // Local Methods
 
-    Encode_Status getOneNALUnit(uint8_t *inBuffer, uint32_t bufSize, uint32_t *nalSize, uint32_t *nalType, uint32_t *nalOffset);
-    Encode_Status getHeader(uint8_t *inBuffer, uint32_t bufSize, uint32_t *headerSize);
+    Encode_Status getOneNALUnit(uint8_t *inBuffer, uint32_t bufSize, uint32_t *nalSize, uint32_t *nalType, uint32_t *nalOffset, uint32_t status);
+    Encode_Status getHeader(uint8_t *inBuffer, uint32_t bufSize, uint32_t *headerSize, uint32_t status);
     Encode_Status outputCodecData(VideoEncOutputBuffer *outBuffer);
     Encode_Status outputOneNALU(VideoEncOutputBuffer *outBuffer, bool startCode);
     Encode_Status outputLengthPrefixed(VideoEncOutputBuffer *outBuffer);

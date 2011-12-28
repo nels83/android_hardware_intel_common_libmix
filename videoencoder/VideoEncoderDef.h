@@ -181,6 +181,8 @@ struct VideoRateControlParams {
     uint32_t minQP;
     uint32_t windowSize;
     uint32_t targetPercentage;
+    uint32_t disableFrameSkip;
+    uint32_t disableBitsStuffing;
 
     VideoRateControlParams &operator=(const VideoRateControlParams &other) {
         if (this == &other) return *this;
@@ -190,6 +192,8 @@ struct VideoRateControlParams {
         this->minQP = other.minQP;
         this->windowSize = other.windowSize;
         this->targetPercentage = other.targetPercentage;
+        this->disableFrameSkip = other.disableFrameSkip;
+        this->disableBitsStuffing = other.disableBitsStuffing;
         return *this;
     }
 };
@@ -216,6 +220,7 @@ enum VideoParamConfigType {
     VideoParamsTypeVC1,
     VideoParamsTypeUpSteamBuffer,
     VideoParamsTypeUsrptrBuffer,
+    VideoParamsTypeHRD,
 
     VideoConfigTypeFrameRate,
     VideoConfigTypeBitRate,
@@ -257,6 +262,7 @@ struct VideoParamsCommon : VideoParamConfigSet {
     int32_t cyclicFrameInterval;
     AirParams airParams;
     uint32_t disableDeblocking;
+    bool syncEncMode;
 
     VideoParamsCommon() {
         type = VideoParamsTypeCommon;
@@ -279,6 +285,7 @@ struct VideoParamsCommon : VideoParamConfigSet {
         this->cyclicFrameInterval = other.cyclicFrameInterval;
         this->airParams = other.airParams;
         this->disableDeblocking = other.disableDeblocking;
+        this->syncEncMode = other.syncEncMode;
         return *this;
     }
 };
@@ -321,6 +328,7 @@ struct VideoParamsUpstreamBuffer : VideoParamConfigSet {
     VideoBufferSharingMode bufferMode;
     uint32_t *bufList;
     uint32_t bufCnt;
+    void *display;
 };
 
 struct VideoParamsUsrptrBuffer : VideoParamConfigSet {
@@ -340,6 +348,17 @@ struct VideoParamsUsrptrBuffer : VideoParamConfigSet {
     uint32_t actualSize;
     uint32_t stride;
     uint8_t *usrPtr;
+};
+
+struct VideoParamsHRD : VideoParamConfigSet {
+
+    VideoParamsHRD() {
+        type = VideoParamsTypeHRD;
+        size = sizeof(VideoParamsHRD);
+    }
+
+    uint32_t bufferSize;
+    uint32_t initBufferFullness;
 };
 
 struct VideoConfigFrameRate : VideoParamConfigSet {

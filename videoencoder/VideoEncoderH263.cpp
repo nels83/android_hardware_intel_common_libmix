@@ -41,12 +41,15 @@ Encode_Status VideoEncoderH263::renderSequenceParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSequenceParameterBufferH263 h263SequenceParam;
+    uint32_t frameRateNum = mComParams.frameRate.frameRateNum;
+    uint32_t frameRateDenom = mComParams.frameRate.frameRateDenom;
 
     LOG_V( "Begin\n\n");
 
     //set up the sequence params for HW
     h263SequenceParam.bits_per_second= mComParams.rcParams.bitRate;
-    h263SequenceParam.frame_rate = 30; //hard-coded, driver need;
+    h263SequenceParam.frame_rate = 
+            (unsigned int) (frameRateNum + frameRateDenom /2) / frameRateDenom;   //hard-coded, driver need;
     h263SequenceParam.initial_qp = mComParams.rcParams.initQP;
     h263SequenceParam.min_qp = mComParams.rcParams.minQP;
     h263SequenceParam.intra_period = mComParams.intraPeriod;
