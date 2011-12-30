@@ -709,6 +709,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         mVAExternalMemoryBuffers->count = mNumSurfaces;
         mVAExternalMemoryBuffers->luma_stride= mConfigBuffer.graphicBufferStride;
         mVAExternalMemoryBuffers->pixel_format = mConfigBuffer.graphicBufferColorFormat;
+        mVAExternalMemoryBuffers->native_window = mConfigBuffer.nativeWindow;
         mVAExternalMemoryBuffers->width = mVideoFormatInfo.width;
         mVAExternalMemoryBuffers->height = mVideoFormatInfo.height;
         mVAExternalMemoryBuffers->type = VAExternalMemoryAndroidGrallocBuffer;
