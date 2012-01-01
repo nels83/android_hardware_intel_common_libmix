@@ -155,7 +155,7 @@ static inline int32_t viddec_pm_utils_getbytes(viddec_pm_utils_bstream_buf_cxt_t
     while (valid_bytes_read < num_bytes)
     {
         cur_byte = bstream->buf[bstream->buf_index + *act_bytes];
-        if ((cur_byte == 0x3) &&(*phase == 2))
+        if (emul_reqd && (cur_byte == 0x3) &&(*phase == 2))
         {/* skip emulation byte. we update the phase only if emulation prevention is enabled */
             *phase = 0;
         }

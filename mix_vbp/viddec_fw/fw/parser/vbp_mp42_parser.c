@@ -253,8 +253,8 @@ uint32 vbp_parse_start_code_mp42(vbp_context *pcontext)
     query_data->number_picture_data= 0;
     query_data->number_pictures = 0;
 
-    // emulation prevention byte is always present
-    cxt->getbits.is_emul_reqd = 1;
+    // emulation prevention byte is not needed
+    cxt->getbits.is_emul_reqd = 0;
 
     cxt->list.num_items = 0;
     cxt->list.data[0].stpos = 0;
