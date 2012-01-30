@@ -97,6 +97,7 @@ enum VideoBufferSharingMode {
     BUFFER_SHARING_V4L2 = 4,
     BUFFER_SHARING_SURFACE = 8,
     BUFFER_SHARING_USRPTR = 16,
+    BUFFER_SHARING_GFXHANDLE = 32,
     BUFFER_LAST
 };
 
@@ -210,6 +211,14 @@ struct SliceNum {
         return *this;
     }
 };
+
+typedef struct {
+    uint32_t width;
+    uint32_t height;
+    uint32_t lumaStride;
+    uint32_t chromStride;
+    uint32_t format;
+} ExternalBufferAttrib;
 
 enum VideoParamConfigType {
     VideoParamsTypeStartUnused = 0x01000000,
@@ -328,6 +337,7 @@ struct VideoParamsUpstreamBuffer : VideoParamConfigSet {
     VideoBufferSharingMode bufferMode;
     uint32_t *bufList;
     uint32_t bufCnt;
+    ExternalBufferAttrib *bufAttrib;
     void *display;
 };
 

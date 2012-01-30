@@ -55,11 +55,12 @@ protected:
 
 private:
     void setDefaultParams(void);
-    Encode_Status setUpstreamBuffer(VideoBufferSharingMode bufferMode, uint32_t *bufList, uint32_t bufCnt, VADisplay display);
+    Encode_Status setUpstreamBuffer(VideoParamsUpstreamBuffer *upStreamBuffer);
     Encode_Status getNewUsrptrFromSurface(uint32_t width, uint32_t height, uint32_t format,
             uint32_t expectedSize, uint32_t *outsize, uint32_t *stride, uint8_t **usrptr);
     Encode_Status generateVideoBufferAndAttachToList(uint32_t index, uint8_t *usrptr);
     Encode_Status surfaceMappingForSurfaceList();
+    Encode_Status surfaceMappingForGfxHandle();
     Encode_Status surfaceMappingForCIFrameList();
 
     VideoEncSurfaceBuffer *appendVideoSurfaceBuffer(
@@ -96,6 +97,7 @@ protected:
     VideoBufferSharingMode mBufferMode;
     uint32_t *mUpstreamBufferList;
     uint32_t mUpstreamBufferCnt;
+    ExternalBufferAttrib *mBufAttrib;
 
     bool mForceKeyFrame;
     bool mNewHeader;
