@@ -65,7 +65,7 @@ private:
     };
 
     enum {
-        AVC_EXTRA_SURFACE_NUMBER = 6,
+        AVC_EXTRA_SURFACE_NUMBER = 11,
         // maximum DPB (Decoded Picture Buffer) size
         MAX_REF_NUMBER = 16,
         DPB_SIZE = 17,         // DPB_SIZE = MAX_REF_NUMBER + 1,

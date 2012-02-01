@@ -102,7 +102,7 @@ struct VideoDecodeBuffer {
 };
 
 
-#define MAX_GRAPHIC_NUM 16+1+6 // max DPB +1+AVC_EXTRA_NUM
+#define MAX_GRAPHIC_NUM 16 + 1 + 11 // max DPB + 1 + AVC_EXTRA_NUM
 
 struct VideoConfigBuffer {
     uint8_t *data;
