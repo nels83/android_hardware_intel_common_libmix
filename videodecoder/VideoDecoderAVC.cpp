@@ -673,6 +673,7 @@ Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
     if (width == mVideoFormatInfo.width &&
         height == mVideoFormatInfo.height) {
         ITRACE("New video sequence with the same resolution.");
+        mSizeChanged = false;
     } else {
         WTRACE("Video size changed from %d x %d to %d x %d.", width, height,
                 mVideoFormatInfo.width, mVideoFormatInfo.height);
