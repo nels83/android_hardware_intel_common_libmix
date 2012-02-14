@@ -125,14 +125,14 @@ Decode_Status VideoDecoderMPEG4::decodeFrame(VideoDecodeBuffer *buffer, vbp_data
         CHECK_STATUS("endDecodingFrame");
 
         // start decoding a new frame
-        status = beginDecodingFrame(data);
-        if (status != DECODE_SUCCESS) {
+        status = beginDecodingFrame(data, buffer);
+        if (status != DECODE_SUCCESS && status != DECODE_MULTIPLE_FRAME) {
             endDecodingFrame(true);
         }
         CHECK_STATUS("beginDecodingFrame");
     } else {
-        status = continueDecodingFrame(data);
-        if (status != DECODE_SUCCESS) {
+        status = continueDecodingFrame(data, buffer);
+        if (status != DECODE_SUCCESS && status != DECODE_MULTIPLE_FRAME) {
             endDecodingFrame(true);
         }
         CHECK_STATUS("continueDecodingFrame");
@@ -147,7 +147,8 @@ Decode_Status VideoDecoderMPEG4::decodeFrame(VideoDecodeBuffer *buffer, vbp_data
     return DECODE_SUCCESS;
 }
 
-Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data) {
+Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data, VideoDecodeBuffer *buffer) {
+
     Decode_Status status = DECODE_SUCCESS;
     vbp_picture_data_mp42 *picData = data->picture_data;
     VAPictureParameterBufferMPEG4 *picParam = &(picData->picture_param);
@@ -223,14 +224,15 @@ Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data) {
             }
         }
         // all sanity checks pass, continue decoding through continueDecodingFrame
-        status = continueDecodingFrame(data);
+        status = continueDecodingFrame(data, buffer);
     }
     return status;
 }
 
-Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data) {
+Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data, VideoDecodeBuffer *buffer) {
     Decode_Status status = DECODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
+    bool useGraphicBuffer = mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER;
 
     /*
          Packed Frame Assumption:
@@ -271,28 +273,59 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data) {
                 // TODO: handle this case
             }
             if (mDecodingFrame) {
-                // this indicates the start of a new frame in the packed frame
-                // Update timestamp for P frame in the packed frame as timestamp here is for the B frame!
-                if (picParam->vop_time_increment_resolution)
-                {
-                    uint64_t increment = mLastVOPTimeIncrement - picData->vop_time_increment +
-                            picParam->vop_time_increment_resolution;
-                    increment = increment % picParam->vop_time_increment_resolution;
-                    // convert to nano-second
-                    // TODO: unit of time stamp varies on different frame work
-                    increment = increment * 1e9 / picParam->vop_time_increment_resolution;
-                    mAcquiredBuffer->renderBuffer.timeStamp += increment;
+                if (codingType == MP4_VOP_TYPE_B){
+                    // this indicates the start of a new frame in the packed frame
+                    // Update timestamp for P frame in the packed frame as timestamp here is for the B frame!
+                    if (picParam->vop_time_increment_resolution){
+                        uint64_t increment = mLastVOPTimeIncrement - picData->vop_time_increment +
+                                picParam->vop_time_increment_resolution;
+                        increment = increment % picParam->vop_time_increment_resolution;
+                        // convert to micro-second
+                        // TODO: unit of time stamp varies on different frame work
+                        increment = increment * 1e6 / picParam->vop_time_increment_resolution;
+                        mAcquiredBuffer->renderBuffer.timeStamp += increment;
+                        if (useGraphicBuffer){
+                           buffer->nextTimeStamp = mCurrentPTS;
+                           mCurrentPTS = mAcquiredBuffer->renderBuffer.timeStamp;
+                        }
+                    }
+                } else {
+                    // this indicates the start of a new frame in the packed frame. no B frame int the packet
+                    // Update the timestamp according the increment
+                    if (picParam->vop_time_increment_resolution){
+                        int64_t increment = picData->vop_time_increment - mLastVOPTimeIncrement + picParam->vop_time_increment_resolution;
+                        increment = increment % picParam->vop_time_increment_resolution;
+                        //convert to micro-second
+                        increment = increment * 1e6 / picParam->vop_time_increment_resolution;
+                        if (useGraphicBuffer) {
+                            buffer->nextTimeStamp = mCurrentPTS + increment;
+                        }
+                        else {
+                            mCurrentPTS += increment;
+                        }
+
+                    } else {
+                        if (useGraphicBuffer) {
+                            buffer->nextTimeStamp = mCurrentPTS + 30000;
+                        }
+                        else {
+                            mCurrentPTS += 30000;
+                        }
+                    }
                 }
                 endDecodingFrame(false);
                 mExpectingNVOP = true;
+                if (codingType != MP4_VOP_TYPE_B) {
+                    mExpectingNVOP = false;
+                }
+                if (useGraphicBuffer) {
+                    buffer->hasNext  = true;
+                    buffer->offSet = data->frameSize;
+                    VTRACE("Report OMX to handle for Multiple frame offset=%d time=%lld",data->frameSize,buffer->nextTimeStamp);
+                    return DECODE_MULTIPLE_FRAME;
+                }
             }
 
-            if (mExpectingNVOP == true && codingType != MP4_VOP_TYPE_B) {
-                ETRACE("The second frame in the packed frame is not B frame.");
-                mExpectingNVOP = false;
-                // TODO:  should be able to continue
-                return DECODE_FAIL;
-            }
             // acquire a new surface buffer
             status = acquireSurfaceBuffer();
             CHECK_STATUS("acquireSurfaceBuffer");

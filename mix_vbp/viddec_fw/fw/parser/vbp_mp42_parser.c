@@ -632,6 +632,13 @@ void vbp_fill_iq_matrix_buffer(vbp_context *pcontext)
 
 void vbp_on_vop_mp42(vbp_context *pcontext, int list_index)
 {
+    if(list_index == 0) {
+        // for the fist list item
+        viddec_pm_cxt_t *parent = pcontext->parser_cxt;
+        vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
+        query_data->frameSize = parent->list.total_bytes; //record the first item frame size
+    }
+
     vbp_fill_codec_data(pcontext);
     vbp_fill_picture_param(pcontext, 1);
     vbp_fill_iq_matrix_buffer(pcontext);

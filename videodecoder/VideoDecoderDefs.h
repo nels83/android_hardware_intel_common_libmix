@@ -99,6 +99,9 @@ struct VideoDecodeBuffer {
     int64_t timeStamp;
     uint32_t flag;
     VideoFormatSpecificData *ext;
+    bool hasNext; // for multiple frame in a buffer
+    int64_t nextTimeStamp; // next frame timestamp
+    int32_t offSet; // next frame offset
 };
 
 
@@ -181,6 +184,7 @@ typedef enum {
     DECODE_SUCCESS = 1,
     DECODE_FORMAT_CHANGE = 2,
     DECODE_FRAME_DROPPED = 3,
+    DECODE_MULTIPLE_FRAME = 4,
 } VIDEO_DECODE_STATUS;
 
 typedef int32_t Decode_Status;
