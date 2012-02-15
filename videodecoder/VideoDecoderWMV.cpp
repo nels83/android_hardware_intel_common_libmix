@@ -105,6 +105,11 @@ Decode_Status VideoDecoderWMV::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
     }
 
     if (data->pic_data[0].picture_is_skipped == VC1_PTYPE_SKIPPED) {
+
+        // Do nothing for skip frame as the last frame will be rendered agian by natively
+        // No needs to handle reference frame neither
+        return DECODE_SUCCESS;
+#if 0
         //use the last P or I frame surface for skipped frame and treat it as P frame
         if (mLastReference == NULL) {
             // TODO: handle this case
@@ -124,6 +129,7 @@ Decode_Status VideoDecoderWMV::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
         // let outputSurfaceBuffer handle "asReference" for VC1
         status = outputSurfaceBuffer();
         return status;
+#endif
     }
 
     status = acquireSurfaceBuffer();
