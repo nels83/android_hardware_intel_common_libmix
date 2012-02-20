@@ -183,6 +183,9 @@ Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data) {
             mExpectingNVOP = false;
         }
         else {
+            // Do nothing for skip frame as the last frame will be rendered agian by natively
+            // No needs to handle reference frame neither
+#if 0
             // this is skipped frame, use the last reference frame as output
             status = acquireSurfaceBuffer();
             CHECK_STATUS("acquireSurfaceBuffer");
@@ -195,6 +198,7 @@ Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data) {
             mAcquiredBuffer->referenceFrame = true;
             status = outputSurfaceBuffer();
             CHECK_STATUS("outputSurfaceBuffer");
+#endif
         }
 
         if (data->number_picture_data > 1) {
