@@ -50,9 +50,9 @@ public:
     //virtual Decode_Status decode(VideoDecodeBuffer *buffer);
     virtual void flush(void);
     virtual const VideoRenderBuffer* getOutput(bool draining = false);
-    virtual Decode_Status SignalRenderDoneFlag(void * graphichandler);
-    virtual Decode_Status GetNativeBufferStatus(void * graphichandler, bool* used);
+    virtual Decode_Status signalRenderDone(void * graphichandler);
     virtual const VideoFormatInfo* getFormatInfo(void);
+    virtual bool checkBufferAvail();
 
 protected:
     // each acquireSurfaceBuffer must be followed by a corresponding outputSurfaceBuffer or releaseSurfaceBuffer.
@@ -81,7 +81,7 @@ private:
     Decode_Status getRawDataFromSurface(void);
     void initSurfaceBuffer(bool reset);
 
-    bool initialized;
+    bool mInitialized;
     pthread_mutex_t mLock;
 
 
