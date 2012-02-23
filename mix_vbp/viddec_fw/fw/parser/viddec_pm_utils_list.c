@@ -200,10 +200,13 @@ void viddec_pm_utils_list_remove_used_entries(viddec_pm_utils_list_t *list, uint
                 list->start_offset = byte_pos - list->data[items].stpos;
                 while (items < list->num_items)
                 {
-                    es_buf = &(list->sc_ibuf[items]);
-                    list->sc_ibuf[index] = *es_buf;
-                    index++;
-                    items++;
+                    if (index < MAX_IBUFS_PER_SC)
+                    {
+                        es_buf = &(list->sc_ibuf[items]);
+                        list->sc_ibuf[index] = *es_buf;
+                        index++;
+                        items++;
+                    }
                 }
                 list->num_items = index;
             }

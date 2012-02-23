@@ -142,10 +142,13 @@ void viddec_pm_add_tags_to_pendinglist(viddec_pm_cxt_t *cxt, uint32_t ignore_fir
     }
 
     while ( (index < list->num_items) && (list->data[index].edpos <= (uint32_t)list->total_bytes))
-    {/* walk through consumed buffers and buffer id's in pending list */
-        pend->pending_tags[t_index] = list->sc_ibuf[index].id;
-        index++;
-        t_index++;
+    {
+        if (t_index < MAX_IBUFS_PER_SC)
+        { /* walk through consumed buffers and buffer id's in pending list */
+            pend->pending_tags[t_index] = list->sc_ibuf[index].id;
+            index++;
+            t_index++;
+        }
     }
     if ( (index < list->num_items) && (list->data[index].stpos < (uint32_t)list->total_bytes))
     {/* If last item is partially consumed still add it to pending tags since tag association is based on start of ES buffer */

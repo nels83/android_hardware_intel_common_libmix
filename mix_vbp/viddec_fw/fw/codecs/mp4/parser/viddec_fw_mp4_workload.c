@@ -181,9 +181,12 @@ uint32_t viddec_fw_mp4_insert_sprite_workitem(void *parent, viddec_mp4_parser_t 
         {
             if (warp_index < vol->sprite_info.no_of_sprite_warping_points)
             {
-                viddec_fw_mp4_set_warping_point_index(sprite_info.warping_mv_code[j], warp_index);
-                viddec_fw_mp4_set_warping_mv_code_du(sprite_info.warping_mv_code[j], vop->warping_mv_code_du[warp_index]);
-                viddec_fw_mp4_set_warping_mv_code_dv(sprite_info.warping_mv_code[j], vop->warping_mv_code_dv[warp_index]);
+                if (warp_index < 4)
+                {
+                    viddec_fw_mp4_set_warping_point_index(sprite_info.warping_mv_code[j], warp_index);
+                    viddec_fw_mp4_set_warping_mv_code_du(sprite_info.warping_mv_code[j], vop->warping_mv_code_du[warp_index]);
+                    viddec_fw_mp4_set_warping_mv_code_dv(sprite_info.warping_mv_code[j], vop->warping_mv_code_dv[warp_index]);
+                }
             }
             else
             {

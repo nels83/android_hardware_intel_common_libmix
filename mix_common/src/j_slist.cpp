@@ -53,10 +53,13 @@ JSList* j_slist_remove(JSList *list, void* data)
     }
 
     if (traverse_item != NULL) {
-        assert(prev_item != NULL); // as 1st element is processed @ beginning
-        prev_item->next = traverse_item->next;
-        traverse_item->next = NULL;
-        free(traverse_item);
+        if (prev_item != NULL) {
+            assert(prev_item != NULL); // as 1st element is processed @ beginning
+            prev_item->next = traverse_item->next;
+            traverse_item->next = NULL;
+            free(traverse_item);
+        }
+
     }
 
     return list;

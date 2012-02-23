@@ -787,33 +787,36 @@ h264_Status h264_Parse_Dec_Ref_Pic_Marking(void *parent, h264_Info* pInfo,h264_S
         {
             do
             {
-                SliceHeader->sh_dec_refpic.memory_management_control_operation[i] = h264_GetVLCElement(parent, pInfo, false);
-                if ((SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 1) || (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 3))
+                if (i < NUM_MMCO_OPERATIONS)
                 {
-                    SliceHeader->sh_dec_refpic.difference_of_pic_num_minus1[i] = h264_GetVLCElement(parent, pInfo, false);
+                    SliceHeader->sh_dec_refpic.memory_management_control_operation[i] = h264_GetVLCElement(parent, pInfo, false);
+                    if ((SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 1) || (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 3))
+                    {
+                        SliceHeader->sh_dec_refpic.difference_of_pic_num_minus1[i] = h264_GetVLCElement(parent, pInfo, false);
+                    }
+
+                    if (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 2)
+                    {
+                        SliceHeader->sh_dec_refpic.long_term_pic_num[i] = h264_GetVLCElement(parent, pInfo, false);
+                    }
+
+                    if ((SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 3) || (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 6))
+                    {
+                        SliceHeader->sh_dec_refpic.long_term_frame_idx[i] = h264_GetVLCElement(parent, pInfo, false);
+                    }
+
+                    if (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 4)
+                    {
+                        SliceHeader->sh_dec_refpic.max_long_term_frame_idx_plus1[i] = h264_GetVLCElement(parent, pInfo, false);
+                    }
+
+                    if (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 5)
+                    {
+                        pInfo->img.curr_has_mmco_5 = 1;
+                    }
                 }
 
-                if (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 2)
-                {
-                    SliceHeader->sh_dec_refpic.long_term_pic_num[i] = h264_GetVLCElement(parent, pInfo, false);
-                }
-
-                if ((SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 3) || (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 6))
-                {
-                    SliceHeader->sh_dec_refpic.long_term_frame_idx[i] = h264_GetVLCElement(parent, pInfo, false);
-                }
-
-                if (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 4)
-                {
-                    SliceHeader->sh_dec_refpic.max_long_term_frame_idx_plus1[i] = h264_GetVLCElement(parent, pInfo, false);
-                }
-
-                if (SliceHeader->sh_dec_refpic.memory_management_control_operation[i] == 5)
-                {
-                    pInfo->img.curr_has_mmco_5 = 1;
-                }
-
-                if (i>NUM_MMCO_OPERATIONS) {
+                if (i >= NUM_MMCO_OPERATIONS) {
                     return H264_STATUS_ERROR;
                 }
 

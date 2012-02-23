@@ -379,8 +379,10 @@ h264_Status h264_sei_userdata_reg(void *parent,h264_Info* pInfo, uint32_t payloa
     {
 
         viddec_pm_get_bits(parent, (uint32_t *)&byte, 8);
-
-        wi.user_data.data_payload[wi.user_data.size]=(uint8_t)byte;
+        if (wi.user_data.size < 11)
+        {
+            wi.user_data.data_payload[wi.user_data.size]=(uint8_t)byte;
+        }
         wi.user_data.size++;
 
         if (11 == wi.user_data.size)
@@ -439,8 +441,10 @@ h264_Status h264_sei_userdata_unreg(void *parent, h264_Info* pInfo, uint32_t pay
     {
 
         viddec_pm_get_bits(parent, (uint32_t *)&byte, 8);
-
-        wi.user_data.data_payload[wi.user_data.size]=(uint8_t)byte;
+        if (wi.user_data.size < 11)
+        {
+            wi.user_data.data_payload[wi.user_data.size]=(uint8_t)byte;
+        }
         wi.user_data.size++;
 
         if (11 == wi.user_data.size)

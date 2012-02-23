@@ -1064,9 +1064,11 @@ static void linked_list_reorder (struct linked_list_t *lp, int32_t list_value)
             lvp = lvp->next;
         }
         lvp->value = list_value;   // force end matches
-
-        // remove lvp from the list
-        lvp_prev->next = lvp->next;
+        if (lvp_prev != NULL)
+        {
+            // remove lvp from the list
+            lvp_prev->next = lvp->next;
+        }
         if (lvp==lp->end) lp->end = lvp_prev;
 
         // insert lvp in front of lp->entry
@@ -2037,13 +2039,16 @@ void h264_dpb_mm_update_max_long_term_frame_idx(h264_DecodedPictureBuffer *p_dpb
     for (idx = 0; idx < temp; idx++)
     {
         idx2 = idx - removed_count;
-        h264_dpb_set_active_fs(p_dpb, p_dpb->fs_ltref_idc[idx2]);
-
-        if (p_dpb->active_fs->long_term_frame_idx > p_dpb->max_long_term_pic_idx)
+        if (idx2 < 16 && idx2 > 0)
         {
-            removed_count++;
-            h264_dpb_unmark_for_long_term_reference(p_dpb, p_dpb->fs_ltref_idc[idx2]);
-            h264_dpb_remove_ltref_list(p_dpb, p_dpb->fs_ltref_idc[idx2]);
+            h264_dpb_set_active_fs(p_dpb, p_dpb->fs_ltref_idc[idx2]);
+
+            if (p_dpb->active_fs->long_term_frame_idx > p_dpb->max_long_term_pic_idx)
+            {
+                removed_count++;
+                h264_dpb_unmark_for_long_term_reference(p_dpb, p_dpb->fs_ltref_idc[idx2]);
+                h264_dpb_remove_ltref_list(p_dpb, p_dpb->fs_ltref_idc[idx2]);
+            }
         }
     }
     return;
