@@ -126,6 +126,7 @@ struct VideoConfigBuffer {
     uint32_t graphicBufferColorFormat;
     VideoExtensionBuffer *ext;
     void* nativeWindow;
+    uint32_t rotationDegrees;
 };
 
 struct VideoRenderBuffer {

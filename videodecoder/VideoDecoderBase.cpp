@@ -806,6 +806,20 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         CHECK_STATUS("mapSurface")
     }
 
+    VADisplayAttribute rotate;
+    rotate.type = VADisplayAttribRotation;
+    rotate.value = VA_ROTATION_NONE;
+    if (mConfigBuffer.rotationDegrees == 0)
+        rotate.value = VA_ROTATION_NONE;
+    else if (mConfigBuffer.rotationDegrees == 90)
+        rotate.value = VA_ROTATION_90;
+    else if (mConfigBuffer.rotationDegrees == 180)
+        rotate.value = VA_ROTATION_180;
+    else if (mConfigBuffer.rotationDegrees == 270)
+        rotate.value = VA_ROTATION_270;
+
+    vaStatus = vaSetDisplayAttributes(mVADisplay, &rotate, 1);
+
     mVAStarted = true;
     return DECODE_SUCCESS;
 }
