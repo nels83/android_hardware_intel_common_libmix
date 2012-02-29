@@ -144,6 +144,7 @@ protected:
     void ManageReference(bool enable) {mManageReference = enable;}
     void setOutputMethod(OUTPUT_METHOD method) {mOutputMethod = method;}
     void setOutputWindowSize(int32_t size) {mOutputWindowSize = size;}
+    void querySurfaceRenderStatus(VideoSurfaceBuffer* surface);
 };
 
 

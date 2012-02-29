@@ -456,7 +456,11 @@ bool VideoDecoderBase::checkBufferAvail(void) {
     VideoSurfaceBuffer *buffer = NULL;
     for (int32_t i = 0; i < mNumSurfaces; i++) {
         buffer = mSurfaceBuffers + i;
-        if (buffer->asReferernce == false && buffer->renderBuffer.renderDone == true) {
+
+        querySurfaceRenderStatus(buffer);
+        if (buffer->asReferernce == false &&
+            buffer->renderBuffer.renderDone == true &&
+            buffer->renderBuffer.driverRenderDone == true) {
             return true;
         }
      }
@@ -476,9 +480,13 @@ Decode_Status VideoDecoderBase::acquireSurfaceBuffer(void) {
     int nextAcquire = mSurfaceAcquirePos;
     VideoSurfaceBuffer *acquiredBuffer = NULL;
     bool acquired = false;
+
     while (acquired == false) {
         acquiredBuffer = mSurfaceBuffers + nextAcquire;
-        if (acquiredBuffer->asReferernce == false && acquiredBuffer->renderBuffer.renderDone == true) {
+
+        querySurfaceRenderStatus(acquiredBuffer);
+
+        if (acquiredBuffer->asReferernce == false && acquiredBuffer->renderBuffer.renderDone == true && acquiredBuffer->renderBuffer.driverRenderDone == true) {
             // this is potential buffer for acquisition. Check if it is referenced by other surface for frame skipping
             VideoSurfaceBuffer *temp;
             acquired = true;
@@ -1124,4 +1132,19 @@ Decode_Status VideoDecoderBase::signalRenderDone(void * graphichandler) {
 
 }
 
+void VideoDecoderBase::querySurfaceRenderStatus(VideoSurfaceBuffer* surface) {
+    VASurfaceStatus surfStat = VASurfaceReady;
+    VAStatus    vaStat = VA_STATUS_SUCCESS;
+
+    surface->renderBuffer.driverRenderDone = true;
+    if ((mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER)) {
+
+        vaStat = vaQuerySurfaceStatus(mVADisplay, surface->renderBuffer.surface, &surfStat);
+
+        if ((vaStat == VA_STATUS_SUCCESS) && (surfStat != VASurfaceReady))
+            surface->renderBuffer.driverRenderDone = false;
+
+    }
+
+}
 

@@ -132,6 +132,7 @@ struct VideoRenderBuffer {
     void * graphicBufferHandle;
     int32_t acquirePos;  //the acquirepos in graphichandle array
     uint32_t flag;
+    mutable volatile bool driverRenderDone;
     VideoFrameRawData *rawData;
 };
 
