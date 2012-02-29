@@ -10,6 +10,7 @@ LOCAL_SRC_FILES := \
     VideoDecoderAVC.cpp \
     VideoDecoderVP8.cpp \
     VideoDecoderPAVC.cpp \
+    VideoDecoderAVCSecure.cpp \
     VideoDecoderTrace.cpp
 
 # LOCAL_CFLAGS :=

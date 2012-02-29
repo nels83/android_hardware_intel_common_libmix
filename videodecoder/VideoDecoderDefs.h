@@ -28,7 +28,6 @@
 #include <va/va.h>
 #include <stdint.h>
 
-
 // format specific data, for future extension.
 struct VideoExtensionBuffer {
     int32_t extType;
@@ -100,6 +99,9 @@ typedef enum {
     // indicate whether it is a sync frame in container
     IS_SYNC_FRAME = 0x4000,
 
+    // indicate whether video decoder buffer contains secure data
+    IS_SECURE_DATA = 0x8000,
+
 } VIDEO_BUFFER_FLAG;
 
 struct VideoDecodeBuffer {
@@ -111,7 +113,7 @@ struct VideoDecodeBuffer {
 };
 
 
-#define MAX_GRAPHIC_NUM 16 + 1 + 11 // max DPB + 1 + AVC_EXTRA_NUM
+#define MAX_GRAPHIC_BUFFER_NUM  (16 + 1 + 11)  // max DPB + 1 + AVC_EXTRA_NUM
 
 struct VideoConfigBuffer {
     uint8_t *data;
@@ -122,7 +124,7 @@ struct VideoConfigBuffer {
     int32_t surfaceNumber;
     VAProfile profile;
     uint32_t flag;
-    void *graphicBufferHandler[ MAX_GRAPHIC_NUM ];
+    void *graphicBufferHandler[MAX_GRAPHIC_BUFFER_NUM];
     uint32_t graphicBufferStride;
     uint32_t graphicBufferColorFormat;
     uint32_t graphicBufferWidth;
@@ -140,7 +142,7 @@ struct VideoRenderBuffer {
     mutable volatile bool renderDone;  // indicated whether frame is rendered, this must be set to false by the client of this library once
                                         // surface is rendered. Not setting this flag will lead to DECODE_NO_SURFACE error.
     void * graphicBufferHandle;
-    int32_t acquirePos;  //the acquirepos in graphichandle array
+    int32_t graphicBufferIndex;  //the index in graphichandle array
     uint32_t flag;
     mutable volatile bool driverRenderDone;
     VideoFrameRawData *rawData;

@@ -167,11 +167,13 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
     }
 
     // HAS_COMPLETE_FRAME is not reliable as it may indicate end of a field
-  /*  if (buffer->flag & HAS_COMPLETE_FRAME) {
+#if 0
+    if (buffer->flag & HAS_COMPLETE_FRAME) {
         // finish decoding current frame
         status = endDecodingFrame(false);
         CHECK_STATUS("endDecodingFrame");
-    }*/
+    }
+#endif
 
     if (mSizeChanged) {
         mSizeChanged = false;

@@ -26,6 +26,7 @@
 #include "VideoDecoderMPEG4.h"
 #include "VideoDecoderAVC.h"
 #include "VideoDecoderPAVC.h"
+#include "VideoDecoderAVCSecure.h"
 #include "VideoDecoderHost.h"
 #include "VideoDecoderTrace.h"
 #include <string.h>
@@ -52,6 +53,9 @@ IVideoDecoder* createVideoDecoder(const char* mimeType) {
         return (IVideoDecoder *)p;
     } else if (strcasecmp(mimeType, "video/pavc") == 0) {
         VideoDecoderAVC *p = new VideoDecoderPAVC(mimeType);
+        return (IVideoDecoder *)p;
+    } else if (strcasecmp(mimeType, "video/avc-secure") == 0) {
+        VideoDecoderAVC *p = new VideoDecoderAVCSecure(mimeType);
         return (IVideoDecoder *)p;
     } else {
         ETRACE("Unknown mime type: %s", mimeType);

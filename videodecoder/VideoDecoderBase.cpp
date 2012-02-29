@@ -78,7 +78,7 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
 
     memset(&mVideoFormatInfo, 0, sizeof(VideoFormatInfo));
     memset(&mConfigBuffer, 0, sizeof(mConfigBuffer));
-    for (int i =0; i < MAX_GRAPHIC_NUM; i++) {
+    for (int i = 0; i < MAX_GRAPHIC_BUFFER_NUM; i++) {
          mSignalBufferPre[i] = NULL;
     }
     pthread_mutex_init(&mLock, NULL);
@@ -471,7 +471,7 @@ bool VideoDecoderBase::checkBufferAvail(void) {
         if ((mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER) == 0) {
             return true;
         }
-        for (int i = 0; i < MAX_GRAPHIC_NUM; i++) {
+        for (int i = 0; i < MAX_GRAPHIC_BUFFER_NUM; i++) {
             if (mSignalBufferPre[i] != NULL) {
                 return true;
             }
@@ -1153,7 +1153,7 @@ void VideoDecoderBase::initSurfaceBuffer(bool reset) {
             mSurfaceBuffers[i].renderBuffer.graphicBufferHandle = NULL;
             mSurfaceBuffers[i].renderBuffer.renderDone = true;
         }
-        mSurfaceBuffers[i].renderBuffer.acquirePos = i;
+        mSurfaceBuffers[i].renderBuffer.graphicBufferIndex = i;
     }
 
     if (useGraphicBuffer && reset) {
@@ -1172,7 +1172,7 @@ Decode_Status VideoDecoderBase::signalRenderDone(void * graphichandler) {
     if (!mInitialized) {
         mSignalBufferPre[mSignalBufferSize++] = graphichandler;
         VTRACE("SignalRenderDoneFlag mInitialized = false graphichandler = %p, mSignalBufferSize = %d", graphichandler, mSignalBufferSize);
-        if (mSignalBufferSize > MAX_GRAPHIC_NUM)
+        if (mSignalBufferSize > MAX_GRAPHIC_BUFFER_NUM)
             return DECODE_INVALID_DATA;
     } else {
         if (!(mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER)) {

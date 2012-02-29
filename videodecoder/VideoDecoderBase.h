@@ -138,7 +138,7 @@ private:
     int32_t mNextOutputPOC; // Picture order count of next output
     _vbp_parser_type mParserType;
     void *mParserHandle;
-    void *mSignalBufferPre[MAX_GRAPHIC_NUM];
+    void *mSignalBufferPre[MAX_GRAPHIC_BUFFER_NUM];
     uint32 mSignalBufferSize;
 
 protected:
