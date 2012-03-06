@@ -642,7 +642,7 @@ Decode_Status VideoDecoderBase::endDecodingFrame(bool dropFrame) {
 
     if (dropFrame) {
         // we are asked to drop this decoded picture
-        LOGW("Frame dropped");
+        VTRACE("Frame dropped in endDecodingFrame");
         releaseSurfaceBuffer();
         goto exit;
     }
