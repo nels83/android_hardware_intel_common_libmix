@@ -30,11 +30,15 @@
 
 
 // format specific data, for future extension.
-struct VideoFormatSpecificData {
-    int32_t formatType;
-    int32_t formatSize;
-    uint8_t *formatData;
+struct VideoExtensionBuffer {
+    int32_t extType;
+    int32_t extSize;
+    uint8_t *extData;
 };
+
+typedef enum {
+    PACKED_FRAME_TYPE,
+} VIDEO_EXTENSION_TYPE;
 
 struct VideoFrameRawData {
     int32_t width;
@@ -45,6 +49,11 @@ struct VideoFrameRawData {
     int32_t size;
     uint8_t *data;
     bool own; // own data or derived from surface. If true, the library will release the memory during clearnup
+};
+
+struct PackedFrameData {
+    int64_t timestamp;
+    int32_t offSet;
 };
 
 // flags for VideoDecodeBuffer, VideoConfigBuffer and VideoRenderBuffer
@@ -98,10 +107,7 @@ struct VideoDecodeBuffer {
     int32_t size;
     int64_t timeStamp;
     uint32_t flag;
-    VideoFormatSpecificData *ext;
-    bool hasNext; // for multiple frame in a buffer
-    int64_t nextTimeStamp; // next frame timestamp
-    int32_t offSet; // next frame offset
+    VideoExtensionBuffer *ext;
 };
 
 
@@ -118,7 +124,7 @@ struct VideoConfigBuffer {
     void *graphicBufferHandler[ MAX_GRAPHIC_NUM ];
     uint32_t graphicBufferStride;
     uint32_t graphicBufferColorFormat;
-    VideoFormatSpecificData *ext;
+    VideoExtensionBuffer *ext;
     void* nativeWindow;
 };
 
@@ -166,7 +172,7 @@ struct VideoFormatInfo {
     int32_t bitrate;
     int32_t framerateNom;
     int32_t framerateDenom;
-    VideoFormatSpecificData *ext;
+    VideoExtensionBuffer *ext;
 };
 
 // TODO: categorize the follow errors as fatal and non-fatal.

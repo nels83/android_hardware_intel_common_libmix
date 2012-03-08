@@ -40,8 +40,8 @@ public:
 
 private:
     Decode_Status decodeFrame(VideoDecodeBuffer *buffer, vbp_data_mp42 *data);
-    Decode_Status beginDecodingFrame(vbp_data_mp42 *data, VideoDecodeBuffer *buffer);
-    Decode_Status continueDecodingFrame(vbp_data_mp42 *data, VideoDecodeBuffer *buffer);
+    Decode_Status beginDecodingFrame(vbp_data_mp42 *data);
+    Decode_Status continueDecodingFrame(vbp_data_mp42 *data);
     Decode_Status decodeSlice(vbp_data_mp42 *data, vbp_picture_data_mp42 *picData);
     Decode_Status setReference(VAPictureParameterBufferMPEG4 *picParam);
     Decode_Status startVA(vbp_data_mp42 *data);
@@ -65,6 +65,8 @@ private:
     bool mSendIQMatrixBuf; // indicate if iq_matrix_buffer is sent to driver
     int32_t mLastVOPCodingType;
     bool mIsSyncFrame; // indicate if it is SyncFrame in container
+    VideoExtensionBuffer mExtensionBuffer;
+    PackedFrameData mPackedFrame;
 };
 
 

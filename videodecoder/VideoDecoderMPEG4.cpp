@@ -78,6 +78,7 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
     } else {
         mIsSyncFrame = false;
     }
+    buffer->ext = NULL;
     status =  VideoDecoderBase::parseBuffer(
             buffer->data,
             buffer->size,
@@ -125,14 +126,24 @@ Decode_Status VideoDecoderMPEG4::decodeFrame(VideoDecodeBuffer *buffer, vbp_data
         CHECK_STATUS("endDecodingFrame");
 
         // start decoding a new frame
-        status = beginDecodingFrame(data, buffer);
-        if (status != DECODE_SUCCESS && status != DECODE_MULTIPLE_FRAME) {
+        status = beginDecodingFrame(data);
+        if (status == DECODE_MULTIPLE_FRAME) {
+            buffer->ext = &mExtensionBuffer;
+            mExtensionBuffer.extType = PACKED_FRAME_TYPE;
+            mExtensionBuffer.extSize = sizeof(mPackedFrame);
+            mExtensionBuffer.extData = (uint8_t*)&mPackedFrame;
+        } else if (status != DECODE_SUCCESS) {
             endDecodingFrame(true);
         }
         CHECK_STATUS("beginDecodingFrame");
     } else {
-        status = continueDecodingFrame(data, buffer);
-        if (status != DECODE_SUCCESS && status != DECODE_MULTIPLE_FRAME) {
+        status = continueDecodingFrame(data);
+        if (status == DECODE_MULTIPLE_FRAME) {
+            buffer->ext = &mExtensionBuffer;
+            mExtensionBuffer.extType = PACKED_FRAME_TYPE;
+            mExtensionBuffer.extSize = sizeof(mPackedFrame);
+            mExtensionBuffer.extData = (uint8_t*)&mPackedFrame;
+        } else if (status != DECODE_SUCCESS) {
             endDecodingFrame(true);
         }
         CHECK_STATUS("continueDecodingFrame");
@@ -147,7 +158,7 @@ Decode_Status VideoDecoderMPEG4::decodeFrame(VideoDecodeBuffer *buffer, vbp_data
     return DECODE_SUCCESS;
 }
 
-Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data, VideoDecodeBuffer *buffer) {
+Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data) {
 
     Decode_Status status = DECODE_SUCCESS;
     vbp_picture_data_mp42 *picData = data->picture_data;
@@ -224,12 +235,12 @@ Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data, VideoDe
             }
         }
         // all sanity checks pass, continue decoding through continueDecodingFrame
-        status = continueDecodingFrame(data, buffer);
+        status = continueDecodingFrame(data);
     }
     return status;
 }
 
-Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data, VideoDecodeBuffer *buffer) {
+Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data) {
     Decode_Status status = DECODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     bool useGraphicBuffer = mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER;
@@ -285,7 +296,7 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data, Vide
                         increment = increment * 1e6 / picParam->vop_time_increment_resolution;
                         mAcquiredBuffer->renderBuffer.timeStamp += increment;
                         if (useGraphicBuffer){
-                           buffer->nextTimeStamp = mCurrentPTS;
+                           mPackedFrame.timestamp = mCurrentPTS;
                            mCurrentPTS = mAcquiredBuffer->renderBuffer.timeStamp;
                         }
                     }
@@ -298,7 +309,7 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data, Vide
                         //convert to micro-second
                         increment = increment * 1e6 / picParam->vop_time_increment_resolution;
                         if (useGraphicBuffer) {
-                            buffer->nextTimeStamp = mCurrentPTS + increment;
+                            mPackedFrame.timestamp = mCurrentPTS + increment;
                         }
                         else {
                             mCurrentPTS += increment;
@@ -306,7 +317,7 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data, Vide
 
                     } else {
                         if (useGraphicBuffer) {
-                            buffer->nextTimeStamp = mCurrentPTS + 30000;
+                            mPackedFrame.timestamp = mCurrentPTS + 30000;
                         }
                         else {
                             mCurrentPTS += 30000;
@@ -319,9 +330,8 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data, Vide
                     mExpectingNVOP = false;
                 }
                 if (useGraphicBuffer) {
-                    buffer->hasNext  = true;
-                    buffer->offSet = data->frameSize;
-                    VTRACE("Report OMX to handle for Multiple frame offset=%d time=%lld",data->frameSize,buffer->nextTimeStamp);
+                    mPackedFrame.offSet = data->frameSize;
+                    VTRACE("Report OMX to handle for Multiple frame offset=%d time=%lld",data->frameSize,mPackedFrame.timestamp);
                     return DECODE_MULTIPLE_FRAME;
                 }
             }
