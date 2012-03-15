@@ -200,6 +200,7 @@ Encode_Status VideoEncoderBase::start() {
             case BUFFER_SHARING_V4L2:
             case BUFFER_SHARING_SURFACE:
             case BUFFER_SHARING_GFXHANDLE:
+            case BUFFER_SHARING_KBUFHANDLE:
             {
                 mSharedSurfacesCnt = mUpstreamBufferCnt;
                 normalSurfacesCnt = VENCODER_NUMBER_EXTRA_SURFACES_SHARED_MODE;
@@ -279,6 +280,10 @@ Encode_Status VideoEncoderBase::start() {
         case BUFFER_SHARING_GFXHANDLE:
             ret = surfaceMappingForGfxHandle();
             CHECK_ENCODE_STATUS_CLEANUP("surfaceMappingForGfxHandle");
+            break;
+        case BUFFER_SHARING_KBUFHANDLE:
+            ret = surfaceMappingForKbufHandle();
+            CHECK_ENCODE_STATUS_CLEANUP("surfaceMappingForKbufHandle");
             break;
         case BUFFER_SHARING_NONE:
             break;
@@ -1513,8 +1518,7 @@ Encode_Status VideoEncoderBase::setUpstreamBuffer(VideoParamsUpstreamBuffer *upS
     }
 
     if (upStreamBuffer->bufAttrib) {
-        mBufAttrib->format = upStreamBuffer->bufAttrib->format;
-        mBufAttrib->lumaStride = upStreamBuffer->bufAttrib->lumaStride;
+        memcpy(mBufAttrib, upStreamBuffer->bufAttrib, sizeof(ExternalBufferAttrib));
     } else {
         LOG_E ("Buffer Attrib doesn't set by client, return error");
         return ENCODE_INVALID_PARAMS;
@@ -1687,6 +1691,35 @@ Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle() {
     return ret;
 }
 
+Encode_Status VideoEncoderBase::surfaceMappingForKbufHandle() {
+
+    uint32_t index;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    Encode_Status ret = ENCODE_SUCCESS;
+
+    uint32_t lumaOffset = 0;
+    uint32_t chromaUOffset = mBufAttrib->realHeight * mBufAttrib->lumaStride;
+    uint32_t chromaVOffset = chromaUOffset + 1;
+
+    for (index = 0; index < mSharedSurfacesCnt; index++) {
+
+        vaStatus = vaCreateSurfaceFromKBuf(
+                mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
+                (VASurfaceID *)&mSharedSurfaces[index], mUpstreamBufferList[index], mBufAttrib->lumaStride * mComParams.resolution.height * 3 / 2,
+                mBufAttrib->format, mBufAttrib->lumaStride, mBufAttrib->chromStride, mBufAttrib->chromStride, lumaOffset, chromaUOffset, chromaVOffset);
+
+        CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
+
+        LOG_I("Surface ID created from Kbuf = 0x%08x", mSharedSurfaces[index]);
+
+        mSurfaces[index] = mSharedSurfaces[index];
+        ret = generateVideoBufferAndAttachToList(index, NULL);
+        CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList");
+    }
+
+    return ret;
+}
+
 Encode_Status VideoEncoderBase::surfaceMappingForCIFrameList() {
     uint32_t index;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
@@ -1731,7 +1764,9 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
 
         }
 
-    } else if (mBufferMode == BUFFER_SHARING_SURFACE || mBufferMode == BUFFER_SHARING_GFXHANDLE) {
+    } else if (mBufferMode == BUFFER_SHARING_SURFACE ||
+                   mBufferMode == BUFFER_SHARING_GFXHANDLE  ||
+                   mBufferMode == BUFFER_SHARING_KBUFHANDLE) {
 
         bufIndex = (uint32_t) -1;
         data = *(uint32_t*)inBuffer->data;
@@ -1782,6 +1817,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
         case BUFFER_SHARING_CI:
         case BUFFER_SHARING_SURFACE:
         case BUFFER_SHARING_GFXHANDLE:
+        case BUFFER_SHARING_KBUFHANDLE:
         case BUFFER_SHARING_USRPTR: {
 
             if (mRefFrame== NULL) {

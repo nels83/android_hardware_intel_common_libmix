@@ -98,6 +98,7 @@ enum VideoBufferSharingMode {
     BUFFER_SHARING_SURFACE = 8,
     BUFFER_SHARING_USRPTR = 16,
     BUFFER_SHARING_GFXHANDLE = 32,
+    BUFFER_SHARING_KBUFHANDLE = 64,
     BUFFER_LAST
 };
 
@@ -213,8 +214,8 @@ struct SliceNum {
 };
 
 typedef struct {
-    uint32_t width;
-    uint32_t height;
+    uint32_t realWidth;
+    uint32_t realHeight;
     uint32_t lumaStride;
     uint32_t chromStride;
     uint32_t format;

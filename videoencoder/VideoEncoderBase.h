@@ -62,6 +62,7 @@ private:
     Encode_Status surfaceMappingForSurfaceList();
     Encode_Status surfaceMappingForGfxHandle();
     Encode_Status surfaceMappingForCIFrameList();
+    Encode_Status surfaceMappingForKbufHandle();
 
     VideoEncSurfaceBuffer *appendVideoSurfaceBuffer(
             VideoEncSurfaceBuffer *head, VideoEncSurfaceBuffer *buffer);
