@@ -220,6 +220,36 @@ typedef struct {
     uint32_t format;
 } ExternalBufferAttrib;
 
+struct Cropping {
+    uint32_t LeftOffset;
+    uint32_t RightOffset;
+    uint32_t TopOffset;
+    uint32_t BottomOffset;
+
+    Cropping &operator=(const Cropping &other) {
+        if (this == &other) return *this;
+
+        this->LeftOffset = other.LeftOffset;
+        this->RightOffset = other.RightOffset;
+        this->TopOffset = other.TopOffset;
+        this->BottomOffset = other.BottomOffset;
+        return *this;
+    }
+};
+
+struct SamplingAspectRatio {
+    uint16_t SarWidth;
+    uint16_t SarHeight;
+
+    SamplingAspectRatio &operator=(const SamplingAspectRatio &other) {
+        if (this == &other) return *this;
+
+        this->SarWidth = other.SarWidth;
+        this->SarHeight = other.SarHeight;
+        return *this;
+    }
+};
+
 enum VideoParamConfigType {
     VideoParamsTypeStartUnused = 0x01000000,
     VideoParamsTypeCommon,
@@ -306,6 +336,8 @@ struct VideoParamsAVC : VideoParamConfigSet {
     uint32_t idrInterval;
     SliceNum sliceNum;
     AVCDelimiterType delimiterType;
+    Cropping crop;
+    SamplingAspectRatio SAR;
 
     VideoParamsAVC() {
         type = VideoParamsTypeAVC;
@@ -322,6 +354,12 @@ struct VideoParamsAVC : VideoParamConfigSet {
         this->idrInterval = other.idrInterval;
         this->sliceNum = other.sliceNum;
         this->delimiterType = other.delimiterType;
+        this->crop.LeftOffset = other.crop.LeftOffset;
+        this->crop.RightOffset = other.crop.RightOffset;
+        this->crop.TopOffset = other.crop.TopOffset;
+        this->crop.BottomOffset = other.crop.BottomOffset;
+        this->SAR.SarWidth = other.SAR.SarWidth;
+        this->SAR.SarHeight = other.SAR.SarHeight;
 
         return *this;
     }

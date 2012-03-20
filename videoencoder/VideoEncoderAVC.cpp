@@ -22,6 +22,12 @@ VideoEncoderAVC::VideoEncoderAVC()
     mVideoParamsAVC.maxSliceSize = 0;
     mVideoParamsAVC.delimiterType = AVC_DELIMITER_ANNEXB;
     mSliceNum = 2;
+    mVideoParamsAVC.crop.LeftOffset = 0;
+    mVideoParamsAVC.crop.RightOffset = 0;
+    mVideoParamsAVC.crop.TopOffset = 0;
+    mVideoParamsAVC.crop.BottomOffset = 0;
+    mVideoParamsAVC.SAR.SarWidth = 0;
+    mVideoParamsAVC.SAR.SarHeight = 0;
 }
 
 Encode_Status VideoEncoderAVC::start() {
@@ -772,6 +778,23 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     //avcSeqParams.vui_flag = 248;
     avcSeqParams.vui_flag = mVideoParamsAVC.VUIFlag;
     avcSeqParams.seq_parameter_set_id = 8;
+    if (mVideoParamsAVC.crop.LeftOffset ||
+            mVideoParamsAVC.crop.RightOffset ||
+            mVideoParamsAVC.crop.TopOffset ||
+            mVideoParamsAVC.crop.BottomOffset) {
+        avcSeqParams.frame_cropping_flag = true;
+        avcSeqParams.frame_crop_left_offset = mVideoParamsAVC.crop.LeftOffset;
+        avcSeqParams.frame_crop_right_offset = mVideoParamsAVC.crop.RightOffset;
+        avcSeqParams.frame_crop_top_offset = mVideoParamsAVC.crop.TopOffset;
+        avcSeqParams.frame_crop_bottom_offset = mVideoParamsAVC.crop.BottomOffset;
+    } else
+        avcSeqParams.frame_cropping_flag = false;
+    if(avcSeqParams.vui_flag && (mVideoParamsAVC.SAR.SarWidth || mVideoParamsAVC.SAR.SarHeight)) {
+        avcSeqParams.aspect_ratio_info_present_flag = true;
+        avcSeqParams.aspect_ratio_idc = 0xff /* Extended_SAR */;
+        avcSeqParams.sar_width = mVideoParamsAVC.SAR.SarWidth;
+        avcSeqParams.sar_height = mVideoParamsAVC.SAR.SarHeight;
+    }
 
     // This is a temporary fix suggested by Binglin for bad encoding quality issue
     avcSeqParams.max_num_ref_frames = 1; // TODO: We need a long term design for this field
