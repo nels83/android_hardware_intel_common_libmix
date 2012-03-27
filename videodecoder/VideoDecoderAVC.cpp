@@ -153,7 +153,7 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
     mCurrentPTS = buffer->timeStamp;
 
     //if (lastPTS != mCurrentPTS) {
-    if (isNewFrame(data)) {
+    if (isNewFrame(data, lastPTS == mCurrentPTS)) {
         // finish decoding the last frame
         status = endDecodingFrame(false);
         CHECK_STATUS("endDecodingFrame");
@@ -682,7 +682,7 @@ Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
     return DECODE_SUCCESS;
 }
 
-bool VideoDecoderAVC::isNewFrame(vbp_data_h264 *data) {
+bool VideoDecoderAVC::isNewFrame(vbp_data_h264 *data, bool equalPTS) {
     if (data->num_pictures == 0) {
         ETRACE("num_pictures == 0");
         return true;
@@ -701,6 +701,11 @@ bool VideoDecoderAVC::isNewFrame(vbp_data_h264 *data) {
         // not the first slice, assume it is continuation of a partial frame
         // TODO: check if it is new frame boundary as the first slice may get lost in streaming case.
         WTRACE("first_mb_in_slice != 0");
+        if (!equalPTS) {
+            // return true if different timestamp, it is a workaround here for a streaming case
+            WTRACE("different PTS, treat it as a new frame");
+            return true;
+        }
     } else {
         if ((picData->pic_parms->CurrPic.flags & fieldFlags) == fieldFlags) {
             ETRACE("Current picture has both odd field and even field.");

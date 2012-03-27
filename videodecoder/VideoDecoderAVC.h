@@ -55,7 +55,7 @@ protected:
     Decode_Status startVA(vbp_data_h264 *data);
     void updateFormatInfo(vbp_data_h264 *data);
     Decode_Status handleNewSequence(vbp_data_h264 *data);
-    bool isNewFrame(vbp_data_h264 *data);
+    bool isNewFrame(vbp_data_h264 *data, bool equalPTS);
     int32_t getDPBSize(vbp_data_h264 *data);
 
 private:
