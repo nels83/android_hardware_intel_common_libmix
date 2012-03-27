@@ -694,6 +694,17 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
     vaStatus = vaInitialize(mVADisplay, &majorVersion, &minorVersion);
     CHECK_VA_STATUS("vaInitialize");
 
+    if (mConfigBuffer.frameRate > 45 && mVideoFormatInfo.height >= 1080) {
+        // ugly workaround here
+        // for fps > 45 and height > 1080, we will force to
+        // use surfaceTexture render mode duo to performance issue
+        VADisplayAttribute renderMode;
+        renderMode.type = VADisplayAttribRenderMode;
+        renderMode.value = VA_RENDER_MODE_EXTERNAL_GPU;
+        vaStatus = vaSetDisplayAttributes(mVADisplay, &renderMode, 1);
+        CHECK_VA_STATUS("vaSetDisplayAttributes");
+    }
+
     if ((int32_t)profile != VAProfileSoftwareDecoding) {
         //We are requesting RT attributes
         attrib.type = VAConfigAttribRTFormat;
