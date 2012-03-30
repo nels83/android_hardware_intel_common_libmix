@@ -516,8 +516,10 @@ void VideoDecoderMPEG4::updateFormatInfo(vbp_data_mp42 *data) {
         data->codec_data.video_object_layer_width,
         data->codec_data.video_object_layer_height);
 
-    if (mVideoFormatInfo.width != (int32_t)data->codec_data.video_object_layer_width ||
-        mVideoFormatInfo.height != (int32_t)data->codec_data.video_object_layer_height) {
+    if ((mVideoFormatInfo.width != (int32_t)data->codec_data.video_object_layer_width ||
+        mVideoFormatInfo.height != (int32_t)data->codec_data.video_object_layer_height) &&
+        data->codec_data.video_object_layer_width &&
+        data->codec_data.video_object_layer_height) {
         // update  encoded image size
         mVideoFormatInfo.width = data->codec_data.video_object_layer_width;
         mVideoFormatInfo.height = data->codec_data.video_object_layer_height;

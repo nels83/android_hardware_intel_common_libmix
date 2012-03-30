@@ -401,8 +401,10 @@ void VideoDecoderWMV::updateFormatInfo(vbp_data_vc1 *data) {
         mVideoFormatInfo.width, mVideoFormatInfo.height,
         data->se_data->CODED_WIDTH, data->se_data->CODED_HEIGHT);
 
-    if (mVideoFormatInfo.width != data->se_data->CODED_WIDTH ||
-        mVideoFormatInfo.height!= data->se_data->CODED_HEIGHT) {
+    if ((mVideoFormatInfo.width != data->se_data->CODED_WIDTH ||
+        mVideoFormatInfo.height != data->se_data->CODED_HEIGHT) &&
+        data->se_data->CODED_WIDTH &&
+        data->se_data->CODED_HEIGHT) {
         // encoded image size
         mVideoFormatInfo.width = data->se_data->CODED_WIDTH;
         mVideoFormatInfo.height = data->se_data->CODED_HEIGHT;

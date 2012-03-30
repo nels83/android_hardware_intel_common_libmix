@@ -603,8 +603,9 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
     ITRACE("updateFormatInfo: current size: %d x %d, new size: %d x %d",
         mVideoFormatInfo.width, mVideoFormatInfo.height, width, height);
 
-    if (mVideoFormatInfo.width != width ||
-        mVideoFormatInfo.height!= height) {
+    if ((mVideoFormatInfo.width != width ||
+        mVideoFormatInfo.height != height) &&
+        width && height) {
         mVideoFormatInfo.width = width;
         mVideoFormatInfo.height = height;
         mSizeChanged = true;
