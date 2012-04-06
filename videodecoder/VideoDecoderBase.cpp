@@ -199,9 +199,6 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
         if (mOutputHead == NULL) {
             mOutputTail = NULL;
         }
-        if (useGraphicBuffer ) {
-            vaSyncSurface(mVADisplay, outputByPos->renderBuffer.surface);
-        }
         return &(outputByPos->renderBuffer);
     }
 
@@ -245,9 +242,6 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
         if (mOutputHead == NULL) {
             mOutputTail = NULL;
         }
-    }
-    if (useGraphicBuffer ) {
-         vaSyncSurface(mVADisplay, output->renderBuffer.surface);
     }
     //VTRACE("Output POC %d for display (pts = %.2f)", output->pictureOrder, output->renderBuffer.timeStamp/1E6);
     return &(output->renderBuffer);
