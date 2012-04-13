@@ -462,10 +462,8 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
     ret = sendEncodeCommand();
     CHECK_ENCODE_STATUS_RETURN("sendEncodeCommand");
 
-    if ((mComParams.rcMode == VA_RC_NONE) || mFirstFrame) {
-        vaStatus = vaEndPicture(mVADisplay, mVAContext);
-        CHECK_VA_STATUS_RETURN("vaEndPicture");
-    }
+    vaStatus = vaEndPicture(mVADisplay, mVAContext);
+    CHECK_VA_STATUS_RETURN("vaEndPicture");
 
     LOG_V( "vaEndPicture\n");
 
@@ -488,12 +486,6 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
     vaStatus = vaMapBuffer (mVADisplay, mOutCodedBuffer, (void **)&buf);
     vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
 
-    if (!((mComParams.rcMode == VA_RC_NONE) || mFirstFrame)) {
-        vaStatus = vaEndPicture(mVADisplay, mVAContext);
-        CHECK_VA_STATUS_RETURN("vaEndPicture");
-
-    }
-
     if (mFirstFrame) {
         vaStatus = vaBeginPicture(mVADisplay, mVAContext, mCurFrame->surface);
         CHECK_VA_STATUS_RETURN("vaBeginPicture");
@@ -509,7 +501,7 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
 
     // Query the status of current surface
     VASurfaceStatus vaSurfaceStatus;
-    vaStatus = vaQuerySurfaceStatus(mVADisplay, mCurFrame->surface,  &vaSurfaceStatus);
+    vaStatus = vaQuerySurfaceStatus(mVADisplay, mLastFrame->surface, &vaSurfaceStatus);
     CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
 
     mPicSkipped = vaSurfaceStatus & VASurfaceSkipped;
