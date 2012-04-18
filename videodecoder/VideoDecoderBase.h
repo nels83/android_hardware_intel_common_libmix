@@ -46,6 +46,7 @@ public:
     virtual ~VideoDecoderBase();
 
     virtual Decode_Status start(VideoConfigBuffer *buffer);
+    virtual Decode_Status reset(VideoConfigBuffer *buffer) ;
     virtual void stop(void);
     //virtual Decode_Status decode(VideoDecodeBuffer *buffer);
     virtual void flush(void);

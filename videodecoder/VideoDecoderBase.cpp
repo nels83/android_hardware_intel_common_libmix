@@ -114,6 +114,10 @@ Decode_Status VideoDecoderBase::start(VideoConfigBuffer *buffer) {
 
     mVideoFormatInfo.width = buffer->width;
     mVideoFormatInfo.height = buffer->height;
+    if (buffer->flag & USE_NATIVE_GRAPHIC_BUFFER) {
+        mVideoFormatInfo.surfaceWidth = buffer->graphicBufferWidth;
+        mVideoFormatInfo.surfaceHeight = buffer->graphicBufferHeight;
+    }
     mLowDelay = buffer->flag & WANT_LOW_DELAY;
     mRawOutput = buffer->flag & WANT_RAW_OUTPUT;
     if (mRawOutput) {
@@ -122,6 +126,35 @@ Decode_Status VideoDecoderBase::start(VideoConfigBuffer *buffer) {
 
     return DECODE_SUCCESS;
 }
+
+
+Decode_Status VideoDecoderBase::reset(VideoConfigBuffer *buffer) {
+    if (buffer == NULL) {
+        return DECODE_INVALID_DATA;
+    }
+
+    // if VA is already started, terminate VA as graphic buffers are reallocated by omxcodec
+    terminateVA();
+
+    // reset the mconfigBuffer to pass it for startVA.
+    mConfigBuffer = *buffer;
+    mConfigBuffer.data = NULL;
+    mConfigBuffer.size = 0;
+
+    mVideoFormatInfo.width = buffer->width;
+    mVideoFormatInfo.height = buffer->height;
+    mVideoFormatInfo.surfaceWidth = buffer->graphicBufferWidth;
+    mVideoFormatInfo.surfaceHeight = buffer->graphicBufferHeight;
+    mLowDelay = buffer->flag & WANT_LOW_DELAY;
+    mRawOutput = buffer->flag & WANT_RAW_OUTPUT;
+    mSignalBufferSize = 0;
+    if (mRawOutput) {
+        WTRACE("Output is raw data.");
+    }
+    return DECODE_SUCCESS;
+}
+
+
 
 void VideoDecoderBase::stop(void) {
     terminateVA();
@@ -659,7 +692,15 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
     }
 
     if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER){
-       numSurface = mConfigBuffer.surfaceNumber;
+        numSurface = mConfigBuffer.surfaceNumber;
+        // if format has been changed in USE_NATIVE_GRAPHIC_BUFFER mode,
+        // we can not setupVA here when the graphic buffer resolution is smaller than the resolution decoder really needs
+        if (mSizeChanged) {
+            if (mVideoFormatInfo.surfaceWidth < mVideoFormatInfo.width || mVideoFormatInfo.surfaceHeight < mVideoFormatInfo.height) {
+                mSizeChanged = false;
+                return DECODE_FORMAT_CHANGE;
+            }
+        }
     }
     // TODO: validate profile
     if (numSurface == 0) {
@@ -748,8 +789,8 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         mVAExternalMemoryBuffers->luma_stride = mConfigBuffer.graphicBufferStride;
         mVAExternalMemoryBuffers->pixel_format = mConfigBuffer.graphicBufferColorFormat;
         mVAExternalMemoryBuffers->native_window = mConfigBuffer.nativeWindow;
-        mVAExternalMemoryBuffers->width = mVideoFormatInfo.width;
-        mVAExternalMemoryBuffers->height = mVideoFormatInfo.height;
+        mVAExternalMemoryBuffers->width = mVideoFormatInfo.surfaceWidth;
+        mVAExternalMemoryBuffers->height = mVideoFormatInfo.surfaceHeight;
         mVAExternalMemoryBuffers->type = VAExternalMemoryAndroidGrallocBuffer;
         for (int i = 0; i < mNumSurfaces; i++) {
             mVAExternalMemoryBuffers->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
@@ -760,8 +801,8 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         mVASurfaceAttrib->value.value.p_val = (void *)mVAExternalMemoryBuffers;
         vaStatus = vaCreateSurfaces(
             mVADisplay,
-            mVideoFormatInfo.width,
-            mVideoFormatInfo.height,
+            mVideoFormatInfo.surfaceWidth,
+            mVideoFormatInfo.surfaceHeight,
             format,
             mNumSurfaces,
             mSurfaces,
@@ -777,11 +818,11 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
             mSurfaces,
             NULL,
             0);
+    mVideoFormatInfo.surfaceWidth = mVideoFormatInfo.width;
+    mVideoFormatInfo.surfaceHeight = mVideoFormatInfo.height;
     }
     CHECK_VA_STATUS("vaCreateSurfaces");
 
-    mVideoFormatInfo.surfaceWidth = mVideoFormatInfo.width;
-    mVideoFormatInfo.surfaceHeight = mVideoFormatInfo.height;
     mVideoFormatInfo.surfaceNumber = mNumSurfaces;
     mVideoFormatInfo.ctxSurfaces = mSurfaces;
 

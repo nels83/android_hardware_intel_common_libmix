@@ -32,6 +32,7 @@ class IVideoDecoder {
 public:
     virtual ~IVideoDecoder() {}
     virtual Decode_Status start(VideoConfigBuffer *buffer) = 0;
+    virtual Decode_Status reset(VideoConfigBuffer *buffer) = 0;
     virtual void stop(void) = 0;
     virtual void flush() = 0;
     virtual Decode_Status decode(VideoDecodeBuffer *buffer) = 0;

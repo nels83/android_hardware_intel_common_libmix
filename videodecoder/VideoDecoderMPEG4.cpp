@@ -516,6 +516,11 @@ void VideoDecoderMPEG4::updateFormatInfo(vbp_data_mp42 *data) {
         data->codec_data.video_object_layer_width,
         data->codec_data.video_object_layer_height);
 
+    mVideoFormatInfo.cropBottom = data->codec_data.video_object_layer_height > mVideoFormatInfo.height ?
+                                                                          data->codec_data.video_object_layer_height - mVideoFormatInfo.height : 0;
+    mVideoFormatInfo.cropRight = data->codec_data.video_object_layer_width > mVideoFormatInfo.width ?
+                                                                     data->codec_data.video_object_layer_width - mVideoFormatInfo.width : 0;
+
     if ((mVideoFormatInfo.width != (int32_t)data->codec_data.video_object_layer_width ||
         mVideoFormatInfo.height != (int32_t)data->codec_data.video_object_layer_height) &&
         data->codec_data.video_object_layer_width &&

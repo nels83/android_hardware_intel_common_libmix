@@ -661,6 +661,10 @@ Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
     updateFormatInfo(data);
     if (mSizeChanged == false) {
         return DECODE_SUCCESS;
+    } else if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER){
+        mSizeChanged = false;
+        flushSurfaceBuffers();
+        return DECODE_FORMAT_CHANGE;
     }
 
     if (mVideoFormatInfo.width > mVideoFormatInfo.surfaceWidth ||
