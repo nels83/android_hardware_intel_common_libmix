@@ -86,6 +86,14 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
             (void**)&data);
     CHECK_STATUS("VideoDecoderBase::parseBuffer");
 
+    // When the MPEG4 parser gets the invaild parameters, add the check
+    // and return error to OMX to avoid mediaserver crash.
+    if (data && data->picture_data &&
+        (data->picture_data->picture_param.vop_width == 0
+        || data->picture_data->picture_param.vop_height == 0)) {
+        return DECODE_FAIL;
+    }
+
     if (!mVAStarted) {
         status = startVA(data);
         CHECK_STATUS("startVA");
