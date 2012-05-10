@@ -37,7 +37,7 @@ AsfStreamParser::AsfStreamParser(void)
       mHeaderParsed(false) {
     mHeaderParser = new AsfHeaderParser;
     mDataParser = new AsfDataParser;
-    mSimpleIndexParser = new AsfSimpleIndexParser;
+    mSimpleIndexParser = NULL;
 }
 
 AsfStreamParser::~AsfStreamParser(void) {
@@ -160,10 +160,27 @@ int AsfStreamParser::parseSimpleIndexObject(uint8_t *buffer, uint32_t size) {
         return ASF_PARSER_FAILED;
     }
 
-    return mSimpleIndexParser->parse(buffer, size);
+    if (mSimpleIndexParser) {
+        delete mSimpleIndexParser;
+        mSimpleIndexParser = NULL;
+    }
+
+    mSimpleIndexParser = new AsfSimpleIndexParser;
+
+    if (mSimpleIndexParser == NULL) return ASF_PARSER_FAILED;
+
+    if (ASF_PARSER_SUCCESS != mSimpleIndexParser->parse(buffer, size)) {
+        delete mSimpleIndexParser;
+        mSimpleIndexParser = NULL;
+        return ASF_PARSER_FAILED;
+    }
+
+    return ASF_PARSER_SUCCESS;
 }
 
 AsfSimpleIndexInfo* AsfStreamParser::getIndexInfo() const {
+    if (!mSimpleIndexParser) return NULL;
+
     return mSimpleIndexParser->getIndexInfo();
 }
 
@@ -180,9 +197,41 @@ int AsfStreamParser::seek(
         return ASF_PARSER_FAILED;
     }
 
-    seekTime += mHeaderParser->getPreroll()*ASF_SCALE_MS_TO_100NANOSEC;  //add preroll start time
+    if (mSimpleIndexParser) {
+        seekTime += mHeaderParser->getPreroll()*ASF_SCALE_MS_TO_100NANOSEC;  //add preroll start time
+        return mSimpleIndexParser->seek(seekTime, nextSync, packetNumber, targetTime);
+    }
+    else {
+        // no index object, need to seek using average bitrate method
 
-    return mSimpleIndexParser->seek(seekTime, nextSync, packetNumber, targetTime);
+        if (mHeaderParser->hasVideo()){
+            return ASF_PARSER_FAILED;
+        }
+
+        if (!mHeaderParser->hasAudio()) {
+            return ASF_PARSER_FAILED;
+        }
+
+        int totalByteRate=0;
+        AsfAudioStreamInfo* audioInfo = mHeaderParser->getAudioInfo();
+        while (audioInfo != NULL) {
+            totalByteRate += audioInfo->avgByteRate;
+            audioInfo = audioInfo->next;
+        }
+
+        if (totalByteRate == 0) {
+            return ASF_PARSER_FAILED;
+        }
+
+        uint32_t packetSize = mHeaderParser->getDataPacketSize();
+        if (packetSize <= 0) {
+            return ASF_PARSER_FAILED;
+        }
+
+        packetNumber = seekTime/10000000 * totalByteRate / packetSize;
+        targetTime = seekTime;
+        return ASF_PARSER_SUCCESS;
+    }
 }
 
 uint32_t AsfStreamParser::getMaxObjectSize() {
