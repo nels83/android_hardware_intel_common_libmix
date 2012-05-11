@@ -113,12 +113,14 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
 
 
 
+#ifndef VBP
         if (pInfo->img.recovery_point_found == 0) {
             pInfo->img.structure = FRAME;
             pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
             pInfo->wl_err_curr |= (FRAME << FIELD_ERR_OFFSET);
             break;
         }
+#endif
 
         ////////////////////////////////////////////////////////////////////////////
         // Step 2: Parsing slice header
