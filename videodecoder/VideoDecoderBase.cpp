@@ -1196,8 +1196,13 @@ void VideoDecoderBase::querySurfaceRenderStatus(VideoSurfaceBuffer* surface) {
     VASurfaceStatus surfStat = VASurfaceReady;
     VAStatus    vaStat = VA_STATUS_SUCCESS;
 
+    if (!surface) {
+        LOGW("SurfaceBuffer not ready yet");
+        return;
+    }
     surface->renderBuffer.driverRenderDone = true;
-    if ((mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER)) {
+    if (surface->renderBuffer.surface != VA_INVALID_SURFACE &&
+       (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER)) {
 
         vaStat = vaQuerySurfaceStatus(mVADisplay, surface->renderBuffer.surface, &surfStat);
 
