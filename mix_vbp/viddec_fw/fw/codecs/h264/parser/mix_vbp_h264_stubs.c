@@ -130,7 +130,7 @@ void h264_parse_emit_current_slice( void *parent, h264_Info *pInfo )
 {
 
     viddec_workload_item_t     wi;
-    h264_slice_data 				slice_data;
+    h264_slice_data 				slice_data = {};
 
     uint32_t		i=0, nitems=0, data=0;
     uint32_t 	bits_offset =0, byte_offset =0;
