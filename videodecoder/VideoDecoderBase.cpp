@@ -672,6 +672,7 @@ Decode_Status VideoDecoderBase::endDecodingFrame(bool dropFrame) {
     if (dropFrame) {
         // we are asked to drop this decoded picture
         VTRACE("Frame dropped in endDecodingFrame");
+        vaStatus = vaSyncSurface(mVADisplay, mAcquiredBuffer->renderBuffer.surface);
         releaseSurfaceBuffer();
         goto exit;
     }
