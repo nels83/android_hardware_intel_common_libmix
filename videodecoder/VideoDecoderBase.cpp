@@ -39,7 +39,6 @@
 // POC: 4P,  8P,  10P,  6B and mNextOutputPOC = 5
 #define OUTPUT_WINDOW_SIZE 8
 
-
 VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
     : mDisplay(NULL),
       mVADisplay(NULL),
@@ -210,6 +209,7 @@ const VideoFormatInfo* VideoDecoderBase::getFormatInfo(void) {
 }
 
 const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
+    VAStatus vaStatus;
     if (mVAStarted == false) {
         return NULL;
     }
@@ -232,6 +232,7 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
         if (mOutputHead == NULL) {
             mOutputTail = NULL;
         }
+        vaStatus = vaSetTimestampForSurface(mVADisplay, outputByPos->renderBuffer.surface, outputByPos->renderBuffer.timeStamp);
         return &(outputByPos->renderBuffer);
     }
 
@@ -277,6 +278,7 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
         }
     }
     //VTRACE("Output POC %d for display (pts = %.2f)", output->pictureOrder, output->renderBuffer.timeStamp/1E6);
+    vaStatus = vaSetTimestampForSurface(mVADisplay, output->renderBuffer.surface, output->renderBuffer.timeStamp);
     return &(output->renderBuffer);
 }
 
