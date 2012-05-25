@@ -235,6 +235,7 @@ int AsfStreamParser::seek(
 }
 
 uint32_t AsfStreamParser::getMaxObjectSize() {
+    if (!mSimpleIndexParser) return NULL;
     return mSimpleIndexParser->getMaximumPacketCount() * mDataPacketSize;
 }
 
