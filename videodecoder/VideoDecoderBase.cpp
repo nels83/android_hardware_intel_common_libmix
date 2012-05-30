@@ -1173,12 +1173,15 @@ Decode_Status VideoDecoderBase::signalRenderDone(void * graphichandler) {
     pthread_mutex_lock(&mLock);
     int i = 0;
     if (!mInitialized) {
+        if (mSignalBufferSize >= MAX_GRAPHIC_BUFFER_NUM) {
+            pthread_mutex_unlock(&mLock);
+            return DECODE_INVALID_DATA;
+        }
         mSignalBufferPre[mSignalBufferSize++] = graphichandler;
         VTRACE("SignalRenderDoneFlag mInitialized = false graphichandler = %p, mSignalBufferSize = %d", graphichandler, mSignalBufferSize);
-        if (mSignalBufferSize > MAX_GRAPHIC_BUFFER_NUM)
-            return DECODE_INVALID_DATA;
     } else {
         if (!(mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER)) {
+            pthread_mutex_unlock(&mLock);
             return DECODE_SUCCESS;
         }
         for (i = 0; i < mNumSurfaces; i++) {
