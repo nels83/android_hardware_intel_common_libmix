@@ -11,6 +11,7 @@
 #include "VideoEncoderLog.h"
 #include "VideoEncoderAVC.h"
 #include <va/va_tpi.h>
+#include <va/va_enc_h264.h>
 
 VideoEncoderAVC::VideoEncoderAVC()
     :VideoEncoderBase() {
@@ -306,7 +307,7 @@ Encode_Status VideoEncoderAVC::getOneNALUnit(
     zeroByteCount = 0;
     *nalOffset = pos;
 
-    if (status & VA_CODED_BUF_STATUS_AVC_SINGLE_NALU) {
+    if (status & VA_CODED_BUF_STATUS_SINGLE_NALU) {
         *nalSize = bufSize - pos;
         return ENCODE_SUCCESS;
     }
@@ -753,30 +754,63 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSequenceParameterBufferH264 avcSeqParams;
+    VAEncMiscParameterBuffer   *miscEncRCParamBuf;
+    VAEncMiscParameterBuffer   *miscEncFrameRateParamBuf;
+    VAEncMiscParameterRateControl *rcMiscParam;
+    VAEncMiscParameterFrameRate *framerateParam;
     int level;
     uint32_t frameRateNum = mComParams.frameRate.frameRateNum;
     uint32_t frameRateDenom = mComParams.frameRate.frameRateDenom;
+    const char* device_info;
 
     LOG_V( "Begin\n\n");
-
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+            VAEncMiscParameterBufferType,
+            sizeof (VAEncMiscParameterBuffer) + sizeof (VAEncMiscParameterRateControl),
+            1, NULL,
+            &mRcParamBuf);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+    vaStatus = vaMapBuffer(mVADisplay, mRcParamBuf, (void **)&miscEncRCParamBuf);
+    CHECK_VA_STATUS_RETURN("vaMapBuffer");
+    
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+            VAEncMiscParameterBufferType,
+            sizeof (VAEncMiscParameterBuffer) + sizeof (VAEncMiscParameterFrameRate),
+            1, NULL,
+            &mFrameRateParamBuf);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+    vaStatus = vaMapBuffer(mVADisplay, mFrameRateParamBuf, (void **)&miscEncFrameRateParamBuf);
+    CHECK_VA_STATUS_RETURN("vaMapBuffer");
+	
+    miscEncRCParamBuf->type = VAEncMiscParameterTypeRateControl;
+    rcMiscParam = (VAEncMiscParameterRateControl  *)miscEncRCParamBuf->data;
+    miscEncFrameRateParamBuf->type = VAEncMiscParameterTypeFrameRate;
+    framerateParam = (VAEncMiscParameterFrameRate *)miscEncFrameRateParamBuf->data;
     // set up the sequence params for HW
     // avcSeqParams.level_idc = mLevel;
     avcSeqParams.intra_period = mComParams.intraPeriod;
     avcSeqParams.intra_idr_period = mVideoParamsAVC.idrInterval;
     avcSeqParams.picture_width_in_mbs = (mComParams.resolution.width + 15) / 16;
     avcSeqParams.picture_height_in_mbs = (mComParams.resolution.height + 15) / 16;
+    if((avcSeqParams.picture_width_in_mbs >=1920)|| (avcSeqParams.picture_height_in_mbs >=1080))
+    {
+        device_info = vaQueryVendorString(mVADisplay);
+        if(strstr(device_info, "LEXINGTON"))
+            return ENCODE_INVALID_PARAMS;
+    }
 
     level = calcLevel (avcSeqParams.picture_width_in_mbs * avcSeqParams.picture_height_in_mbs);
     avcSeqParams.level_idc = level;
     avcSeqParams.bits_per_second = mComParams.rcParams.bitRate;
-    avcSeqParams.frame_rate =
+    framerateParam->framerate =
             (unsigned int) (frameRateNum + frameRateDenom /2 ) / frameRateDenom;
-    avcSeqParams.initial_qp = mComParams.rcParams.initQP;
-    avcSeqParams.min_qp = mComParams.rcParams.minQP;
-    avcSeqParams.basic_unit_size = mVideoParamsAVC.basicUnitSize; //for rate control usage
+    rcMiscParam->initial_qp = mComParams.rcParams.initQP;
+    rcMiscParam->min_qp = mComParams.rcParams.minQP;
+    rcMiscParam->window_size = mComParams.rcParams.windowSize;
+    rcMiscParam->basic_unit_size = mVideoParamsAVC.basicUnitSize; //for rate control usage
     avcSeqParams.intra_period = mComParams.intraPeriod;
     //avcSeqParams.vui_flag = 248;
-    avcSeqParams.vui_flag = mVideoParamsAVC.VUIFlag;
+    avcSeqParams.vui_parameters_present_flag = mVideoParamsAVC.VUIFlag;
     avcSeqParams.seq_parameter_set_id = 8;
     if (mVideoParamsAVC.crop.LeftOffset ||
             mVideoParamsAVC.crop.RightOffset ||
@@ -789,8 +823,8 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
         avcSeqParams.frame_crop_bottom_offset = mVideoParamsAVC.crop.BottomOffset;
     } else
         avcSeqParams.frame_cropping_flag = false;
-    if(avcSeqParams.vui_flag && (mVideoParamsAVC.SAR.SarWidth || mVideoParamsAVC.SAR.SarHeight)) {
-        avcSeqParams.aspect_ratio_info_present_flag = true;
+    if(avcSeqParams.vui_parameters_present_flag && (mVideoParamsAVC.SAR.SarWidth || mVideoParamsAVC.SAR.SarHeight)) {
+        avcSeqParams.vui_fields.bits.aspect_ratio_info_present_flag = true;
         avcSeqParams.aspect_ratio_idc = 0xff /* Extended_SAR */;
         avcSeqParams.sar_width = mVideoParamsAVC.SAR.SarWidth;
         avcSeqParams.sar_height = mVideoParamsAVC.SAR.SarHeight;
@@ -807,18 +841,26 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     LOG_I( "picture_width_in_mbs = %d\n", avcSeqParams.picture_width_in_mbs);
     LOG_I( "picture_height_in_mbs = %d\n", avcSeqParams.picture_height_in_mbs);
     LOG_I( "bitrate = %d\n", avcSeqParams.bits_per_second);
-    LOG_I( "frame_rate = %d\n", avcSeqParams.frame_rate);
-    LOG_I( "initial_qp = %d\n", avcSeqParams.initial_qp);
-    LOG_I( "min_qp = %d\n", avcSeqParams.min_qp);
-    LOG_I( "basic_unit_size = %d\n", avcSeqParams.basic_unit_size);
+    LOG_I( "frame_rate = %d\n", framerateParam->framerate);
+    LOG_I( "initial_qp = %d\n", rcMiscParam->initial_qp);
+    LOG_I( "min_qp = %d\n", rcMiscParam->min_qp);
+    LOG_I( "basic_unit_size = %d\n", rcMiscParam->basic_unit_size);
 
+    vaStatus = vaUnmapBuffer(mVADisplay, mRcParamBuf);
+    CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
+    vaStatus = vaUnmapBuffer(mVADisplay, mFrameRateParamBuf);
+    CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,
             VAEncSequenceParameterBufferType,
             sizeof(avcSeqParams), 1, &avcSeqParams,
             &mSeqParamBuf);
     CHECK_VA_STATUS_RETURN("vaCreateBuffer");
-
+	
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mRcParamBuf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mFrameRateParamBuf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
     vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mSeqParamBuf, 1);
     CHECK_VA_STATUS_RETURN("vaRenderPicture");
 
@@ -833,20 +875,20 @@ Encode_Status VideoEncoderAVC::renderPictureParams() {
 
     LOG_V( "Begin\n\n");
     // set picture params for HW
-    avcPicParams.reference_picture = mRefFrame->surface;
-    avcPicParams.reconstructed_picture = mRecFrame->surface;
+    avcPicParams.ReferenceFrames[0].picture_id= mRefFrame->surface;
+    avcPicParams.CurrPic.picture_id= mRecFrame->surface;
     avcPicParams.coded_buf = mVACodedBuffer [mCodedBufIndex];
-    avcPicParams.picture_width = mComParams.resolution.width;
-    avcPicParams.picture_height = mComParams.resolution.height;
+    //avcPicParams.picture_width = mComParams.resolution.width;
+    //avcPicParams.picture_height = mComParams.resolution.height;
     avcPicParams.last_picture = 0;
 
     LOG_V("======h264 picture params======\n");
-    LOG_I( "reference_picture = 0x%08x\n", avcPicParams.reference_picture);
-    LOG_I( "reconstructed_picture = 0x%08x\n", avcPicParams.reconstructed_picture);
+    LOG_I( "reference_picture = 0x%08x\n", avcPicParams.ReferenceFrames[0].picture_id);
+    LOG_I( "reconstructed_picture = 0x%08x\n", avcPicParams.CurrPic.picture_id);
     LOG_I( "coded_buf_index = %d\n", mCodedBufIndex);
     LOG_I( "coded_buf = 0x%08x\n", avcPicParams.coded_buf);
-    LOG_I( "picture_width = %d\n", avcPicParams.picture_width);
-    LOG_I( "picture_height = %d\n\n", avcPicParams.picture_height);
+    //LOG_I( "picture_width = %d\n", avcPicParams.picture_width);
+    //LOG_I( "picture_height = %d\n\n", avcPicParams.picture_height);
 
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,

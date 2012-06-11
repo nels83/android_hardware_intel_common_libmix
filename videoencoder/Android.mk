@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-VIDEO_ENC_LOG_ENABLE := false
+VIDEO_ENC_LOG_ENABLE := true
 
 LOCAL_SRC_FILES :=              \
     VideoEncoderBase.cpp        \

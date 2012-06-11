@@ -473,9 +473,9 @@ MIX_RESULT MixVideoFormatEnc_H263::Initialize(
 
     LOG_V( "vaCreateSurfaces\n");
 
-    va_status = vaCreateSurfaces(va_display, this->picture_width,
-                                 this->picture_height, this->va_format,
-                                 normal_surfaces_cnt, surfaces, NULL, 0);
+    va_status = vaCreateSurfaces(va_display, this->va_format,
+                                 this->picture_width, this->picture_height,
+                                 surfaces, normal_surfaces_cnt, NULL, 0);
 
     if (va_status != VA_STATUS_SUCCESS)
     {
@@ -503,6 +503,7 @@ MIX_RESULT MixVideoFormatEnc_H263::Initialize(
     switch (this->buffer_mode) {
     case MIX_BUFFER_UPSTREAM_ALLOC_CI:
     {
+		#if 0
         for (index = 0; index < this->shared_surfaces_cnt; index++) {
 
             va_status = vaCreateSurfaceFromCIFrame(va_display,
@@ -517,6 +518,7 @@ MIX_RESULT MixVideoFormatEnc_H263::Initialize(
 
             this->surfaces[index] = this->shared_surfaces[index];
         }
+		#endif
     }
     break;
     case MIX_BUFFER_UPSTREAM_ALLOC_V4L2:

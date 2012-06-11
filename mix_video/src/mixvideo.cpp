@@ -2041,12 +2041,12 @@ MIX_RESULT mix_video_get_new_userptr_for_surface_buffer_default (MixVideo * mix,
         LOG_E("Usr created Surface count is exceed max number!\n");
         goto cleanup;
     }
-
+#if 0 //jgl
     va_status = vaCreateSurfacesForUserPtr (
                     priv->va_display, width, height, VA_RT_FORMAT_YUV420, 1,
                     &surface, expected_size, VA_FOURCC_NV12, width, width, width,
                     0, width * height, width * height);
-
+#endif
 
     if (va_status != VA_STATUS_SUCCESS) {
         LOG_E("Failed vaCreateSurfaces\n");

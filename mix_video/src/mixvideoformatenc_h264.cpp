@@ -14,6 +14,7 @@
 #include "mixvideoformatenc_h264.h"
 #include "mixvideoconfigparamsenc_h264.h"
 #include <va/va_tpi.h>
+#include <va/va_enc_h264.h>
 
 #undef SHOW_SRC
 
@@ -546,9 +547,9 @@ MixVideoFormatEnc_H264::Initialize(
 
     LOG_V( "vaCreateSurfaces\n");
 
-    va_status = vaCreateSurfaces(va_display, this->picture_width,
-                                 this->picture_height, this->va_format,
-                                 normal_surfaces_cnt, surfaces, NULL, 0);
+    va_status = vaCreateSurfaces(va_display, this->va_format,
+                                 this->picture_width, this->picture_height,
+                                 surfaces,normal_surfaces_cnt,  NULL, 0);
 
     if (va_status != VA_STATUS_SUCCESS)
     {
@@ -579,8 +580,8 @@ MixVideoFormatEnc_H264::Initialize(
     switch (this->buffer_mode) {
     case MIX_BUFFER_UPSTREAM_ALLOC_CI:
     {
+#if 0
         for (index = 0; index < this->shared_surfaces_cnt; index++) {
-
             va_status = vaCreateSurfaceFromCIFrame(va_display,
                                                    (ulong) (ci_info->ci_frame_id[index]),
                                                    &this->shared_surfaces[index]);
@@ -593,7 +594,9 @@ MixVideoFormatEnc_H264::Initialize(
 
             this->surfaces[index] = this->shared_surfaces[index];
         }
+#endif
     }
+
     break;
     case MIX_BUFFER_UPSTREAM_ALLOC_V4L2:
         /*To be develped*/
@@ -2668,6 +2671,8 @@ MIX_RESULT
 MixVideoFormatEnc_H264::_send_seq_params () {
     VAStatus va_status;
     VAEncSequenceParameterBufferH264 h264_seq_param;
+	VAEncMiscParameterRateControl rc_misc_param;
+	VAEncMiscParameterFrameRate frame_rate_param;
     int level;
 
     LOG_V( "Begin\n\n");
@@ -2685,13 +2690,13 @@ MixVideoFormatEnc_H264::_send_seq_params () {
     h264_seq_param.level_idc = level;
 
     h264_seq_param.bits_per_second = this->bitrate;
-    h264_seq_param.frame_rate =
+    frame_rate_param.framerate =
         (unsigned int) (this->frame_rate_num + this->frame_rate_denom /2 ) / this->frame_rate_denom;
-    h264_seq_param.initial_qp = this->initial_qp;
-    h264_seq_param.min_qp = this->min_qp;
-    h264_seq_param.basic_unit_size = this->basic_unit_size; //for rate control usage
+    rc_misc_param.initial_qp = this->initial_qp;
+    rc_misc_param.min_qp = this->min_qp;
+    rc_misc_param.basic_unit_size = this->basic_unit_size; //for rate control usage
     h264_seq_param.intra_period = this->intra_period;
-    h264_seq_param.vui_flag = this->vui_flag;
+    h264_seq_param.vui_parameters_present_flag = this->vui_flag;
     //h264_seq_param.vui_flag = 248;
     //h264_seq_param.seq_parameter_set_id = 176;
 
@@ -2716,21 +2721,33 @@ MixVideoFormatEnc_H264::_send_seq_params () {
     LOG_I( "bitrate = %d\n",
            h264_seq_param.bits_per_second);
     LOG_I( "frame_rate = %d\n",
-           h264_seq_param.frame_rate);
+           frame_rate_param.frame_rate);
     LOG_I( "initial_qp = %d\n",
-           h264_seq_param.initial_qp);
+           rc_misc_param.initial_qp);
     LOG_I( "min_qp = %d\n",
-           h264_seq_param.min_qp);
+           rc_misc_param.min_qp);
     LOG_I( "basic_unit_size = %d\n",
-           h264_seq_param.basic_unit_size);
+           rc_misc_param.basic_unit_size);
     LOG_I( "vui_flag = %d\n\n",
-           h264_seq_param.vui_flag);
+           h264_seq_param.vui_parameters_present_flag);
 
     va_status = vaCreateBuffer(this->va_display, this->va_context,
                                VAEncSequenceParameterBufferType,
                                sizeof(h264_seq_param),
                                1, &h264_seq_param,
                                &this->seq_param_buf);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+            "Failed to vaCreateBuffer\n");
+        return MIX_RESULT_FAIL;
+    }
+
+    va_status = vaCreateBuffer(this->va_display, this->va_context,
+                               VAEncMiscParameterBufferType,
+                               sizeof(rc_misc_param),
+                               1, &h264_seq_param,
+                               &this->rc_param_buf);
     if (va_status != VA_STATUS_SUCCESS)
     {
         LOG_E(
@@ -2746,7 +2763,14 @@ MixVideoFormatEnc_H264::_send_seq_params () {
             "Failed to vaRenderPicture\n");
         return MIX_RESULT_FAIL;
     }
-
+    va_status = vaRenderPicture(this->va_display, this->va_context,
+                                &this->rc_param_buf, 1);
+    if (va_status != VA_STATUS_SUCCESS)
+    {
+        LOG_E(
+            "Failed to vaRenderPicture\n");
+        return MIX_RESULT_FAIL;
+    }
     return MIX_RESULT_SUCCESS;
 
 }
@@ -2761,29 +2785,30 @@ MixVideoFormatEnc_H264::_send_picture_parameter () {
 
 
     /*set picture params for HW*/
-    h264_pic_param.reference_picture = this->ref_frame->frame_id;
-    h264_pic_param.reconstructed_picture = this->rec_frame->frame_id;
+    h264_pic_param.ReferenceFrames[0].picture_id= this->ref_frame->frame_id;
+    h264_pic_param.CurrPic.picture_id= this->rec_frame->frame_id;
     h264_pic_param.coded_buf = this->coded_buf[this->coded_buf_index];
-    h264_pic_param.picture_width = this->picture_width;
-    h264_pic_param.picture_height = this->picture_height;
+    //h264_pic_param.picture_width = this->picture_width;
+    //h264_pic_param.picture_height = this->picture_height;
     h264_pic_param.last_picture = 0;
 
 
     LOG_V(
         "======h264 picture params======\n");
     LOG_I( "reference_picture = 0x%08x\n",
-           h264_pic_param.reference_picture);
+           h264_pic_param.ReferenceFrames[0].picture_id);
     LOG_I( "reconstructed_picture = 0x%08x\n",
-           h264_pic_param.reconstructed_picture);
+           h264_pic_param.CurrPic.picture_id);
     LOG_I( "coded_buf_index = %d\n",
            this->coded_buf_index);
     LOG_I( "coded_buf = 0x%08x\n",
            h264_pic_param.coded_buf);
+	/*
     LOG_I( "picture_width = %d\n",
            h264_pic_param.picture_width);
     LOG_I( "picture_height = %d\n\n",
            h264_pic_param.picture_height);
-
+	*/
     va_status = vaCreateBuffer(this->va_display, this->va_context,
                                VAEncPictureParameterBufferType,
                                sizeof(h264_pic_param),

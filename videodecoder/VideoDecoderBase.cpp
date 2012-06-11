@@ -66,7 +66,6 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
       mOutputTail(NULL),
       mSurfaces(NULL),
       mVASurfaceAttrib(NULL),
-      mVAExternalMemoryBuffers(NULL),
       mSurfaceUserPtr(NULL),
       mSurfaceAcquirePos(0),
       mNextOutputPOC(MINIMUM_POC),
@@ -776,49 +775,43 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         WTRACE("Surface is protected.");
     }
     if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER) {
-        mVASurfaceAttrib = new VASurfaceAttrib;
+        mVASurfaceAttrib = new VASurfaceAttributeTPI;
         if (mVASurfaceAttrib == NULL) {
             return DECODE_MEMORY_FAIL;
         }
-        mVAExternalMemoryBuffers = new VAExternalMemoryBuffers;
-        if (mVAExternalMemoryBuffers == NULL) {
+
+        mVASurfaceAttrib->buffers= (unsigned int *)malloc(sizeof(unsigned int)*mNumSurfaces);
+        if (mVASurfaceAttrib->buffers == NULL) {
             return DECODE_MEMORY_FAIL;
         }
-        mVAExternalMemoryBuffers->buffers= (unsigned int *)malloc(sizeof(unsigned int)*mNumSurfaces);
-        if (mVAExternalMemoryBuffers->buffers == NULL) {
-            return DECODE_MEMORY_FAIL;
-        }
-        mVAExternalMemoryBuffers->count = mNumSurfaces;
-        mVAExternalMemoryBuffers->luma_stride = mConfigBuffer.graphicBufferStride;
-        mVAExternalMemoryBuffers->pixel_format = mConfigBuffer.graphicBufferColorFormat;
-        mVAExternalMemoryBuffers->native_window = mConfigBuffer.nativeWindow;
-        mVAExternalMemoryBuffers->width = mVideoFormatInfo.surfaceWidth;
-        mVAExternalMemoryBuffers->height = mVideoFormatInfo.surfaceHeight;
-        mVAExternalMemoryBuffers->type = VAExternalMemoryAndroidGrallocBuffer;
+        mVASurfaceAttrib->count = mNumSurfaces;
+        mVASurfaceAttrib->luma_stride = mConfigBuffer.graphicBufferStride;
+        mVASurfaceAttrib->pixel_format = mConfigBuffer.graphicBufferColorFormat;
+        mVASurfaceAttrib->width = mVideoFormatInfo.width;
+        mVASurfaceAttrib->height = mVideoFormatInfo.height;
+        mVASurfaceAttrib->type = VAExternalMemoryAndroidGrallocBuffer;
+        mVASurfaceAttrib->reserved[0] = (unsigned int)mConfigBuffer.nativeWindow;
+        
         for (int i = 0; i < mNumSurfaces; i++) {
-            mVAExternalMemoryBuffers->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
+            mVASurfaceAttrib->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
         }
-        mVASurfaceAttrib->flags = VA_SURFACE_ATTRIB_SETTABLE;
-        mVASurfaceAttrib->type = VASurfaceAttribNativeHandle;
-        mVASurfaceAttrib->value.type = VAGenericValueTypePointer;
-        mVASurfaceAttrib->value.value.p_val = (void *)mVAExternalMemoryBuffers;
-        vaStatus = vaCreateSurfaces(
+
+        vaStatus = vaCreateSurfacesWithAttribute(
             mVADisplay,
             mVideoFormatInfo.surfaceWidth,
             mVideoFormatInfo.surfaceHeight,
             format,
             mNumSurfaces,
             mSurfaces,
-            mVASurfaceAttrib,
-            1);
+            mVASurfaceAttrib);
     } else {
         vaStatus = vaCreateSurfaces(
             mVADisplay,
+            format,
             mVideoFormatInfo.width,
             mVideoFormatInfo.height,
-            format,
-            mNumSurfaces,
             mSurfaces,
+            mNumSurfaces,
             NULL,
             0);
     mVideoFormatInfo.surfaceWidth = mVideoFormatInfo.width;
@@ -889,16 +882,6 @@ Decode_Status VideoDecoderBase::terminateVA(void) {
         }
         delete [] mSurfaceBuffers;
         mSurfaceBuffers = NULL;
-    }
-
-
-    if (mVAExternalMemoryBuffers) {
-        if (mVAExternalMemoryBuffers->buffers) {
-            free(mVAExternalMemoryBuffers->buffers);
-            mVAExternalMemoryBuffers->buffers = NULL;
-        }
-        delete mVAExternalMemoryBuffers;
-        mVAExternalMemoryBuffers = NULL;
     }
 
     if (mVASurfaceAttrib) {

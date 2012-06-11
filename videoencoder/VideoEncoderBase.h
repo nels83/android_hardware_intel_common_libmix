@@ -10,6 +10,7 @@
 #define __VIDEO_ENCODER_BASE_H__
 
 #include <va/va.h>
+#include <va/va_tpi.h>
 #include "VideoEncoderDef.h"
 #include "VideoEncoderInterface.h"
 class VideoEncoderBase : IVideoEncoder {
@@ -115,6 +116,8 @@ protected:
     VABufferID mLastCodedBuffer;
     VABufferID mOutCodedBuffer;
     VABufferID mSeqParamBuf;
+    VABufferID mRcParamBuf;
+    VABufferID mFrameRateParamBuf;
     VABufferID mPicParamBuf;
     VABufferID mSliceParamBuf;
 

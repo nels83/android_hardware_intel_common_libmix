@@ -72,6 +72,7 @@ public:
     VABufferID coded_buf[2];
     VABufferID last_coded_buf;
     VABufferID seq_param_buf;
+	VABufferID rc_param_buf;
     VABufferID pic_param_buf;
     VABufferID slice_param_buf;
     //VASurfaceID *   ci_shared_surfaces;

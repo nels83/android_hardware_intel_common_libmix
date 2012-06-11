@@ -30,25 +30,7 @@ VAStatus vaLockSurface(VADisplay dpy,
 VAStatus vaUnlockSurface(VADisplay dpy,
     VASurfaceID surface
 );
-
-VAStatus vaCreateSurfaceFromKBuf(
-    VADisplay dpy,
-    int width,
-    int height,
-    int format,
-    VASurfaceID *surface,       /* out */
-    unsigned int kbuf_handle, /* kernel buffer handle*/
-    unsigned size, /* kernel buffer size */
-    unsigned int kBuf_fourcc, /* expected fourcc */
-    unsigned int luma_stride, /* luma stride, could be width aligned with a special value */
-    unsigned int chroma_u_stride, /* chroma stride */
-    unsigned int chroma_v_stride,
-    unsigned int luma_offset, /* could be 0 */
-    unsigned int chroma_u_offset, /* UV offset from the beginning of the memory */
-    unsigned int chroma_v_offset
-);
 }
-
 VideoEncoderBase::VideoEncoderBase()
     :mInitialized(false)
     ,mVADisplay(NULL)
@@ -242,7 +224,7 @@ Encode_Status VideoEncoderBase::start() {
         }
     }
 
-    LOG_I("mBufferMode = %d\n", mBufferMode);
+    LOG_E("mBufferMode = %d\n", mBufferMode);
 
     mSurfaceCnt = normalSurfacesCnt + mSharedSurfacesCnt + mReqSurfacesCnt;
 
@@ -260,9 +242,9 @@ Encode_Status VideoEncoderBase::start() {
         goto CLEAN_UP;
     }
 
-    vaStatus = vaCreateSurfaces(mVADisplay, mComParams.resolution.width,
-            mComParams.resolution.height, VA_RT_FORMAT_YUV420,
-            normalSurfacesCnt, surfaces, NULL , 0);
+    vaStatus = vaCreateSurfaces(mVADisplay,VA_RT_FORMAT_YUV420, mComParams.resolution.width,
+            mComParams.resolution.height, 
+            surfaces, normalSurfacesCnt, NULL , 0);
     CHECK_VA_STATUS_GOTO_CLEANUP("vaCreateSurfaces");
 
     switch (mBufferMode) {
@@ -1412,12 +1394,21 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
         LOG_W ("Format is not supported\n");
         return ENCODE_NOT_SUPPORTED;
     }
+    VASurfaceAttributeTPI *attribute_tpi = new VASurfaceAttributeTPI;
 
-    vaStatus = vaCreateSurfacesForUserPtr(mVADisplay, width, height, VA_RT_FORMAT_YUV420, 1,
-            &surface, expectedSize, VA_FOURCC_NV12, width, width, width,
-            0, width * height, width * height);
+    attribute_tpi->size = expectedSize;
+    attribute_tpi->luma_stride = width;
+    attribute_tpi->chroma_u_stride = width;
+    attribute_tpi->chroma_v_stride = width;
+    attribute_tpi->luma_offset = 0;
+    attribute_tpi->chroma_u_offset = width*height;
+    attribute_tpi->chroma_v_offset = width*height;
+    attribute_tpi->pixel_format = VA_FOURCC_NV12;
+    attribute_tpi->type = VAExternalMemoryNULL;
 
-    CHECK_VA_STATUS_RETURN("vaCreateSurfacesForUserPtr");
+    vaCreateSurfacesWithAttribute(mVADisplay, width, height, VA_RT_FORMAT_YUV420,
+            1, &surface, attribute_tpi);
+    CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
 
     vaStatus = vaDeriveImage(mVADisplay, surface, &image);
     CHECK_VA_STATUS_RETURN("vaDeriveImage");
@@ -1484,6 +1475,10 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
 
     mReqSurfacesCnt ++;
     ret = ENCODE_SUCCESS;
+    if(attribute_tpi) {
+        delete attribute_tpi;
+        attribute_tpi = NULL;
+    }
 
     return ret;
 }
@@ -1550,7 +1545,6 @@ Encode_Status VideoEncoderBase::generateVideoBufferAndAttachToList(uint32_t inde
 }
 
 Encode_Status VideoEncoderBase::surfaceMappingForSurfaceList() {
-
     uint32_t index;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Encode_Status ret = ENCODE_SUCCESS;
@@ -1564,6 +1558,13 @@ Encode_Status VideoEncoderBase::surfaceMappingForSurfaceList() {
     uint32_t chromaVOffset = 0;
     uint32_t kBufHandle = 0;
 
+    VASurfaceAttributeTPI * vaSurfaceAttrib = new VASurfaceAttributeTPI;
+    if (vaSurfaceAttrib == NULL) {
+        LOG_E("Failed to allocate VASurfaceAttrib\n");
+        return ENCODE_NO_MEMORY;
+    }
+    vaSurfaceAttrib->buffers = new uint32_t[mSharedSurfacesCnt];
+    
     for (index = 0; index < mSharedSurfacesCnt; index++) {
 
         vaStatus = vaLockSurface(
@@ -1585,10 +1586,20 @@ Encode_Status VideoEncoderBase::surfaceMappingForSurfaceList() {
         vaStatus = vaUnlockSurface(mVADecoderDisplay, (VASurfaceID)mUpstreamBufferList[index]);
         CHECK_VA_STATUS_RETURN("vaUnlockSurface");
 
-        vaStatus = vaCreateSurfaceFromKBuf(
+        vaSurfaceAttrib->size = mComParams.resolution.width*mComParams.resolution.height*1.5;
+        vaSurfaceAttrib->luma_stride = lumaStride;
+        vaSurfaceAttrib->chroma_u_stride = chromaUStride;
+        vaSurfaceAttrib->chroma_v_stride = chromaVStride;
+        vaSurfaceAttrib->luma_offset = lumaOffset;
+        vaSurfaceAttrib->chroma_u_offset = chromaUOffset;
+        vaSurfaceAttrib->chroma_v_offset = chromaVOffset;
+        vaSurfaceAttrib->buffers[0] = kBufHandle;
+        vaSurfaceAttrib->pixel_format = fourCC;
+        vaSurfaceAttrib->type = VAExternalMemoryKernelDRMBufffer;
+
+        vaStatus = vaCreateSurfacesWithAttribute(
                 mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
-                (VASurfaceID *)&mSharedSurfaces[index], kBufHandle, lumaStride * mComParams.resolution.height * 3 / 2,
-                fourCC, lumaStride, chromaUStride, chromaVStride, lumaOffset, chromaUOffset, chromaVOffset);
+                1 /*mSharedSurfacesCnt*/, &mSharedSurfaces[index], vaSurfaceAttrib);
 
         CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
 
@@ -1598,7 +1609,15 @@ Encode_Status VideoEncoderBase::surfaceMappingForSurfaceList() {
         ret = generateVideoBufferAndAttachToList(index, NULL);
         CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList");
     }
-
+    
+    if(vaSurfaceAttrib) {
+        if(vaSurfaceAttrib->buffers) {
+            delete [] vaSurfaceAttrib->buffers;
+            vaSurfaceAttrib->buffers= NULL;
+        }
+        delete vaSurfaceAttrib;
+        vaSurfaceAttrib = NULL;
+    }
     return ret;
 }
 
@@ -1608,21 +1627,15 @@ Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle() {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Encode_Status ret = ENCODE_SUCCESS;
 
-    VASurfaceAttrib * vaSurfaceAttrib = new VASurfaceAttrib;
+    VASurfaceAttributeTPI * vaSurfaceAttrib = new VASurfaceAttributeTPI;
     if (vaSurfaceAttrib == NULL) {
         LOG_E("Failed to allocate VASurfaceAttrib\n");
         return ENCODE_NO_MEMORY;
     }
 
-    VAExternalMemoryBuffers *vaExternalMemoryBuffers = new VAExternalMemoryBuffers;
-    if (vaExternalMemoryBuffers == NULL) {
-        LOG_E("Failed to allocate VAExternalMemoryBuffers\n");
-        return ENCODE_NO_MEMORY;
-    }
-
-    vaExternalMemoryBuffers->buffers = new uint32_t[mSharedSurfacesCnt];
-    if (vaExternalMemoryBuffers->buffers == NULL) {
-        LOG_E("Failed to allocate buffers for VAExternalMemoryBuffers\n");
+    vaSurfaceAttrib->buffers = new uint32_t[mSharedSurfacesCnt];
+    if (vaSurfaceAttrib->buffers == NULL) {
+        LOG_E("Failed to allocate buffers for vaSurfaceAttrib\n");
         return ENCODE_NO_MEMORY;
     }
 
@@ -1632,31 +1645,27 @@ Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle() {
     LOG_I("width = %d\n", mComParams.resolution.width);
     LOG_I("height = %d\n", mComParams.resolution.height);
 
-    vaExternalMemoryBuffers->count = mSharedSurfacesCnt;
-    vaExternalMemoryBuffers->luma_stride = mBufAttrib->lumaStride;
-    vaExternalMemoryBuffers->pixel_format = mBufAttrib->format;
-    vaExternalMemoryBuffers->width = mComParams.resolution.width;
-    vaExternalMemoryBuffers->height = mComParams.resolution.height;
-    vaExternalMemoryBuffers->type = VAExternalMemoryAndroidGrallocBuffer;
+    vaSurfaceAttrib->count = mSharedSurfacesCnt;
+    vaSurfaceAttrib->luma_stride = mBufAttrib->lumaStride;
+    vaSurfaceAttrib->pixel_format = mBufAttrib->format;
+    vaSurfaceAttrib->width = mComParams.resolution.width;
+    vaSurfaceAttrib->height = mComParams.resolution.height;
+    vaSurfaceAttrib->type = VAExternalMemoryAndroidGrallocBuffer;
     for(index = 0; index < mSharedSurfacesCnt; index++) {
-        vaExternalMemoryBuffers->buffers[index] = (uint32_t) mUpstreamBufferList[index];
+        vaSurfaceAttrib->buffers[index] = (uint32_t) mUpstreamBufferList[index];
         LOG_I("NativeHandleList[%d] = 0x%08x", index, mUpstreamBufferList[index]);
     }
-    vaSurfaceAttrib->flags = VA_SURFACE_ATTRIB_SETTABLE;
-    vaSurfaceAttrib->type = VASurfaceAttribNativeHandle;
-    vaSurfaceAttrib->value.type = VAGenericValueTypePointer;
-    vaSurfaceAttrib->value.value.p_val = (void *)vaExternalMemoryBuffers;
-    vaStatus = vaCreateSurfaces(
+
+    vaStatus = vaCreateSurfacesWithAttribute(
             mVADisplay,
             mComParams.resolution.width,
             mComParams.resolution.height,
             VA_RT_FORMAT_YUV420,
             mSharedSurfacesCnt,
             mSharedSurfaces,
-            vaSurfaceAttrib,
-            1);
+            vaSurfaceAttrib);
 
-    CHECK_VA_STATUS_RETURN("vaCreateSurfaces");
+    CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
     LOG_V("Successfully create surfaces from native hanle");
 
     for(index = 0; index < mSharedSurfacesCnt; index++) {
@@ -1665,16 +1674,12 @@ Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle() {
         LOG_I("mSurfaces[%d] = %08x", index, mSurfaces[index]);
         CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList");
     }
-    if(vaExternalMemoryBuffers) {
-        if(vaExternalMemoryBuffers->buffers) {
-            delete [] vaExternalMemoryBuffers->buffers;
-            vaExternalMemoryBuffers->buffers= NULL;
-        }
-        delete vaExternalMemoryBuffers;
-        vaExternalMemoryBuffers =  NULL;
-    }
 
     if(vaSurfaceAttrib) {
+        if(vaSurfaceAttrib->buffers) {
+            delete [] vaSurfaceAttrib->buffers;
+            vaSurfaceAttrib->buffers= NULL;
+        }
         delete vaSurfaceAttrib;
         vaSurfaceAttrib = NULL;
     }
@@ -1692,13 +1697,29 @@ Encode_Status VideoEncoderBase::surfaceMappingForKbufHandle() {
     uint32_t lumaOffset = 0;
     uint32_t chromaUOffset = mBufAttrib->realHeight * mBufAttrib->lumaStride;
     uint32_t chromaVOffset = chromaUOffset + 1;
-
+    
+    VASurfaceAttributeTPI * vaSurfaceAttrib = new VASurfaceAttributeTPI;
+    if (vaSurfaceAttrib == NULL) {
+        LOG_E("Failed to allocate VASurfaceAttrib\n");
+        return ENCODE_NO_MEMORY;
+    }
+    vaSurfaceAttrib->buffers = new uint32_t[mSharedSurfacesCnt];
+    
     for (index = 0; index < mSharedSurfacesCnt; index++) {
+        vaSurfaceAttrib->size = mBufAttrib->lumaStride * mComParams.resolution.height * 3 / 2;
+        vaSurfaceAttrib->luma_stride = mBufAttrib->lumaStride;
+        vaSurfaceAttrib->chroma_u_stride = mBufAttrib->chromStride;
+        vaSurfaceAttrib->chroma_v_stride = mBufAttrib->chromStride;
+        vaSurfaceAttrib->luma_offset = lumaOffset;
+        vaSurfaceAttrib->chroma_u_offset = chromaUOffset;
+        vaSurfaceAttrib->chroma_v_offset = chromaVOffset;
+        vaSurfaceAttrib->buffers[0] = mUpstreamBufferList[index];
+        vaSurfaceAttrib->pixel_format = mBufAttrib->format;
+        vaSurfaceAttrib->type = VAExternalMemoryKernelDRMBufffer;
 
-        vaStatus = vaCreateSurfaceFromKBuf(
+        vaStatus = vaCreateSurfacesWithAttribute(
                 mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
-                (VASurfaceID *)&mSharedSurfaces[index], mUpstreamBufferList[index], mBufAttrib->lumaStride * mComParams.resolution.height * 3 / 2,
-                mBufAttrib->format, mBufAttrib->lumaStride, mBufAttrib->chromStride, mBufAttrib->chromStride, lumaOffset, chromaUOffset, chromaVOffset);
+                1 /*mSharedSurfacesCnt*/, &mSharedSurfaces[index], vaSurfaceAttrib);
 
         CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
 
@@ -1708,6 +1729,15 @@ Encode_Status VideoEncoderBase::surfaceMappingForKbufHandle() {
         ret = generateVideoBufferAndAttachToList(index, NULL);
         CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList");
     }
+    
+    if(vaSurfaceAttrib) {
+        if(vaSurfaceAttrib->buffers) {
+            delete [] vaSurfaceAttrib->buffers;
+            vaSurfaceAttrib->buffers= NULL;
+        }
+        delete vaSurfaceAttrib;
+        vaSurfaceAttrib = NULL;
+    }
 
     return ret;
 }
@@ -1716,18 +1746,38 @@ Encode_Status VideoEncoderBase::surfaceMappingForCIFrameList() {
     uint32_t index;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Encode_Status ret = ENCODE_SUCCESS;
-
+    VASurfaceAttributeTPI * vaSurfaceAttrib = new VASurfaceAttributeTPI;
+    if (vaSurfaceAttrib == NULL) {
+        LOG_E("Failed to allocate VASurfaceAttrib\n");
+        return ENCODE_NO_MEMORY;
+    }
+    vaSurfaceAttrib->type = VAExternalMemoryCIFrame;
+    vaSurfaceAttrib->buffers = new uint32_t[mSharedSurfacesCnt];
+  
     for (index = 0; index < mSharedSurfacesCnt; index++) {
-
-        vaStatus = vaCreateSurfaceFromCIFrame(
-                mVADisplay, (uint32_t)mUpstreamBufferCnt, &mSharedSurfaces[index]);
-
-        CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromCIFrame");
-
+        vaSurfaceAttrib->buffers[0] = (uint32_t)mUpstreamBufferCnt;
+        vaStatus = vaCreateSurfacesWithAttribute(
+                mVADisplay,
+                mComParams.resolution.width,
+                mComParams.resolution.height,
+                VA_RT_FORMAT_YUV420,
+                1 /*mSharedSurfacesCnt*/,
+                &mSharedSurfaces[index],
+                vaSurfaceAttrib);
+        CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
         mSurfaces[index] = mSharedSurfaces[index];
 
         ret = generateVideoBufferAndAttachToList(index, NULL);
         CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList")
+    }
+   
+    if(vaSurfaceAttrib) {
+        if(vaSurfaceAttrib->buffers) {
+            delete [] vaSurfaceAttrib->buffers;
+            vaSurfaceAttrib->buffers= NULL;
+        }
+        delete vaSurfaceAttrib;
+        vaSurfaceAttrib = NULL;
     }
     return ret;
 }
