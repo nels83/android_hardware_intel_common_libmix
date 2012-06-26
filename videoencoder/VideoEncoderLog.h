@@ -23,6 +23,7 @@
     __android_log_print(level, comp, "%s():%d: "format, \
     __FUNCTION__, __LINE__, ##__VA_ARGS__)
 
+#if 1
 #ifdef VIDEO_ENC_LOG_ENABLE
 #define LOG_V(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_VERBOSE, format, ##__VA_ARGS__)
 #define LOG_I(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_INFO, format, ##__VA_ARGS__)
@@ -34,6 +35,12 @@
 #endif
 
 #define LOG_E(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
+#else
+#define LOG_V printf
+#define LOG_I printf
+#define LOG_W printf
+#define LOG_E printf
+#endif
 
 #define CHECK_VA_STATUS_RETURN(FUNC)\
     if (vaStatus != VA_STATUS_SUCCESS) {\

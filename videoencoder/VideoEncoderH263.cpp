@@ -86,8 +86,8 @@ Encode_Status VideoEncoderH263::renderPictureParams() {
     LOG_V( "Begin\n\n");
 
     // set picture params for HW
-    h263PictureParams.reference_picture = mRefFrame->surface;
-    h263PictureParams.reconstructed_picture = mRecFrame->surface;
+    h263PictureParams.reference_picture = mRefSurface;
+    h263PictureParams.reconstructed_picture = mRecSurface;
     h263PictureParams.coded_buf = mVACodedBuffer [mCodedBufIndex];
     h263PictureParams.picture_width = mComParams.resolution.width;
     h263PictureParams.picture_height = mComParams.resolution.height;

@@ -875,8 +875,8 @@ Encode_Status VideoEncoderAVC::renderPictureParams() {
 
     LOG_V( "Begin\n\n");
     // set picture params for HW
-    avcPicParams.ReferenceFrames[0].picture_id= mRefFrame->surface;
-    avcPicParams.CurrPic.picture_id= mRecFrame->surface;
+    avcPicParams.ReferenceFrames[0].picture_id= mRefSurface;
+    avcPicParams.CurrPic.picture_id= mRecSurface;
     avcPicParams.coded_buf = mVACodedBuffer [mCodedBufIndex];
     //avcPicParams.picture_width = mComParams.resolution.width;
     //avcPicParams.picture_height = mComParams.resolution.height;

@@ -24,6 +24,7 @@ public:
     virtual Encode_Status getConfig(VideoParamConfigSet *videoEncConfig) = 0;
     virtual Encode_Status setConfig(VideoParamConfigSet *videoEncConfig) = 0;
     virtual Encode_Status getMaxOutSize(uint32_t *maxSize) = 0;
+    virtual Encode_Status getStatistics(VideoStatistics *videoStat) = 0;
 };
 
 #endif /* VIDEO_ENCODER_INTERFACE_H_ */

@@ -13,6 +13,18 @@
 #include <va/va_tpi.h>
 #include "VideoEncoderDef.h"
 #include "VideoEncoderInterface.h"
+#include "IntelMetadataBuffer.h"
+
+struct SurfaceMap {
+    VASurfaceID surface;
+    MetadataBufferType type;
+    int32_t value;
+    ValueInfo vinfo;
+    uint32_t index;
+    bool added;
+    SurfaceMap *next;
+};
+
 class VideoEncoderBase : IVideoEncoder {
 
 public:
@@ -38,6 +50,7 @@ public:
     virtual Encode_Status getConfig(VideoParamConfigSet *videoEncConfig);
 
     virtual Encode_Status getMaxOutSize(uint32_t *maxSize);
+    virtual Encode_Status getStatistics(VideoStatistics *videoStat);
 
 protected:
     virtual Encode_Status sendEncodeCommand(void) = 0;
@@ -59,23 +72,24 @@ private:
     Encode_Status setUpstreamBuffer(VideoParamsUpstreamBuffer *upStreamBuffer);
     Encode_Status getNewUsrptrFromSurface(uint32_t width, uint32_t height, uint32_t format,
             uint32_t expectedSize, uint32_t *outsize, uint32_t *stride, uint8_t **usrptr);
-    Encode_Status generateVideoBufferAndAttachToList(uint32_t index, uint8_t *usrptr);
-    Encode_Status surfaceMappingForSurfaceList();
-    Encode_Status surfaceMappingForGfxHandle();
-    Encode_Status surfaceMappingForCIFrameList();
-    Encode_Status surfaceMappingForKbufHandle();
+    Encode_Status surfaceMappingForSurface(SurfaceMap *map);
+    Encode_Status surfaceMappingForGfxHandle(SurfaceMap *map);
+    Encode_Status surfaceMappingForCI(SurfaceMap *map);
+    Encode_Status surfaceMappingForKbufHandle(SurfaceMap *map);
+    Encode_Status surfaceMappingForMalloc(SurfaceMap *map);
+    Encode_Status surfaceMapping(SurfaceMap *map);
 
-    VideoEncSurfaceBuffer *appendVideoSurfaceBuffer(
-            VideoEncSurfaceBuffer *head, VideoEncSurfaceBuffer *buffer);
-    VideoEncSurfaceBuffer *removeVideoSurfaceBuffer(
-            VideoEncSurfaceBuffer *head, VideoEncSurfaceBuffer *buffer);
-    VideoEncSurfaceBuffer *getVideoSurfaceBufferByIndex(
-            VideoEncSurfaceBuffer *head, uint32_t index);
+    SurfaceMap *appendSurfaceMap(
+            SurfaceMap *head, SurfaceMap *map);
+    SurfaceMap *removeSurfaceMap(
+            SurfaceMap *head, SurfaceMap *map);
+    SurfaceMap *findSurfaceMapByValue(
+            SurfaceMap *head, int32_t value);
 
     Encode_Status manageSrcSurface(VideoEncRawBuffer *inBuffer);
     void updateProperities(void);
     void decideFrameType(void);
-    Encode_Status uploadDataToSurface(VideoEncRawBuffer *inBuffer);
+//    Encode_Status uploadDataToSurface(VideoEncRawBuffer *inBuffer);
     Encode_Status syncEncode(VideoEncRawBuffer *inBuffer);
     Encode_Status asyncEncode(VideoEncRawBuffer *inBuffer);
 
@@ -83,7 +97,6 @@ protected:
 
     bool mInitialized;
     VADisplay mVADisplay;
-    VADisplay mVADecoderDisplay;
     VAContextID mVAContext;
     VAConfigID mVAConfig;
     VAEntrypoint mVAEntrypoint;
@@ -95,11 +108,7 @@ protected:
 
     VideoParamsCommon mComParams;
     VideoParamsHRD mHrdParam;
-
-    VideoBufferSharingMode mBufferMode;
-    uint32_t *mUpstreamBufferList;
-    uint32_t mUpstreamBufferCnt;
-    ExternalBufferAttrib *mBufAttrib;
+    VideoParamsStoreMetaDataInBuffers mStoreMetaDataInBuffers;
 
     bool mForceKeyFrame;
     bool mNewHeader;
@@ -121,18 +130,16 @@ protected:
     VABufferID mPicParamBuf;
     VABufferID mSliceParamBuf;
 
-    VASurfaceID *mSharedSurfaces;
     VASurfaceID *mSurfaces;
     uint32_t mSurfaceCnt;
-    uint32_t mSharedSurfacesCnt;
-    uint32_t mReqSurfacesCnt;
-    uint8_t **mUsrPtr;
 
-    VideoEncSurfaceBuffer *mVideoSrcBufferList;
-    VideoEncSurfaceBuffer *mCurFrame;	//current input frame to be encoded;
-    VideoEncSurfaceBuffer *mRefFrame;   //reference frame
-    VideoEncSurfaceBuffer *mRecFrame;	//reconstructed frame;
-    VideoEncSurfaceBuffer *mLastFrame;	//last frame;
+    SurfaceMap *mSrcSurfaceMapList;
+
+    //for new design
+    VASurfaceID mCurSurface;        //current input surface to be encoded 
+    VASurfaceID mRefSurface;        //reference surface
+    VASurfaceID mRecSurface;        //reconstructed surface
+    VASurfaceID mLastSurface;       //last surface
 
     VideoEncRawBuffer *mLastInputRawBuffer;
 
@@ -147,6 +154,10 @@ protected:
     bool mCodedBufferMapped;
     bool mDataCopiedOut;
     bool mKeyFrame;
+
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    VideoStatistics mVideoStat;
+#endif
 
     // Constants
     static const uint32_t VENCODER_NUMBER_EXTRA_SURFACES_SHARED_MODE = 2;

@@ -211,8 +211,8 @@ Encode_Status VideoEncoderMP4::renderPictureParams() {
     LOG_V( "Begin\n\n");
 
     // set picture params for HW
-    mpeg4_pic_param.reference_picture = mRefFrame->surface;
-    mpeg4_pic_param.reconstructed_picture = mRecFrame->surface;
+    mpeg4_pic_param.reference_picture = mRefSurface;
+    mpeg4_pic_param.reconstructed_picture = mRecSurface;
     mpeg4_pic_param.coded_buf = mVACodedBuffer[mCodedBufIndex];
     mpeg4_pic_param.picture_width = mComParams.resolution.width;
     mpeg4_pic_param.picture_height = mComParams.resolution.height;

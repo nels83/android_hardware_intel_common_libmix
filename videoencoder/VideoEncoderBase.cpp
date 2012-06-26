@@ -8,6 +8,7 @@
 #include <string.h>
 #include "VideoEncoderLog.h"
 #include "VideoEncoderBase.h"
+#include "IntelMetadataBuffer.h"
 #include <va/va_tpi.h>
 #include <va/va_android.h>
 
@@ -34,7 +35,6 @@ VAStatus vaUnlockSurface(VADisplay dpy,
 VideoEncoderBase::VideoEncoderBase()
     :mInitialized(false)
     ,mVADisplay(NULL)
-    ,mVADecoderDisplay(NULL)
     ,mVAContext(0)
     ,mVAConfig(0)
     ,mVAEntrypoint(VAEntrypointEncSlice)
@@ -42,10 +42,6 @@ VideoEncoderBase::VideoEncoderBase()
     ,mOffsetInSeg(0)
     ,mTotalSize(0)
     ,mTotalSizeCopied(0)
-    ,mBufferMode(BUFFER_SHARING_NONE)
-    ,mUpstreamBufferList(NULL)
-    ,mUpstreamBufferCnt(0)
-    ,mBufAttrib(NULL)
     ,mForceKeyFrame(false)
     ,mNewHeader(false)
     ,mFirstFrame (true)
@@ -60,17 +56,13 @@ VideoEncoderBase::VideoEncoderBase()
     ,mSeqParamBuf(0)
     ,mPicParamBuf(0)
     ,mSliceParamBuf(0)
-    ,mSharedSurfaces(NULL)
     ,mSurfaces(NULL)
     ,mSurfaceCnt(0)
-    ,mSharedSurfacesCnt(0)
-    ,mReqSurfacesCnt(0)
-    ,mUsrPtr(NULL)
-    ,mVideoSrcBufferList(NULL)
-    ,mCurFrame(NULL)
-    ,mRefFrame(NULL)
-    ,mRecFrame(NULL)
-    ,mLastFrame(NULL)
+    ,mSrcSurfaceMapList(NULL)
+    ,mCurSurface(VA_INVALID_SURFACE)
+    ,mRefSurface(VA_INVALID_SURFACE)
+    ,mRecSurface(VA_INVALID_SURFACE)
+    ,mLastSurface(VA_INVALID_SURFACE)
     ,mLastInputRawBuffer(NULL)
     ,mEncodedFrames(0)
     ,mFrameNum(0)
@@ -105,6 +97,12 @@ VideoEncoderBase::VideoEncoderBase()
     if (vaStatus != VA_STATUS_SUCCESS) {
         LOG_E( "Failed vaInitialize, vaStatus = %d\n", vaStatus);
     }
+
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    memset(&mVideoStat, 0, sizeof(VideoStatistics));
+    mVideoStat.min_encode_time = 0xFFFFFFFF;
+#endif
+
 }
 
 VideoEncoderBase::~VideoEncoderBase() {
@@ -123,26 +121,17 @@ Encode_Status VideoEncoderBase::start() {
 
     Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VASurfaceID *surfaces = NULL;
+    VASurfaceID surfaces[2];
+    int32_t index = -1;
+    SurfaceMap *map = mSrcSurfaceMapList;
 
     VAConfigAttrib vaAttrib[2];
-    uint32_t index;
     uint32_t maxSize = 0;
-
-    VideoEncSurfaceBuffer *videoSurfaceBuffer = NULL;
-    uint32_t normalSurfacesCnt = 2;
 
     if (mInitialized) {
         LOG_V("Encoder has been started\n");
         return ENCODE_ALREADY_INIT;
     }
-
-    // For upstream allocates buffer, it is mandatory to set buffer mode
-    // and for other stuff, it is optional
-    // Different buffer mode will have different surface handling approach
-
-    // mSharedSurfacesCnt is for upstream buffer allocation case
-    mSharedSurfacesCnt = 0;
 
     vaAttrib[0].type = VAConfigAttribRTFormat;
     vaAttrib[1].type = VAConfigAttribRateControl;
@@ -173,139 +162,31 @@ Encode_Status VideoEncoderBase::start() {
         mRenderBitRate = true;
     }
 
-    LOG_I("mReqSurfacesCnt = %d\n", mReqSurfacesCnt);
-    LOG_I("mUpstreamBufferCnt = %d\n", mUpstreamBufferCnt);
-
-    if (mReqSurfacesCnt == 0) {
-        switch (mBufferMode) {
-            case BUFFER_SHARING_CI:
-            case BUFFER_SHARING_V4L2:
-            case BUFFER_SHARING_SURFACE:
-            case BUFFER_SHARING_GFXHANDLE:
-            case BUFFER_SHARING_KBUFHANDLE:
-            {
-                mSharedSurfacesCnt = mUpstreamBufferCnt;
-                normalSurfacesCnt = VENCODER_NUMBER_EXTRA_SURFACES_SHARED_MODE;
-
-                if (mSharedSurfacesCnt != 0) {
-                    mSharedSurfaces = new VASurfaceID[mSharedSurfacesCnt];
-
-                    if (mSharedSurfaces == NULL) {
-                        LOG_E("Failed allocate shared surface\n");
-                        ret = ENCODE_NO_MEMORY;
-                        goto CLEAN_UP;
-                    }
-                } else {
-                    LOG_E("Set to upstream mode, but no upstream info, something is wrong");
-                    ret = ENCODE_FAIL;
-                    goto CLEAN_UP;
-                }
-                break;
-            }
-
-            default:
-            {
-                mBufferMode = BUFFER_SHARING_NONE;
-                normalSurfacesCnt = VENCODER_NUMBER_EXTRA_SURFACES_NON_SHARED_MODE;
-                break;
-            }
-        }
-    } else if (mReqSurfacesCnt == 1) {
-        // TODO: Un-normal case,
-        mBufferMode = BUFFER_SHARING_NONE;
-        normalSurfacesCnt = VENCODER_NUMBER_EXTRA_SURFACES_NON_SHARED_MODE;
-    } else {
-        mBufferMode = BUFFER_SHARING_USRPTR;
-        mUsrPtr = new uint8_t *[mReqSurfacesCnt];
-        if (mUsrPtr == NULL) {
-            LOG_E("Failed allocate memory\n");
-            ret = ENCODE_NO_MEMORY;
-            goto CLEAN_UP;
-        }
-    }
-
-    LOG_E("mBufferMode = %d\n", mBufferMode);
-
-    mSurfaceCnt = normalSurfacesCnt + mSharedSurfacesCnt + mReqSurfacesCnt;
-
-    surfaces = new VASurfaceID[normalSurfacesCnt];
-    if (surfaces == NULL) {
-        LOG_E("Failed allocate surface\n");
-        ret = ENCODE_NO_MEMORY;
-        goto CLEAN_UP;
-    }
-
-    mSurfaces = new VASurfaceID[mSurfaceCnt] ;
-    if (mSurfaces == NULL) {
-        LOG_E("Failed allocate private surface\n");
-        ret = ENCODE_NO_MEMORY;
-        goto CLEAN_UP;
-    }
-
+    LOG_V( "======VA CreateSurfaces for Rec/Ref frames ======\n");
     vaStatus = vaCreateSurfaces(mVADisplay,VA_RT_FORMAT_YUV420, mComParams.resolution.width,
             mComParams.resolution.height, 
-            surfaces, normalSurfacesCnt, NULL , 0);
+            surfaces, 2, NULL , 0);
     CHECK_VA_STATUS_GOTO_CLEANUP("vaCreateSurfaces");
+    mRefSurface = surfaces[0];
+    mRecSurface = surfaces[1];
 
-    switch (mBufferMode) {
-        case BUFFER_SHARING_CI:
-            ret = surfaceMappingForCIFrameList();
-            CHECK_ENCODE_STATUS_CLEANUP("surfaceMappingForCIFrameList");
-            break;
-        case BUFFER_SHARING_V4L2:
-            // To be develped
-            break;
-        case BUFFER_SHARING_SURFACE:
-            ret = surfaceMappingForSurfaceList();
-            CHECK_ENCODE_STATUS_CLEANUP("surfaceMappingForSurfaceList");
-            break;
-        case BUFFER_SHARING_GFXHANDLE:
-            ret = surfaceMappingForGfxHandle();
-            CHECK_ENCODE_STATUS_CLEANUP("surfaceMappingForGfxHandle");
-            break;
-        case BUFFER_SHARING_KBUFHANDLE:
-            ret = surfaceMappingForKbufHandle();
-            CHECK_ENCODE_STATUS_CLEANUP("surfaceMappingForKbufHandle");
-            break;
-        case BUFFER_SHARING_NONE:
-            break;
-        case BUFFER_SHARING_USRPTR: {
-            videoSurfaceBuffer = mVideoSrcBufferList;
-            index = 0;
-            while (videoSurfaceBuffer != NULL) {
-                mSurfaces[index] = videoSurfaceBuffer->surface;
-                mUsrPtr [index] = videoSurfaceBuffer->usrptr;
-                videoSurfaceBuffer = videoSurfaceBuffer->next;
-                index ++;
-            }
-        }
-            break;
-        default:
-            break;
+    //count total surface id already allocated
+    mSurfaceCnt = 2;
+    
+    while(map) {
+        mSurfaceCnt ++;
+        map = map->next;
     }
 
-    for (index = 0; index < normalSurfacesCnt; index++) {
-        mSurfaces[mReqSurfacesCnt + mSharedSurfacesCnt + index] = surfaces[index];
-
-        videoSurfaceBuffer = new VideoEncSurfaceBuffer;
-        if (videoSurfaceBuffer == NULL) {
-            LOG_E( "new VideoEncSurfaceBuffer failed\n");
-            return ENCODE_NO_MEMORY;
-        }
-
-        videoSurfaceBuffer->surface = surfaces[index];
-        videoSurfaceBuffer->usrptr = NULL;
-        videoSurfaceBuffer->index = mReqSurfacesCnt + mSharedSurfacesCnt + index;
-        videoSurfaceBuffer->bufAvailable = true;
-        videoSurfaceBuffer->next = NULL;
-
-        mVideoSrcBufferList = appendVideoSurfaceBuffer(mVideoSrcBufferList, videoSurfaceBuffer);
-
-        videoSurfaceBuffer = NULL;
+    mSurfaces = new VASurfaceID[mSurfaceCnt];
+    map = mSrcSurfaceMapList;
+    while(map) {
+        mSurfaces[++index] = map->surface;
+        map->added = true;
+        map = map->next;
     }
-
-    LOG_V( "assign surface Done\n");
-    LOG_I( "Created %d libva surfaces\n", mSurfaceCnt);
+    mSurfaces[++index] = mRefSurface;
+    mSurfaces[++index] = mRecSurface;
 
     //Initialize and save the VA context ID
     LOG_V( "vaCreateContext\n");
@@ -349,8 +230,6 @@ CLEAN_UP:
         mInitialized = true;
     }
 
-    if (surfaces) delete []surfaces;
-
     LOG_V( "end\n");
     return ret;
 }
@@ -363,13 +242,42 @@ Encode_Status VideoEncoderBase::encode(VideoEncRawBuffer *inBuffer) {
     }
 
     CHECK_NULL_RETURN_IFFAIL(inBuffer);
+
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    struct timespec ts1;
+    clock_gettime(CLOCK_MONOTONIC, &ts1);
+
+#endif
+
+    Encode_Status status;
+
     if (mComParams.syncEncMode) {
         LOG_I("Sync Enocde Mode, no optimization, no one frame delay\n");
-        return syncEncode(inBuffer);
+        status = syncEncode(inBuffer);
     } else {
         LOG_I("Async Enocde Mode, HW/SW works in parallel, introduce one frame delay\n");
-        return asyncEncode(inBuffer);
+        status = asyncEncode(inBuffer);
     }
+
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    struct timespec ts2;
+    clock_gettime(CLOCK_MONOTONIC, &ts2);
+
+    uint32_t encode_time = (ts2.tv_sec - ts1.tv_sec) * 1000000 + (ts2.tv_nsec - ts1.tv_nsec) / 1000;
+    if (encode_time > mVideoStat.max_encode_time) {
+        mVideoStat.max_encode_time = encode_time;
+        mVideoStat.max_encode_frame = mFrameNum;
+    }
+
+    if (encode_time <  mVideoStat.min_encode_time) {
+        mVideoStat.min_encode_time = encode_time;
+        mVideoStat.min_encode_frame = mFrameNum;
+    }
+
+    mVideoStat.average_encode_time += encode_time;
+#endif
+
+    return status;
 }
 
 Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
@@ -390,9 +298,10 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
     // Start encoding process
     LOG_V( "vaBeginPicture\n");
     LOG_I( "mVAContext = 0x%08x\n",(uint32_t) mVAContext);
-    LOG_I( "Surface = 0x%08x\n",(uint32_t) mCurFrame->surface);
+    LOG_I( "Surface = 0x%08x\n",(uint32_t) mCurSurface);
     LOG_I( "mVADisplay = 0x%08x\n",(uint32_t)mVADisplay);
 
+#if 0
 #ifdef DUMP_SRC_DATA
 
     if (mBufferMode == BUFFER_SHARING_SURFACE && mFirstFrame){
@@ -403,7 +312,7 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
         uint32_t stride = 0;
         uint32_t frameSize = 0;
 
-        vaStatus = vaDeriveImage(mVADisplay, mCurFrame->surface, &image);
+        vaStatus = vaDeriveImage(mVADisplay, mCurSurface, &image);
         CHECK_VA_STATUS_RETURN("vaDeriveImage");
 
         LOG_V( "vaDeriveImage Done\n");
@@ -437,8 +346,9 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
         CHECK_VA_STATUS_RETURN("vaDestroyImage");
     }
 #endif
+#endif
 
-    vaStatus = vaBeginPicture(mVADisplay, mVAContext, mCurFrame->surface);
+    vaStatus = vaBeginPicture(mVADisplay, mVAContext, mCurSurface);
     CHECK_VA_STATUS_RETURN("vaBeginPicture");
 
     ret = sendEncodeCommand();
@@ -454,8 +364,8 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
         decideFrameType();
     }
 
-    LOG_I ("vaSyncSurface ID = 0x%08x\n", mLastFrame->surface);
-    vaStatus = vaSyncSurface(mVADisplay, mLastFrame->surface);
+    LOG_I ("vaSyncSurface ID = 0x%08x\n", mLastSurface);
+    vaStatus = vaSyncSurface(mVADisplay, mLastSurface);
     if (vaStatus != VA_STATUS_SUCCESS) {
         LOG_W( "Failed vaSyncSurface\n");
     }
@@ -469,7 +379,7 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
     vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
 
     if (mFirstFrame) {
-        vaStatus = vaBeginPicture(mVADisplay, mVAContext, mCurFrame->surface);
+        vaStatus = vaBeginPicture(mVADisplay, mVAContext, mCurSurface);
         CHECK_VA_STATUS_RETURN("vaBeginPicture");
 
         ret = sendEncodeCommand();
@@ -483,18 +393,19 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
 
     // Query the status of current surface
     VASurfaceStatus vaSurfaceStatus;
-    vaStatus = vaQuerySurfaceStatus(mVADisplay, mLastFrame->surface, &vaSurfaceStatus);
+    vaStatus = vaQuerySurfaceStatus(mVADisplay, mLastSurface, &vaSurfaceStatus);
     CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
 
     mPicSkipped = vaSurfaceStatus & VASurfaceSkipped;
 
-    if (!mFirstFrame) {
-        VideoEncoderBase::appendVideoSurfaceBuffer(mVideoSrcBufferList, mLastFrame);
-    }
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    if (mPicSkipped)
+        mVideoStat.skipped_frames ++;
+#endif
 
-    mLastFrame = NULL;
+    mLastSurface = VA_INVALID_SURFACE;
     updateProperities();
-    mCurFrame = NULL;
+    mCurSurface = VA_INVALID_SURFACE;
 
     if (mLastInputRawBuffer) mLastInputRawBuffer->bufAvailable = true;
 
@@ -511,7 +422,7 @@ Encode_Status VideoEncoderBase::syncEncode(VideoEncRawBuffer *inBuffer) {
     Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     uint8_t *buf = NULL;
-    VideoEncSurfaceBuffer *tmpFrame = NULL;
+    VASurfaceID tmpSurface = VA_INVALID_SURFACE;
 
     inBuffer->bufAvailable = false;
     if (mNewHeader) mFrameNum = 0;
@@ -522,7 +433,7 @@ Encode_Status VideoEncoderBase::syncEncode(VideoEncRawBuffer *inBuffer) {
     ret = manageSrcSurface(inBuffer);
     CHECK_ENCODE_STATUS_RETURN("manageSrcSurface");
 
-    vaStatus = vaBeginPicture(mVADisplay, mVAContext, mCurFrame->surface);
+    vaStatus = vaBeginPicture(mVADisplay, mVAContext, mCurSurface);
     CHECK_VA_STATUS_RETURN("vaBeginPicture");
 
     ret = sendEncodeCommand();
@@ -531,8 +442,8 @@ Encode_Status VideoEncoderBase::syncEncode(VideoEncRawBuffer *inBuffer) {
     vaStatus = vaEndPicture(mVADisplay, mVAContext);
     CHECK_VA_STATUS_RETURN("vaEndPicture");
 
-    LOG_I ("vaSyncSurface ID = 0x%08x\n", mCurFrame->surface);
-    vaStatus = vaSyncSurface(mVADisplay, mCurFrame->surface);
+    LOG_I ("vaSyncSurface ID = 0x%08x\n", mCurSurface);
+    vaStatus = vaSyncSurface(mVADisplay, mCurSurface);
     if (vaStatus != VA_STATUS_SUCCESS) {
         LOG_W( "Failed vaSyncSurface\n");
     }
@@ -547,22 +458,26 @@ Encode_Status VideoEncoderBase::syncEncode(VideoEncRawBuffer *inBuffer) {
 
     // Query the status of current surface
     VASurfaceStatus vaSurfaceStatus;
-    vaStatus = vaQuerySurfaceStatus(mVADisplay, mCurFrame->surface,  &vaSurfaceStatus);
+    vaStatus = vaQuerySurfaceStatus(mVADisplay, mCurSurface,  &vaSurfaceStatus);
     CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
 
     mPicSkipped = vaSurfaceStatus & VASurfaceSkipped;
 
-    VideoEncoderBase::appendVideoSurfaceBuffer(mVideoSrcBufferList, mCurFrame);
-    mCurFrame = NULL;
+    mCurSurface = 0;
 
     mEncodedFrames ++;
     mFrameNum ++;
 
     if (!mPicSkipped) {
-        tmpFrame = mRecFrame;
-        mRecFrame = mRefFrame;
-        mRefFrame = tmpFrame;
+        tmpSurface = mRecSurface;
+        mRecSurface = mRefSurface;
+        mRefSurface = tmpSurface;
     }
+
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    if (mPicSkipped)
+        mVideoStat.skipped_frames ++;
+#endif
 
     inBuffer->bufAvailable = true;
     return ENCODE_SUCCESS;
@@ -651,24 +566,6 @@ void VideoEncoderBase::flush() {
 
     LOG_V( "Begin\n");
 
-    // put reconstructed surface back to list
-    if (mRecFrame != NULL) {
-        appendVideoSurfaceBuffer(mVideoSrcBufferList, mRecFrame);
-        mRecFrame = NULL;
-    }
-
-    // put reference surface back to list
-    if (mRefFrame != NULL) {
-        appendVideoSurfaceBuffer(mVideoSrcBufferList, mRefFrame);
-        mRefFrame = NULL;
-    }
-
-    // Here this raw buffer means the surface being encoding
-    if (mLastInputRawBuffer) {
-        mLastInputRawBuffer->bufAvailable = true;
-        mLastInputRawBuffer = NULL;
-    }
-
     // reset the properities
     mEncodedFrames = 0;
     mFrameNum = 0;
@@ -682,35 +579,13 @@ Encode_Status VideoEncoderBase::stop() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Encode_Status ret = ENCODE_SUCCESS;
-    VideoEncSurfaceBuffer *videoSurfaceBuffer = NULL;
-    VideoEncSurfaceBuffer *tmpBuffer = NULL;
-
+    SurfaceMap *map = NULL;
 
     LOG_V( "Begin\n");
-
-    if (mSharedSurfaces) {
-        delete [] mSharedSurfaces;
-        mSharedSurfaces = NULL;
-    }
 
     if (mSurfaces) {
         delete [] mSurfaces;
         mSurfaces = NULL;
-    }
-
-    if (mUsrPtr) {
-        delete [] mUsrPtr;
-        mUsrPtr = NULL;
-    }
-
-    if (mUpstreamBufferList) {
-        delete [] mUpstreamBufferList;
-        mUpstreamBufferList = NULL;
-    }
-
-    if (mBufAttrib) {
-        delete mBufAttrib;
-        mBufAttrib = NULL;
     }
 
     // It is possible that above pointers have been allocated
@@ -720,27 +595,6 @@ Encode_Status VideoEncoderBase::stop() {
         return ENCODE_SUCCESS;
     }
 
-    LOG_V( "Release frames\n");
-
-    // put reconstructed surface back to list
-    if (mRecFrame != NULL) {
-        appendVideoSurfaceBuffer(mVideoSrcBufferList, mRecFrame);
-        mRecFrame = NULL;
-    }
-
-    // put reference surface back to list
-    if (mRefFrame != NULL) {
-        appendVideoSurfaceBuffer(mVideoSrcBufferList, mRefFrame);
-        mRefFrame = NULL;
-    }
-
-    // put Source surface back to list
-    if (mLastFrame != NULL) {
-        appendVideoSurfaceBuffer(mVideoSrcBufferList, mLastFrame);
-        mLastFrame = NULL;
-    }
-
-    LOG_V( "Release surfaces\n");
     LOG_V( "vaDestroyContext\n");
     vaStatus = vaDestroyContext(mVADisplay, mVAContext);
     CHECK_VA_STATUS_GOTO_CLEANUP("vaDestroyContext");
@@ -749,19 +603,28 @@ Encode_Status VideoEncoderBase::stop() {
     vaStatus = vaDestroyConfig(mVADisplay, mVAConfig);
     CHECK_VA_STATUS_GOTO_CLEANUP("vaDestroyConfig");
 
-    // Release Src Surface Buffer List
-    LOG_V( "Rlease Src Surface Buffer \n");
+    // Release Src Surface Buffer Map 
+    LOG_V( "Rlease Src Surface Map\n");
 
-    videoSurfaceBuffer = mVideoSrcBufferList;
-
-    while (videoSurfaceBuffer != NULL) {
-        tmpBuffer = videoSurfaceBuffer;
-        videoSurfaceBuffer = videoSurfaceBuffer->next;
-        delete tmpBuffer;
+    map = mSrcSurfaceMapList;
+    while(map) {
+        if (! map->added) {
+            //destroy surface by itself
+            LOG_V( "Rlease Src Surface Buffer not added into vaContext\n");
+            vaDestroySurfaces(mVADisplay, &map->surface, 1);
+        }
+        SurfaceMap *tmp = map;
+        map = map->next;
+        delete tmp;
     }
 
 CLEAN_UP:
     mInitialized = false;
+
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    memset(&mVideoStat, 0, sizeof(VideoStatistics));
+    mVideoStat.min_encode_time = 0xFFFFFFFF;
+#endif
     LOG_V( "end\n");
     return ret;
 }
@@ -948,6 +811,8 @@ void VideoEncoderBase::setDefaultParams() {
 
     mHrdParam.bufferSize = 0;
     mHrdParam.initBufferFullness = 0;
+
+    mStoreMetaDataInBuffers.isEnabled = false;
 }
 
 Encode_Status VideoEncoderBase::setParameters(
@@ -1010,6 +875,19 @@ Encode_Status VideoEncoderBase::setParameters(
             break;
         }
 
+        case VideoParamsTypeStoreMetaDataInBuffers: {
+            VideoParamsStoreMetaDataInBuffers *metadata =
+                    reinterpret_cast <VideoParamsStoreMetaDataInBuffers *> (videoEncParams);
+
+            if (metadata->size != sizeof (VideoParamsStoreMetaDataInBuffers)) {
+                return ENCODE_INVALID_PARAMS;
+            }
+
+            mStoreMetaDataInBuffers.isEnabled = metadata->isEnabled;
+
+            break;
+        }
+
         case VideoParamsTypeAVC:
         case VideoParamsTypeH263:
         case VideoParamsTypeMP4:
@@ -1020,7 +898,7 @@ Encode_Status VideoEncoderBase::setParameters(
 
         default: {
             LOG_E ("Wrong ParamType here\n");
-            break;
+            return ENCODE_INVALID_PARAMS;
         }
     }
     return ret;
@@ -1079,6 +957,19 @@ Encode_Status VideoEncoderBase::getParameters(
 
             hrd->bufferSize = mHrdParam.bufferSize;
             hrd->initBufferFullness = mHrdParam.initBufferFullness;
+
+            break;
+        }
+
+        case VideoParamsTypeStoreMetaDataInBuffers: {
+            VideoParamsStoreMetaDataInBuffers *metadata =
+                    reinterpret_cast <VideoParamsStoreMetaDataInBuffers *> (videoEncParams);
+
+            if (metadata->size != sizeof (VideoParamsStoreMetaDataInBuffers)) {
+                return ENCODE_INVALID_PARAMS;
+            }
+
+            metadata->isEnabled = mStoreMetaDataInBuffers.isEnabled;
 
             break;
         }
@@ -1303,7 +1194,7 @@ void VideoEncoderBase:: decideFrameType () {
 
 void VideoEncoderBase:: updateProperities () {
 
-    VideoEncSurfaceBuffer *tmpFrame = NULL;
+    VASurfaceID tmp = VA_INVALID_SURFACE;
     LOG_V( "Begin\n");
 
     mEncodedFrames ++;
@@ -1312,12 +1203,12 @@ void VideoEncoderBase:: updateProperities () {
     mCodedBufIndex ++;
     mCodedBufIndex %=2;
 
-    mLastFrame = mCurFrame;
+    mLastSurface = mCurSurface;
 
     if (!mPicSkipped) {
-        tmpFrame = mRecFrame;
-        mRecFrame = mRefFrame;
-        mRefFrame = tmpFrame;
+        tmp = mRecSurface;
+        mRecSurface = mRefSurface;
+        mRefSurface = tmp;
     }
 
     LOG_V( "End\n");
@@ -1361,6 +1252,25 @@ Encode_Status  VideoEncoderBase::getMaxOutSize (uint32_t *maxSize) {
     return ENCODE_SUCCESS;
 }
 
+Encode_Status VideoEncoderBase::getStatistics (VideoStatistics *videoStat) {
+
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    if (videoStat != NULL) {
+        videoStat->total_frames = mEncodedFrames;
+        videoStat->skipped_frames = mVideoStat.skipped_frames;     
+        videoStat->average_encode_time = mVideoStat.average_encode_time / mEncodedFrames;
+        videoStat->max_encode_time = mVideoStat.max_encode_time;
+        videoStat->max_encode_frame = mVideoStat.max_encode_frame;
+        videoStat->min_encode_time = mVideoStat.min_encode_time;
+        videoStat->min_encode_frame = mVideoStat.min_encode_frame;
+    }
+    
+    return ENCODE_SUCCESS;
+#else
+    return ENCODE_NOT_SUPPORTED;
+#endif
+}
+
 Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
     uint32_t width, uint32_t height, uint32_t format,
     uint32_t expectedSize, uint32_t *outsize, uint32_t *stride, uint8_t **usrptr) {
@@ -1372,7 +1282,7 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
     VAImage image;
     uint32_t index = 0;
 
-    VideoEncSurfaceBuffer *videoSurfaceBuffer = NULL;
+    SurfaceMap *map = NULL;
 
     LOG_V( "Begin\n");
 
@@ -1390,24 +1300,24 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
     // Current only NV12 is supported in VA API
     // Through format we can get known the number of planes
     if (format != STRING_TO_FOURCC("NV12")) {
-
         LOG_W ("Format is not supported\n");
         return ENCODE_NOT_SUPPORTED;
     }
-    VASurfaceAttributeTPI *attribute_tpi = new VASurfaceAttributeTPI;
 
-    attribute_tpi->size = expectedSize;
-    attribute_tpi->luma_stride = width;
-    attribute_tpi->chroma_u_stride = width;
-    attribute_tpi->chroma_v_stride = width;
-    attribute_tpi->luma_offset = 0;
-    attribute_tpi->chroma_u_offset = width*height;
-    attribute_tpi->chroma_v_offset = width*height;
-    attribute_tpi->pixel_format = VA_FOURCC_NV12;
-    attribute_tpi->type = VAExternalMemoryNULL;
+    VASurfaceAttributeTPI attribute_tpi;
+
+    attribute_tpi.size = expectedSize;
+    attribute_tpi.luma_stride = width;
+    attribute_tpi.chroma_u_stride = width;
+    attribute_tpi.chroma_v_stride = width;
+    attribute_tpi.luma_offset = 0;
+    attribute_tpi.chroma_u_offset = width*height;
+    attribute_tpi.chroma_v_offset = width*height;
+    attribute_tpi.pixel_format = VA_FOURCC_NV12;
+    attribute_tpi.type = VAExternalMemoryNULL;
 
     vaCreateSurfacesWithAttribute(mVADisplay, width, height, VA_RT_FORMAT_YUV420,
-            1, &surface, attribute_tpi);
+            1, &surface, &attribute_tpi);
     CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
 
     vaStatus = vaDeriveImage(mVADisplay, surface, &image);
@@ -1428,19 +1338,28 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
     *outsize = image.data_size;
     *stride = image.pitches[0];
 
-    videoSurfaceBuffer = new VideoEncSurfaceBuffer;
-    if (videoSurfaceBuffer == NULL) {
-        LOG_E( "new VideoEncSurfaceBuffer failed\n");
+    map = new SurfaceMap;
+    if (map == NULL) {
+        LOG_E( "new SurfaceMap failed\n");
         return ENCODE_NO_MEMORY;
     }
 
-    videoSurfaceBuffer->surface = surface;
-    videoSurfaceBuffer->usrptr = *usrptr;
-    videoSurfaceBuffer->index = mReqSurfacesCnt;
-    videoSurfaceBuffer->bufAvailable = true;
-    videoSurfaceBuffer->next = NULL;
+    map->surface = surface;
+    map->type = MetadataBufferTypeEncoder;
+    map->value = (int32_t)*usrptr;
+    map->vinfo.mode = (MemMode)MEM_MODE_USRPTR;
+    map->vinfo.handle = 0;
+    map->vinfo.size = 0;
+    map->vinfo.width = width;
+    map->vinfo.height = height;
+    map->vinfo.lumaStride = width;
+    map->vinfo.chromStride = width;
+    map->vinfo.format = VA_FOURCC_NV12;
+    map->vinfo.s3dformat = 0xffffffff;
+    map->added = false;
+    map->next = NULL;
 
-    mVideoSrcBufferList = appendVideoSurfaceBuffer(mVideoSrcBufferList, videoSurfaceBuffer);
+    mSrcSurfaceMapList = appendSurfaceMap(mSrcSurfaceMapList, map);
 
     LOG_I( "surface = 0x%08x\n",(uint32_t)surface);
     LOG_I("image->pitches[0] = %d\n", image.pitches[0]);
@@ -1453,10 +1372,7 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
 
     LOG_I ("data_size = %d\n", image.data_size);
     LOG_I ("usrptr = 0x%p\n", *usrptr);
-    LOG_I ("mReqSurfacesCnt = %d\n", mReqSurfacesCnt);
-    LOG_I ("videoSurfaceBuffer->usrptr = 0x%p\n ", videoSurfaceBuffer->usrptr);
-
-    videoSurfaceBuffer = NULL;
+    LOG_I ("map->value = 0x%p\n ", (void *)map->value);
 
     vaStatus = vaUnmapBuffer(mVADisplay, image.buf);
     CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
@@ -1473,12 +1389,7 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
         return ENCODE_FAIL;
     }
 
-    mReqSurfacesCnt ++;
     ret = ENCODE_SUCCESS;
-    if(attribute_tpi) {
-        delete attribute_tpi;
-        attribute_tpi = NULL;
-    }
 
     return ret;
 }
@@ -1486,68 +1397,63 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
 
 Encode_Status VideoEncoderBase::setUpstreamBuffer(VideoParamsUpstreamBuffer *upStreamBuffer) {
 
+    Encode_Status status = ENCODE_SUCCESS;
+
     CHECK_NULL_RETURN_IFFAIL(upStreamBuffer);
     if (upStreamBuffer->bufCnt == 0) {
         LOG_E("bufCnt == 0\n");
         return ENCODE_FAIL;
     }
 
-    if (mUpstreamBufferList) delete [] mUpstreamBufferList;
-    if (mBufAttrib) delete mBufAttrib;
-
-    mUpstreamBufferCnt = upStreamBuffer->bufCnt;
-    mVADecoderDisplay = upStreamBuffer->display;
-    mBufferMode = upStreamBuffer->bufferMode;
-    mBufAttrib = new ExternalBufferAttrib;
-    if (!mBufAttrib) {
-        LOG_E ("mBufAttrib NULL\n");
-        return ENCODE_NO_MEMORY;
-    }
-
-    if (upStreamBuffer->bufAttrib) {
-        memcpy(mBufAttrib, upStreamBuffer->bufAttrib, sizeof(ExternalBufferAttrib));
-    } else {
+    if (upStreamBuffer->bufAttrib == NULL) {
         LOG_E ("Buffer Attrib doesn't set by client, return error");
         return ENCODE_INVALID_PARAMS;
     }
 
-    mUpstreamBufferList = new uint32_t [upStreamBuffer->bufCnt];
-    if (!mUpstreamBufferList) {
-        LOG_E ("mUpstreamBufferList NULL\n");
-        return ENCODE_NO_MEMORY;
+    for(unsigned int i=0; i < upStreamBuffer->bufCnt; i++) {
+        if (findSurfaceMapByValue(mSrcSurfaceMapList, upStreamBuffer->bufList[i]) != NULL)  //already mapped
+            continue;
+
+        //wrap upstream buffer into vaSurface
+        SurfaceMap *map = new SurfaceMap;
+
+        map->type = MetadataBufferTypeUser;
+        map->value = upStreamBuffer->bufList[i];
+        map->vinfo.mode = (MemMode)upStreamBuffer->bufferMode;
+        map->vinfo.handle = (uint32_t)upStreamBuffer->display;
+        map->vinfo.size = 0;
+        map->vinfo.width = upStreamBuffer->bufAttrib->realWidth;
+        map->vinfo.height = upStreamBuffer->bufAttrib->realHeight;
+        map->vinfo.lumaStride = upStreamBuffer->bufAttrib->lumaStride;
+        map->vinfo.chromStride = upStreamBuffer->bufAttrib->chromStride;
+        map->vinfo.format = upStreamBuffer->bufAttrib->format;
+        map->vinfo.s3dformat = 0xFFFFFFFF;
+        map->added = false;
+        map->next = NULL;
+        status = surfaceMapping(map);
+
+        if (status == ENCODE_SUCCESS)
+            mSrcSurfaceMapList = appendSurfaceMap(mSrcSurfaceMapList, map);
+        else
+           delete map;
+    
+        if (mSrcSurfaceMapList == NULL) {
+            LOG_E ("mSrcSurfaceMapList should not be NULL now, maybe meet mapping error\n");
+            return ENCODE_NO_MEMORY;
+        }
     }
 
-    memcpy(mUpstreamBufferList, upStreamBuffer->bufList, upStreamBuffer->bufCnt * sizeof (uint32_t));
-    return ENCODE_SUCCESS;
+    return status;
 }
 
+Encode_Status VideoEncoderBase::surfaceMappingForSurface(SurfaceMap *map) {
 
-Encode_Status VideoEncoderBase::generateVideoBufferAndAttachToList(uint32_t index, uint8_t *usrptr) {
+    if (!map)
+        return ENCODE_NULL_PTR;
 
-    VideoEncSurfaceBuffer *videoSurfaceBuffer = NULL;
-    videoSurfaceBuffer = new VideoEncSurfaceBuffer;
-    if (videoSurfaceBuffer == NULL) {
-        LOG_E( "new VideoEncSurfaceBuffer failed\n");
-        return ENCODE_NO_MEMORY;
-    }
-
-    videoSurfaceBuffer->surface = mSharedSurfaces[index];
-    videoSurfaceBuffer->usrptr = NULL;
-    videoSurfaceBuffer->index = index;
-    videoSurfaceBuffer->bufAvailable = true;
-    videoSurfaceBuffer->next = NULL;
-
-    mVideoSrcBufferList = appendVideoSurfaceBuffer
-            (mVideoSrcBufferList, videoSurfaceBuffer);
-    videoSurfaceBuffer = NULL;
-
- return ENCODE_SUCCESS;
-}
-
-Encode_Status VideoEncoderBase::surfaceMappingForSurfaceList() {
-    uint32_t index;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Encode_Status ret = ENCODE_SUCCESS;
+    VASurfaceID surface;
 
     uint32_t fourCC = 0;
     uint32_t lumaStride = 0;
@@ -1558,442 +1464,443 @@ Encode_Status VideoEncoderBase::surfaceMappingForSurfaceList() {
     uint32_t chromaVOffset = 0;
     uint32_t kBufHandle = 0;
 
-    VASurfaceAttributeTPI * vaSurfaceAttrib = new VASurfaceAttributeTPI;
-    if (vaSurfaceAttrib == NULL) {
-        LOG_E("Failed to allocate VASurfaceAttrib\n");
-        return ENCODE_NO_MEMORY;
-    }
-    vaSurfaceAttrib->buffers = new uint32_t[mSharedSurfacesCnt];
+    VASurfaceAttributeTPI vaSurfaceAttrib;
+    uint32_t buf;
     
-    for (index = 0; index < mSharedSurfacesCnt; index++) {
+    vaSurfaceAttrib.buffers = &buf;
 
-        vaStatus = vaLockSurface(
-                mVADecoderDisplay, (VASurfaceID)mUpstreamBufferList[index],
-                &fourCC, &lumaStride, &chromaUStride, &chromaVStride,
-                &lumaOffset, &chromaUOffset, &chromaVOffset, &kBufHandle, NULL);
+    vaStatus = vaLockSurface(
+            (VADisplay)map->vinfo.handle, (VASurfaceID)map->value,
+            &fourCC, &lumaStride, &chromaUStride, &chromaVStride,
+            &lumaOffset, &chromaUOffset, &chromaVOffset, &kBufHandle, NULL);
 
-        CHECK_VA_STATUS_RETURN("vaLockSurface");
-        LOG_I("Surface incoming = 0x%08x", mUpstreamBufferList[index]);
-        LOG_I("lumaStride = %d", lumaStride);
-        LOG_I("chromaUStride = %d", chromaUStride);
-        LOG_I("chromaVStride = %d", chromaVStride);
-        LOG_I("lumaOffset = %d", lumaOffset);
-        LOG_I("chromaUOffset = %d", chromaUOffset);
-        LOG_I("chromaVOffset = %d", chromaVOffset);
-        LOG_I("kBufHandle = 0x%08x", kBufHandle);
-        LOG_I("fourCC = %d", fourCC);
+    CHECK_VA_STATUS_RETURN("vaLockSurface");
+    LOG_I("Surface incoming = 0x%08x", map->value);
+    LOG_I("lumaStride = %d", lumaStride);
+    LOG_I("chromaUStride = %d", chromaUStride);
+    LOG_I("chromaVStride = %d", chromaVStride);
+    LOG_I("lumaOffset = %d", lumaOffset);
+    LOG_I("chromaUOffset = %d", chromaUOffset);
+    LOG_I("chromaVOffset = %d", chromaVOffset);
+    LOG_I("kBufHandle = 0x%08x", kBufHandle);
+    LOG_I("fourCC = %d", fourCC);
 
-        vaStatus = vaUnlockSurface(mVADecoderDisplay, (VASurfaceID)mUpstreamBufferList[index]);
-        CHECK_VA_STATUS_RETURN("vaUnlockSurface");
+    vaStatus = vaUnlockSurface((VADisplay)map->vinfo.handle, (VASurfaceID)map->value);
+    CHECK_VA_STATUS_RETURN("vaUnlockSurface");
 
-        vaSurfaceAttrib->size = mComParams.resolution.width*mComParams.resolution.height*1.5;
-        vaSurfaceAttrib->luma_stride = lumaStride;
-        vaSurfaceAttrib->chroma_u_stride = chromaUStride;
-        vaSurfaceAttrib->chroma_v_stride = chromaVStride;
-        vaSurfaceAttrib->luma_offset = lumaOffset;
-        vaSurfaceAttrib->chroma_u_offset = chromaUOffset;
-        vaSurfaceAttrib->chroma_v_offset = chromaVOffset;
-        vaSurfaceAttrib->buffers[0] = kBufHandle;
-        vaSurfaceAttrib->pixel_format = fourCC;
-        vaSurfaceAttrib->type = VAExternalMemoryKernelDRMBufffer;
+    vaSurfaceAttrib.count = 1;
+    vaSurfaceAttrib.size = mComParams.resolution.width * mComParams.resolution.height * 3 /2;
+    vaSurfaceAttrib.luma_stride = lumaStride;
+    vaSurfaceAttrib.chroma_u_stride = chromaUStride;
+    vaSurfaceAttrib.chroma_v_stride = chromaVStride;
+    vaSurfaceAttrib.luma_offset = lumaOffset;
+    vaSurfaceAttrib.chroma_u_offset = chromaUOffset;
+    vaSurfaceAttrib.chroma_v_offset = chromaVOffset;
+    vaSurfaceAttrib.buffers[0] = kBufHandle;
+    vaSurfaceAttrib.pixel_format = fourCC;
+    vaSurfaceAttrib.type = VAExternalMemoryKernelDRMBufffer;
 
-        vaStatus = vaCreateSurfacesWithAttribute(
-                mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
-                1 /*mSharedSurfacesCnt*/, &mSharedSurfaces[index], vaSurfaceAttrib);
+    vaStatus = vaCreateSurfacesWithAttribute(
+            mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
+            1, &surface, &vaSurfaceAttrib);
 
-        CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
+    CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
 
-        LOG_I("Surface ID created from Kbuf = 0x%08x", mSharedSurfaces[index]);
+    LOG_I("Surface ID created from Kbuf = 0x%08x", surface);
 
-        mSurfaces[index] = mSharedSurfaces[index];
-        ret = generateVideoBufferAndAttachToList(index, NULL);
-        CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList");
-    }
+    map->surface = surface;
     
-    if(vaSurfaceAttrib) {
-        if(vaSurfaceAttrib->buffers) {
-            delete [] vaSurfaceAttrib->buffers;
-            vaSurfaceAttrib->buffers= NULL;
-        }
-        delete vaSurfaceAttrib;
-        vaSurfaceAttrib = NULL;
-    }
     return ret;
 }
 
-Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle() {
+Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle(SurfaceMap *map) {
 
-    uint32_t index;
+    if (!map)
+        return ENCODE_NULL_PTR;
+
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Encode_Status ret = ENCODE_SUCCESS;
+    VASurfaceID surface;
 
-    VASurfaceAttributeTPI * vaSurfaceAttrib = new VASurfaceAttributeTPI;
-    if (vaSurfaceAttrib == NULL) {
-        LOG_E("Failed to allocate VASurfaceAttrib\n");
-        return ENCODE_NO_MEMORY;
-    }
+    VASurfaceAttributeTPI vaSurfaceAttrib;
+    uint32_t buf;
 
-    vaSurfaceAttrib->buffers = new uint32_t[mSharedSurfacesCnt];
-    if (vaSurfaceAttrib->buffers == NULL) {
-        LOG_E("Failed to allocate buffers for vaSurfaceAttrib\n");
-        return ENCODE_NO_MEMORY;
-    }
+    vaSurfaceAttrib.buffers = &buf;
 
-    LOG_I("mSharedSurfacesCnt = %d\n", mSharedSurfacesCnt);
-    LOG_I("lumaStride = %d\n", mBufAttrib->lumaStride);
-    LOG_I("format = 0x%08x\n", mBufAttrib->format);
+    LOG_I("surfaceMappingForGfxHandle ......\n");
+    LOG_I("lumaStride = %d\n", map->vinfo.lumaStride);
+    LOG_I("format = 0x%08x\n", map->vinfo.format);
     LOG_I("width = %d\n", mComParams.resolution.width);
     LOG_I("height = %d\n", mComParams.resolution.height);
+    LOG_I("gfxhandle = %d\n", map->value);
 
-    vaSurfaceAttrib->count = mSharedSurfacesCnt;
-    vaSurfaceAttrib->luma_stride = mBufAttrib->lumaStride;
-    vaSurfaceAttrib->pixel_format = mBufAttrib->format;
-    vaSurfaceAttrib->width = mComParams.resolution.width;
-    vaSurfaceAttrib->height = mComParams.resolution.height;
-    vaSurfaceAttrib->type = VAExternalMemoryAndroidGrallocBuffer;
-    for(index = 0; index < mSharedSurfacesCnt; index++) {
-        vaSurfaceAttrib->buffers[index] = (uint32_t) mUpstreamBufferList[index];
-        LOG_I("NativeHandleList[%d] = 0x%08x", index, mUpstreamBufferList[index]);
-    }
+    vaSurfaceAttrib.count = 1;
+    vaSurfaceAttrib.luma_stride = map->vinfo.lumaStride;
+    vaSurfaceAttrib.pixel_format = map->vinfo.format;
+    vaSurfaceAttrib.width = mComParams.resolution.width;
+    vaSurfaceAttrib.height = mComParams.resolution.height;
+    vaSurfaceAttrib.type = VAExternalMemoryAndroidGrallocBuffer;
+    vaSurfaceAttrib.buffers[0] = (uint32_t) map->value;
 
     vaStatus = vaCreateSurfacesWithAttribute(
             mVADisplay,
             mComParams.resolution.width,
             mComParams.resolution.height,
             VA_RT_FORMAT_YUV420,
-            mSharedSurfacesCnt,
-            mSharedSurfaces,
-            vaSurfaceAttrib);
+            1,
+            &surface,
+            &vaSurfaceAttrib);
 
     CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
     LOG_V("Successfully create surfaces from native hanle");
 
-    for(index = 0; index < mSharedSurfacesCnt; index++) {
-        mSurfaces[index] = mSharedSurfaces[index];
-        ret = generateVideoBufferAndAttachToList(index, NULL);
-        LOG_I("mSurfaces[%d] = %08x", index, mSurfaces[index]);
-        CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList");
-    }
-
-    if(vaSurfaceAttrib) {
-        if(vaSurfaceAttrib->buffers) {
-            delete [] vaSurfaceAttrib->buffers;
-            vaSurfaceAttrib->buffers= NULL;
-        }
-        delete vaSurfaceAttrib;
-        vaSurfaceAttrib = NULL;
-    }
+    map->surface = surface;
 
     LOG_V("surfaceMappingForGfxHandle: Done");
     return ret;
 }
 
-Encode_Status VideoEncoderBase::surfaceMappingForKbufHandle() {
+Encode_Status VideoEncoderBase::surfaceMappingForKbufHandle(SurfaceMap *map) {
 
-    uint32_t index;
+    if (!map)
+        return ENCODE_NULL_PTR;
+
+    LOG_I("surfaceMappingForKbufHandle value=%d\n", map->value);
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Encode_Status ret = ENCODE_SUCCESS;
+    VASurfaceID surface;
 
     uint32_t lumaOffset = 0;
-    uint32_t chromaUOffset = mBufAttrib->realHeight * mBufAttrib->lumaStride;
+    uint32_t chromaUOffset = map->vinfo.height * map->vinfo.lumaStride;
     uint32_t chromaVOffset = chromaUOffset + 1;
     
-    VASurfaceAttributeTPI * vaSurfaceAttrib = new VASurfaceAttributeTPI;
-    if (vaSurfaceAttrib == NULL) {
-        LOG_E("Failed to allocate VASurfaceAttrib\n");
-        return ENCODE_NO_MEMORY;
-    }
-    vaSurfaceAttrib->buffers = new uint32_t[mSharedSurfacesCnt];
+    VASurfaceAttributeTPI vaSurfaceAttrib;
+    uint32_t buf;
+
+    vaSurfaceAttrib.buffers = &buf;
     
-    for (index = 0; index < mSharedSurfacesCnt; index++) {
-        vaSurfaceAttrib->size = mBufAttrib->lumaStride * mComParams.resolution.height * 3 / 2;
-        vaSurfaceAttrib->luma_stride = mBufAttrib->lumaStride;
-        vaSurfaceAttrib->chroma_u_stride = mBufAttrib->chromStride;
-        vaSurfaceAttrib->chroma_v_stride = mBufAttrib->chromStride;
-        vaSurfaceAttrib->luma_offset = lumaOffset;
-        vaSurfaceAttrib->chroma_u_offset = chromaUOffset;
-        vaSurfaceAttrib->chroma_v_offset = chromaVOffset;
-        vaSurfaceAttrib->buffers[0] = mUpstreamBufferList[index];
-        vaSurfaceAttrib->pixel_format = mBufAttrib->format;
-        vaSurfaceAttrib->type = VAExternalMemoryKernelDRMBufffer;
+    vaSurfaceAttrib.count = 1;
+    vaSurfaceAttrib.size = map->vinfo.lumaStride * mComParams.resolution.height * 3 / 2;
+    vaSurfaceAttrib.luma_stride = map->vinfo.lumaStride;
+    vaSurfaceAttrib.chroma_u_stride = map->vinfo.chromStride;
+    vaSurfaceAttrib.chroma_v_stride = map->vinfo.chromStride;
+    vaSurfaceAttrib.luma_offset = lumaOffset;
+    vaSurfaceAttrib.chroma_u_offset = chromaUOffset;
+    vaSurfaceAttrib.chroma_v_offset = chromaVOffset;
+    vaSurfaceAttrib.buffers[0] = map->value;
+    vaSurfaceAttrib.pixel_format = map->vinfo.format;
+    vaSurfaceAttrib.type = VAExternalMemoryKernelDRMBufffer;
 
-        vaStatus = vaCreateSurfacesWithAttribute(
-                mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
-                1 /*mSharedSurfacesCnt*/, &mSharedSurfaces[index], vaSurfaceAttrib);
+    vaStatus = vaCreateSurfacesWithAttribute(
+            mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
+            1, &surface, &vaSurfaceAttrib);
 
-        CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
+    CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
 
-        LOG_I("Surface ID created from Kbuf = 0x%08x", mSharedSurfaces[index]);
+    LOG_I("Surface ID created from Kbuf = 0x%08x", map->value);
 
-        mSurfaces[index] = mSharedSurfaces[index];
-        ret = generateVideoBufferAndAttachToList(index, NULL);
-        CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList");
-    }
+    map->surface = surface;
     
-    if(vaSurfaceAttrib) {
-        if(vaSurfaceAttrib->buffers) {
-            delete [] vaSurfaceAttrib->buffers;
-            vaSurfaceAttrib->buffers= NULL;
-        }
-        delete vaSurfaceAttrib;
-        vaSurfaceAttrib = NULL;
-    }
+    return ret;
+}
+
+Encode_Status VideoEncoderBase::surfaceMappingForCI(SurfaceMap *map) {
+
+    if (!map)
+        return ENCODE_NULL_PTR;
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    Encode_Status ret = ENCODE_SUCCESS;
+    VASurfaceID surface;
+
+    VASurfaceAttributeTPI vaSurfaceAttrib;
+    uint32_t buf;
+
+    vaSurfaceAttrib.buffers = &buf;
+
+    vaSurfaceAttrib.count = 1;
+    vaSurfaceAttrib.type = VAExternalMemoryCIFrame;
+    vaSurfaceAttrib.buffers[0] = (uint32_t)map->value;
+    vaStatus = vaCreateSurfacesWithAttribute(
+            mVADisplay,
+            mComParams.resolution.width,
+            mComParams.resolution.height,
+            VA_RT_FORMAT_YUV420,
+            1,
+            &surface,
+            &vaSurfaceAttrib);
+    CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
+
+    map->surface = surface;
+   
+    return ret;
+}
+
+Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
+
+    if (!map)
+        return ENCODE_NULL_PTR;
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    Encode_Status ret = ENCODE_SUCCESS;
+    VASurfaceID surface;
+
+    VASurfaceAttributeTPI vaSurfaceAttrib;
+    uint32_t buf;
+
+    vaSurfaceAttrib.buffers = &buf;
+
+    vaSurfaceAttrib.count = 1;
+    vaSurfaceAttrib.width = map->vinfo.width;
+    vaSurfaceAttrib.height = map->vinfo.height;
+    vaSurfaceAttrib.luma_stride = map->vinfo.lumaStride;
+    vaSurfaceAttrib.buffers[0] = map->value;
+    vaSurfaceAttrib.pixel_format = map->vinfo.format;
+    vaSurfaceAttrib.type = VAExternalMemoryUserPointer;
+
+    vaStatus = vaCreateSurfacesWithAttribute(
+            mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
+            1, &surface, &vaSurfaceAttrib);
+
+    CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromMalloc");
+
+    LOG_I("Surface ID created from Malloc = 0x%08x", map->value);
+
+    map->surface = surface;
 
     return ret;
 }
 
-Encode_Status VideoEncoderBase::surfaceMappingForCIFrameList() {
-    uint32_t index;
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
-    Encode_Status ret = ENCODE_SUCCESS;
-    VASurfaceAttributeTPI * vaSurfaceAttrib = new VASurfaceAttributeTPI;
-    if (vaSurfaceAttrib == NULL) {
-        LOG_E("Failed to allocate VASurfaceAttrib\n");
-        return ENCODE_NO_MEMORY;
-    }
-    vaSurfaceAttrib->type = VAExternalMemoryCIFrame;
-    vaSurfaceAttrib->buffers = new uint32_t[mSharedSurfacesCnt];
-  
-    for (index = 0; index < mSharedSurfacesCnt; index++) {
-        vaSurfaceAttrib->buffers[0] = (uint32_t)mUpstreamBufferCnt;
-        vaStatus = vaCreateSurfacesWithAttribute(
-                mVADisplay,
-                mComParams.resolution.width,
-                mComParams.resolution.height,
-                VA_RT_FORMAT_YUV420,
-                1 /*mSharedSurfacesCnt*/,
-                &mSharedSurfaces[index],
-                vaSurfaceAttrib);
-        CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
-        mSurfaces[index] = mSharedSurfaces[index];
+Encode_Status VideoEncoderBase::surfaceMapping(SurfaceMap *map) {
 
-        ret = generateVideoBufferAndAttachToList(index, NULL);
-        CHECK_ENCODE_STATUS_RETURN("generateVideoBufferAndAttachToList")
+    if (!map)
+        return ENCODE_NULL_PTR;
+
+    Encode_Status status;
+
+LOG_I("surfaceMapping mode=%d, format=%d, lumaStride=%d, width=%d, heith=%d, value=%x\n", map->vinfo.mode, map->vinfo.format, map->vinfo.lumaStride, map->vinfo.width, map->vinfo.height, map->value);
+    switch (map->vinfo.mode) {
+        case MEM_MODE_CI:
+            status = surfaceMappingForCI(map);
+            break;
+        case MEM_MODE_SURFACE:
+            status = surfaceMappingForSurface(map);
+            break;
+        case MEM_MODE_GFXHANDLE:
+            status = surfaceMappingForGfxHandle(map);
+            break;
+        case MEM_MODE_KBUFHANDLE:
+            status = surfaceMappingForKbufHandle(map);
+            break;
+        case MEM_MODE_MALLOC:
+            status = surfaceMappingForMalloc(map);
+            break;
+        case MEM_MODE_ION:
+        case MEM_MODE_V4L2:
+        case MEM_MODE_USRPTR:
+        default:
+            status = ENCODE_NOT_SUPPORTED;
+            break;
     }
-   
-    if(vaSurfaceAttrib) {
-        if(vaSurfaceAttrib->buffers) {
-            delete [] vaSurfaceAttrib->buffers;
-            vaSurfaceAttrib->buffers= NULL;
-        }
-        delete vaSurfaceAttrib;
-        vaSurfaceAttrib = NULL;
-    }
-    return ret;
+
+    return status;
 }
 
 Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
 
-    Encode_Status ret = ENCODE_SUCCESS;
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    Encode_Status ret = ENCODE_SUCCESS;        
+    MetadataBufferType type;
+    int32_t value;
+    ValueInfo vinfo;
+    ValueInfo *pvinfo = &vinfo;
+    int32_t *extravalues = NULL;
+    unsigned int extravalues_count = 0;
 
-    uint32_t idx = 0;
-    uint32_t bufIndex = 0;
-    uint32_t data = 0;
-
-    if (mBufferMode == BUFFER_SHARING_CI) {
-
-        memcpy(&bufIndex, inBuffer->data, sizeof(unsigned int));
-        // bufIndex = *(uint32_t*)inBuffer->data;
-
-        LOG_I("mSurfaceCnt = %d\n", mSurfaceCnt);
-        LOG_I("bufIndex = %d\n", bufIndex);
-
-        if (bufIndex > mSurfaceCnt - 2) {
-            LOG_E("the CI frame idx is bigger than total CI frame count\n");
-            ret = ENCODE_FAIL;
-            return ret;
-
+    IntelMetadataBuffer *imb = new IntelMetadataBuffer;
+    SurfaceMap *map = NULL;
+  
+    if (mStoreMetaDataInBuffers.isEnabled) {        
+        //metadatabuffer mode
+        LOG_I("in metadata mode, data=%p, size=%d\n", inBuffer->data, inBuffer->size);
+        if (imb->SetBytes(inBuffer->data, inBuffer->size) != IMB_SUCCESS) {
+            //fail to parse buffer
+            delete imb;
+            return ENCODE_NO_REQUEST_DATA; 
         }
 
-    } else if (mBufferMode == BUFFER_SHARING_SURFACE ||
-                   mBufferMode == BUFFER_SHARING_GFXHANDLE  ||
-                   mBufferMode == BUFFER_SHARING_KBUFHANDLE) {
-
-        bufIndex = (uint32_t) -1;
-        data = *(uint32_t*)inBuffer->data;
-
-        LOG_I("data = 0x%08x\n", data);
-
-        for (idx = 0; idx < mSharedSurfacesCnt; idx++) {
-
-            LOG_I("mUpstreamBufferList[%d] = 0x%08x\n", idx, mUpstreamBufferList[idx]);
-            if (data == mUpstreamBufferList[idx])
-                bufIndex = idx;
+        imb->GetType(type);
+        imb->GetValue(value);
+    } else {
+        //raw mode
+        LOG_I("in raw mode, data=%p, size=%d\n", inBuffer->data, inBuffer->size);
+        if (! inBuffer->data || inBuffer->size == 0) {
+            delete imb;
+            return ENCODE_NULL_PTR; 
         }
 
-        LOG_I("mSurfaceCnt = %d\n", mSurfaceCnt);
-        LOG_I("bufIndex = %d\n", bufIndex);
+        type = MetadataBufferTypeUser;
+        value = (int32_t)inBuffer->data;
+    }
+   
+    //find if mapped
+    map = findSurfaceMapByValue(mSrcSurfaceMapList, value);
 
-        if (bufIndex > mSurfaceCnt - 2) {
-            LOG_E("Can't find the surface in our list\n");
-            ret = ENCODE_FAIL;
-            return ret;
-        }
-    }else if (mBufferMode == BUFFER_SHARING_USRPTR) {
+    if (map) {  	
+        //has mapped, get surfaceID directly
+        LOG_I("direct find surface %d from value %x\n", map->surface, value);
+        mCurSurface = map->surface;
 
-        bufIndex = (uint32_t) -1; //fixme, temp use a big value
-
-        LOG_I("bufin->data = 0x%p\n", inBuffer->data);
-
-        for (idx = 0; idx < mReqSurfacesCnt; idx++) {
-            LOG_I("mUsrPtr[%d] = 0x%p\n", idx, mUsrPtr[idx]);
-
-            if (inBuffer->data == mUsrPtr[idx])
-                bufIndex = idx;
-        }
-
-        LOG_I("mSurfaceCnt = %d\n", mSurfaceCnt);
-        LOG_I("bufIndex = %d\n", bufIndex);
-
-        if (bufIndex > mSurfaceCnt - 2) {
-            LOG_W("the Surface idx is too big, most likely the buffer passed in is not allocated by us\n");
-            ret = ENCODE_FAIL;
-            goto no_share_mode;
-        }
+        delete imb;
+        return ret;
     }
 
+    //if no found from list, then try to map value with parameters
+    LOG_I("not find surface from cache with value %x, start mapping if enough information\n", value);
 
-    switch (mBufferMode) {
+    if (mStoreMetaDataInBuffers.isEnabled) {  
+    	
+        //if type is MetadataBufferTypeGrallocSource, use default parameters
+        if (type == MetadataBufferTypeGrallocSource) {
+            vinfo.mode = MEM_MODE_GFXHANDLE;
+            vinfo.handle = 0;
+            vinfo.size = 0;
+            vinfo.width = mComParams.resolution.width;
+            vinfo.height = mComParams.resolution.height;
+            vinfo.lumaStride = mComParams.resolution.width;
+            vinfo.chromStride = mComParams.resolution.width;
+            vinfo.format = VA_FOURCC_NV12;
+            vinfo.s3dformat = 0xFFFFFFFF;
+        } else {            
+            //get all info mapping needs
+            imb->GetValueInfo(pvinfo);                 
+            imb->GetExtraValues(extravalues, extravalues_count);
+  	}
+        
+    } else {
 
-        case BUFFER_SHARING_CI:
-        case BUFFER_SHARING_SURFACE:
-        case BUFFER_SHARING_GFXHANDLE:
-        case BUFFER_SHARING_KBUFHANDLE:
-        case BUFFER_SHARING_USRPTR: {
-
-            if (mRefFrame== NULL) {
-                mRefFrame = getVideoSurfaceBufferByIndex(mVideoSrcBufferList, mSurfaceCnt -1 );
-                if (mRefFrame == NULL) {
-                    LOG_E ("No Surface buffer available, something should be wrong\n");
-                    return ENCODE_FAIL;
-                }
-                mVideoSrcBufferList = removeVideoSurfaceBuffer(mVideoSrcBufferList, mRefFrame);
-
-            }
-
-            if (mRecFrame== NULL) {
-                mRecFrame = getVideoSurfaceBufferByIndex(mVideoSrcBufferList, mSurfaceCnt - 2);
-                if (mRecFrame == NULL) {
-                    LOG_E ("No Surface buffer available, something should be wrong\n");
-                    return ENCODE_FAIL;
-                }
-                mVideoSrcBufferList = removeVideoSurfaceBuffer(mVideoSrcBufferList, mRecFrame);
-
-            }
-
-            if (mCurFrame== NULL) {
-                mCurFrame = getVideoSurfaceBufferByIndex(mVideoSrcBufferList, bufIndex);
-                if (mCurFrame == NULL) {
-                    LOG_E ("No Surface buffer available, something should be wrong\n");
-                    return ENCODE_FAIL;
-                }
-                mVideoSrcBufferList = removeVideoSurfaceBuffer(mVideoSrcBufferList, mCurFrame);
-            }
-        }
-
-        break;
-        case BUFFER_SHARING_V4L2:
-            LOG_E("Not Implemented\n");
-            break;
-
-        case BUFFER_SHARING_NONE: {
-no_share_mode:
-
-            if (mRefFrame== NULL) {
-                mRefFrame = mVideoSrcBufferList;
-                if (mRefFrame == NULL) {
-                    LOG_E("No Surface buffer available, something should be wrong\n");
-                    return ENCODE_FAIL;
-                }
-                mVideoSrcBufferList = removeVideoSurfaceBuffer(mVideoSrcBufferList, mRefFrame);
-
-            }
-
-            if (mRecFrame== NULL) {
-                mRecFrame = mVideoSrcBufferList;
-                if (mRecFrame == NULL) {
-                    LOG_E ("No Surface buffer available, something should be wrong\n");
-                    return ENCODE_FAIL;
-                }
-                mVideoSrcBufferList = removeVideoSurfaceBuffer(mVideoSrcBufferList, mRecFrame);
-
-            }
-
-            if (mCurFrame== NULL) {
-                mCurFrame = mVideoSrcBufferList;
-                if (mCurFrame == NULL) {
-                    LOG_E ("No Surface buffer available, something should be wrong\n");
-                    return ENCODE_FAIL;
-                }
-                mVideoSrcBufferList = removeVideoSurfaceBuffer(mVideoSrcBufferList, mCurFrame);
-            }
-
-            LOG_V( "Get Surface Done\n");
-            ret = uploadDataToSurface (inBuffer);
-            CHECK_ENCODE_STATUS_RETURN("uploadDataToSurface");
-        }
-        break;
-        default:
-            break;
-
+        //raw mode           
+        vinfo.mode = MEM_MODE_MALLOC;
+        vinfo.handle = 0;
+        vinfo.size = inBuffer->size;
+        vinfo.width = mComParams.resolution.width;
+        vinfo.height = mComParams.resolution.height;
+        vinfo.lumaStride = mComParams.resolution.width;
+        vinfo.chromStride = mComParams.resolution.width;
+        vinfo.format = VA_FOURCC_NV12;
+        vinfo.s3dformat = 0xFFFFFFFF;
     }
 
-    return ENCODE_SUCCESS;
+    /*  Start mapping, if pvinfo is not NULL, then have enough info to map;
+     *   if extravalues is not NULL, then need to do more times mapping
+     */
+    if (pvinfo){
+        //map according info, and add to surfacemap list
+        map = new SurfaceMap;
+        map->type = type;
+        map->value = value;
+        memcpy(&(map->vinfo), pvinfo, sizeof(ValueInfo));
+        map->added = false;
+        map->next = NULL;
+
+        ret = surfaceMapping(map);
+        if (ret == ENCODE_SUCCESS) {
+            LOG_I("surface mapping success, map value %x into surface %d\n", value, map->surface);
+            mSrcSurfaceMapList = appendSurfaceMap(mSrcSurfaceMapList, map);
+        } else {
+            delete map;
+            delete imb;
+            LOG_E("surface mapping failed, wrong info or meet serious error\n");
+            return ret;
+        } 
+
+        mCurSurface = map->surface;
+
+    } else {
+        //can't map due to no info
+        delete imb;
+        LOG_E("surface mapping failed,  missing information\n");
+        return ENCODE_NO_REQUEST_DATA;
+    }
+            
+    if (extravalues) {
+        //map more using same ValueInfo
+        for(unsigned int i=0; i<extravalues_count; i++) {
+            map = new SurfaceMap;
+            map->type = type;
+            map->value = extravalues[i];
+            memcpy(&(map->vinfo), pvinfo, sizeof(ValueInfo));
+            map->added = false;
+            map->next = NULL;
+
+            ret = surfaceMapping(map);
+            if (ret == ENCODE_SUCCESS) {
+                LOG_I("surface mapping extravalue success, map value %x into surface %d\n", extravalues[i], map->surface);
+                mSrcSurfaceMapList = appendSurfaceMap(mSrcSurfaceMapList, map);
+            } else {
+                delete map;
+                map = NULL;
+                LOG_E( "surface mapping extravalue failed, extravalue is %x\n", extravalues[i]);
+            }
+        }
+    }
+   
+    delete imb;
+ 
+    return ret;
 }
 
-VideoEncSurfaceBuffer *VideoEncoderBase::appendVideoSurfaceBuffer(
-        VideoEncSurfaceBuffer *head, VideoEncSurfaceBuffer *buffer) {
+SurfaceMap *VideoEncoderBase::appendSurfaceMap(
+        SurfaceMap *head, SurfaceMap *map) {
 
     if (head == NULL) {
-        return buffer;
+        return map;
     }
 
-    VideoEncSurfaceBuffer *node = head;
-    VideoEncSurfaceBuffer *tail = NULL;
+    SurfaceMap *node = head;
+    SurfaceMap *tail = NULL;
 
     while (node != NULL) {
         tail = node;
         node = node->next;
     }
-    tail->next = buffer;
+    tail->next = map;
 
     return head;
 }
 
-VideoEncSurfaceBuffer *VideoEncoderBase::removeVideoSurfaceBuffer(
-        VideoEncSurfaceBuffer *head, VideoEncSurfaceBuffer *buffer) {
+SurfaceMap *VideoEncoderBase::removeSurfaceMap(
+        SurfaceMap *head, SurfaceMap *map) {
 
-    VideoEncSurfaceBuffer *node = head;
-    VideoEncSurfaceBuffer *tmpNode = NULL;
+    SurfaceMap *node = head;
+    SurfaceMap *tmpNode = NULL;
 
-    if (head == buffer) {
+    if (head == map) {
         tmpNode = head->next;
-        buffer->next = NULL;
+        map->next = NULL;
         return tmpNode;
     }
 
     while (node != NULL) {
-        if (node->next == buffer)
+        if (node->next == map)
             break;
         node = node->next;
     }
 
     if (node != NULL) {
-        node->next = buffer->next;
+        node->next = map->next;
     }
 
-    buffer->next = NULL;
+    map->next = NULL;
     return head;
-
 }
 
-VideoEncSurfaceBuffer *VideoEncoderBase::getVideoSurfaceBufferByIndex(
-        VideoEncSurfaceBuffer *head, uint32_t index) {
-    VideoEncSurfaceBuffer *node = head;
+SurfaceMap *VideoEncoderBase::findSurfaceMapByValue(
+        SurfaceMap *head, int32_t value) {
+
+    SurfaceMap *node = head;
 
     while (node != NULL) {
-        if (node->index == index)
+        if (node->value == value)
             break;
         node = node->next;
     }
@@ -2001,6 +1908,7 @@ VideoEncSurfaceBuffer *VideoEncoderBase::getVideoSurfaceBufferByIndex(
     return node;
 }
 
+#if 0
 Encode_Status VideoEncoderBase::uploadDataToSurface(VideoEncRawBuffer *inBuffer) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
@@ -2023,9 +1931,9 @@ Encode_Status VideoEncoderBase::uploadDataToSurface(VideoEncRawBuffer *inBuffer)
     uint32_t uvWidth = width;
 
     LOG_V("map source data to surface\n");
-    LOG_I("Surface ID = 0x%08x\n", (uint32_t) mCurFrame->surface);
+    LOG_I("Surface ID = 0x%08x\n", (uint32_t) mCurSurface);
 
-    vaStatus = vaDeriveImage(mVADisplay, mCurFrame->surface, &srcImage);
+    vaStatus = vaDeriveImage(mVADisplay, mCurSurface, &srcImage);
     CHECK_VA_STATUS_RETURN("vaDeriveImage");
 
     LOG_V( "vaDeriveImage Done\n");
@@ -2092,6 +2000,7 @@ Encode_Status VideoEncoderBase::uploadDataToSurface(VideoEncRawBuffer *inBuffer)
 
     return ENCODE_SUCCESS;
 }
+#endif
 
 Encode_Status VideoEncoderBase::renderDynamicBitrate() {
     VAStatus vaStatus = VA_STATUS_SUCCESS;

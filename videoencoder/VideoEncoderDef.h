@@ -261,6 +261,7 @@ enum VideoParamConfigType {
     VideoParamsTypeUpSteamBuffer,
     VideoParamsTypeUsrptrBuffer,
     VideoParamsTypeHRD,
+    VideoParamsTypeStoreMetaDataInBuffers,
 
     VideoConfigTypeFrameRate,
     VideoConfigTypeBitRate,
@@ -410,6 +411,16 @@ struct VideoParamsHRD : VideoParamConfigSet {
     uint32_t initBufferFullness;
 };
 
+struct VideoParamsStoreMetaDataInBuffers : VideoParamConfigSet {
+
+    VideoParamsStoreMetaDataInBuffers() {
+        type = VideoParamsTypeStoreMetaDataInBuffers;
+        size = sizeof(VideoParamsStoreMetaDataInBuffers);
+    }
+
+    bool isEnabled;
+};
+
 struct VideoConfigFrameRate : VideoParamConfigSet {
 
     VideoConfigFrameRate() {
@@ -500,4 +511,15 @@ struct VideoConfigSliceNum : VideoParamConfigSet {
 
     SliceNum sliceNum;
 };
+
+typedef struct {
+    uint32_t total_frames; 
+    uint32_t skipped_frames;
+    uint32_t average_encode_time;
+    uint32_t max_encode_time;
+    uint32_t max_encode_frame;
+    uint32_t min_encode_time;
+    uint32_t min_encode_frame;
+}VideoStatistics;
+
 #endif /*  __VIDEO_ENCODER_DEF_H__ */
