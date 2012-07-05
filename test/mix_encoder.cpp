@@ -721,9 +721,13 @@ for(int i=0; i<1; i++)
     fclose(file);
 
     VideoStatistics stat;
-    gVideoEncoder->getStatistics(&stat);
-    printf("\nVideoStatistics\n");
-    printf("Encoded %d frames, Skip %d frames, encode time: average( %d us), max( %d us/Frame %d), min( %d us/Frame %d)\n", stat.total_frames, stat.skipped_frames, stat.average_encode_time, stat.max_encode_time, stat.max_encode_frame, stat.min_encode_time, stat.min_encode_frame );
+    if (gVideoEncoder->getStatistics(&stat) == ENCODE_SUCCESS)
+    {
+        printf("\nVideoStatistics\n");
+        printf("Encoded %d frames, Skip %d frames, encode time: average( %d us), max( %d us/Frame %d), min( %d us/Frame %d)\n", \
+		stat.total_frames, stat.skipped_frames, stat.average_encode_time, stat.max_encode_time, stat.max_encode_frame, \
+		stat.min_encode_time, stat.min_encode_frame );
+    }
     if(gVideoEncoder) {
         releaseVideoEncoder(gVideoEncoder);
         gVideoEncoder = NULL;

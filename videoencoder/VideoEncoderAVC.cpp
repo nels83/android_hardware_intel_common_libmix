@@ -298,6 +298,7 @@ Encode_Status VideoEncoderAVC::getOneNALUnit(
 
     if (inBuffer[pos - 1] != 0x01 || zeroByteCount < 2) {
         LOG_E("The stream is not AnnexB format \n");
+        LOG_E("segment status is %x \n", status);
         return ENCODE_FAIL; //not AnnexB, we won't process it
     }
 
