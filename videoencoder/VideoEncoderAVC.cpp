@@ -319,32 +319,33 @@ Encode_Status VideoEncoderAVC::getOneNALUnit(
     while ((dataRemaining > 0) && (zeroByteCount < 3)) {
         if (((((uint32_t)dataPtr) & 0xF ) == 0) && (0 == zeroByteCount)
                && (dataRemaining > 0xF)) {
-            __asm__(
+
+            __asm__  (
                 //Data input
                 "movl %1, %%ecx\n\t"//data_ptr=>ecx
                 "movl %0, %%eax\n\t"//data_remaing=>eax
                 //Main compare loop
-                "MATCH_8_ZERO:\n\t"
+                //
+                "0:\n\t"   //MATCH_8_ZERO:
                 "pxor %%xmm0,%%xmm0\n\t"//set 0=>xmm0
                 "pcmpeqb (%%ecx),%%xmm0\n\t"//data_ptr=xmm0,(byte==0)?0xFF:0x00
                 "pmovmskb %%xmm0, %%edx\n\t"//edx[0]=xmm0[7],edx[1]=xmm0[15],...,edx[15]=xmm0[127]
                 "test $0xAAAA, %%edx\n\t"//edx& 1010 1010 1010 1010b
-                "jnz DATA_RET\n\t"//Not equal to zero means that at least one byte 0x00
+                "jnz 2f\n\t"//Not equal to zero means that at least one byte 0x00
 
-                "PREPARE_NEXT_MATCH:\n\t"
+                "1:\n\t"  //PREPARE_NEXT_MATCH:
                 "sub $0x10, %%eax\n\t"//16 + ecx --> ecx
                 "add $0x10, %%ecx\n\t"//eax-16 --> eax
                 "cmp $0x10, %%eax\n\t"
-                "jge MATCH_8_ZERO\n\t"//search next 16 bytes
+                "jge 0b\n\t"//search next 16 bytes
 
-                "DATA_RET:\n\t"
+                "2:\n\t"   //DATA_RET:
                 "movl %%ecx, %1\n\t"//output ecx->data_ptr
                 "movl %%eax, %0\n\t"//output eax->data_remaining
                 : "+m"(dataRemaining), "+m"(dataPtr)
                 :
                 :"eax", "ecx", "edx", "xmm0"
                 );
-
             if (0 >= dataRemaining) {
                 break;
             }
