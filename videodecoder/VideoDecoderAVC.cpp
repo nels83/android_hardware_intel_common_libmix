@@ -657,36 +657,14 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
 }
 
 Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
-    int width = mVideoFormatInfo.width;
-    int height = mVideoFormatInfo.height;
-
     updateFormatInfo(data);
     if (mSizeChanged == false) {
         return DECODE_SUCCESS;
-    } else if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER){
+    } else {
         mSizeChanged = false;
         flushSurfaceBuffers();
         return DECODE_FORMAT_CHANGE;
     }
-
-    if (mVideoFormatInfo.width > mVideoFormatInfo.surfaceWidth ||
-        mVideoFormatInfo.height > mVideoFormatInfo.surfaceHeight) {
-        ETRACE("New video size %d x %d exceeds surface size %d x %d.",
-                mVideoFormatInfo.width, mVideoFormatInfo.height,
-                mVideoFormatInfo.surfaceWidth, mVideoFormatInfo.surfaceHeight);
-        return DECODE_NEED_RESTART;
-    }
-
-    if (width == mVideoFormatInfo.width &&
-        height == mVideoFormatInfo.height) {
-        ITRACE("New video sequence with the same resolution.");
-        mSizeChanged = false;
-    } else {
-        WTRACE("Video size changed from %d x %d to %d x %d.", width, height,
-                mVideoFormatInfo.width, mVideoFormatInfo.height);
-        flushSurfaceBuffers();
-    }
-    return DECODE_SUCCESS;
 }
 
 bool VideoDecoderAVC::isNewFrame(vbp_data_h264 *data, bool equalPTS) {

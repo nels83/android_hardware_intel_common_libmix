@@ -141,8 +141,10 @@ Decode_Status VideoDecoderBase::reset(VideoConfigBuffer *buffer) {
 
     mVideoFormatInfo.width = buffer->width;
     mVideoFormatInfo.height = buffer->height;
-    mVideoFormatInfo.surfaceWidth = buffer->graphicBufferWidth;
-    mVideoFormatInfo.surfaceHeight = buffer->graphicBufferHeight;
+    if (buffer->flag & USE_NATIVE_GRAPHIC_BUFFER) {
+        mVideoFormatInfo.surfaceWidth = buffer->graphicBufferWidth;
+        mVideoFormatInfo.surfaceHeight = buffer->graphicBufferHeight;
+    }
     mLowDelay = buffer->flag & WANT_LOW_DELAY;
     mRawOutput = buffer->flag & WANT_RAW_OUTPUT;
     mSignalBufferSize = 0;
@@ -704,6 +706,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
             }
         }
     }
+
     // TODO: validate profile
     if (numSurface == 0) {
         return DECODE_FAIL;

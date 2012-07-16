@@ -103,6 +103,7 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
     CHECK_STATUS("decodeFrame");
     if (mSizeChanged) {
         mSizeChanged = false;
+        flushSurfaceBuffers();
         return DECODE_FORMAT_CHANGE;
     }
 
