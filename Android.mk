@@ -13,4 +13,5 @@ include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/asfparser/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/videodecoder/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/videoencoder/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/frameworks/asf_extractor/Android.mk
+include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/frameworks/vavideodecoder/Android.mk
 endif
