@@ -338,8 +338,17 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data) {
                     mExpectingNVOP = false;
                 }
                 if (useGraphicBuffer) {
-                    mPackedFrame.offSet = data->frameSize;
-                    VTRACE("Report OMX to handle for Multiple frame offset=%d time=%lld",data->frameSize,mPackedFrame.timestamp);
+                    int32_t count = i - 1;
+                    if (count < 0) {
+                        WTRACE("Shuld not be here!");
+                        return DECODE_SUCCESS;
+                    }
+                    vbp_picture_data_mp42 *lastpic = data->picture_data;
+                    for(int k = 0; k < count; k++ ) {
+                        lastpic = lastpic->next_picture_data;
+                    }
+                    mPackedFrame.offSet = lastpic->slice_data.slice_offset + lastpic->slice_data.slice_size;
+                    VTRACE("Report OMX to handle for Multiple frame offset=%d time=%lld",mPackedFrame.offSet,mPackedFrame.timestamp);
                     return DECODE_MULTIPLE_FRAME;
                 }
             }

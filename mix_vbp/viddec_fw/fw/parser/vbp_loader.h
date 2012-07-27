@@ -113,7 +113,6 @@ typedef struct _vbp_data_mp42
     uint32 number_pictures;
 
     vbp_picture_data_mp42 *picture_data;
-    uint32 frameSize; // fist frame size in buffer. Use for multiple frame in a buffer
 
 } vbp_data_mp42;
 
