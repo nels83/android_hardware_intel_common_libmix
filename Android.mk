@@ -15,4 +15,5 @@ include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/videoencoder/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/frameworks/asf_extractor/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/frameworks/vavideodecoder/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/frameworks/libI420colorconvert/Android.mk
+include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/frameworks/videoedit/Android.mk
 endif
