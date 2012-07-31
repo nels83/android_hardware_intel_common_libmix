@@ -402,7 +402,7 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
         mKeyFrame = true;
     }
 
-    // Query the status of current surface
+    // Query the status of last surface to check if its next frame is skipped
     VASurfaceStatus vaSurfaceStatus;
     vaStatus = vaQuerySurfaceStatus(mVADisplay, mLastSurface, &vaSurfaceStatus);
     CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
@@ -467,14 +467,17 @@ Encode_Status VideoEncoderBase::syncEncode(VideoEncRawBuffer *inBuffer) {
     vaStatus = vaMapBuffer (mVADisplay, mOutCodedBuffer, (void **)&buf);
     vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
 
-    // Query the status of current surface
-    VASurfaceStatus vaSurfaceStatus;
-    vaStatus = vaQuerySurfaceStatus(mVADisplay, mCurSurface,  &vaSurfaceStatus);
-    CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
+    mPicSkipped = false;
+    if (!mFirstFrame) {
+        // Query the status of last surface to check if its next frame is skipped
+        VASurfaceStatus vaSurfaceStatus;
+        vaStatus = vaQuerySurfaceStatus(mVADisplay, mLastSurface,  &vaSurfaceStatus);
+        CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
+        mPicSkipped = vaSurfaceStatus & VASurfaceSkipped;
+    }
 
-    mPicSkipped = vaSurfaceStatus & VASurfaceSkipped;
-
-    mCurSurface = 0;
+    mLastSurface = mCurSurface;
+    mCurSurface = VA_INVALID_SURFACE;
 
     mEncodedFrames ++;
     mFrameNum ++;
