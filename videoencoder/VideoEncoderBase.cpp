@@ -162,11 +162,24 @@ Encode_Status VideoEncoderBase::start() {
         mRenderBitRate = true;
     }
 
-    LOG_V( "======VA CreateSurfaces for Rec/Ref frames ======\n");
-    vaStatus = vaCreateSurfaces(mVADisplay,VA_RT_FORMAT_YUV420, mComParams.resolution.width,
-            mComParams.resolution.height, 
-            surfaces, 2, NULL , 0);
-    CHECK_VA_STATUS_GOTO_CLEANUP("vaCreateSurfaces");
+    LOG_V( "======VA Create Surfaces for Rec/Ref frames ======\n");
+
+    VASurfaceAttributeTPI attribute_tpi;
+
+    attribute_tpi.size = mComParams.resolution.width * mComParams.resolution.height * 3 / 2;
+    attribute_tpi.luma_stride = mComParams.resolution.width;
+    attribute_tpi.chroma_u_stride = mComParams.resolution.width;
+    attribute_tpi.chroma_v_stride = mComParams.resolution.width;
+    attribute_tpi.luma_offset = 0;
+    attribute_tpi.chroma_u_offset = mComParams.resolution.width * mComParams.resolution.height;
+    attribute_tpi.chroma_v_offset = mComParams.resolution.width * mComParams.resolution.height;
+    attribute_tpi.pixel_format = VA_FOURCC_NV12;
+    attribute_tpi.type = VAExternalMemoryNULL;
+
+    vaCreateSurfacesWithAttribute(mVADisplay, mComParams.resolution.width, mComParams.resolution.height,
+            VA_RT_FORMAT_YUV420, 2, surfaces, &attribute_tpi);
+    CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
+
     mRefSurface = surfaces[0];
     mRecSurface = surfaces[1];
 
@@ -301,7 +314,6 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
     LOG_I( "Surface = 0x%08x\n",(uint32_t) mCurSurface);
     LOG_I( "mVADisplay = 0x%08x\n",(uint32_t)mVADisplay);
 
-#if 0
 #ifdef DUMP_SRC_DATA
 
     if (mBufferMode == BUFFER_SHARING_SURFACE && mFirstFrame){
@@ -345,7 +357,6 @@ Encode_Status VideoEncoderBase::asyncEncode(VideoEncRawBuffer *inBuffer) {
         vaStatus = vaDestroyImage(mVADisplay, image.image_id);
         CHECK_VA_STATUS_RETURN("vaDestroyImage");
     }
-#endif
 #endif
 
     vaStatus = vaBeginPicture(mVADisplay, mVAContext, mCurSurface);
@@ -622,6 +633,12 @@ CLEAN_UP:
     mInitialized = false;
 
 #ifdef VIDEO_ENC_STATISTICS_ENABLE
+    LOG_V("Encoder Statistics:\n");
+    LOG_V("    %d frames Encoded, %d frames Skipped\n", mEncodedFrames, mVideoStat.skipped_frames);
+    LOG_V("    Encode time: Average(%d us), Max(%d us @Frame No.%d), Min(%d us @Frame No.%d)\n", \
+           mVideoStat.average_encode_time / mEncodedFrames, mVideoStat.max_encode_time, \
+           mVideoStat.max_encode_frame, mVideoStat.min_encode_time, mVideoStat.min_encode_frame);
+
     memset(&mVideoStat, 0, sizeof(VideoStatistics));
     mVideoStat.min_encode_time = 0xFFFFFFFF;
 #endif
@@ -1907,100 +1924,6 @@ SurfaceMap *VideoEncoderBase::findSurfaceMapByValue(
 
     return node;
 }
-
-#if 0
-Encode_Status VideoEncoderBase::uploadDataToSurface(VideoEncRawBuffer *inBuffer) {
-
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
-
-    uint32_t width = mComParams.resolution.width;
-    uint32_t height = mComParams.resolution.height;
-
-    VAImage srcImage;
-    uint8_t *pvBuffer;
-    uint8_t *dstY;
-    uint8_t *dstUV;
-    uint32_t i,j;
-
-    uint8_t *inBuf = inBuffer->data;
-    VAImage *image = NULL;
-
-    int uvOffset = width * height;
-    uint8_t *uvBufIn = inBuf + uvOffset;
-    uint32_t uvHeight = height / 2;
-    uint32_t uvWidth = width;
-
-    LOG_V("map source data to surface\n");
-    LOG_I("Surface ID = 0x%08x\n", (uint32_t) mCurSurface);
-
-    vaStatus = vaDeriveImage(mVADisplay, mCurSurface, &srcImage);
-    CHECK_VA_STATUS_RETURN("vaDeriveImage");
-
-    LOG_V( "vaDeriveImage Done\n");
-
-    image = &srcImage;
-
-    vaStatus = vaMapBuffer(mVADisplay, image->buf, (void **)&pvBuffer);
-    CHECK_VA_STATUS_RETURN("vaMapBuffer");
-
-    LOG_V("vaImage information\n");
-    LOG_I("image->pitches[0] = %d\n", image->pitches[0]);
-    LOG_I("image->pitches[1] = %d\n", image->pitches[1]);
-    LOG_I("image->offsets[0] = %d\n", image->offsets[0]);
-    LOG_I("image->offsets[1] = %d\n", image->offsets[1]);
-    LOG_I("image->num_planes = %d\n", image->num_planes);
-    LOG_I("image->width = %d\n", image->width);
-    LOG_I("image->height = %d\n", image->height);
-
-    LOG_I("input buf size = %d\n", inBuffer->size);
-
-    if (mComParams.rawFormat == RAW_FORMAT_YUV420) {
-        dstY = pvBuffer +image->offsets[0];
-
-        for (i = 0; i < height; i ++) {
-            memcpy(dstY, inBuf + i * width, width);
-            dstY += image->pitches[0];
-        }
-
-        dstUV = pvBuffer + image->offsets[1];
-
-        for (i = 0; i < height / 2; i ++) {
-            for (j = 0; j < width; j+=2) {
-                dstUV [j] = inBuf [width * height + i * width / 2 + j / 2];
-                dstUV [j + 1] =
-                    inBuf [width * height * 5 / 4 + i * width / 2 + j / 2];
-            }
-            dstUV += image->pitches[1];
-        }
-    }
-
-    else if (mComParams.rawFormat == RAW_FORMAT_NV12) {
-
-        dstY = pvBuffer + image->offsets[0];
-        for (i = 0; i < height; i++) {
-            memcpy(dstY, inBuf + i * width, width);
-            dstY += image->pitches[0];
-        }
-
-        dstUV = pvBuffer + image->offsets[1];
-        for (i = 0; i < uvHeight; i++) {
-            memcpy(dstUV, uvBufIn + i * uvWidth, uvWidth);
-            dstUV += image->pitches[1];
-        }
-    } else {
-        LOG_E("Raw format not supoort\n");
-        return ENCODE_FAIL;
-    }
-
-    vaStatus = vaUnmapBuffer(mVADisplay, image->buf);
-    CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
-
-    vaStatus = vaDestroyImage(mVADisplay, srcImage.image_id);
-    CHECK_VA_STATUS_RETURN("vaDestroyImage");
-
-    return ENCODE_SUCCESS;
-}
-#endif
 
 Encode_Status VideoEncoderBase::renderDynamicBitrate() {
     VAStatus vaStatus = VA_STATUS_SUCCESS;

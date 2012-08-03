@@ -5,9 +5,10 @@
 #include <getopt.h>
 #include <IntelMetadataBuffer.h>
 
-#include <surfaceflinger/ISurfaceComposer.h>
-#include <surfaceflinger/SurfaceComposerClient.h>
-#include <surfaceflinger/IGraphicBufferAlloc.h>
+#include <private/gui/ComposerService.h>
+#include <gui/ISurfaceComposer.h>
+#include <gui/SurfaceComposerClient.h>
+#include <gui/IGraphicBufferAlloc.h>
 
 #include <binder/IPCThreadState.h>
 #include <binder/ProcessState.h>
@@ -460,9 +461,10 @@ void CreateGfxhandle()
     gGraphicBufferAlloc = composer->createGraphicBufferAlloc();
     
     uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_SW_WRITE_OFTEN | GraphicBuffer::USAGE_SW_READ_OFTEN; // | GraphicBuffer::USAGE_HW_COMPOSER;
-    int format = HAL_PIXEL_FORMAT_NV12_VED; //HAL_PIXEL_FORMAT_RGBA_8888
+//    int format = HAL_PIXEL_FORMAT_YV12;
+    int format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
     int32_t error;
-
+/*
     int adjusted_width, adjusted_height;
     if (0) {
         ;
@@ -483,26 +485,26 @@ void CreateGfxhandle()
     adjusted_height = (gHeight + 0x1f) & ~0x1f;
 
 printf("adjust width=%d, height=%d\n", adjusted_width, adjusted_height);
+*/
     for(int i = 0; i < gSrcFrames; i ++)
     {
         sp<GraphicBuffer> graphicBuffer(
                 gGraphicBufferAlloc->createGraphicBuffer(
-//                                gWidth, gHeight, format, usage, &error));
-                                adjusted_width, adjusted_height, format, usage, &error));
+                                gWidth, gHeight, format, usage, &error));
+//                                adjusted_width, adjusted_height, format, usage, &error));
 
         gGraphicBuffer[i] = graphicBuffer;
-        graphicBuffer->lock(GRALLOC_USAGE_SW_WRITE_OFTEN, (void**)(&gUsrptr[i]));
-
+        graphicBuffer->lock(GraphicBuffer::USAGE_SW_WRITE_OFTEN, (void**)(&gUsrptr[i]));
         gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)gGraphicBuffer[i]->handle);
         graphicBuffer->unlock();
     }
-    
 }
 
 void CreateGralloc()
 {
     int usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_HW_TEXTURE;
-    int format = HAL_PIXEL_FORMAT_NV12_VED;
+//    int format = HAL_PIXEL_FORMAT_YV12;
+    int format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
 
     gfx_init();
 
@@ -512,13 +514,12 @@ void CreateGralloc()
     for(int i = 0; i < gSrcFrames; i ++)
     {
         gfx_alloc(gWidth, gHeight, format, usage, &handle, (int32_t*)&gStride);
-        gfx_lock(handle, usage, 0, 0, gWidth, gHeight, &vaddr);
+        gfx_lock(handle, GRALLOC_USAGE_SW_WRITE_OFTEN, 0, 0, gWidth, gHeight, &vaddr);
         printf("vaddr= %p\n", vaddr);
         gUsrptr[i] = (uint8_t*)vaddr;
         gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)handle);
         gfx_unlock(handle);
     }
-
 }
 
 int CheckArgs(int argc, char* argv[])
