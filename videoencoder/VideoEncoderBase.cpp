@@ -649,7 +649,6 @@ CLEAN_UP:
 Encode_Status VideoEncoderBase::prepareForOutput(
         VideoEncOutputBuffer *outBuffer, bool *useLocalBuffer) {
 
-    Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VACodedBufferSegment *vaCodedSeg = NULL;
     uint32_t status = 0;
@@ -733,7 +732,6 @@ Encode_Status VideoEncoderBase::prepareForOutput(
 Encode_Status VideoEncoderBase::cleanupForOutput() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    Encode_Status ret = ENCODE_SUCCESS;
 
     //mCurSegment is NULL means all data has been copied out
     if (mCurSegment == NULL && mCodedBufferMapped) {
@@ -1733,25 +1731,23 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
     int32_t *extravalues = NULL;
     unsigned int extravalues_count = 0;
 
-    IntelMetadataBuffer *imb = new IntelMetadataBuffer;
+    IntelMetadataBuffer imb;
     SurfaceMap *map = NULL;
   
     if (mStoreMetaDataInBuffers.isEnabled) {        
         //metadatabuffer mode
         LOG_I("in metadata mode, data=%p, size=%d\n", inBuffer->data, inBuffer->size);
-        if (imb->SetBytes(inBuffer->data, inBuffer->size) != IMB_SUCCESS) {
+        if (imb.UnSerialize(inBuffer->data, inBuffer->size) != IMB_SUCCESS) {
             //fail to parse buffer
-            delete imb;
             return ENCODE_NO_REQUEST_DATA; 
         }
 
-        imb->GetType(type);
-        imb->GetValue(value);
+        imb.GetType(type);
+        imb.GetValue(value);
     } else {
         //raw mode
         LOG_I("in raw mode, data=%p, size=%d\n", inBuffer->data, inBuffer->size);
         if (! inBuffer->data || inBuffer->size == 0) {
-            delete imb;
             return ENCODE_NULL_PTR; 
         }
 
@@ -1767,7 +1763,6 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
         LOG_I("direct find surface %d from value %x\n", map->surface, value);
         mCurSurface = map->surface;
 
-        delete imb;
         return ret;
     }
 
@@ -1789,8 +1784,8 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
             vinfo.s3dformat = 0xFFFFFFFF;
         } else {            
             //get all info mapping needs
-            imb->GetValueInfo(pvinfo);                 
-            imb->GetExtraValues(extravalues, extravalues_count);
+            imb.GetValueInfo(pvinfo);                 
+            imb.GetExtraValues(extravalues, extravalues_count);
   	}
         
     } else {
@@ -1825,7 +1820,6 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
             mSrcSurfaceMapList = appendSurfaceMap(mSrcSurfaceMapList, map);
         } else {
             delete map;
-            delete imb;
             LOG_E("surface mapping failed, wrong info or meet serious error\n");
             return ret;
         } 
@@ -1834,7 +1828,6 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
 
     } else {
         //can't map due to no info
-        delete imb;
         LOG_E("surface mapping failed,  missing information\n");
         return ENCODE_NO_REQUEST_DATA;
     }
@@ -1861,8 +1854,6 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer) {
         }
     }
    
-    delete imb;
- 
     return ret;
 }
 

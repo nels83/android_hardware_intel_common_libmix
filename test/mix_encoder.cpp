@@ -697,7 +697,7 @@ for(int i=0; i<1; i++)
     {
         if (gMode != 4)
         {
-            gIMB[i % gSrcFrames]->GetBytes(data, size);
+            gIMB[i % gSrcFrames]->Serialize(data, size);
      //       printf("srcno =%d, data=%x, size=%d\n", i % gSrcFrames, data, size);
         }else
         {
@@ -729,11 +729,10 @@ for(int i=0; i<1; i++)
 		stat.total_frames, stat.skipped_frames, stat.average_encode_time, stat.max_encode_time, stat.max_encode_frame, \
 		stat.min_encode_time, stat.min_encode_frame );
     }
-    if(gVideoEncoder) {
-        releaseVideoEncoder(gVideoEncoder);
-        gVideoEncoder = NULL;
-    }
 
+    gVideoEncoder->stop();
+    releaseVideoEncoder(gVideoEncoder);
+    gVideoEncoder = NULL;
     
     switch(gMode)
     {

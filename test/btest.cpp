@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
         ret = mb1->SetValueInfo(&vi1);
         ret = mb1->SetExtraValues(ev1, 10);
     }
-    ret = mb1->GetBytes(bytes, size);
+    ret = mb1->Serialize(bytes, size);
     printf("assembling IntelMetadataBuffer %s, ret = %d\n", (ret == IMB_SUCCESS)?"Success":"Fail", ret );    
 
     printf("size = %d, bytes = ", size);
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     printf("\n");
 
     mb2 = new IntelMetadataBuffer();
-    ret = mb2->SetBytes(bytes, size);
+    ret = mb2->UnSerialize(bytes, size);
     printf("parsing IntelMetadataBuffer %s, ret = %d\n", (ret == IMB_SUCCESS)?"Success":"Fail", ret );    
     
     ret = mb2->GetType(t2);

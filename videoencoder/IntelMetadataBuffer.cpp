@@ -60,6 +60,55 @@ IntelMetadataBuffer::~IntelMetadataBuffer()
         delete[] mBytes;
 }
 
+
+IntelMetadataBuffer::IntelMetadataBuffer(const IntelMetadataBuffer& imb)
+     :mType(imb.mType), mValue(imb.mValue), mInfo(NULL), mExtraValues(NULL),
+      mExtraValues_Count(imb.mExtraValues_Count), mBytes(NULL), mSize(imb.mSize)
+{
+    if (imb.mInfo)
+        mInfo = new ValueInfo(*imb.mInfo);
+
+    if (imb.mExtraValues)
+    {
+        mExtraValues = new int32_t[mExtraValues_Count];
+        memcpy(mExtraValues, imb.mExtraValues, 4 * mExtraValues_Count);
+    }
+
+    if (imb.mBytes)
+    {
+        mBytes = new uint8_t[mSize];
+        memcpy(mBytes, imb.mBytes, mSize);
+    }
+}
+
+const IntelMetadataBuffer& IntelMetadataBuffer::operator=(const IntelMetadataBuffer& imb)
+{
+    mType = imb.mType;
+    mValue = imb.mValue;
+    mInfo = NULL;
+    mExtraValues = NULL;
+    mExtraValues_Count = imb.mExtraValues_Count;
+    mBytes = NULL;
+    mSize = imb.mSize;
+
+    if (imb.mInfo)
+        mInfo = new ValueInfo(*imb.mInfo);
+
+    if (imb.mExtraValues)
+    {
+        mExtraValues = new int32_t[mExtraValues_Count];
+        memcpy(mExtraValues, imb.mExtraValues, 4 * mExtraValues_Count);
+    }
+
+    if (imb.mBytes)
+    {
+        mBytes = new uint8_t[mSize];
+        memcpy(mBytes, imb.mBytes, mSize);
+    }
+
+    return *this;
+}
+
 IMB_Result IntelMetadataBuffer::GetType(MetadataBufferType& type)
 {
     type = mType;
@@ -143,7 +192,7 @@ IMB_Result IntelMetadataBuffer::SetExtraValues(int32_t* values, uint32_t num)
     return IMB_SUCCESS;
 }
 
-IMB_Result IntelMetadataBuffer::SetBytes(uint8_t* data, uint32_t size)
+IMB_Result IntelMetadataBuffer::UnSerialize(uint8_t* data, uint32_t size)
 {
     if (!data || size == 0)
         return IMB_INVAL_PARAM;
@@ -214,7 +263,12 @@ IMB_Result IntelMetadataBuffer::SetBytes(uint8_t* data, uint32_t size)
     return IMB_SUCCESS;
 }
 
-IMB_Result IntelMetadataBuffer::GetBytes(uint8_t* &data, uint32_t& size)
+IMB_Result IntelMetadataBuffer::SetBytes(uint8_t* data, uint32_t size)
+{
+    return UnSerialize(data, size);
+}
+
+IMB_Result IntelMetadataBuffer::Serialize(uint8_t* &data, uint32_t& size)
 {
     if (mBytes == NULL)
     {
@@ -251,6 +305,11 @@ IMB_Result IntelMetadataBuffer::GetBytes(uint8_t* &data, uint32_t& size)
     size = mSize;
     
     return IMB_SUCCESS;
+}
+
+IMB_Result IntelMetadataBuffer::GetBytes(uint8_t* &data, uint32_t& size)
+{
+    return Serialize(data, size);
 }
 
 uint32_t IntelMetadataBuffer::GetMaxBufferSize()
