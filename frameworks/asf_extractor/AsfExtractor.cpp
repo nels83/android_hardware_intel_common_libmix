@@ -43,6 +43,17 @@
 
 namespace android {
 
+// The audio format tags that represent the input categories supported
+// by the Windows Media Audio decoder, don't change it
+enum WMAAudioFormats {
+    WAVE_FORMAT_MSAUDIO1         = 0x160,
+    WAVE_FORMAT_WMAUDIO2         = 0x161,
+    WAVE_FORMAT_WMAUDIO3X        = 0x162,
+    WAVE_FORMAT_WMAUDIO_LOSSLESS = 0x163,
+    WAVE_FORMAT_WMAVOICE9        = 0x000A,
+    WAVE_FORMAT_WMAVOICE10       = 0x000B,
+};
+
 class ASFSource : public MediaSource  {
 public:
     ASFSource(const sp<AsfExtractor> &extractor, int trackIndex)
@@ -173,9 +184,11 @@ status_t AsfExtractor::read(
         return BAD_VALUE;
     }
 
+    int64_t seekTimeUs;
+    MediaSource::ReadOptions::SeekMode mode;
     if (!mParser->hasVideo() || (mParser->hasVideo() && mHasIndexObject)) {
-        if (options != NULL) {
-            status_t err = seek_l(track, options);
+        if (options != NULL  && options->getSeekTo(&seekTimeUs, &mode)) {
+            status_t err = seek_l(track, seekTimeUs, mode);
             if (err != OK) {
                 return err;
             }
@@ -273,9 +286,13 @@ status_t AsfExtractor::initialize() {
         }
     }
 
-    if (mParser->hasVideo() || mParser->hasAudio()) {
+    if (mParser->hasVideo()) {
         ALOGV("MEDIA_MIMETYPE_CONTAINER_ASF");
         mFileMetaData->setCString(kKeyMIMEType, MEDIA_MIMETYPE_CONTAINER_ASF);
+    } else if (mParser->hasAudio() && mParser->getAudioInfo()->codecID >= WAVE_FORMAT_MSAUDIO1 &&
+               mParser->getAudioInfo()->codecID <= WAVE_FORMAT_WMAUDIO_LOSSLESS) {
+        LOGV("MEDIA_MIMETYPE_AUDIO_WMA", mParser->getAudioInfo()->codecID);
+        mFileMetaData->setCString(kKeyMIMEType, MEDIA_MIMETYPE_AUDIO_WMA);
     } else {
         ALOGE("Content does not have neither audio nor video.");
         return ERROR_UNSUPPORTED;
@@ -354,20 +371,20 @@ static const char* FourCC2MIME(uint32_t fourcc) {
 static const char* CodecID2MIME(uint32_t codecID) {
     switch (codecID) {
         // WMA version 1
-        case 0x0160:
+        case WAVE_FORMAT_MSAUDIO1:
         // WMA version 2 (7, 8, 9 series)
-        case 0x0161:
+        case WAVE_FORMAT_WMAUDIO2:
         // WMA 9/10 profressional (WMA version 3)
-        case 0x0162:
+        case WAVE_FORMAT_WMAUDIO3X:
             return MEDIA_MIMETYPE_AUDIO_WMA;
         // WMA 9 lossless
-        case 0x0163:
+        case WAVE_FORMAT_WMAUDIO_LOSSLESS:
             //return MEDIA_MIMETYPE_AUDIO_WMA_LOSSLESS;
             return MEDIA_MIMETYPE_AUDIO_WMA;
         // WMA voice 9
-        case 0x000A:
+        case WAVE_FORMAT_WMAVOICE9:
         // WMA voice 10
-        case 0x000B:
+        case WAVE_FORMAT_WMAVOICE10:
             ALOGW("WMA voice 9/10 is not supported.");
             return "audio/wma-voice";
         default:
@@ -378,8 +395,7 @@ static const char* CodecID2MIME(uint32_t codecID) {
 
 
 status_t AsfExtractor::setupTracks() {
-    ALOGW("Audio is temporarily disabled!!!!!!!!!!!!!!");
-    AsfAudioStreamInfo* audioInfo = NULL;//mParser->getAudioInfo();
+    AsfAudioStreamInfo* audioInfo = mParser->getAudioInfo();
     AsfVideoStreamInfo* videoInfo = mParser->getVideoInfo();
     Track* track;
     while (audioInfo || videoInfo) {
@@ -401,10 +417,22 @@ status_t AsfExtractor::setupTracks() {
         track->bufferPool = new MediaBufferPool;
 
         if (audioInfo) {
+            LOGV("streamNumber = %d\n, encryptedContentFlag= %d\n, timeOffset = %lld\n,
+                  codecID = %d\n, numChannels=%d\n, sampleRate=%d\n, avgBitRate = %d\n,
+                  blockAlignment =%d\n, bitsPerSample=%d\n, codecDataSize=%d\n",
+                  audioInfo->streamNumber, audioInfo->encryptedContentFlag,
+                  audioInfo->timeOffset, audioInfo->codecID, audioInfo->numChannels,
+                  audioInfo->sampleRate, audioInfo->avgByteRate*8, audioInfo->blockAlignment,
+                  audioInfo->bitsPerSample, audioInfo->codecDataSize);
+
             track->streamNumber = audioInfo->streamNumber;
             track->encrypted = audioInfo->encryptedContentFlag;
             track->meta->setInt32(kKeyChannelCount, audioInfo->numChannels);
             track->meta->setInt32(kKeySampleRate, audioInfo->sampleRate);
+            track->meta->setInt32(kKeyWmaBlockAlign, audioInfo->blockAlignment);
+            track->meta->setInt32(kKeyBitPerSample, audioInfo->bitsPerSample);
+            track->meta->setInt32(kKeyBitRate, audioInfo->avgByteRate*8);
+            track->meta->setInt32(kKeyWmaFormatTag, audioInfo->codecID);
 
             if (audioInfo->codecDataSize) {
                 track->meta->setData(
@@ -452,7 +480,7 @@ status_t AsfExtractor::setupTracks() {
     return OK;
 }
 
-status_t AsfExtractor::seek_l(Track* track, const MediaSource::ReadOptions *options) {
+status_t AsfExtractor::seek_l(Track* track, int64_t seekTimeUs, MediaSource::ReadOptions::SeekMode mode) {
     Mutex::Autolock lockSeek(mReadLock);
 
     // It is expected seeking will happen on all the tracks with the same seeking options.
@@ -469,11 +497,6 @@ status_t AsfExtractor::seek_l(Track* track, const MediaSource::ReadOptions *opti
         // seeking is completed through a different track
         track->seekCompleted = false;
         return OK;
-    }
-    int64_t seekTimeUs;
-    MediaSource::ReadOptions::SeekMode mode;
-    if(!options->getSeekTo(&seekTimeUs,&mode)) {
-       return OK;
     }
 
     uint64_t targetSampleTimeUs = 0;

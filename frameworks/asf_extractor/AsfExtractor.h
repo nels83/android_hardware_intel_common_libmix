@@ -105,7 +105,7 @@ private:
     status_t setupTracks();
     inline Track* getTrackByTrackIndex(int index);
     inline Track* getTrackByStreamNumber(int stream);
-    status_t seek_l(Track* track, const MediaSource::ReadOptions *options);
+    status_t seek_l(Track* track, int64_t seekTimeUs, MediaSource::ReadOptions::SeekMode mode);
     status_t read_l(Track *track, MediaBuffer **buffer);
     status_t readPacket();
 };
