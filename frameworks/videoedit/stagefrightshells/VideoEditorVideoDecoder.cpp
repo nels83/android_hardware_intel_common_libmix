@@ -868,7 +868,8 @@ cleanUp:
     if( M4NO_ERROR == err ) {
         ALOGV("VideoEditorVideoDecoder_configureFromMetadata no error");
     } else {
-        if( M4OSA_NULL != pDecShellContext->m_pDecBufferPool ) {
+        if( (M4OSA_NULL != pDecShellContext) && \
+            (M4OSA_NULL != pDecShellContext->m_pDecBufferPool) ) {
             VIDEOEDITOR_BUFFER_freePool(pDecShellContext->m_pDecBufferPool);
             pDecShellContext->m_pDecBufferPool = M4OSA_NULL;
         }
@@ -1626,7 +1627,7 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
         goto cleanUp;
     }
 
-    ALOGV("VideoEditorVideoDecoder_render 3 ouput %d %d %d %d",
+    ALOGV("VideoEditorVideoDecoder_render 3 output %d %d %d %d",
         pOutputPlane[0].u_width, pOutputPlane[0].u_height,
         pOutputPlane[0].u_topleft, pOutputPlane[0].u_stride);
 
@@ -1643,20 +1644,13 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
         tmpPlane[0].u_topleft = 0;
         tmpPlane[0].u_stride  = tmpPlane[0].u_width;
         tmpPlane[0].pac_data  = (M4VIFI_UInt8*)pRenderVIDEOEDITORBuffer->pData;
-        tmpPlane[1].u_width   = tmpPlane[0].u_width/2;
+        tmpPlane[1].u_width   = tmpPlane[0].u_width;
         tmpPlane[1].u_height  = tmpPlane[0].u_height/2;
         tmpPlane[1].u_topleft = 0;
-        tmpPlane[1].u_stride  = tmpPlane[0].u_stride/2;
+        tmpPlane[1].u_stride  = tmpPlane[0].u_stride;
         tmpPlane[1].pac_data  = tmpPlane[0].pac_data +
             (tmpPlane[0].u_stride * tmpPlane[0].u_height);
-        tmpPlane[2].u_width   = tmpPlane[1].u_width;
-        tmpPlane[2].u_height  = tmpPlane[1].u_height;
-        tmpPlane[2].u_topleft = 0;
-        tmpPlane[2].u_stride  = tmpPlane[1].u_stride;
-        tmpPlane[2].pac_data  = tmpPlane[1].pac_data +
-            (tmpPlane[1].u_stride * tmpPlane[1].u_height);
-
-        ALOGV("VideoEditorVideoDecoder_render w = %d H = %d",
+        ALOGV("VideoEditorVideoDecoder_render W = %d H = %d",
             tmpPlane[0].u_width,tmpPlane[0].u_height);
         pDecShellContext->m_pFilter(M4OSA_NULL, &tmpPlane[0], pOutputPlane);
     } else {
@@ -1672,10 +1666,7 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
             tempWidth * tempHeight);
         tempBuffPtr += (tempWidth * tempHeight);
         memcpy((void *) pOutputPlane[1].pac_data, (void *)tempBuffPtr,
-            (tempWidth/2) * (tempHeight/2));
-        tempBuffPtr += ((tempWidth/2) * (tempHeight/2));
-        memcpy((void *) pOutputPlane[2].pac_data, (void *)tempBuffPtr,
-            (tempWidth/2) * (tempHeight/2));
+            tempWidth * tempHeight/2);
     }
 
     pDecShellContext->mNbRenderedFrames++;

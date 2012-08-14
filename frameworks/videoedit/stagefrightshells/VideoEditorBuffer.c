@@ -93,9 +93,10 @@ M4OSA_ERR VIDEOEDITOR_BUFFER_allocatePool(VIDEOEDITOR_BUFFER_Pool** ppool,
     ALOGV("VIDEOEDITOR_BUFFER_allocatePool : Assigning Pool name buffer");
 
     memset((void *)pool->poolName, 0,VIDEOEDITOR_BUFFEPOOL_MAX_NAME_SIZE);
-    memcpy((void *)pool->poolName, (void *)poolName,
-        VIDEOEDITOR_BUFFEPOOL_MAX_NAME_SIZE-1);
-
+    if (strlen((const char *)poolName) < VIDEOEDITOR_BUFFEPOOL_MAX_NAME_SIZE) {
+        memcpy((void *)pool->poolName, (void *)poolName,
+            strlen((const char *)poolName));
+    }
     pool->NB = nbBuffers;
 
 VIDEOEDITOR_BUFFER_allocatePool_Cleanup:

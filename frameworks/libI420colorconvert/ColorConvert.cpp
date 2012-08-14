@@ -29,10 +29,11 @@ static int convertDecoderOutputToI420(
         srcWidth * srcRect.top + srcRect.left;
     const uint8_t *pSrc_uv = (const uint8_t *)pSrc_y +
         srcWidth * (srcHeight - srcRect.top / 2);
-
     int dstWidth = srcRect.right - srcRect.left + 1;
     int dstHeight = srcRect.bottom - srcRect.top + 1;
     size_t dst_y_size = dstWidth * dstHeight;
+
+#ifndef VIDEOEDITOR_INTEL_NV12_VERSION
     size_t dst_uv_stride = dstWidth / 2;
     size_t dst_uv_size = dstWidth / 2 * dstHeight / 2;
     uint8_t *pDst_y = (uint8_t *)dstBits;
@@ -55,6 +56,11 @@ static int convertDecoderOutputToI420(
         pDst_u += dst_uv_stride;
         pDst_v += dst_uv_stride;
     }
+#else
+    uint8_t *pDst_y = (uint8_t *)dstBits;
+    memcpy(pDst_y,pSrc_y,dst_y_size*3/2);
+#endif
+
     return 0;
 }
 
@@ -68,6 +74,8 @@ static int convertI420ToEncoderInput(
     void* dstBits) {
     uint8_t *pSrc_y = (uint8_t*) srcBits;
     uint8_t *pDst_y = (uint8_t*) dstBits;
+
+#ifndef VIDEOEDITOR_INTEL_NV12_VERSION
     for(int i=0; i < srcHeight; i++) {
         memcpy(pDst_y, pSrc_y, srcWidth);
         pSrc_y += srcWidth;
@@ -86,6 +94,10 @@ static int convertI420ToEncoderInput(
         pSrc_u += srcWidth / 2;
         pSrc_v += srcWidth / 2;
     }
+#else
+    memcpy(pDst_y,pSrc_y,dstWidth*dstHeight*3/2);
+#endif
+
     return 0;
 }
 
