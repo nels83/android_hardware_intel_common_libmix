@@ -124,6 +124,8 @@ Encode_Status VideoEncoderBase::start() {
     VASurfaceID surfaces[2];
     int32_t index = -1;
     SurfaceMap *map = mSrcSurfaceMapList;
+    uint32_t stride_aligned = 0;
+    uint32_t height_aligned = 0;
 
     VAConfigAttrib vaAttrib[2];
     uint32_t maxSize = 0;
@@ -166,17 +168,20 @@ Encode_Status VideoEncoderBase::start() {
 
     VASurfaceAttributeTPI attribute_tpi;
 
-    attribute_tpi.size = mComParams.resolution.width * mComParams.resolution.height * 3 / 2;
-    attribute_tpi.luma_stride = mComParams.resolution.width;
-    attribute_tpi.chroma_u_stride = mComParams.resolution.width;
-    attribute_tpi.chroma_v_stride = mComParams.resolution.width;
+    stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
+    height_aligned = ((mComParams.resolution.height + 15) / 16 ) * 16;
+
+    attribute_tpi.size = stride_aligned * height_aligned * 3 / 2;
+    attribute_tpi.luma_stride = stride_aligned;
+    attribute_tpi.chroma_u_stride = stride_aligned;
+    attribute_tpi.chroma_v_stride = stride_aligned;
     attribute_tpi.luma_offset = 0;
-    attribute_tpi.chroma_u_offset = mComParams.resolution.width * mComParams.resolution.height;
-    attribute_tpi.chroma_v_offset = mComParams.resolution.width * mComParams.resolution.height;
+    attribute_tpi.chroma_u_offset = stride_aligned * height_aligned;
+    attribute_tpi.chroma_v_offset = stride_aligned * height_aligned;
     attribute_tpi.pixel_format = VA_FOURCC_NV12;
     attribute_tpi.type = VAExternalMemoryNULL;
 
-    vaCreateSurfacesWithAttribute(mVADisplay, mComParams.resolution.width, mComParams.resolution.height,
+    vaCreateSurfacesWithAttribute(mVADisplay, stride_aligned, height_aligned,
             VA_RT_FORMAT_YUV420, 2, surfaces, &attribute_tpi);
     CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
 
