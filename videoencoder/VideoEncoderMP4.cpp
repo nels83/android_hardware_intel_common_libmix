@@ -22,9 +22,7 @@ VideoEncoderMP4::VideoEncoderMP4()
 Encode_Status VideoEncoderMP4::getHeaderPos(
         uint8_t *inBuffer, uint32_t bufSize, uint32_t *headerSize) {
 
-    uint8_t *buf = inBuffer;
     uint32_t bytesLeft = bufSize;
-    Encode_Status ret = ENCODE_SUCCESS;
 
     *headerSize = 0;
     CHECK_NULL_RETURN_IFFAIL(inBuffer);
