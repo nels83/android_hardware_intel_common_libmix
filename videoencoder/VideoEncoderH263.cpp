@@ -120,6 +120,7 @@ Encode_Status VideoEncoderH263::renderPictureParams() {
 Encode_Status VideoEncoderH263::renderSliceParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
+    uint32_t sliceNum;
     uint32_t sliceHeight;
     uint32_t sliceHeightInMB;
 

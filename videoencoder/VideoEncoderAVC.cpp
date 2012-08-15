@@ -197,6 +197,9 @@ Encode_Status VideoEncoderAVC::getOutput(VideoEncOutputBuffer *outBuffer) {
     Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     bool useLocalBuffer = false;
+    uint32_t nalType = 0;
+    uint32_t nalSize = 0;
+    uint32_t nalOffset = 0;
     uint32_t idrPeroid = mComParams.intraPeriod * mVideoParamsAVC.idrInterval;
 
     LOG_V("Begin\n");
@@ -280,6 +283,8 @@ Encode_Status VideoEncoderAVC::getOneNALUnit(
         uint32_t *nalType, uint32_t *nalOffset, uint32_t status) {
     uint32_t pos = 0;
     uint32_t zeroByteCount = 0;
+    uint32_t prefixLength = 0;
+    uint32_t leadingZeroCnt = 0;
     uint32_t singleByteTable[3][2] = {{1,0},{2,0},{2,3}};
     uint32_t dataRemaining = 0;
     uint8_t *dataPtr;
@@ -515,6 +520,7 @@ Encode_Status VideoEncoderAVC::outputLengthPrefixed(VideoEncOutputBuffer *outBuf
     uint32_t nalSize = 0;
     uint32_t nalOffset = 0;
     uint32_t sizeCopiedHere = 0;
+    uint32_t sizeToBeCopied = 0;
 
     CHECK_NULL_RETURN_IFFAIL(mCurSegment->buf);
 
@@ -642,6 +648,7 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(void) {
 Encode_Status VideoEncoderAVC::renderMaxSliceSize() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
+    Encode_Status ret = ENCODE_SUCCESS;
     LOG_V( "Begin\n\n");
 
     if (mComParams.rcMode != RATE_CONTROL_VCM) {
@@ -787,6 +794,12 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     avcSeqParams.intra_idr_period = mVideoParamsAVC.idrInterval;
     avcSeqParams.picture_width_in_mbs = (mComParams.resolution.width + 15) / 16;
     avcSeqParams.picture_height_in_mbs = (mComParams.resolution.height + 15) / 16;
+    if((avcSeqParams.picture_width_in_mbs >=1920)|| (avcSeqParams.picture_height_in_mbs >=1080))
+    {
+        device_info = vaQueryVendorString(mVADisplay);
+        if(strstr(device_info, "LEXINGTON"))
+            return ENCODE_INVALID_PARAMS;
+    }
 
     level = calcLevel (avcSeqParams.picture_width_in_mbs * avcSeqParams.picture_height_in_mbs);
     avcSeqParams.level_idc = level;
@@ -900,6 +913,7 @@ Encode_Status VideoEncoderAVC::renderSliceParams() {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
 
     uint32_t sliceNum = 0;
+    uint32_t sliceHeight = 0;
     uint32_t sliceIndex = 0;
     uint32_t sliceHeightInMB = 0;
     uint32_t maxSliceNum = 0;

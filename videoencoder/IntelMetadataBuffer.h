@@ -72,9 +72,6 @@ public:
     IntelMetadataBuffer(MetadataBufferType type, int32_t value);    //for quick generator
     ~IntelMetadataBuffer();
 
-    IntelMetadataBuffer(const IntelMetadataBuffer& imb);
-    const IntelMetadataBuffer& operator=(const IntelMetadataBuffer& imb);
-
     IMB_Result GetType(MetadataBufferType &type);
     IMB_Result SetType(MetadataBufferType type);
     IMB_Result GetValue(int32_t &value);
@@ -84,14 +81,11 @@ public:
     IMB_Result GetExtraValues(int32_t* &values, uint32_t &num);
     IMB_Result SetExtraValues(int32_t *values, uint32_t num);
 
-    //for bytes input, also for parser, will be obsoleted
+    //for bytes input, also for parser
     IMB_Result SetBytes(uint8_t* data, uint32_t size);
-    //for bytes output, also for generator, will be obsoleted
-    IMB_Result GetBytes(uint8_t* &data, uint32_t& size);
 
-    //New API for bytes input/ouput, UnSerialize=SetBytes, Serialize=GetBytes
-    IMB_Result UnSerialize(uint8_t* data, uint32_t size);
-    IMB_Result Serialize(uint8_t* &data, uint32_t& size);
+    //for bytes output, also for generator
+    IMB_Result GetBytes(uint8_t* &data, uint32_t& size);
 
     //Static, for get max IntelMetadataBuffer size
     static uint32_t GetMaxBufferSize();
