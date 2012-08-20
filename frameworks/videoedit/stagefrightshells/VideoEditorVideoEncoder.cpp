@@ -841,9 +841,10 @@ M4OSA_ERR VideoEditorVideoEncoder_processOutputBuffer(
     LOGV("[TS_CHECK] VI/ENC WRITE frame %d @ %lld -> %d (last %d)",
         pEncoderContext->mNbOutputFrames, i64Tmp, Cts,
         pEncoderContext->mLastCTS);
-    if ( Cts < pEncoderContext->mLastCTS ) {
+    if ( Cts < pEncoderContext->mLastCTS || Cts < pEncoderContext->mAccessUnit->CTS ) {
         LOGV("VideoEncoder_processOutputBuffer WARNING : Cts is going "
-        "backwards %d < %d", Cts, pEncoderContext->mLastCTS);
+        "backwards %d < %d(or %lld)", Cts, pEncoderContext->mLastCTS,
+        pEncoderContext->mAccessUnit->CTS);
         goto cleanUp;
     }
     LOGV("VideoEditorVideoEncoder_processOutputBuffer : %d %d",
