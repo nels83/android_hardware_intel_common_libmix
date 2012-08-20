@@ -980,9 +980,9 @@ M4OSA_ERR VideoEditorVideoEncoder_encode(M4ENCODER_Context pContext,
             // Provide the encoded AU to the writer
             err = VideoEditorVideoEncoder_processOutputBuffer(pEncoderContext,
                 outputBuffer);
+            pEncoderContext->mPuller->putBuffer(outputBuffer);
             VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
 
-            pEncoderContext->mPuller->putBuffer(outputBuffer);
         }
     }
 
@@ -1059,9 +1059,9 @@ M4OSA_ERR VideoEditorVideoEncoder_stop(M4ENCODER_Context pContext) {
 
             err = VideoEditorVideoEncoder_processOutputBuffer(
                 pEncoderContext, outputBuffer);
+            pEncoderContext->mPuller->putBuffer(outputBuffer);
             VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
 
-            pEncoderContext->mPuller->putBuffer(outputBuffer);
         }
 
         pEncoderContext->mState = STARTED;
