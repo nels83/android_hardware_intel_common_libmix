@@ -1428,11 +1428,6 @@ Encode_Status VideoEncoderBase::setUpstreamBuffer(VideoParamsUpstreamBuffer *upS
         return ENCODE_FAIL;
     }
 
-    if (upStreamBuffer->bufAttrib == NULL) {
-        LOG_E ("Buffer Attrib doesn't set by client, return error");
-        return ENCODE_INVALID_PARAMS;
-    }
-
     for(unsigned int i=0; i < upStreamBuffer->bufCnt; i++) {
         if (findSurfaceMapByValue(mSrcSurfaceMapList, upStreamBuffer->bufList[i]) != NULL)  //already mapped
             continue;
@@ -1445,11 +1440,13 @@ Encode_Status VideoEncoderBase::setUpstreamBuffer(VideoParamsUpstreamBuffer *upS
         map->vinfo.mode = (MemMode)upStreamBuffer->bufferMode;
         map->vinfo.handle = (uint32_t)upStreamBuffer->display;
         map->vinfo.size = 0;
-        map->vinfo.width = upStreamBuffer->bufAttrib->realWidth;
-        map->vinfo.height = upStreamBuffer->bufAttrib->realHeight;
-        map->vinfo.lumaStride = upStreamBuffer->bufAttrib->lumaStride;
-        map->vinfo.chromStride = upStreamBuffer->bufAttrib->chromStride;
-        map->vinfo.format = upStreamBuffer->bufAttrib->format;
+        if (upStreamBuffer->bufAttrib) {
+            map->vinfo.width = upStreamBuffer->bufAttrib->realWidth;
+            map->vinfo.height = upStreamBuffer->bufAttrib->realHeight;
+            map->vinfo.lumaStride = upStreamBuffer->bufAttrib->lumaStride;
+            map->vinfo.chromStride = upStreamBuffer->bufAttrib->chromStride;
+            map->vinfo.format = upStreamBuffer->bufAttrib->format;
+        }
         map->vinfo.s3dformat = 0xFFFFFFFF;
         map->added = false;
         map->next = NULL;
