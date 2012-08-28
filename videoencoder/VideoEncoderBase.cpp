@@ -73,7 +73,8 @@ VideoEncoderBase::VideoEncoderBase()
     ,mSliceSizeOverflow(false)
     ,mCodedBufferMapped(false)
     ,mDataCopiedOut(false)
-    ,mKeyFrame(true) {
+    ,mKeyFrame(true)
+    ,mInitCheck(true) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     // here the display can be any value, use following one
@@ -96,6 +97,7 @@ VideoEncoderBase::VideoEncoderBase()
     LOG_V("vaInitialize \n");
     if (vaStatus != VA_STATUS_SUCCESS) {
         LOG_E( "Failed vaInitialize, vaStatus = %d\n", vaStatus);
+        mInitCheck = false;
     }
 
 #ifdef VIDEO_ENC_STATISTICS_ENABLE
@@ -133,6 +135,11 @@ Encode_Status VideoEncoderBase::start() {
     if (mInitialized) {
         LOG_V("Encoder has been started\n");
         return ENCODE_ALREADY_INIT;
+    }
+
+    if (!mInitCheck) {
+        LOGE("Encoder Initialize fail can not start");
+        return ENCODE_DRIVER_FAIL;
     }
 
     vaAttrib[0].type = VAConfigAttribRTFormat;

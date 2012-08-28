@@ -155,6 +155,8 @@ protected:
     bool mDataCopiedOut;
     bool mKeyFrame;
 
+    int32_t  mInitCheck;
+
 #ifdef VIDEO_ENC_STATISTICS_ENABLE
     VideoStatistics mVideoStat;
 #endif
