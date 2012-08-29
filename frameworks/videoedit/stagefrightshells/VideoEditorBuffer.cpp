@@ -15,7 +15,7 @@
  */
 /**
 *************************************************************************
-* @file   VideoEditorBuffer.c
+* @file   VideoEditorBuffer.cpp
 * @brief  StageFright shell Buffer
 *************************************************************************
 */
@@ -114,28 +114,31 @@ VIDEOEDITOR_BUFFER_allocatePool_Cleanup:
 
 /**
  ************************************************************************
- M4OSA_ERR VIDEOEDITOR_BUFFER_freePool(VIDEOEDITOR_BUFFER_Pool* ppool)
+ M4OSA_ERR VIDEOEDITOR_BUFFER_freePool_Ext(VIDEOEDITOR_BUFFER_Pool* ppool)
  * @brief   Deallocate a buffer pool
  *
  * @param   ppool      : IN The buffer pool to free
  * @return  Error code
  ************************************************************************
 */
-M4OSA_ERR VIDEOEDITOR_BUFFER_freePool(VIDEOEDITOR_BUFFER_Pool* ppool)
+M4OSA_ERR VIDEOEDITOR_BUFFER_freePool_Ext(VIDEOEDITOR_BUFFER_Pool* ppool)
 {
     M4OSA_ERR err;
-    M4OSA_UInt32  j = 0;
+    M4OSA_UInt32 j = 0;
 
-    ALOGV("VIDEOEDITOR_BUFFER_freePool : ppool = 0x%x", ppool);
+    ALOGV("VIDEOEDITOR_BUFFER_freePool_Ext : ppool = 0x%x", ppool);
 
     err = M4NO_ERROR;
 
     for (j = 0; j < ppool->NB; j++)
     {
-        if(M4OSA_NULL != ppool->pNXPBuffer[j].pData)
+        if(M4OSA_NULL != ppool->pNXPBuffer[j].mBuffer)
         {
-            free(ppool->pNXPBuffer[j].pData);
-            ppool->pNXPBuffer[j].pData = M4OSA_NULL;
+            ppool->pNXPBuffer[j].mBuffer->release();
+            ppool->pNXPBuffer[j].state = VIDEOEDITOR_BUFFER_kEmpty;
+            ppool->pNXPBuffer[j].mBuffer = M4OSA_NULL;
+            ppool->pNXPBuffer[j].size = 0;
+            ppool->pNXPBuffer[j].buffCTS = -1;
         }
     }
 
@@ -200,33 +203,74 @@ M4OSA_ERR VIDEOEDITOR_BUFFER_getBuffer(VIDEOEDITOR_BUFFER_Pool* ppool,
     return(err);
 }
 
-M4OSA_ERR VIDEOEDITOR_BUFFER_initPoolBuffers(VIDEOEDITOR_BUFFER_Pool* pool,
+/**
+ ************************************************************************
+ void VIDEOEDITOR_BUFFER_getBufferForDecoder(VIDEOEDITOR_BUFFER_Pool* ppool,
+ *         VIDEOEDITOR_BUFFER_Buffer** pNXPBuffer)
+ * @brief   Returns a buffer in a given state
+ *
+ * @param   ppool      : IN The buffer pool
+ * @param   desiredState : IN The buffer state
+ * @param   pNXPBuffer : IN The selected buffer
+ * @return  Error code
+ ************************************************************************
+*/
+void VIDEOEDITOR_BUFFER_getBufferForDecoder(VIDEOEDITOR_BUFFER_Pool* ppool)
+{
+    M4OSA_Bool bFound = M4OSA_FALSE;
+    M4OSA_UInt32 i, ibuf;
+    M4_MediaTime  candidateTimeStamp = (M4_MediaTime)0x7ffffff;
+    ibuf = 0;
+
+    for (i=0; i < ppool->NB; i++)
+    {
+        bFound = (ppool->pNXPBuffer[i].state == VIDEOEDITOR_BUFFER_kEmpty);
+        if (bFound)
+        {
+            break;
+        }
+    }
+
+    if(!bFound)
+    {
+        for(i = 0; i< ppool->NB; i++)
+        {
+            if(ppool->pNXPBuffer[i].state == VIDEOEDITOR_BUFFER_kFilled)
+            {
+               if(ppool->pNXPBuffer[i].buffCTS <= candidateTimeStamp)
+               {
+                  bFound = M4OSA_TRUE;
+                  candidateTimeStamp = ppool->pNXPBuffer[i].buffCTS;
+                  ibuf = i;
+               }
+            }
+        }
+
+        if(M4OSA_TRUE == bFound)
+        {
+           if(M4OSA_NULL != ppool->pNXPBuffer[ibuf].mBuffer) {
+              ppool->pNXPBuffer[ibuf].mBuffer->release();
+              ppool->pNXPBuffer[ibuf].state = VIDEOEDITOR_BUFFER_kEmpty;
+              ppool->pNXPBuffer[ibuf].mBuffer = M4OSA_NULL;
+              ppool->pNXPBuffer[ibuf].size = 0;
+              ppool->pNXPBuffer[ibuf].buffCTS = -1;
+           }
+        }
+
+    }
+
+}
+M4OSA_ERR VIDEOEDITOR_BUFFER_initPoolBuffers_Ext(VIDEOEDITOR_BUFFER_Pool* pool,
     M4OSA_UInt32 lSize)
 {
     M4OSA_ERR     err = M4NO_ERROR;
-    M4OSA_UInt32  index, j;
+    M4OSA_UInt32  index, i, j;
 
     /**
      * Initialize all the buffers in the pool */
     for(index = 0; index < pool->NB; index++)
     {
-        pool->pNXPBuffer[index].pData = M4OSA_NULL;
-        pool->pNXPBuffer[index].pData = (M4OSA_Void*)M4OSA_32bitAlignedMalloc(
-            lSize, VIDEOEDITOR_BUFFER_EXTERNAL,
-            (M4OSA_Char*)("BUFFER_initPoolBuffers: Buffer data"));
-        if(M4OSA_NULL == pool->pNXPBuffer[index].pData)
-        {
-            for (j = 0; j < index; j++)
-            {
-                if(M4OSA_NULL != pool->pNXPBuffer[j].pData)
-                {
-                    free(pool->pNXPBuffer[j].pData);
-                    pool->pNXPBuffer[j].pData = M4OSA_NULL;
-                }
-            }
-            err = M4ERR_ALLOC;
-            return err;
-        }
+        pool->pNXPBuffer[index].mBuffer = M4OSA_NULL;
         pool->pNXPBuffer[index].size = 0;
         pool->pNXPBuffer[index].state = VIDEOEDITOR_BUFFER_kEmpty;
         pool->pNXPBuffer[index].idx = index;
@@ -253,7 +297,7 @@ M4OSA_ERR VIDEOEDITOR_BUFFER_getOldestBuffer(VIDEOEDITOR_BUFFER_Pool *pool,
             {
                 bFound = M4OSA_TRUE;
                 candidateTimeStamp = pool->pNXPBuffer[index].buffCTS;
-                    *pNXPBuffer = &(pool->pNXPBuffer[index]);
+                *pNXPBuffer = &(pool->pNXPBuffer[index]);
             }
         }
     }

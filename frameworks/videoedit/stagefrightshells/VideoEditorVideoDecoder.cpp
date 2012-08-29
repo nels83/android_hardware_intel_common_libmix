@@ -25,6 +25,7 @@
  *     HEADERS     *
  *******************/
 
+#include "VideoEditorBuffer.h"
 #include "VideoEditorVideoDecoder_internal.h"
 #include "VideoEditorUtils.h"
 #include "M4VD_Tools.h"
@@ -35,7 +36,7 @@
 /********************
  *   DEFINITIONS    *
  ********************/
-#define MAX_DEC_BUFFERS 10
+#define MAX_DEC_BUFFERS 4
 
 /********************
  *   SOURCE CLASS   *
@@ -853,13 +854,13 @@ M4OSA_ERR VideoEditorVideoDecoder_configureFromMetadata(M4OSA_Context pContext,
     // Configure the buffer pool
     if( M4OSA_NULL != pDecShellContext->m_pDecBufferPool ) {
         ALOGV("VideoDecoder_configureFromMetadata : reset the buffer pool");
-        VIDEOEDITOR_BUFFER_freePool(pDecShellContext->m_pDecBufferPool);
+        VIDEOEDITOR_BUFFER_freePool_Ext(pDecShellContext->m_pDecBufferPool);
         pDecShellContext->m_pDecBufferPool = M4OSA_NULL;
     }
     err =  VIDEOEDITOR_BUFFER_allocatePool(&pDecShellContext->m_pDecBufferPool,
         MAX_DEC_BUFFERS, (M4OSA_Char*)"VIDEOEDITOR_DecodedBufferPool");
     VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
-    err = VIDEOEDITOR_BUFFER_initPoolBuffers(pDecShellContext->m_pDecBufferPool,
+    err = VIDEOEDITOR_BUFFER_initPoolBuffers_Ext(pDecShellContext->m_pDecBufferPool,
                 frameSize + pDecShellContext->mGivenWidth * 2);
 
     VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
@@ -870,7 +871,7 @@ cleanUp:
     } else {
         if( (M4OSA_NULL != pDecShellContext) && \
             (M4OSA_NULL != pDecShellContext->m_pDecBufferPool) ) {
-            VIDEOEDITOR_BUFFER_freePool(pDecShellContext->m_pDecBufferPool);
+            VIDEOEDITOR_BUFFER_freePool_Ext(pDecShellContext->m_pDecBufferPool);
             pDecShellContext->m_pDecBufferPool = M4OSA_NULL;
         }
         ALOGV("VideoEditorVideoDecoder_configureFromMetadata ERROR 0x%X", err);
@@ -891,20 +892,22 @@ M4OSA_ERR VideoEditorVideoDecoder_destroy(M4OSA_Context pContext) {
     // Release the color converter
     delete pDecShellContext->mI420ColorConverter;
 
+    // Release memory
+    if( pDecShellContext->m_pDecBufferPool != M4OSA_NULL ) {
+        VIDEOEDITOR_BUFFER_freePool_Ext(pDecShellContext->m_pDecBufferPool);
+        pDecShellContext->m_pDecBufferPool = M4OSA_NULL;
+    }
+
     // Destroy the graph
     if( pDecShellContext->mVideoDecoder != NULL ) {
         ALOGV("### VideoEditorVideoDecoder_destroy : releasing decoder");
         pDecShellContext->mVideoDecoder->stop();
         pDecShellContext->mVideoDecoder.clear();
     }
+
     pDecShellContext->mClient.disconnect();
     pDecShellContext->mReaderSource.clear();
 
-    // Release memory
-    if( pDecShellContext->m_pDecBufferPool != M4OSA_NULL ) {
-        VIDEOEDITOR_BUFFER_freePool(pDecShellContext->m_pDecBufferPool);
-        pDecShellContext->m_pDecBufferPool = M4OSA_NULL;
-    }
     SAFE_FREE(pDecShellContext);
     pContext = NULL;
 
@@ -1339,6 +1342,7 @@ M4OSA_ERR VideoEditorVideoDecoder_decode(M4OSA_Context context,
     MediaBuffer* pNextBuffer = NULL;
     status_t errStatus;
     bool needSeek = bJump;
+    bool needSave = M4OSA_TRUE;
 
     ALOGV("VideoEditorVideoDecoder_decode begin");
 
@@ -1368,7 +1372,11 @@ M4OSA_ERR VideoEditorVideoDecoder_decode(M4OSA_Context context,
     while (pDecoderBuffer == NULL || pDecShellContext->m_lastDecodedCTS + tolerance < *pTime) {
         ALOGV("VideoEditorVideoDecoder_decode, frameCTS = %lf, DecodeUpTo = %lf",
             pDecShellContext->m_lastDecodedCTS, *pTime);
-
+        if (M4OSA_TRUE == needSave) {
+            VIDEOEDITOR_BUFFER_getBufferForDecoder(pDecShellContext->m_pDecBufferPool);
+        } else {
+            needSave = M4OSA_TRUE;
+        }
         // Read the buffer from the stagefright decoder
         if (needSeek) {
             MediaSource::ReadOptions options;
@@ -1388,6 +1396,7 @@ M4OSA_ERR VideoEditorVideoDecoder_decode(M4OSA_Context context,
             // If we decoded a buffer before EOS, we still need to put it
             // into the queue.
             if (pDecoderBuffer && bJump) {
+                pDecoderBuffer->add_ref();
                 copyBufferToQueue(pDecShellContext, pDecoderBuffer);
             }
             goto VIDEOEDITOR_VideoDecode_cleanUP;
@@ -1413,14 +1422,11 @@ M4OSA_ERR VideoEditorVideoDecoder_decode(M4OSA_Context context,
         // and drop the 0-length buffers.
         if (pNextBuffer->range_length() == 0) {
             pNextBuffer->release();
+            pNextBuffer = NULL;
+            needSave = M4OSA_FALSE;
             continue;
         }
 
-        // Now we have a good next buffer, release the previous one.
-        if (pDecoderBuffer != NULL) {
-            pDecoderBuffer->release();
-            pDecoderBuffer = NULL;
-        }
         pDecoderBuffer = pNextBuffer;
 
         // Record the timestamp of last decoded buffer
@@ -1452,6 +1458,12 @@ M4OSA_ERR VideoEditorVideoDecoder_decode(M4OSA_Context context,
             if (lerr != M4NO_ERROR) {
                 goto VIDEOEDITOR_VideoDecode_cleanUP;
             }
+        } else {
+            if (pDecoderBuffer != NULL) {
+                pDecoderBuffer->release();
+                pDecoderBuffer = NULL;
+            }
+            needSave = M4OSA_FALSE;
         }
     }
 
@@ -1463,10 +1475,6 @@ M4OSA_ERR VideoEditorVideoDecoder_decode(M4OSA_Context context,
 
 VIDEOEDITOR_VideoDecode_cleanUP:
     *pTime = pDecShellContext->m_lastDecodedCTS;
-    if (pDecoderBuffer != NULL) {
-        pDecoderBuffer->release();
-        pDecoderBuffer = NULL;
-    }
 
     ALOGV("VideoEditorVideoDecoder_decode: end with 0x%x", lerr);
     return lerr;
@@ -1486,7 +1494,11 @@ static M4OSA_ERR copyBufferToQueue(
         lerr = VIDEOEDITOR_BUFFER_getOldestBuffer(
             pDecShellContext->m_pDecBufferPool,
             VIDEOEDITOR_BUFFER_kFilled, &tmpDecBuffer);
+        tmpDecBuffer->mBuffer->release();
         tmpDecBuffer->state = VIDEOEDITOR_BUFFER_kEmpty;
+        tmpDecBuffer->mBuffer = NULL;
+        tmpDecBuffer->size = 0;
+        tmpDecBuffer->buffCTS = -1;
         lerr = M4NO_ERROR;
     }
 
@@ -1494,15 +1506,7 @@ static M4OSA_ERR copyBufferToQueue(
 
     // Color convert or copy from the given MediaBuffer to our buffer
     if (pDecShellContext->mI420ColorConverter) {
-        if (pDecShellContext->mI420ColorConverter->convertDecoderOutputToI420(
-            (uint8_t *)pDecoderBuffer->data(),// ?? + pDecoderBuffer->range_offset(),   // decoderBits
-            pDecShellContext->mGivenWidth,  // decoderWidth
-            pDecShellContext->mGivenHeight,  // decoderHeight
-            pDecShellContext->mCropRect,  // decoderRect
-            tmpDecBuffer->pData /* dstBits */) < 0) {
-            ALOGE("convertDecoderOutputToI420 failed");
-            lerr = M4ERR_NOT_IMPLEMENTED;
-        }
+        tmpDecBuffer->mBuffer = pDecoderBuffer;
     } else if (pDecShellContext->decOuputColorFormat == OMX_COLOR_FormatYUV420Planar) {
         int32_t width = pDecShellContext->m_pVideoStreamhandler->m_videoWidth;
         int32_t height = pDecShellContext->m_pVideoStreamhandler->m_videoHeight;
@@ -1515,20 +1519,20 @@ static M4OSA_ERR copyBufferToQueue(
         {
             M4OSA_MemAddr8 pTmpBuff = (M4OSA_MemAddr8)pDecoderBuffer->data() + pDecoderBuffer->range_offset();
 
-            memcpy((void *)tmpDecBuffer->pData, (void *)pTmpBuff, yPlaneSize);
+            memcpy((void *)((M4OSA_MemAddr8)tmpDecBuffer->mBuffer->data() + tmpDecBuffer->mBuffer->range_offset()), (void *)pTmpBuff, yPlaneSize);
 
             offsetSrc += pDecShellContext->mGivenWidth * pDecShellContext->mGivenHeight;
-            memcpy((void *)((M4OSA_MemAddr8)tmpDecBuffer->pData + yPlaneSize),
+            memcpy((void *)((M4OSA_MemAddr8)tmpDecBuffer->mBuffer->data() + tmpDecBuffer->mBuffer->range_offset() + yPlaneSize),
                 (void *)(pTmpBuff + offsetSrc), uvPlaneSize);
 
             offsetSrc += (pDecShellContext->mGivenWidth >> 1) * (pDecShellContext->mGivenHeight >> 1);
-            memcpy((void *)((M4OSA_MemAddr8)tmpDecBuffer->pData + yPlaneSize + uvPlaneSize),
+            memcpy((void *)((M4OSA_MemAddr8)tmpDecBuffer->mBuffer->data() + tmpDecBuffer->mBuffer->range_offset() + yPlaneSize + uvPlaneSize),
                 (void *)(pTmpBuff + offsetSrc), uvPlaneSize);
         }
         else
         {
             M4OSA_MemAddr8 pTmpBuff = (M4OSA_MemAddr8)pDecoderBuffer->data() + pDecoderBuffer->range_offset();
-            M4OSA_MemAddr8 pTmpBuffDst = (M4OSA_MemAddr8)tmpDecBuffer->pData;
+            M4OSA_MemAddr8 pTmpBuffDst = (M4OSA_MemAddr8)(tmpDecBuffer->mBuffer->data() + tmpDecBuffer->mBuffer->range_offset());
             int32_t index;
 
             for ( index = 0; index < height; index++)
@@ -1562,7 +1566,7 @@ static M4OSA_ERR copyBufferToQueue(
 
     tmpDecBuffer->buffCTS = pDecShellContext->m_lastDecodedCTS;
     tmpDecBuffer->state = VIDEOEDITOR_BUFFER_kFilled;
-    tmpDecBuffer->size = pDecoderBuffer->size();
+    tmpDecBuffer->size = pDecoderBuffer->range_length();
 
     return lerr;
 }
@@ -1573,7 +1577,7 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
     M4OSA_ERR err = M4NO_ERROR;
     VideoEditorVideoDecoder_Context* pDecShellContext =
         (VideoEditorVideoDecoder_Context*) context;
-    M4OSA_UInt32 lindex, i;
+    M4OSA_UInt32 i;
     M4OSA_UInt8* p_buf_src, *p_buf_dest;
     M4VIFI_ImagePlane tmpPlaneIn, tmpPlaneOut;
     VIDEOEDITOR_BUFFER_Buffer* pTmpVIDEOEDITORBuffer, *pRenderVIDEOEDITORBuffer
@@ -1603,12 +1607,6 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
         pTmpVIDEOEDITORBuffer = &pDecShellContext->m_pDecBufferPool\
             ->pNXPBuffer[i];
         if (pTmpVIDEOEDITORBuffer->state == VIDEOEDITOR_BUFFER_kFilled) {
-            /** Free all those buffers older than last rendered frame. */
-            if (pTmpVIDEOEDITORBuffer->buffCTS < pDecShellContext->\
-                    m_lastRenderCts) {
-                pTmpVIDEOEDITORBuffer->state = VIDEOEDITOR_BUFFER_kEmpty;
-            }
-
             /** Get the buffer with appropriate timestamp  */
             if ( (pTmpVIDEOEDITORBuffer->buffCTS >= pDecShellContext->\
                     m_lastRenderCts) &&
@@ -1635,7 +1633,7 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
 
     if( M4OSA_NULL != pDecShellContext->m_pFilter ) {
         // Filtering was requested
-        M4VIFI_ImagePlane tmpPlane[3];
+        M4VIFI_ImagePlane tmpPlane[2];
         // Prepare the output image for conversion
         tmpPlane[0].u_width   =
             pDecShellContext->m_pVideoStreamhandler->m_videoWidth;
@@ -1643,9 +1641,9 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
             pDecShellContext->m_pVideoStreamhandler->m_videoHeight;
         tmpPlane[0].u_topleft = 0;
         tmpPlane[0].u_stride  = tmpPlane[0].u_width;
-        tmpPlane[0].pac_data  = (M4VIFI_UInt8*)pRenderVIDEOEDITORBuffer->pData;
+        tmpPlane[0].pac_data  = (M4VIFI_UInt8*)(pRenderVIDEOEDITORBuffer->mBuffer->data() + pRenderVIDEOEDITORBuffer->mBuffer->range_offset());
         tmpPlane[1].u_width   = tmpPlane[0].u_width;
-        tmpPlane[1].u_height  = tmpPlane[0].u_height/2;
+        tmpPlane[1].u_height  = tmpPlane[0].u_height>>1;
         tmpPlane[1].u_topleft = 0;
         tmpPlane[1].u_stride  = tmpPlane[0].u_stride;
         tmpPlane[1].pac_data  = tmpPlane[0].pac_data +
@@ -1656,7 +1654,7 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
     } else {
         // Just copy the YUV420P buffer
         M4OSA_MemAddr8 tempBuffPtr =
-            (M4OSA_MemAddr8)pRenderVIDEOEDITORBuffer->pData;
+            (M4OSA_MemAddr8)(pRenderVIDEOEDITORBuffer->mBuffer->data() + pRenderVIDEOEDITORBuffer->mBuffer->range_offset());
         M4OSA_UInt32 tempWidth =
             pDecShellContext->m_pVideoStreamhandler->m_videoWidth;
         M4OSA_UInt32 tempHeight =
@@ -1666,7 +1664,7 @@ M4OSA_ERR VideoEditorVideoDecoder_render(M4OSA_Context context,
             tempWidth * tempHeight);
         tempBuffPtr += (tempWidth * tempHeight);
         memcpy((void *) pOutputPlane[1].pac_data, (void *)tempBuffPtr,
-            tempWidth * tempHeight/2);
+            tempWidth * (tempHeight>>1));
     }
 
     pDecShellContext->mNbRenderedFrames++;

@@ -23,7 +23,7 @@ LOCAL_SRC_FILES:= \
     VideoEditorAudioDecoder.cpp \
     VideoEditorMp3Reader.cpp \
     VideoEditor3gpReader.cpp \
-    VideoEditorBuffer.c \
+    VideoEditorBuffer.cpp \
     VideoEditorVideoEncoder.cpp \
     VideoEditorAudioEncoder.cpp \
     IntelVideoEditorUtils.cpp \
