@@ -45,6 +45,8 @@ static uint32_t gWidth = 1280;
 static uint32_t gHeight = 720;
 static uint32_t gStride = 1280;
 static uint32_t gFrameRate = 30;
+static uint32_t gEncodeWidth = 0;
+static uint32_t gEncodeHeight = 0;
 
 static char* gFile = (char*)"out.264";
 
@@ -54,6 +56,7 @@ static const char* gRCModeString[4] ={"NO_RC", "CBR", "VBR", "VCM"};
 
 //for uploading src pictures, also for Camera malloc, WiDi clone, raw mode usrptr storage
 static uint8_t* gUsrptr[gSrcFrames];
+static uint8_t* gMallocPtr[gSrcFrames];
 
 //for metadatabuffer transfer
 static IntelMetadataBuffer* gIMB[gSrcFrames] = {NULL};
@@ -177,8 +180,8 @@ Encode_Status SetVideoEncoderParam() {
     ret = gVideoEncoder->getParameters(&gEncoderParams);
     CHECK_ENCODE_STATUS("getParameters");
     
-    gEncoderParams.resolution.height = gHeight;
-    gEncoderParams.resolution.width = gWidth;
+    gEncoderParams.resolution.height = gEncodeHeight;
+    gEncoderParams.resolution.width = gEncodeWidth;
     gEncoderParams.frameRate.frameRateDenom = 1;
     gEncoderParams.frameRate.frameRateNum = gFrameRate;
     gEncoderParams.rcMode = gRC;
@@ -294,7 +297,8 @@ void MallocExternalMemory()
             
     for(int i = 0; i < gSrcFrames; i ++) 
     {
-        gUsrptr[i] = (uint8_t*)malloc(size);
+        gMallocPtr[i] = (uint8_t*)malloc(size + 4095);
+        gUsrptr[i] = (uint8_t*)((((int )gMallocPtr[i] + 4095) / 4096 ) * 4096);
 
         gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
 
@@ -556,9 +560,15 @@ int CheckArgs(int argc, char* argv[])
                 case 's':
                     gSyncEncMode = atoi(optarg);
                     break;
+                case 'k':
+                    gEncodeWidth = atoi(optarg);
+                    break;
+                case 'g':
+                    gEncodeHeight = atoi(optarg);
+                    break;
                 case '?':
                 default:
-         	     printf("\n./mix_encode -c <Codec> -b <Bit rate> -r <Rate control> -w <Width> -h <Height> -n <Frame_num> -m <Mode> -s <Sync mode> -f <Output file>\n");
+                     printf("\n./mix_encode -c <Codec> -b <Bit rate> -r <Rate control> -w <Width> -h <Height> -k <EncodeWidth> -g <EncodeHight> -n <Frame_num> -m <Mode> -s <Sync mode> -f <Output file>\n");
               	     printf("\nCodec:\n");
               	     printf("0: H264 (default)\n1: MPEG4\n2: H263\n");
               	     printf("\nRate control:\n");
@@ -569,6 +579,17 @@ int CheckArgs(int argc, char* argv[])
         }
     }
 
+    if (gMode == 5 || gMode == 6)
+    {
+        gWidth = ((gWidth + 15 ) / 16 ) * 16;
+        gHeight = ((gHeight + 15 ) / 16 ) * 16;
+    }
+
+    if (gEncodeWidth == 0 || gEncodeHeight == 0)
+    {
+        gEncodeWidth = gWidth;
+        gEncodeHeight = gHeight;
+    }
     return 0;
 }
 
@@ -619,9 +640,8 @@ int main(int argc, char* argv[])
     }
     
     printf("\nStart %s Encoding ....\n", codec);
-    printf("Mode is %s, RC mode is %s, Width=%d, Height=%d, Bitrate=%dbps, EncodeFrames=%d, SyncMode=%d, out file is %s\n\n", gModeString[gMode], gRCModeString[gRCMode], gWidth, gHeight, gBitrate, gEncFrames, gSyncEncMode, gFile);
-
-//sleep(10);    
+    printf("Mode is %s, RC mode is %s, Src Width=%d, Height=%d, Encode Width=%d, Height=%d \n", gModeString[gMode], gRCModeString[gRCMode], gWidth, gHeight, gEncodeWidth, gEncodeHeight);
+    printf("Bitrate=%dbps, EncodeFrames=%d, SyncMode=%d, out file is %s\n\n", gBitrate, gEncFrames, gSyncEncMode, gFile);
 
 for(int i=0; i<1; i++)
 {
@@ -658,8 +678,6 @@ for(int i=0; i<1; i++)
         default:
             break;
     }
-
-//sleep(10);
 
     //upload src data
     for(int i=0; i<gSrcFrames; i++)
@@ -740,7 +758,7 @@ for(int i=0; i<1; i++)
         case 4: //Raw
             for(int i=0; i<gSrcFrames; i++)
             {
-                delete gUsrptr[i];
+                free(gMallocPtr[i]);
             }
             break;
         case 1: //WiDi clone

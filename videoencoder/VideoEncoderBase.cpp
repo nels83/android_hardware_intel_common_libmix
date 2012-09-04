@@ -1516,7 +1516,7 @@ Encode_Status VideoEncoderBase::surfaceMappingForSurface(SurfaceMap *map) {
     CHECK_VA_STATUS_RETURN("vaUnlockSurface");
 
     vaSurfaceAttrib.count = 1;
-    vaSurfaceAttrib.size = mComParams.resolution.width * mComParams.resolution.height * 3 /2;
+    vaSurfaceAttrib.size = map->vinfo.width * map->vinfo.height * 3 / 2;
     vaSurfaceAttrib.luma_stride = lumaStride;
     vaSurfaceAttrib.chroma_u_stride = chromaUStride;
     vaSurfaceAttrib.chroma_v_stride = chromaVStride;
@@ -1528,7 +1528,7 @@ Encode_Status VideoEncoderBase::surfaceMappingForSurface(SurfaceMap *map) {
     vaSurfaceAttrib.type = VAExternalMemoryKernelDRMBufffer;
 
     vaStatus = vaCreateSurfacesWithAttribute(
-            mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
+            mVADisplay, map->vinfo.width, map->vinfo.height, VA_RT_FORMAT_YUV420,
             1, &surface, &vaSurfaceAttrib);
 
     CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
@@ -1571,8 +1571,8 @@ Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle(SurfaceMap *map) {
 
     vaStatus = vaCreateSurfacesWithAttribute(
             mVADisplay,
-            mComParams.resolution.width,
-            mComParams.resolution.height,
+            map->vinfo.width,
+            map->vinfo.height,
             VA_RT_FORMAT_YUV420,
             1,
             &surface,
@@ -1607,7 +1607,7 @@ Encode_Status VideoEncoderBase::surfaceMappingForKbufHandle(SurfaceMap *map) {
     vaSurfaceAttrib.buffers = &buf;
     
     vaSurfaceAttrib.count = 1;
-    vaSurfaceAttrib.size = map->vinfo.lumaStride * mComParams.resolution.height * 3 / 2;
+    vaSurfaceAttrib.size = map->vinfo.lumaStride * map->vinfo.height * 3 / 2;
     vaSurfaceAttrib.luma_stride = map->vinfo.lumaStride;
     vaSurfaceAttrib.chroma_u_stride = map->vinfo.chromStride;
     vaSurfaceAttrib.chroma_v_stride = map->vinfo.chromStride;
@@ -1619,7 +1619,7 @@ Encode_Status VideoEncoderBase::surfaceMappingForKbufHandle(SurfaceMap *map) {
     vaSurfaceAttrib.type = VAExternalMemoryKernelDRMBufffer;
 
     vaStatus = vaCreateSurfacesWithAttribute(
-            mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
+            mVADisplay, map->vinfo.width, map->vinfo.height, VA_RT_FORMAT_YUV420,
             1, &surface, &vaSurfaceAttrib);
 
     CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromKbuf");
@@ -1650,8 +1650,8 @@ Encode_Status VideoEncoderBase::surfaceMappingForCI(SurfaceMap *map) {
     vaSurfaceAttrib.buffers[0] = (uint32_t)map->value;
     vaStatus = vaCreateSurfacesWithAttribute(
             mVADisplay,
-            mComParams.resolution.width,
-            mComParams.resolution.height,
+            map->vinfo.width,
+            map->vinfo.height,
             VA_RT_FORMAT_YUV420,
             1,
             &surface,
@@ -1686,7 +1686,7 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
     vaSurfaceAttrib.type = VAExternalMemoryUserPointer;
 
     vaStatus = vaCreateSurfacesWithAttribute(
-            mVADisplay, mComParams.resolution.width, mComParams.resolution.height, VA_RT_FORMAT_YUV420,
+            mVADisplay, map->vinfo.width, map->vinfo.height, VA_RT_FORMAT_YUV420,
             1, &surface, &vaSurfaceAttrib);
 
     CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromMalloc");
@@ -1705,7 +1705,7 @@ Encode_Status VideoEncoderBase::surfaceMapping(SurfaceMap *map) {
 
     Encode_Status status;
 
-LOG_I("surfaceMapping mode=%d, format=%d, lumaStride=%d, width=%d, heith=%d, value=%x\n", map->vinfo.mode, map->vinfo.format, map->vinfo.lumaStride, map->vinfo.width, map->vinfo.height, map->value);
+LOG_I("surfaceMapping mode=%d, format=%d, lumaStride=%d, width=%d, height=%d, value=%x\n", map->vinfo.mode, map->vinfo.format, map->vinfo.lumaStride, map->vinfo.width, map->vinfo.height, map->value);
     switch (map->vinfo.mode) {
         case MEM_MODE_CI:
             status = surfaceMappingForCI(map);
