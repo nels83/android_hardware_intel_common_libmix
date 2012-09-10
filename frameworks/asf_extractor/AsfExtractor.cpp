@@ -374,8 +374,6 @@ static const char* CodecID2MIME(uint32_t codecID) {
         case WAVE_FORMAT_MSAUDIO1:
         // WMA version 2 (7, 8, 9 series)
         case WAVE_FORMAT_WMAUDIO2:
-        // WMA 9/10 profressional (WMA version 3)
-        case WAVE_FORMAT_WMAUDIO3X:
             return MEDIA_MIMETYPE_AUDIO_WMA;
         // WMA 9 lossless
         case WAVE_FORMAT_WMAUDIO_LOSSLESS:
