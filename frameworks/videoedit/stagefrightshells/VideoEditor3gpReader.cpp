@@ -509,6 +509,20 @@ M4OSA_ERR VideoEditor3gpReader_open(M4OSA_Context pContext,
         return M4ERR_UNSUPPORTED_MEDIA_TYPE;
     }
 
+    M4OSA_UInt8 temp, trackCount;
+    const char *mime;
+    temp = 0;
+    trackCount = pC->mExtractor->countTracks();
+    while (temp < trackCount) {
+        meta = pC->mExtractor->getTrackMetaData(temp);
+        CHECK(meta->findCString(kKeyMIMEType, &mime));
+        if (!strcasecmp(mime,MEDIA_MIMETYPE_AUDIO_MPEG)) {
+            ALOGV("VideoEditorMp3Reader_open error - audio/mpeg is not supported");
+            return M4ERR_READER_UNKNOWN_STREAM_TYPE;
+        }
+        temp++;
+    }
+
     ALOGV("VideoEditor3gpReader_open end ");
     return err;
 }
