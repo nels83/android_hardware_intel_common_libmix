@@ -229,6 +229,30 @@ status_t IntelVideoEditorAVCEncoder::start(MetaData *params) {
     err = mVAEncoder->start();
     if (err!= ENCODE_SUCCESS) {
         LOGE("Failed to initialize the encoder: %d", err);
+
+       /* We should exit the sharedbuffer mode, when failing to
+        create the HW video encoder.
+       */
+
+        androidCreateThread(SBShutdownFunc,this);
+        LOGI("Successfull create thread to exit shared buffer mode!");
+
+        mSource->stop();
+
+        sp<BufferShareRegistry> r = BufferShareRegistry::getInstance();
+        err = r->encoderRequestToDisableSharingMode();
+        LOGV("encoderRequestToDisableSharingMode returned %d\n", err);
+
+        /* libsharedbuffer wants the source to call this after the encoder calls
+         * encoderRequestToDisableSharingMode. Instead of doing complicated
+         * synchronization, let's just call this ourselves on the source's
+         * behalf. */
+        err = r->sourceRequestToDisableSharingMode();
+        LOGV("sourceRequestToDisableSharingMode returned %d\n", err);
+
+        releaseVideoEncoder(mVAEncoder);
+        mVAEncoder = NULL;
+
         return UNKNOWN_ERROR;
     }
 
