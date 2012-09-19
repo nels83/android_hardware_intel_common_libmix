@@ -84,11 +84,6 @@ public:
     IMB_Result GetExtraValues(int32_t* &values, uint32_t &num);
     IMB_Result SetExtraValues(int32_t *values, uint32_t num);
 
-    //for bytes input, also for parser, will be obsoleted
-    IMB_Result SetBytes(uint8_t* data, uint32_t size);
-    //for bytes output, also for generator, will be obsoleted
-    IMB_Result GetBytes(uint8_t* &data, uint32_t& size);
-
     //New API for bytes input/ouput, UnSerialize=SetBytes, Serialize=GetBytes
     IMB_Result UnSerialize(uint8_t* data, uint32_t size);
     IMB_Result Serialize(uint8_t* &data, uint32_t& size);
