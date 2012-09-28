@@ -59,6 +59,8 @@
     #error "Cannot force DSI retrieval if codec type is not fixed"
 #endif
 
+#define WIDTH_1080P_INTEL 1920
+#define HEIGHT_1080P_INTEL 1080
 /********************
  *   SOURCE CLASS   *
  ********************/
@@ -606,10 +608,13 @@ M4OSA_ERR VideoEditorVideoEncoder_open(M4ENCODER_Context pContext,
     VIDEOEDITOR_CHECK(
         pEncoderContext->mCodecParams->Format == pEncoderContext->mFormat,
         M4ERR_PARAMETER);
-    VIDEOEDITOR_CHECK(0 == pEncoderContext->mCodecParams->FrameWidth  % 16,
-        M4ERR_PARAMETER);
-    VIDEOEDITOR_CHECK(0 == pEncoderContext->mCodecParams->FrameHeight % 16,
-        M4ERR_PARAMETER);
+    if (pEncoderContext->mCodecParams->FrameWidth != WIDTH_1080P_INTEL &&
+        pEncoderContext->mCodecParams->FrameHeight != HEIGHT_1080P_INTEL) {
+        VIDEOEDITOR_CHECK(0 == pEncoderContext->mCodecParams->FrameWidth  % 16,
+            M4ERR_PARAMETER);
+        VIDEOEDITOR_CHECK(0 == pEncoderContext->mCodecParams->FrameHeight % 16,
+            M4ERR_PARAMETER);
+    }
 
     /**
      * StageFright graph building

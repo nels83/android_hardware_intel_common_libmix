@@ -1166,8 +1166,8 @@ M4VIFI_UInt8 M4VIFI_ResizeBilinearNV12toNV12(void *pUserData,
                    pixel is replicated here
                 */
                 if (u8Wflag) {
-                    *pu8_data_out++ = (M4VIFI_UInt8)u32_temp_value1;
-                    *pu8_data_out++ = (M4VIFI_UInt8)u32_temp_value;
+                    *pu8_data_out = (M4VIFI_UInt8)u32_temp_value1;
+                    *(pu8_data_out+1) = (M4VIFI_UInt8)u32_temp_value;
                 }
 
                 pu8dum = (pu8_data_out - u32_width_out);
