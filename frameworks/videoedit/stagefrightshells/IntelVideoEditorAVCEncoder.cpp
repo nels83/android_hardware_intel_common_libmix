@@ -71,7 +71,7 @@ status_t IntelVideoEditorAVCEncoder::initCheck(const sp<MetaData>& meta) {
     LOGV("initCheck");
 
     Encode_Status   encStatus;
-
+    uint32_t        disableFrameSkip = 0;
     sp<MetaData> sourceFormat = mSource->getFormat();
 
     CHECK(sourceFormat->findInt32(kKeyWidth, &mVideoWidth));
@@ -104,6 +104,12 @@ status_t IntelVideoEditorAVCEncoder::initCheck(const sp<MetaData>& meta) {
     LOGI("mVideoWidth = %d, mVideoHeight = %d, mVideoFrameRate = %d, mVideoColorFormat = %d, mVideoBitRate = %d",
         mVideoWidth, mVideoHeight, mVideoFrameRate, mVideoColorFormat, mVideoBitRate);
 
+    // disable frame skip for low bitrate clips
+    if (mVideoBitRate < BITRATE_2M) {
+        LOGI("Frameskip is disabled for low bitrate clips");
+        disableFrameSkip = 1;
+    }
+
     if (mVideoColorFormat != OMX_COLOR_FormatYUV420SemiPlanar) {
         LOGE("Color format %d is not supported", mVideoColorFormat);
         return BAD_VALUE;
@@ -124,6 +130,7 @@ status_t IntelVideoEditorAVCEncoder::initCheck(const sp<MetaData>& meta) {
     mEncParamsCommon.frameRate.frameRateDenom = 1;
     mEncParamsCommon.rcMode = RATE_CONTROL_VBR;
     mEncParamsCommon.rcParams.bitRate = mVideoBitRate;
+    mEncParamsCommon.rcParams.disableFrameSkip = disableFrameSkip;
     mEncParamsCommon.rawFormat =  RAW_FORMAT_NV12;
 
     mEncParamsCommon.rcParams.minQP  = 0;
