@@ -64,6 +64,7 @@ namespace android {
  * ENGINE INTERFACE
  */
 
+const char *MEDIA_MIMETYPE_AUDIO_AACEXTENDED = "audio/mp4a-aacextended";
 /**
  ************************************************************************
  * @brief   Array of AMR NB/WB bitrates
@@ -518,6 +519,10 @@ M4OSA_ERR VideoEditor3gpReader_open(M4OSA_Context pContext,
         CHECK(meta->findCString(kKeyMIMEType, &mime));
         if (!strcasecmp(mime,MEDIA_MIMETYPE_AUDIO_MPEG)) {
             ALOGV("VideoEditorMp3Reader_open error - audio/mpeg is not supported");
+            return M4ERR_READER_UNKNOWN_STREAM_TYPE;
+        }
+        if (!strcasecmp(mime,MEDIA_MIMETYPE_AUDIO_AACEXTENDED)) {
+            ALOGV("VideoEditorMp3Reader_open error - audio/aacextended is not supported");
             return M4ERR_READER_UNKNOWN_STREAM_TYPE;
         }
         temp++;
