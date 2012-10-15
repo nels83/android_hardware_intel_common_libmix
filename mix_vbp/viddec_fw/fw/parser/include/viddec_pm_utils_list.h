@@ -34,7 +34,7 @@ typedef struct
 
 /* This function initialises the list to default values */
 void viddec_pm_utils_list_init(viddec_pm_utils_list_t *cxt);
-
+#ifndef VBP
 /* This function adds a new entry to list and will emit tags if needed */
 uint32_t viddec_pm_utils_list_addbuf(viddec_pm_utils_list_t *list, viddec_input_buffer_t *es_buf);
 
@@ -48,4 +48,5 @@ void viddec_pm_utils_list_remove_used_entries(viddec_pm_utils_list_t *list, uint
 
 /* this function returns 1 if the requested byte is not found. If found returns list and offset into list */
 uint32_t viddec_pm_utils_list_getbyte_position(viddec_pm_utils_list_t *list, uint32_t byte, uint32_t *list_index, uint32_t *offset);
+#endif
 #endif

@@ -177,14 +177,16 @@ uint32 vbp_init_parser_entries_h264(vbp_context *pcontext)
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-
+#ifdef VBP
+    pcontext->parser_ops->is_wkld_done = NULL;
+#else
     pcontext->parser_ops->is_wkld_done = dlsym(pcontext->fd_parser, "viddec_h264_wkld_done");
     if (NULL == pcontext->parser_ops->is_wkld_done)
     {
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-
+#endif
     /* entry point not needed */
     pcontext->parser_ops->is_frame_start = NULL;
     return VBP_OK;

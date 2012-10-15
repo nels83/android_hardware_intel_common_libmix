@@ -51,6 +51,7 @@ uint8_t viddec_pm_utils_bstream_nomorerbspdata(viddec_pm_utils_bstream_cxt_t *cx
     return ret;
 }
 
+#ifndef VBP
 /*
   This function returns true if cubby buffer has the last byte of access unit.
 */
@@ -67,13 +68,14 @@ uint8_t viddec_pm_utils_bstream_nomoredata(viddec_pm_utils_bstream_cxt_t *cxt)
     }
     return ret;
 }
+#endif
 
 /* This function initializes scratch buffer, which is used for staging already read data, due to DMA limitations */
 static inline void viddec_pm_utils_bstream_scratch_init(viddec_pm_utils_bstream_scratch_cxt_t *cxt)
 {
     cxt->st = cxt->size = cxt->bitoff=0;
 }
-
+#ifndef VBP
 /* This function tells us how much more data is in the current es buffer from current position. Its used to figure out if
    we need to go to next es buffer
 */
@@ -137,6 +139,7 @@ static inline void viddec_pm_utils_bstream_scratch_copyfrom(viddec_pm_utils_bstr
         data++;
     }
 }
+#endif
 
 /* This function populates requested number of bytes into data parameter, skips emulation prevention bytes if needed */
 static inline int32_t viddec_pm_utils_getbytes(viddec_pm_utils_bstream_buf_cxt_t *bstream,
@@ -259,6 +262,7 @@ void viddec_pm_utils_skip_if_current_is_emulation(viddec_pm_utils_bstream_cxt_t 
     }
 }
 
+#ifndef VBP
 /*
   This function gets physical address of the requested au offset(pos).
 */
@@ -344,6 +348,7 @@ void viddec_pm_utils_bstream_reload(viddec_pm_utils_bstream_cxt_t *cxt)
         }
     }
 }
+#endif
 
 /*
   Init function called by parser manager after sc code detected.

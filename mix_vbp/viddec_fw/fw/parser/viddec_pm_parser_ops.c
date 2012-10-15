@@ -73,6 +73,7 @@ int32_t viddec_pm_get_au_pos(void *parent, uint32_t *bit, uint32_t *byte, uint8_
 
 }
 
+#ifndef VBP
 static inline int32_t viddec_pm_append_restof_pixel_data(void *parent, uint32_t cur_wkld)
 {
     int32_t ret = 1;
@@ -101,6 +102,7 @@ int32_t viddec_pm_append_pixeldata_next(void *parent)
 {
     return viddec_pm_append_restof_pixel_data(parent,  0);
 }
+#endif
 
 viddec_workload_t* viddec_pm_get_header(void *parent)
 {
@@ -140,6 +142,7 @@ uint32_t viddec_pm_get_cur_byte(void *parent, uint8_t *byte)
     return ret;
 }
 
+#ifndef VBP
 int32_t viddec_pm_append_misc_tags(void *parent, uint32_t start, uint32_t end, viddec_workload_item_t *wi, uint32_t using_next)
 {
     int32_t ret = 1;
@@ -152,6 +155,7 @@ int32_t viddec_pm_append_misc_tags(void *parent, uint32_t start, uint32_t end, v
     return ret;
 
 }
+#endif
 
 void viddec_pm_set_next_frame_error_on_eos(void *parent, uint32_t error)
 {

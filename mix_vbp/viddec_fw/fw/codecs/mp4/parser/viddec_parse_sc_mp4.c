@@ -17,7 +17,7 @@
    get complicated is resync marker in LVH can potentially be (00 00 8) which will cause false detect
    of SVH start code.
 */
-
+#ifndef VBP
 uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state)
 {
     uint8_t *ptr;
@@ -149,3 +149,4 @@ uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state)
     /* Return SC found only if phase is 4, else always success */
     return ret;
 }
+#endif

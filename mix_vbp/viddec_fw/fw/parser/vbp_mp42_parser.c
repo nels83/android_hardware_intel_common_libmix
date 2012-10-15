@@ -104,14 +104,16 @@ uint32 vbp_init_parser_entries_mp42( vbp_context *pcontext)
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-
+#ifdef VBP
+    pcontext->parser_ops->parse_sc = NULL;
+#else
     pcontext->parser_ops->parse_sc = dlsym(pcontext->fd_parser, "viddec_parse_sc_mp4");
     if (pcontext->parser_ops->parse_sc == NULL)
     {
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-
+#endif
     pcontext->parser_ops->parse_syntax = dlsym(pcontext->fd_parser, "viddec_mp4_parse");
     if (pcontext->parser_ops->parse_syntax == NULL)
     {
@@ -125,14 +127,16 @@ uint32 vbp_init_parser_entries_mp42( vbp_context *pcontext)
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-
+#ifdef VBP
+    pcontext->parser_ops->is_wkld_done = NULL;
+#else
     pcontext->parser_ops->is_wkld_done = dlsym(pcontext->fd_parser, "viddec_mp4_wkld_done");
     if (pcontext->parser_ops->is_wkld_done == NULL)
     {
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-
+#endif
     return VBP_OK;
 }
 

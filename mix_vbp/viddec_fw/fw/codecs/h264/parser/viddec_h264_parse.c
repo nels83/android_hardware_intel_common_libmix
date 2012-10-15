@@ -490,7 +490,7 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
-
+#ifndef VBP
 static uint32_t viddec_h264_is_frame_start(void *ctxt)
 {
     struct h264_viddec_parser* parser = ctxt;
@@ -504,13 +504,11 @@ static uint32_t viddec_h264_is_frame_start(void *ctxt)
 
     return ret;
 }
+#endif
 
-#ifdef VBP
+#ifndef VBP
 uint32_t viddec_h264_wkld_done(void *parent, void *ctxt, unsigned int next_sc,
                                uint32_t *codec_specific_errors)
-#else
-static uint32_t viddec_h264_wkld_done(void *parent, void *ctxt, unsigned int next_sc, uint32_t *codec_specific_errors)
-#endif
 {
     struct h264_viddec_parser* parser = ctxt;
     uint32_t ret = VIDDEC_PARSE_SUCESS;
@@ -548,6 +546,7 @@ static uint32_t viddec_h264_wkld_done(void *parent, void *ctxt, unsigned int nex
 
     return ret;
 }
+#endif
 
 #ifdef VBP
 void viddec_h264_get_context_size(viddec_parser_memory_sizes_t *size)
@@ -563,6 +562,7 @@ static void viddec_h264_get_context_size(viddec_parser_memory_sizes_t *size)
                          + sizeof(int32_t) * MAX_NUM_REF_FRAMES_IN_PIC_ORDER_CNT_CYCLE;
 }
 
+#ifndef VBP
 void viddec_h264_get_ops(viddec_parser_ops_t *ops)
 {
     ops->init = viddec_h264_init;
@@ -573,4 +573,5 @@ void viddec_h264_get_ops(viddec_parser_ops_t *ops)
     ops->is_frame_start = viddec_h264_is_frame_start;
     return;
 }
+#endif
 

@@ -1,3 +1,4 @@
+#ifndef VBP
 #include <string.h>
 
 #include "viddec_fw_workload.h"
@@ -373,4 +374,4 @@ uint32_t viddec_fw_mp4_emit_workload(void *parent, void *ctxt)
 
     return result;
 } // viddec_fw_mp4_emit_workload
-
+#endif

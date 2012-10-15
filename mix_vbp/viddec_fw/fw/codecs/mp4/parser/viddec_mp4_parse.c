@@ -9,7 +9,9 @@
 #include "viddec_mp4_videoobjectplane.h"
 #include "viddec_mp4_visualobject.h"
 
+#ifndef VBP
 extern uint32_t viddec_parse_sc_mp4(void *in, void *pcxt, void *sc_state);
+#endif
 
 void viddec_mp4_get_context_size(viddec_parser_memory_sizes_t *size)
 {
@@ -19,6 +21,7 @@ void viddec_mp4_get_context_size(viddec_parser_memory_sizes_t *size)
     return;
 } // viddec_mp4_get_context_size
 
+#ifndef VBP
 uint32_t viddec_mp4_wkld_done(void *parent, void *ctxt, uint32_t next_sc, uint32_t *codec_specific_errors)
 {
     viddec_mp4_parser_t *parser = (viddec_mp4_parser_t *) ctxt;
@@ -105,6 +108,7 @@ uint32_t viddec_mp4_wkld_done(void *parent, void *ctxt, uint32_t next_sc, uint32
 
     return result;
 } // viddec_mp4_wkld_done
+#endif
 
 void viddec_mp4_init(void *ctxt, uint32_t *persist_mem, uint32_t preserve)
 {
@@ -282,6 +286,7 @@ uint32_t viddec_mp4_parse(void *parent, void *ctxt)
     return VIDDEC_PARSE_SUCESS;
 } // viddec_mp4_parse
 
+#ifndef VBP
 uint32_t viddec_mp4_is_frame_start(void *ctxt)
 {
     viddec_mp4_parser_t *parser = (viddec_mp4_parser_t *)ctxt;
@@ -298,3 +303,4 @@ void viddec_mp4_get_ops(viddec_parser_ops_t *ops)
     ops->init = viddec_mp4_init;
     return;
 } // viddec_mp4_get_ops
+#endif

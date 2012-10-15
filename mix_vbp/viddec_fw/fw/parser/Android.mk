@@ -10,13 +10,8 @@ LOCAL_SRC_FILES :=			\
 	vbp_loader.c			\
 	vbp_mp42_parser.c		\
 	vbp_utils.c			\
-	viddec_emit.c			\
 	viddec_parse_sc.c		\
-	viddec_parse_sc_stub.c		\
-	viddec_pm.c			\
 	viddec_pm_parser_ops.c		\
-	viddec_pm_stubs.c		\
-	viddec_pm_tags.c		\
 	viddec_pm_utils_bstream.c	\
 	viddec_pm_utils_list.c
 

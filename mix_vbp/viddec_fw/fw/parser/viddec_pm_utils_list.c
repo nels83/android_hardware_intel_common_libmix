@@ -14,6 +14,7 @@ void viddec_pm_utils_list_init(viddec_pm_utils_list_t *cxt)
     cxt->first_scprfx_length = 0;
 }
 
+#ifndef VBP
 /*
   Add a new ES buffer to list. If not succesful returns 0.
  */
@@ -223,3 +224,4 @@ void viddec_pm_utils_list_remove_used_entries(viddec_pm_utils_list_t *list, uint
         list->total_bytes = length;
     }
 }
+#endif
