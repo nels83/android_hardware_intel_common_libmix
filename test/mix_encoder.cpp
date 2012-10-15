@@ -22,11 +22,23 @@
         return -1; \
     }
 
+#define CHECK_ENCODE_STATUS_RETURN(FUNC)\
+    if (ret != ENCODE_SUCCESS) { \
+        printf(FUNC"Failed. ret = 0x%08x\n", ret); \
+        return -1; \
+    }
+
 static const char *AVC_MIME_TYPE = "video/h264";
 static const char *MPEG4_MIME_TYPE = "video/mpeg4";
 static const char *H263_MIME_TYPE = "video/h263";
+//add for video encode libmix code coverage test--start
+//add two mine type define only for code coverage test
+static const char *MPEG4_MIME_TYPE_SP= "video/mp4v-es";
+static const char *MEDIA_MIMETYPE_IMAGE_JPEG = "image/jpeg";
+//add for video encode libmix code coverage test--end
 static const int box_width = 128;
 
+static VideoParamsAVC gVideoParamsAVC;
 static IVideoEncoder *gVideoEncoder = NULL;
 static VideoParamsCommon gEncoderParams;
 static VideoParamsStoreMetaDataInBuffers gStoreMetaDataInBuffers;
@@ -51,9 +63,14 @@ static uint32_t gEncodeHeight = 0;
 static char* gFile = (char*)"out.264";
 
 static uint32_t gMode = 0; //0:Camera malloc , 1: WiDi clone, 2: WiDi ext, 3: WiDi user, 4: Raw, 5: SurfaceMediaSource
-static const char* gModeString[7] = {"Camera malloc", "WiDi clone", "WiDi ext", "WiDi user", "Raw", "GrallocSource(Composer)", "GrallocSource(Gralloc)"};
+static const char* gModeString[9] = {"Camera malloc", "WiDi clone", "WiDi ext", "WiDi user", "Raw", "GrallocSource(Composer)", "GrallocSource(Gralloc)","MappingSurfaceForCI","Camera malloc For Extra Value"};
 static const char* gRCModeString[4] ={"NO_RC", "CBR", "VBR", "VCM"};
 
+
+static uint32_t gOutPutFormat = 0;
+static const char* gOutPutFormatString[6] = {"OUTPUT_EVERYTHING","OUTPUT_CODEC_DATA","OUTPUT_FRAME_DATA","OUTPUT_ONE_NAL","OUTPUT_ONE_NAL_WITHOUT_STARTCODE","OUTPUT_LENGTH_PREFIXED"};
+
+static uint32_t gOutPutBufferSize = 1;
 //for uploading src pictures, also for Camera malloc, WiDi clone, raw mode usrptr storage
 static uint8_t* gUsrptr[gSrcFrames];
 static uint8_t* gMallocPtr[gSrcFrames];
@@ -71,6 +88,16 @@ static uint32_t gkBufHandle[gSrcFrames];
 //for gfxhandle
 static sp<IGraphicBufferAlloc> gGraphicBufferAlloc;
 static sp<GraphicBuffer> gGraphicBuffer[gSrcFrames];
+
+static int ev1[10];
+
+struct VideoConfigTypeIDRReq: VideoParamConfigSet {
+
+    VideoConfigTypeIDRReq() {
+        type = VideoConfigTypeIDRRequest;
+        size = sizeof(VideoConfigTypeIDRReq);
+    }
+};
 
 extern "C" {
 VAStatus vaLockSurface(VADisplay dpy,
@@ -95,6 +122,8 @@ static hw_module_t const *gModule;
 static gralloc_module_t const *gAllocMod; /* get by force hw_module_t */
 static alloc_device_t  *gAllocDev; /* get by gralloc_open */
 
+
+static int gCodeCoverageTestErrorCase = 0;
 static void gfx_init()
 {
     int err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &gModule);
@@ -217,6 +246,111 @@ Encode_Status SetVideoEncoderParam() {
     ret = gVideoEncoder->setParameters(&gEncoderParams);
     CHECK_ENCODE_STATUS("setParameters VideoParamsCommon");
 
+    gVideoEncoder->getParameters(&gVideoParamsAVC);
+    gVideoParamsAVC.crop.TopOffset = 1;
+    gVideoParamsAVC.VUIFlag = 1;
+    gVideoParamsAVC.SAR.SarWidth = 1;
+    gVideoEncoder->setParameters(&gVideoParamsAVC);
+
+    VideoParamsStoreMetaDataInBuffers tmpStoreMetaDataInBuffers;
+    gVideoEncoder->getParameters(&tmpStoreMetaDataInBuffers);
+    memset(&tmpStoreMetaDataInBuffers,0x00,sizeof(VideoParamsStoreMetaDataInBuffers));
+    gVideoEncoder->getParameters(&tmpStoreMetaDataInBuffers);
+    gVideoEncoder->setParameters(&tmpStoreMetaDataInBuffers);
+
+    VideoParamsUpstreamBuffer tmpVideoParamsUpstreamBuffer;
+    tmpVideoParamsUpstreamBuffer.bufCnt = 0;
+    gVideoEncoder->setParameters(&tmpVideoParamsUpstreamBuffer);
+
+    tmpVideoParamsUpstreamBuffer.bufCnt = gSrcFrames;
+    tmpVideoParamsUpstreamBuffer.bufAttrib = NULL;
+    gVideoEncoder->setParameters(&tmpVideoParamsUpstreamBuffer);
+/*
+    ExternalBufferAttrib attrib;
+    tmpVideoParamsUpstreamBuffer.bufCnt = gSrcFrames;
+    tmpVideoParamsUpstreamBuffer.bufAttrib = &attrib;
+    tmpVideoParamsUpstreamBuffer.bufferMode = BUFFER_LAST;
+    gVideoEncoder->setParameters(&tmpVideoParamsUpstreamBuffer);
+*/
+    VideoParamsUsrptrBuffer tmpVideoParamsUsrptrBuffer;
+    tmpVideoParamsUsrptrBuffer.width = 0;
+    gVideoEncoder->getParameters(&tmpVideoParamsUsrptrBuffer);
+
+    //---------------------add for libmix encode code coverage test
+    // VideoEncodeBase.cpp file setConfig && getConfig code coverage test
+    // only for VCM mode
+    if(gRC == RATE_CONTROL_VCM)
+    {
+        // for setConfig && getConfig default case
+        VideoConfigAIR configAIR1;
+        memset(&configAIR1,0x00,sizeof(VideoConfigAIR));
+        gVideoEncoder->setConfig(&configAIR1);
+        gVideoEncoder->getConfig(&configAIR1);
+
+        // VideoConfigTypeAIR setConfig and getConfig
+        VideoConfigAIR configAIR;
+        configAIR.airParams.airAuto = 0;
+        configAIR.airParams.airMBs = 0;
+        configAIR.airParams.airThreshold = 0;
+        gVideoEncoder->setConfig(&configAIR);
+        gVideoEncoder->getConfig(&configAIR);
+
+        // VideoConfigTypeBitRate setConfig and getConfig
+        VideoConfigBitRate configBitRate;
+        configBitRate.rcParams.bitRate = gBitrate;
+        configBitRate.rcParams.initQP = 15;
+        configBitRate.rcParams.minQP = 1;
+        configBitRate.rcParams.windowSize = 50;
+        configBitRate.rcParams.targetPercentage = 95;
+        gVideoEncoder->setConfig(&configBitRate);
+        gVideoEncoder->getConfig(&configBitRate);
+
+        // for VideoConfigTypeSliceNum derivedSetConfig && derivedGetConfig
+        VideoConfigSliceNum configSliceNum;
+        gVideoEncoder->getConfig(&configSliceNum);
+        gVideoEncoder->setConfig(&configSliceNum);
+
+        VideoConfigIntraRefreshType configIntraRefreshType;
+        configIntraRefreshType.refreshType = VIDEO_ENC_AIR;//VIDEO_ENC_AIR
+        gVideoEncoder->setConfig(&configIntraRefreshType);
+        gVideoEncoder->getConfig(&configIntraRefreshType);
+
+        // VideoConfigTypeFrameRate setConfig and getConfig
+        VideoConfigFrameRate configFrameRate;
+        configFrameRate.frameRate.frameRateDenom = 1;
+        configFrameRate.frameRate.frameRateNum = gFrameRate;
+        gVideoEncoder->setConfig(&configFrameRate);
+        gVideoEncoder->getConfig(&configFrameRate);
+
+        // VideoEncodeAVC.cpp file derivedSetConfig && derivedGetConfig code coverage test
+        // for VideoConfigTypeNALSize derivedSetConfig && derivedGetConfig
+        VideoConfigNALSize configNalSize;
+        configNalSize.maxSliceSize = 8*gWidth*gHeight*1.5;
+        gVideoEncoder->setConfig(&configNalSize);
+        gVideoEncoder->getConfig(&configNalSize);
+
+        VideoParamsHRD paramsHRD;
+        paramsHRD.bufferSize = (uint32_t)(gBitrate/gFrameRate) * 1024 * 8;
+        paramsHRD.initBufferFullness = (uint32_t)(gBitrate/gFrameRate);
+        gVideoEncoder->setParameters(&paramsHRD);
+        gVideoEncoder->getParameters(&paramsHRD);
+    }
+    else
+    {
+        // VideoConfigTypeCyclicFrameInterval setConfig and getConfig
+        VideoConfigCyclicFrameInterval configCyclicFrameInterval;
+        configCyclicFrameInterval.cyclicFrameInterval = 30;
+        gVideoEncoder->setConfig(&configCyclicFrameInterval);
+        gVideoEncoder->getConfig(&configCyclicFrameInterval);
+
+        // for VideoConfigTypeAVCIntraPeriod derivedSetConfig && derivedGetConfig
+        VideoConfigAVCIntraPeriod configAVCIntraPeriod;
+        gVideoEncoder->getConfig(&configAVCIntraPeriod);
+        gVideoEncoder->setConfig(&configAVCIntraPeriod);
+        VideoConfigTypeIDRReq tmpVideoConfigTypeIDRReq;
+        gVideoEncoder->setConfig(&tmpVideoConfigTypeIDRReq);
+    }
+
     if (gMode != 4)
     {
         gStoreMetaDataInBuffers.isEnabled = true;
@@ -280,6 +414,34 @@ static int YUV_generator_planar(int width, int height,
 }
 
 //malloc external memory, and not need to set into encoder before start()
+void MallocExternalMemoryWithExtraValues()
+{
+    uint32_t size = gWidth * gHeight * 3 /2;
+
+    ValueInfo* vinfo = new ValueInfo;
+    vinfo->mode = MEM_MODE_MALLOC;
+    vinfo->handle = 0;
+    vinfo->size = size;
+    vinfo->width = gWidth;
+    vinfo->height = gHeight;
+    vinfo->lumaStride = gStride;
+    vinfo->chromStride = gStride;
+    vinfo->format = STRING_TO_FOURCC("NV12");
+    vinfo->s3dformat = 0xFFFFFFFF;
+
+    for(int i = 0; i < gSrcFrames; i ++)
+    {
+        gUsrptr[i] = (uint8_t*)malloc(size);
+
+        gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
+
+        gIMB[i]->SetValueInfo(vinfo);
+    }
+    delete vinfo;
+
+    gIMB[0]->SetExtraValues(ev1, 10);
+}
+//malloc external memory, and not need to set into encoder before start()
 void MallocExternalMemory()
 {
     uint32_t size = gWidth * gHeight * 3 /2;
@@ -294,8 +456,8 @@ void MallocExternalMemory()
     vinfo->chromStride = gStride;
     vinfo->format = STRING_TO_FOURCC("NV12");
     vinfo->s3dformat = 0xFFFFFFFF;
-            
-    for(int i = 0; i < gSrcFrames; i ++) 
+
+    for(int i = 0; i < gSrcFrames; i ++)
     {
         gMallocPtr[i] = (uint8_t*)malloc(size + 4095);
         gUsrptr[i] = (uint8_t*)((((int )gMallocPtr[i] + 4095) / 4096 ) * 4096);
@@ -459,6 +621,31 @@ void CreateUserSurfaces(int mode)
     }
 }
 
+void CreateSurfaceMappingForCI()
+{
+    uint32_t size = gWidth * gHeight * 3 /2;
+
+    ValueInfo* vinfo = new ValueInfo;
+    vinfo->mode = MEM_MODE_CI;
+    vinfo->handle = 0;
+    vinfo->size = size;
+    vinfo->width = gWidth;
+    vinfo->height = gHeight;
+    vinfo->lumaStride = gStride;
+    vinfo->chromStride = gStride;
+    vinfo->format = STRING_TO_FOURCC("NV12");
+    vinfo->s3dformat = 0xFFFFFFFF;
+
+    for(int i = 0; i < gSrcFrames; i ++)
+    {
+        gUsrptr[i] = (uint8_t*)malloc(size);
+
+        gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
+
+        gIMB[i]->SetValueInfo(vinfo);
+    }
+    delete vinfo;
+}
 void CreateGfxhandle()
 {
     sp<ISurfaceComposer> composer(ComposerService::getComposerService());
@@ -530,7 +717,7 @@ int CheckArgs(int argc, char* argv[])
 {
     char c;
     
-    while ((c =getopt(argc, argv,"b:c:r:w:h:m:f:n:s:?") ) != EOF) {
+    while ((c =getopt(argc, argv,"b:c:r:w:h:m:f:n:s:o:e:z:?") ) != EOF) {
         switch (c) {
                 case 'w':
                     gWidth = atoi(optarg);
@@ -566,6 +753,15 @@ int CheckArgs(int argc, char* argv[])
                 case 'g':
                     gEncodeHeight = atoi(optarg);
                     break;
+                case 'o':
+                    gOutPutFormat = atoi(optarg);
+                    break;
+                case 'e':
+                    gCodeCoverageTestErrorCase = atoi(optarg);
+                    break;
+                case 'z':
+                    gOutPutBufferSize = atoi(optarg);
+                    break;
                 case '?':
                 default:
                      printf("\n./mix_encode -c <Codec> -b <Bit rate> -r <Rate control> -w <Width> -h <Height> -k <EncodeWidth> -g <EncodeHight> -n <Frame_num> -m <Mode> -s <Sync mode> -f <Output file>\n");
@@ -597,6 +793,7 @@ int main(int argc, char* argv[])
 {
     Encode_Status ret;
     const char *codec;
+    VideoOutputFormat goutputformat = OUTPUT_EVERYTHING;
 
     CheckArgs(argc, argv);
 
@@ -615,9 +812,20 @@ int main(int argc, char* argv[])
         case 2:
             codec = H263_MIME_TYPE;
             break;
+//add for video encode libmix code coverage test--start
+        case 3:
+           codec = MPEG4_MIME_TYPE_SP;
+           break;
+        case 4:
+           codec = MEDIA_MIMETYPE_IMAGE_JPEG;
+           break;
+        case 5:
+           codec = NULL;
+           break;
         default:
             printf("Not support this type codec\n");
             return 1;
+//add for video encode libmix code coverage test--end
     }
 
     switch(gRCMode)
@@ -638,14 +846,59 @@ int main(int argc, char* argv[])
             printf("Not support this rate control mode\n");
             return 1;
     }
-    
-    printf("\nStart %s Encoding ....\n", codec);
-    printf("Mode is %s, RC mode is %s, Src Width=%d, Height=%d, Encode Width=%d, Height=%d \n", gModeString[gMode], gRCModeString[gRCMode], gWidth, gHeight, gEncodeWidth, gEncodeHeight);
-    printf("Bitrate=%dbps, EncodeFrames=%d, SyncMode=%d, out file is %s\n\n", gBitrate, gEncFrames, gSyncEncMode, gFile);
+
+    switch(gOutPutFormat)
+    {
+        case 0:
+            goutputformat = OUTPUT_EVERYTHING;
+            break;
+        case 1:
+            goutputformat = OUTPUT_CODEC_DATA;
+            break;
+        case 2:
+            goutputformat = OUTPUT_FRAME_DATA;
+            break;
+        case 3:
+            goutputformat = OUTPUT_ONE_NAL;
+            break;
+        case 4:
+            goutputformat = OUTPUT_ONE_NAL_WITHOUT_STARTCODE;
+            break;
+        case 5:
+            goutputformat = OUTPUT_LENGTH_PREFIXED;
+            break;
+        case 6:
+            goutputformat = OUTPUT_BUFFER_LAST;
+            break;
+        default:
+            printf("Not support this Out Put Format\n");
+            return 1;
+    }
+
+//add for video encode libmix code coverage test--start
+    if(codec != NULL)
+       printf("\nStart %s Encoding ....\n", codec);
+    else
+       printf("\nStart codec is null only for code coverage test  ....\n");
+//add for video encode libmix code coverage test--end
+    printf("Mode is %s, RC mode is %s, Width=%d, Height=%d, Bitrate=%dbps, EncodeFrames=%d, SyncMode=%d, file is %s, outputnalformat is %s\n\n", gModeString[gMode], gRCModeString[gRCMode], gWidth, gHeight, gBitrate, gEncFrames, gSyncEncMode, gFile,gOutPutFormatString[gOutPutFormat]);
+
+//sleep(10);
 
 for(int i=0; i<1; i++)
 {
     gVideoEncoder = createVideoEncoder(codec);
+
+    if(gVideoEncoder == NULL)
+    {
+        printf("Finishing code coverage test  ....\n");
+        return 1;
+    }
+
+    // Adding for code coverage test
+    // VideoEncoderBase.cpp uncalled function
+    // VideoEncoderBase::flush()
+    gVideoEncoder->flush();
 
     //set parameter
     SetVideoEncoderParam();
@@ -675,6 +928,12 @@ for(int i=0; i<1; i++)
         case 6: //Gralloc
             CreateGralloc();
             break;
+        case 7: //SurfaceMappingForCI
+            CreateSurfaceMappingForCI();
+            break;
+        case 8:  //Camera malloc with extra values
+            MallocExternalMemoryWithExtraValues();
+            break;
         default:
             break;
     }
@@ -703,12 +962,17 @@ for(int i=0; i<1; i++)
     //output buffers
     VideoEncOutputBuffer OutBuf;
     uint32_t maxsize;
+    //for error hanlding
+    gVideoEncoder->getMaxOutSize(NULL);
     gVideoEncoder->getMaxOutSize(&maxsize);
     uint8_t out[maxsize];
-    OutBuf.bufferSize = maxsize;
+    if(gOutPutBufferSize == 0)
+       OutBuf.bufferSize = 0;
+    else
+       OutBuf.bufferSize = maxsize;
     OutBuf.dataSize = 0;
     OutBuf.data = out;
-    OutBuf.format = OUTPUT_EVERYTHING;
+    OutBuf.format = goutputformat;
 
     printf("\n"); 
     for(unsigned int i=0; i<gEncFrames; i++)
@@ -731,6 +995,7 @@ for(int i=0; i<1; i++)
 
         ret = gVideoEncoder->getOutput(&OutBuf);
         CHECK_ENCODE_STATUS("getOutput");
+        CHECK_ENCODE_STATUS_RETURN("getOutput");
     //    printf("OutBuf.dataSize = %d  .........\n", OutBuf.dataSize);
         fwrite(OutBuf.data, 1, OutBuf.dataSize, file);
         
@@ -738,7 +1003,7 @@ for(int i=0; i<1; i++)
         fflush(stdout);
     }	
     fclose(file);
-
+    
     VideoStatistics stat;
     if (gVideoEncoder->getStatistics(&stat) == ENCODE_SUCCESS)
     {

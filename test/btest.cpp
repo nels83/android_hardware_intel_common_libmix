@@ -33,10 +33,13 @@ int main(int argc, char* argv[])
     mb1 = new IntelMetadataBuffer();
     ret = mb1->SetType(t1);
     ret = mb1->SetValue(v1);
+    mb1->GetMaxBufferSize();
     if (t1 != MetadataBufferTypeGrallocSource) {
         ret = mb1->SetValueInfo(&vi1);
         ret = mb1->SetExtraValues(ev1, 10);
+        ret = mb1->SetExtraValues(ev1, 10);
     }
+//  ret = mb1->GetBytes(bytes, size);
     ret = mb1->Serialize(bytes, size);
     printf("assembling IntelMetadataBuffer %s, ret = %d\n", (ret == IMB_SUCCESS)?"Success":"Fail", ret );    
 
@@ -48,13 +51,27 @@ int main(int argc, char* argv[])
     printf("\n");
 
     mb2 = new IntelMetadataBuffer();
+//  ret = mb2->SetBytes(bytes, size);
     ret = mb2->UnSerialize(bytes, size);
     printf("parsing IntelMetadataBuffer %s, ret = %d\n", (ret == IMB_SUCCESS)?"Success":"Fail", ret );    
     
     ret = mb2->GetType(t2);
     ret = mb2->GetValue(v2);
     ret = mb2->GetValueInfo(vi2);
+    ret = mb1->SetExtraValues(ev1, 10);
     ret = mb2->GetExtraValues(ev2, count);
+
+    IntelMetadataBuffer mb3;;
+//  mb3 = new IntelMetadataBuffer();
+    ret = mb3.SetType(t1);
+    ret = mb3.SetValue(v1);
+    ret = mb3.SetExtraValues(ev1, 10);
+    ret = mb3.SetValueInfo(&vi1);
+    ret = mb3.UnSerialize(bytes, size);
+
+    IntelMetadataBuffer *mb4 = new IntelMetadataBuffer(mb3);
+    IntelMetadataBuffer *mb5;
+    mb5 = mb4;
 
     printf("t2=%d, v2=%d, vi2=%x, ev2=%x\n", t2, v2, vi2, ev2);
     if (v1 == v2 && t1 == t2 ) {
