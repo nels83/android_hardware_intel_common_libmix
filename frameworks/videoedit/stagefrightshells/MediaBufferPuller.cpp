@@ -134,7 +134,9 @@ void MediaBufferPuller::acquireThreadFunc() {
         status_t result = mSource->read(&pBuffer, NULL);
         mLock.lock();
         mSourceError = result;
-        if (result != OK) {
+        if (result == ERROR_END_OF_STREAM && pBuffer != NULL) {
+            mAskToStop = true;
+        } else if (result != OK) {
             break;
         }
         mBuffers.push(pBuffer);

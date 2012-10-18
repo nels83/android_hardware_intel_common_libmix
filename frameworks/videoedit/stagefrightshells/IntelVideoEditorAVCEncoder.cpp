@@ -345,7 +345,7 @@ sp<MetaData> IntelVideoEditorAVCEncoder::getFormat() {
 
 status_t IntelVideoEditorAVCEncoder::read(MediaBuffer **out, const ReadOptions *options) {
 
-    status_t err;
+    status_t err = OK;
     Encode_Status encRet;
     MediaBuffer *tmpIn;
     int64_t timestamp = 0;
@@ -364,7 +364,11 @@ status_t IntelVideoEditorAVCEncoder::read(MediaBuffer **out, const ReadOptions *
     } while (err == INFO_FORMAT_CHANGED);
 
     if (err == ERROR_END_OF_STREAM) {
-        return err;
+        if (mLastInputBuffer != NULL) {
+            tmpIn = mLastInputBuffer;
+        } else {
+            return err;
+        }
     }
     else if (err != OK) {
         LOGE("Failed to read input video frame: %d", err);
@@ -387,9 +391,12 @@ status_t IntelVideoEditorAVCEncoder::read(MediaBuffer **out, const ReadOptions *
         return UNKNOWN_ERROR;
     }
 
-    if (mLastInputBuffer != NULL) {
+    if (mLastInputBuffer != NULL && err != ERROR_END_OF_STREAM) {
+        mLastInputBuffer->meta_data()->findInt64(kKeyTime, &timestamp);
         mLastInputBuffer->release();
         mLastInputBuffer = NULL;
+    } else {
+        timestamp = vaInBuf.timeStamp;
     }
     mLastInputBuffer = tmpIn;
 
@@ -427,7 +434,6 @@ status_t IntelVideoEditorAVCEncoder::read(MediaBuffer **out, const ReadOptions *
             outputBuffer->meta_data()->setInt32(kKeyIsSyncFrame,true);
         }
     }
-    timestamp = vaInBuf.timeStamp;
 
     LOGV("Got it! data= %p, ts=%llu size =%d", vaOutBuf.data, timestamp, vaOutBuf.dataSize);
 
@@ -436,7 +442,7 @@ status_t IntelVideoEditorAVCEncoder::read(MediaBuffer **out, const ReadOptions *
     *out = outputBuffer;
 
     LOGV("IntelVideoEditorAVCEncoder::read end");
-    return OK;
+    return err;
 }
 
 status_t IntelVideoEditorAVCEncoder::getSharedBuffers() {
