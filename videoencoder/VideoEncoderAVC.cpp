@@ -796,6 +796,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     rcMiscParam->initial_qp = mComParams.rcParams.initQP;
     rcMiscParam->min_qp = mComParams.rcParams.minQP;
     rcMiscParam->window_size = mComParams.rcParams.windowSize;
+    rcMiscParam->bits_per_second = mComParams.rcParams.bitRate; //for rate control usage
     rcMiscParam->basic_unit_size = mVideoParamsAVC.basicUnitSize; //for rate control usage
     avcSeqParams.intra_period = mComParams.intraPeriod;
     //avcSeqParams.vui_flag = 248;
@@ -829,7 +830,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     LOG_I( "idr_interval = %d\n", avcSeqParams.intra_idr_period);
     LOG_I( "picture_width_in_mbs = %d\n", avcSeqParams.picture_width_in_mbs);
     LOG_I( "picture_height_in_mbs = %d\n", avcSeqParams.picture_height_in_mbs);
-    LOG_I( "bitrate = %d\n", avcSeqParams.bits_per_second);
+    LOG_I( "bitrate = %d\n", rcMiscParam->bits_per_second);
     LOG_I( "frame_rate = %d\n", framerateParam->framerate);
     LOG_I( "initial_qp = %d\n", rcMiscParam->initial_qp);
     LOG_I( "min_qp = %d\n", rcMiscParam->min_qp);
