@@ -85,30 +85,15 @@ Encode_Status VideoEncoderMP4::outputConfigData(
     return ret;
 }
 
-
-Encode_Status VideoEncoderMP4::getOutput(VideoEncOutputBuffer *outBuffer) {
+Encode_Status VideoEncoderMP4::getExtFormatOutput(VideoEncOutputBuffer *outBuffer) {
 
     Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    bool useLocalBuffer = false;
 
     LOG_V("Begin\n");
     CHECK_NULL_RETURN_IFFAIL(outBuffer);
 
-     setKeyFrame(mComParams.intraPeriod);
-
-    // prepare for output, map the coded buffer
-    ret = VideoEncoderBase::prepareForOutput(outBuffer, &useLocalBuffer);
-    CHECK_ENCODE_STATUS_CLEANUP("prepareForOutput");
-
     switch (outBuffer->format) {
-        case OUTPUT_EVERYTHING:
-        case OUTPUT_FRAME_DATA: {
-            // Output whatever we have
-            ret = VideoEncoderBase::outputAllData(outBuffer);
-            CHECK_ENCODE_STATUS_CLEANUP("outputAllData");
-            break;
-        }
         case OUTPUT_CODEC_DATA: {
             // Output the codec config data
             ret = outputConfigData(outBuffer);
@@ -123,32 +108,14 @@ Encode_Status VideoEncoderMP4::getOutput(VideoEncOutputBuffer *outBuffer) {
 
     LOG_I("out size is = %d\n", outBuffer->dataSize);
 
-    // cleanup, unmap the coded buffer if all
-    // data has been copied out
-    ret = VideoEncoderBase::cleanupForOutput();
 
 CLEAN_UP:
 
-    if (ret < ENCODE_SUCCESS) {
-        if (outBuffer->data && (useLocalBuffer == true)) {
-            delete[] outBuffer->data;
-            outBuffer->data = NULL;
-            useLocalBuffer = false;
-        }
-
-        // error happens, unmap the buffer
-        if (mCodedBufferMapped) {
-            vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
-            mCodedBufferMapped = false;
-            mCurSegment = NULL;
-        }
-    }
     LOG_V("End\n");
     return ret;
 }
 
-
-Encode_Status VideoEncoderMP4::renderSequenceParams() {
+Encode_Status VideoEncoderMP4::renderSequenceParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSequenceParameterBufferMPEG4 mp4SequenceParams = {};
@@ -202,26 +169,26 @@ Encode_Status VideoEncoderMP4::renderSequenceParams() {
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VideoEncoderMP4::renderPictureParams() {
+Encode_Status VideoEncoderMP4::renderPictureParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncPictureParameterBufferMPEG4 mpeg4_pic_param = {};
     LOG_V( "Begin\n\n");
 
     // set picture params for HW
-    mpeg4_pic_param.reference_picture = mRefSurface;
-    mpeg4_pic_param.reconstructed_picture = mRecSurface;
-    mpeg4_pic_param.coded_buf = mVACodedBuffer[mCodedBufIndex];
+    mpeg4_pic_param.reference_picture = task->ref_surface[0];
+    mpeg4_pic_param.reconstructed_picture = task->rec_surface;
+    mpeg4_pic_param.coded_buf = task->coded_buffer;
     mpeg4_pic_param.picture_width = mComParams.resolution.width;
     mpeg4_pic_param.picture_height = mComParams.resolution.height;
     mpeg4_pic_param.vop_time_increment= mFrameNum;
-    mpeg4_pic_param.picture_type = mIsIntra ? VAEncPictureTypeIntra : VAEncPictureTypePredictive;
+    mpeg4_pic_param.picture_type = (task->type == FTYPE_I) ? VAEncPictureTypeIntra : VAEncPictureTypePredictive;
 
     LOG_V("======mpeg4 picture params======\n");
     LOG_I("reference_picture = 0x%08x\n", mpeg4_pic_param.reference_picture);
     LOG_I("reconstructed_picture = 0x%08x\n", mpeg4_pic_param.reconstructed_picture);
     LOG_I("coded_buf = 0x%08x\n", mpeg4_pic_param.coded_buf);
-    LOG_I("coded_buf_index = %d\n", mCodedBufIndex);
+//    LOG_I("coded_buf_index = %d\n", mCodedBufIndex);
     LOG_I("picture_width = %d\n", mpeg4_pic_param.picture_width);
     LOG_I("picture_height = %d\n", mpeg4_pic_param.picture_height);
     LOG_I("vop_time_increment = %d\n", mpeg4_pic_param.vop_time_increment);
@@ -242,7 +209,7 @@ Encode_Status VideoEncoderMP4::renderPictureParams() {
 }
 
 
-Encode_Status VideoEncoderMP4::renderSliceParams() {
+Encode_Status VideoEncoderMP4::renderSliceParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     uint32_t sliceHeight;
@@ -259,7 +226,7 @@ Encode_Status VideoEncoderMP4::renderSliceParams() {
 
     sliceParams.start_row_number = 0;
     sliceParams.slice_height = sliceHeightInMB;
-    sliceParams.slice_flags.bits.is_intra = mIsIntra;
+    sliceParams.slice_flags.bits.is_intra = (task->type == FTYPE_I)?1:0;
     sliceParams.slice_flags.bits.disable_deblocking_filter_idc = 0;
 
     LOG_V("======mpeg4 slice params======\n");
@@ -282,19 +249,19 @@ Encode_Status VideoEncoderMP4::renderSliceParams() {
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VideoEncoderMP4::sendEncodeCommand(void) {
+Encode_Status VideoEncoderMP4::sendEncodeCommand(EncodeTask *task) {
     Encode_Status ret = ENCODE_SUCCESS;
     LOG_V( "Begin\n");
 
     if (mFrameNum == 0) {
-        ret = renderSequenceParams();
+        ret = renderSequenceParams(task);
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
     }
 
-    ret = renderPictureParams();
+    ret = renderPictureParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
 
-    ret = renderSliceParams();
+    ret = renderSliceParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
 
     LOG_V( "End\n");

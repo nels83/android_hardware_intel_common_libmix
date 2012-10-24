@@ -16,20 +16,20 @@ VideoEncoderH263::VideoEncoderH263() {
     mComParams.profile = (VAProfile)PROFILE_H263BASELINE;
 }
 
-Encode_Status VideoEncoderH263::sendEncodeCommand(void) {
+Encode_Status VideoEncoderH263::sendEncodeCommand(EncodeTask *task) {
 
     Encode_Status ret = ENCODE_SUCCESS;
     LOG_V( "Begin\n");
 
     if (mFrameNum == 0) {
-        ret = renderSequenceParams();
+        ret = renderSequenceParams(task);
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
     }
 
-    ret = renderPictureParams();
+    ret = renderPictureParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
 
-    ret = renderSliceParams();
+    ret = renderSliceParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderSliceParams");
 
     LOG_V( "End\n");
@@ -37,7 +37,7 @@ Encode_Status VideoEncoderH263::sendEncodeCommand(void) {
 }
 
 
-Encode_Status VideoEncoderH263::renderSequenceParams() {
+Encode_Status VideoEncoderH263::renderSequenceParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSequenceParameterBufferH263 h263SequenceParam = {};
@@ -78,7 +78,7 @@ Encode_Status VideoEncoderH263::renderSequenceParams() {
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VideoEncoderH263::renderPictureParams() {
+Encode_Status VideoEncoderH263::renderPictureParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncPictureParameterBufferH263 h263PictureParams = {};
@@ -86,18 +86,18 @@ Encode_Status VideoEncoderH263::renderPictureParams() {
     LOG_V( "Begin\n\n");
 
     // set picture params for HW
-    h263PictureParams.reference_picture = mRefSurface;
-    h263PictureParams.reconstructed_picture = mRecSurface;
-    h263PictureParams.coded_buf = mVACodedBuffer [mCodedBufIndex];
+    h263PictureParams.reference_picture = task->ref_surface[0];
+    h263PictureParams.reconstructed_picture = task->rec_surface;
+    h263PictureParams.coded_buf = task->coded_buffer;
     h263PictureParams.picture_width = mComParams.resolution.width;
     h263PictureParams.picture_height = mComParams.resolution.height;
-    h263PictureParams.picture_type = mIsIntra ? VAEncPictureTypeIntra : VAEncPictureTypePredictive;
+    h263PictureParams.picture_type = (task->type == FTYPE_I) ? VAEncPictureTypeIntra : VAEncPictureTypePredictive;
 
     LOG_V("======h263 picture params======\n");
     LOG_I( "reference_picture = 0x%08x\n", h263PictureParams.reference_picture);
     LOG_I( "reconstructed_picture = 0x%08x\n", h263PictureParams.reconstructed_picture);
     LOG_I( "coded_buf = 0x%08x\n", h263PictureParams.coded_buf);
-    LOG_I( "coded_buf_index = %d\n", mCodedBufIndex);
+//    LOG_I( "coded_buf_index = %d\n", mCodedBufIndex);
     LOG_I( "picture_width = %d\n", h263PictureParams.picture_width);
     LOG_I( "picture_height = %d\n",h263PictureParams.picture_height);
     LOG_I( "picture_type = %d\n\n",h263PictureParams.picture_type);
@@ -117,7 +117,7 @@ Encode_Status VideoEncoderH263::renderPictureParams() {
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VideoEncoderH263::renderSliceParams() {
+Encode_Status VideoEncoderH263::renderSliceParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     uint32_t sliceHeight;
@@ -145,7 +145,7 @@ Encode_Status VideoEncoderH263::renderSliceParams() {
     sliceParams->start_row_number = 0;
     // slice height measured in MB
     sliceParams->slice_height = sliceHeightInMB;
-    sliceParams->slice_flags.bits.is_intra = mIsIntra;
+    sliceParams->slice_flags.bits.is_intra = (task->type == FTYPE_I)?1:0;
     sliceParams->slice_flags.bits.disable_deblocking_filter_idc = 0;
 
     LOG_V("======h263 slice params======\n");

@@ -20,6 +20,7 @@ VideoEncoderAVC::VideoEncoderAVC()
     mVideoParamsAVC.sliceNum.iSliceNum = 2;
     mVideoParamsAVC.sliceNum.pSliceNum = 2;
     mVideoParamsAVC.idrInterval = 2;
+    mVideoParamsAVC.ipPeriod = 1;
     mVideoParamsAVC.maxSliceSize = 0;
     mVideoParamsAVC.delimiterType = AVC_DELIMITER_ANNEXB;
     mSliceNum = 2;
@@ -94,6 +95,7 @@ Encode_Status VideoEncoderAVC::derivedSetConfig(VideoParamConfigSet *videoEncCon
             }
 
             mVideoParamsAVC.idrInterval = configAVCIntraPeriod->idrInterval;
+            mVideoParamsAVC.ipPeriod = configAVCIntraPeriod->ipPeriod;
             mComParams.intraPeriod = configAVCIntraPeriod->intraPeriod;
             mNewHeader = true;
             break;
@@ -154,6 +156,7 @@ Encode_Status VideoEncoderAVC:: derivedGetConfig(
 
             configAVCIntraPeriod->idrInterval = mVideoParamsAVC.idrInterval;
             configAVCIntraPeriod->intraPeriod = mComParams.intraPeriod;
+            configAVCIntraPeriod->ipPeriod = mVideoParamsAVC.ipPeriod;
 
             break;
         }
@@ -192,30 +195,68 @@ Encode_Status VideoEncoderAVC:: derivedGetConfig(
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VideoEncoderAVC::getOutput(VideoEncOutputBuffer *outBuffer) {
+Encode_Status VideoEncoderAVC::updateFrameInfo(EncodeTask* task) {
+    uint32_t idrPeroid = mComParams.intraPeriod * mVideoParamsAVC.idrInterval;
+    FrameType frametype;
+    uint32_t frame_num = mFrameNum;
+
+    if (mVideoParamsAVC.idrInterval != 0) {
+        if(mVideoParamsAVC.ipPeriod > 1)
+            frame_num = frame_num % (idrPeroid + 1);
+        else  if(mComParams.intraPeriod != 0)
+            frame_num = frame_num % idrPeroid ;
+    }
+
+    if(frame_num ==0){
+        frametype = FTYPE_IDR;
+    }else if(mComParams.intraPeriod ==0)
+        // only I frame need intraPeriod=idrInterval=ipPeriod=0
+        frametype = FTYPE_I;
+    else if(mVideoParamsAVC.ipPeriod == 1){ // no B frame
+        if(mComParams.intraPeriod != 0 && (frame_num >  1) &&((frame_num -1)%mComParams.intraPeriod == 0))
+            frametype = FTYPE_I;
+        else
+            frametype = FTYPE_P;
+    } else { 
+        if(mComParams.intraPeriod != 0 &&((frame_num-1)%mComParams.intraPeriod == 0)&&(frame_num >mComParams.intraPeriod))
+            frametype = FTYPE_I;
+        else{
+            frame_num = frame_num%mComParams.intraPeriod;
+            if(frame_num == 0)
+                frametype = FTYPE_B;
+            else if((frame_num-1)%mVideoParamsAVC.ipPeriod == 0)
+                frametype = FTYPE_P;
+            else
+                frametype = FTYPE_B;
+        }
+    }
+
+    if (frametype == FTYPE_IDR || frametype == FTYPE_I)
+        task->flag |= ENCODE_BUFFERFLAG_SYNCFRAME;
+
+    if (frametype != task->type) {
+        const char* FrameTypeStr[10] = {"UNKNOWN", "I", "P", "B", "SI", "SP", "EI", "EP", "S", "IDR"};
+        if ((uint32_t) task->type < 9)
+            LOG_V("libMIX thinks it is %s Frame, the input is %s Frame", FrameTypeStr[frametype], FrameTypeStr[task->type]);
+        else
+            LOG_V("Wrong Frame type %d, type may not be initialized ?\n", task->type);
+    }
+
+//temparily comment out to avoid uninitialize error
+//    if (task->type == FTYPE_UNKNOWN || (uint32_t) task->type > 9)
+        task->type = frametype;
+
+    return ENCODE_SUCCESS;
+}
+
+Encode_Status VideoEncoderAVC::getExtFormatOutput(VideoEncOutputBuffer *outBuffer) {
 
     Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    bool useLocalBuffer = false;
-    uint32_t idrPeroid = mComParams.intraPeriod * mVideoParamsAVC.idrInterval;
 
     LOG_V("Begin\n");
-    CHECK_NULL_RETURN_IFFAIL(outBuffer);
-
-    setKeyFrame(idrPeroid);
-
-    // prepare for output, map the coded buffer
-    ret = VideoEncoderBase::prepareForOutput(outBuffer, &useLocalBuffer);
-    CHECK_ENCODE_STATUS_CLEANUP("prepareForOutput");
 
     switch (outBuffer->format) {
-        case OUTPUT_EVERYTHING:
-        case OUTPUT_FRAME_DATA: {
-            // Output whatever we have
-            ret = VideoEncoderBase::outputAllData(outBuffer);
-            CHECK_ENCODE_STATUS_CLEANUP("outputAllData");
-            break;
-        }
         case OUTPUT_CODEC_DATA: {
             // Output the codec data
             ret = outputCodecData(outBuffer);
@@ -251,26 +292,10 @@ Encode_Status VideoEncoderAVC::getOutput(VideoEncOutputBuffer *outBuffer) {
 
     LOG_I("out size is = %d\n", outBuffer->dataSize);
 
-    // cleanup, unmap the coded buffer if all
-    // data has been copied out
-    ret = VideoEncoderBase::cleanupForOutput();
 
 CLEAN_UP:
 
-    if (ret < ENCODE_SUCCESS) {
-        if (outBuffer->data && (useLocalBuffer == true)) {
-            delete[] outBuffer->data;
-            outBuffer->data = NULL;
-            useLocalBuffer = false;
-        }
 
-        // error happens, unmap the buffer
-        if (mCodedBufferMapped) {
-            vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
-            mCodedBufferMapped = false;
-            mCurSegment = NULL;
-        }
-    }
     LOG_V("End\n");
     return ret;
 }
@@ -481,7 +506,6 @@ Encode_Status VideoEncoderAVC::outputOneNALU(
         mOffsetInSeg += (nalSize + nalOffset);
         outBuffer->dataSize = sizeToBeCopied;
         outBuffer->flag |= ENCODE_BUFFERFLAG_PARTIALFRAME;
-        if (mKeyFrame) outBuffer->flag |= ENCODE_BUFFERFLAG_SYNCFRAME;
         outBuffer->remainingSize = 0;
     } else {
         // if nothing to be copied out, set flag to invalid
@@ -500,7 +524,6 @@ Encode_Status VideoEncoderAVC::outputOneNALU(
         } else {
             LOG_V("End of stream\n");
             outBuffer->flag |= ENCODE_BUFFERFLAG_ENDOFFRAME;
-            if (mKeyFrame) outBuffer->flag |= ENCODE_BUFFERFLAG_SYNCFRAME;
             mCurSegment = NULL;
         }
     }
@@ -554,7 +577,6 @@ Encode_Status VideoEncoderAVC::outputLengthPrefixed(VideoEncOutputBuffer *outBuf
             // so the remainingSize size may larger than the remaining data size
             outBuffer->remainingSize = mTotalSize - mTotalSizeCopied + 100;
             outBuffer->flag |= ENCODE_BUFFERFLAG_PARTIALFRAME;
-            if (mKeyFrame) outBuffer->flag |= ENCODE_BUFFERFLAG_SYNCFRAME;
             LOG_E("Buffer size too small\n");
             return ENCODE_BUFFER_TOO_SMALL;
         }
@@ -569,7 +591,6 @@ Encode_Status VideoEncoderAVC::outputLengthPrefixed(VideoEncOutputBuffer *outBuf
                 outBuffer->dataSize = sizeCopiedHere;
                 outBuffer->remainingSize = 0;
                 outBuffer->flag |= ENCODE_BUFFERFLAG_ENDOFFRAME;
-                if (mKeyFrame) outBuffer->flag |= ENCODE_BUFFERFLAG_SYNCFRAME;
                 mCurSegment = NULL;
                 break;
             }
@@ -579,7 +600,7 @@ Encode_Status VideoEncoderAVC::outputLengthPrefixed(VideoEncOutputBuffer *outBuf
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VideoEncoderAVC::sendEncodeCommand(void) {
+Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
     Encode_Status ret = ENCODE_SUCCESS;
 
     LOG_V( "Begin\n");
@@ -592,7 +613,7 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(void) {
             CHECK_ENCODE_STATUS_RETURN("renderHrd");
         }
 
-        ret = renderSequenceParams();
+        ret = renderSequenceParams(task);
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
         mNewHeader = false; //Set to require new header filed to false
     }
@@ -628,10 +649,10 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(void) {
         mRenderFrameRate = false;
     }
 
-    ret = renderPictureParams();
+    ret = renderPictureParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
 
-    ret = renderSliceParams();
+    ret = renderSliceParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderSliceParams");
 
     LOG_V( "End\n");
@@ -745,7 +766,7 @@ int VideoEncoderAVC::calcLevel(int numMbs) {
     return level;
 }
 
-Encode_Status VideoEncoderAVC::renderSequenceParams() {
+Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSequenceParameterBufferH264 avcSeqParams = {};
@@ -767,7 +788,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     CHECK_VA_STATUS_RETURN("vaCreateBuffer");
     vaStatus = vaMapBuffer(mVADisplay, mRcParamBuf, (void **)&miscEncRCParamBuf);
     CHECK_VA_STATUS_RETURN("vaMapBuffer");
-    
+
     vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
             VAEncMiscParameterBufferType,
             sizeof (VAEncMiscParameterBuffer) + sizeof (VAEncMiscParameterFrameRate),
@@ -776,7 +797,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     CHECK_VA_STATUS_RETURN("vaCreateBuffer");
     vaStatus = vaMapBuffer(mVADisplay, mFrameRateParamBuf, (void **)&miscEncFrameRateParamBuf);
     CHECK_VA_STATUS_RETURN("vaMapBuffer");
-	
+
     miscEncRCParamBuf->type = VAEncMiscParameterTypeRateControl;
     rcMiscParam = (VAEncMiscParameterRateControl  *)miscEncRCParamBuf->data;
     miscEncFrameRateParamBuf->type = VAEncMiscParameterTypeFrameRate;
@@ -785,6 +806,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     // avcSeqParams.level_idc = mLevel;
     avcSeqParams.intra_period = mComParams.intraPeriod;
     avcSeqParams.intra_idr_period = mVideoParamsAVC.idrInterval;
+    avcSeqParams.ip_period = mVideoParamsAVC.ipPeriod;
     avcSeqParams.picture_width_in_mbs = (mComParams.resolution.width + 15) / 16;
     avcSeqParams.picture_height_in_mbs = (mComParams.resolution.height + 15) / 16;
 
@@ -822,7 +844,9 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     }
 
     // This is a temporary fix suggested by Binglin for bad encoding quality issue
-    avcSeqParams.max_num_ref_frames = 1; // TODO: We need a long term design for this field
+    avcSeqParams.max_num_ref_frames = 1; 
+    if(avcSeqParams.ip_period > 1)
+        avcSeqParams.max_num_ref_frames = 2; 
 
     LOG_V("===h264 sequence params===\n");
     LOG_I( "seq_parameter_set_id = %d\n", (uint32_t)avcSeqParams.seq_parameter_set_id);
@@ -847,28 +871,27 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
             sizeof(avcSeqParams), 1, &avcSeqParams,
             &mSeqParamBuf);
     CHECK_VA_STATUS_RETURN("vaCreateBuffer");
-	
-    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mRcParamBuf, 1);
-    CHECK_VA_STATUS_RETURN("vaRenderPicture");
     vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mFrameRateParamBuf, 1);
     CHECK_VA_STATUS_RETURN("vaRenderPicture");
     vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mSeqParamBuf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mRcParamBuf, 1);
     CHECK_VA_STATUS_RETURN("vaRenderPicture");
 
     return ENCODE_SUCCESS;
 }
 
 
-Encode_Status VideoEncoderAVC::renderPictureParams() {
+Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncPictureParameterBufferH264 avcPicParams = {};
 
     LOG_V( "Begin\n\n");
     // set picture params for HW
-    avcPicParams.ReferenceFrames[0].picture_id= mRefSurface;
-    avcPicParams.CurrPic.picture_id= mRecSurface;
-    avcPicParams.coded_buf = mVACodedBuffer [mCodedBufIndex];
+    avcPicParams.ReferenceFrames[0].picture_id= task->ref_surface[0];
+    avcPicParams.CurrPic.picture_id= task->rec_surface;
+    avcPicParams.coded_buf = task->coded_buffer;
     //avcPicParams.picture_width = mComParams.resolution.width;
     //avcPicParams.picture_height = mComParams.resolution.height;
     avcPicParams.last_picture = 0;
@@ -876,7 +899,7 @@ Encode_Status VideoEncoderAVC::renderPictureParams() {
     LOG_V("======h264 picture params======\n");
     LOG_I( "reference_picture = 0x%08x\n", avcPicParams.ReferenceFrames[0].picture_id);
     LOG_I( "reconstructed_picture = 0x%08x\n", avcPicParams.CurrPic.picture_id);
-    LOG_I( "coded_buf_index = %d\n", mCodedBufIndex);
+//    LOG_I( "coded_buf_index = %d\n", mCodedBufIndex);
     LOG_I( "coded_buf = 0x%08x\n", avcPicParams.coded_buf);
     //LOG_I( "picture_width = %d\n", avcPicParams.picture_width);
     //LOG_I( "picture_height = %d\n\n", avcPicParams.picture_height);
@@ -897,7 +920,7 @@ Encode_Status VideoEncoderAVC::renderPictureParams() {
 }
 
 
-Encode_Status VideoEncoderAVC::renderSliceParams() {
+Encode_Status VideoEncoderAVC::renderSliceParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
 
@@ -906,8 +929,8 @@ Encode_Status VideoEncoderAVC::renderSliceParams() {
     uint32_t sliceHeightInMB = 0;
     uint32_t maxSliceNum = 0;
     uint32_t minSliceNum = 0;
-    int actualSliceHeightInMB = 0;
-    int startRowInMB = 0;
+    uint32_t actualSliceHeightInMB = 0;
+    uint32_t startRowInMB = 0;
     uint32_t modulus = 0;
 
     LOG_V( "Begin\n\n");
@@ -915,7 +938,7 @@ Encode_Status VideoEncoderAVC::renderSliceParams() {
     maxSliceNum = (mComParams.resolution.height + 15) / 16;
     minSliceNum = 1;
 
-    if (mIsIntra) {
+    if (task->type == FTYPE_I || task->type == FTYPE_IDR) {
         sliceNum = mVideoParamsAVC.sliceNum.iSliceNum;
     } else {
         sliceNum = mVideoParamsAVC.sliceNum.pSliceNum;
@@ -938,14 +961,18 @@ Encode_Status VideoEncoderAVC::renderSliceParams() {
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,
             VAEncSliceParameterBufferType,
-            sizeof(VAEncSliceParameterBuffer),
+            sizeof(VAEncSliceParameterBufferH264),
             sliceNum, NULL,
             &mSliceParamBuf);
     CHECK_VA_STATUS_RETURN("vaCreateBuffer");
 
-    VAEncSliceParameterBuffer *sliceParams, *currentSlice;
+    VAEncSliceParameterBufferH264 *sliceParams, *currentSlice;
+
     vaStatus = vaMapBuffer(mVADisplay, mSliceParamBuf, (void **)&sliceParams);
     CHECK_VA_STATUS_RETURN("vaMapBuffer");
+    memset(sliceParams, 0 , sizeof(VAEncSliceParameterBufferH264));
+    if(!sliceParams)
+        return ENCODE_NULL_PTR;
 
     currentSlice = sliceParams;
     startRowInMB = 0;
@@ -956,25 +983,29 @@ Encode_Status VideoEncoderAVC::renderSliceParams() {
             actualSliceHeightInMB ++;
         }
 
-        // starting MB row number for this slice
-        currentSlice->start_row_number = startRowInMB;
+        // starting MB row number for this slice, suppose macroblock 16x16
+        currentSlice->macroblock_address = startRowInMB * mComParams.resolution.width /16;
         // slice height measured in MB
-        currentSlice->slice_height = actualSliceHeightInMB;
-        currentSlice->slice_flags.bits.is_intra = mIsIntra;
-        currentSlice->slice_flags.bits.disable_deblocking_filter_idc
-        = mComParams.disableDeblocking;
+        currentSlice->num_macroblocks = actualSliceHeightInMB * mComParams.resolution.width /16;
+        if(task->type == FTYPE_I||task->type == FTYPE_IDR)
+            currentSlice->slice_type = 2;
+        else if(task->type == FTYPE_P)
+            currentSlice->slice_type = 0;
+        else if(task->type == FTYPE_B)
+            currentSlice->slice_type = 1;
+        currentSlice->disable_deblocking_filter_idc = mComParams.disableDeblocking;
 
         // This is a temporary fix suggested by Binglin for bad encoding quality issue
         // TODO: We need a long term design for this field
-        currentSlice->slice_flags.bits.uses_long_term_ref = 0;
-        currentSlice->slice_flags.bits.is_long_term_ref = 0;
+        //currentSlice->slice_flags.bits.uses_long_term_ref = 0;
+        //currentSlice->slice_flags.bits.is_long_term_ref = 0;
 
         LOG_V("======AVC slice params======\n");
         LOG_I( "slice_index = %d\n", (int) sliceIndex);
-        LOG_I( "start_row_number = %d\n", (int) currentSlice->start_row_number);
-        LOG_I( "slice_height_in_mb = %d\n", (int) currentSlice->slice_height);
-        LOG_I( "slice.is_intra = %d\n", (int) currentSlice->slice_flags.bits.is_intra);
-        LOG_I("disable_deblocking_filter_idc = %d\n\n", (int) currentSlice->slice_flags.bits.disable_deblocking_filter_idc);
+        LOG_I( "macroblock_address = %d\n", (int) currentSlice->macroblock_address);
+        LOG_I( "slice_height_in_mb = %d\n", (int) currentSlice->num_macroblocks);
+        LOG_I( "slice.type = %d\n", (int) currentSlice->slice_type);
+        LOG_I("disable_deblocking_filter_idc = %d\n\n", (int) currentSlice->disable_deblocking_filter_idc);
 
         startRowInMB += actualSliceHeightInMB;
     }
