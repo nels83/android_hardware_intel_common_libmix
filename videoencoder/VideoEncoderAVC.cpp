@@ -748,7 +748,7 @@ int VideoEncoderAVC::calcLevel(int numMbs) {
 Encode_Status VideoEncoderAVC::renderSequenceParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncSequenceParameterBufferH264 avcSeqParams;
+    VAEncSequenceParameterBufferH264 avcSeqParams = {};
     VAEncMiscParameterBuffer   *miscEncRCParamBuf;
     VAEncMiscParameterBuffer   *miscEncFrameRateParamBuf;
     VAEncMiscParameterRateControl *rcMiscParam;
@@ -796,7 +796,8 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
     rcMiscParam->initial_qp = mComParams.rcParams.initQP;
     rcMiscParam->min_qp = mComParams.rcParams.minQP;
     rcMiscParam->window_size = mComParams.rcParams.windowSize;
-    rcMiscParam->bits_per_second = mComParams.rcParams.bitRate; //for rate control usage
+    //target bitrate is sent to libva through Sequence Parameter Buffer
+    rcMiscParam->bits_per_second = 0;
     rcMiscParam->basic_unit_size = mVideoParamsAVC.basicUnitSize; //for rate control usage
     avcSeqParams.intra_period = mComParams.intraPeriod;
     //avcSeqParams.vui_flag = 248;
@@ -861,7 +862,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams() {
 Encode_Status VideoEncoderAVC::renderPictureParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncPictureParameterBufferH264 avcPicParams;
+    VAEncPictureParameterBufferH264 avcPicParams = {};
 
     LOG_V( "Begin\n\n");
     // set picture params for HW

@@ -40,7 +40,7 @@ Encode_Status VideoEncoderH263::sendEncodeCommand(void) {
 Encode_Status VideoEncoderH263::renderSequenceParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncSequenceParameterBufferH263 h263SequenceParam;
+    VAEncSequenceParameterBufferH263 h263SequenceParam = {};
     uint32_t frameRateNum = mComParams.frameRate.frameRateNum;
     uint32_t frameRateDenom = mComParams.frameRate.frameRateDenom;
 
@@ -81,7 +81,7 @@ Encode_Status VideoEncoderH263::renderSequenceParams() {
 Encode_Status VideoEncoderH263::renderPictureParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncPictureParameterBufferH263 h263PictureParams;
+    VAEncPictureParameterBufferH263 h263PictureParams = {};
 
     LOG_V( "Begin\n\n");
 

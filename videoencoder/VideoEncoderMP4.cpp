@@ -151,7 +151,7 @@ CLEAN_UP:
 Encode_Status VideoEncoderMP4::renderSequenceParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncSequenceParameterBufferMPEG4 mp4SequenceParams;
+    VAEncSequenceParameterBufferMPEG4 mp4SequenceParams = {};
 
     uint32_t frameRateNum = mComParams.frameRate.frameRateNum;
     uint32_t frameRateDenom = mComParams.frameRate.frameRateDenom;
@@ -205,7 +205,7 @@ Encode_Status VideoEncoderMP4::renderSequenceParams() {
 Encode_Status VideoEncoderMP4::renderPictureParams() {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncPictureParameterBufferMPEG4 mpeg4_pic_param;
+    VAEncPictureParameterBufferMPEG4 mpeg4_pic_param = {};
     LOG_V( "Begin\n\n");
 
     // set picture params for HW
