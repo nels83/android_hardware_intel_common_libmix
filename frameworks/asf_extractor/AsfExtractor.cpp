@@ -640,7 +640,7 @@ status_t AsfExtractor::readPacket() {
             buffer->set_range(0, payload->mediaObjectLength);
             // kKeyTime is in microsecond unit (usecs)
             // presentationTime is in mililsecond unit (ms)
-            buffer->meta_data()->setInt64(kKeyTime, payload->presentationTime * 1000);
+            buffer->meta_data()->setInt64(kKeyTime,(uint64_t) payload->presentationTime * 1000);
 
             if (payload->keyframe) {
                 buffer->meta_data()->setInt32(kKeyIsSyncFrame, 1);
@@ -657,7 +657,7 @@ status_t AsfExtractor::readPacket() {
                     Mutex::Autolock lockTrack(track->lock);
                     MediaBuffer* copy = NULL;
                     track->bufferPool->acquire_buffer(payload->payloadSize, &copy);
-                    copy->meta_data()->setInt64(kKeyTime, payload->presentationTime * 1000);
+                    copy->meta_data()->setInt64(kKeyTime,(uint64_t) payload->presentationTime * 1000);
                     memcpy(copy->data(), payload->payloadData, payload->payloadSize);
                     copy->set_range(0, payload->payloadSize);
                     track->bufferQueue.push(copy);
