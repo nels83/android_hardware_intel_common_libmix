@@ -825,10 +825,10 @@ void VideoEncoderBase::setDefaultParams() {
     mComParams.intraPeriod = 30;
     mComParams.rcMode = RATE_CONTROL_NONE;
     mComParams.rcParams.initQP = 15;
-    mComParams.rcParams.minQP = 1;
+    mComParams.rcParams.minQP = 0;
     mComParams.rcParams.bitRate = 640000;
-    mComParams.rcParams.targetPercentage= 95;
-    mComParams.rcParams.windowSize = 500;
+    mComParams.rcParams.targetPercentage= 0;
+    mComParams.rcParams.windowSize = 0;
     mComParams.rcParams.disableFrameSkip = 0;
     mComParams.rcParams.disableBitsStuffing = 1;
     mComParams.cyclicFrameInterval = 30;
@@ -1960,6 +1960,7 @@ Encode_Status VideoEncoderBase::renderDynamicBitrate() {
     bitrateControlParam->window_size = mComParams.rcParams.windowSize;
     bitrateControlParam->rc_flags.bits.disable_frame_skip = mComParams.rcParams.disableFrameSkip;
     bitrateControlParam->rc_flags.bits.disable_bit_stuffing = mComParams.rcParams.disableBitsStuffing;
+    bitrateControlParam->basic_unit_size = 0;
 
     LOG_I("bits_per_second = %d\n", bitrateControlParam->bits_per_second);
     LOG_I("initial_qp = %d\n", bitrateControlParam->initial_qp);

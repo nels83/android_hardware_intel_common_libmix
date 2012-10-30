@@ -178,6 +178,18 @@ status_t IntelVideoEditorAVCEncoder::initCheck(const sp<MetaData>& meta) {
     CHECK(encStatus == ENCODE_SUCCESS);
     LOGV("new  H264 encoder params set");
 
+    if (disableFrameSkip) {
+        VideoConfigBitRate configBitrate;
+        encStatus = mVAEncoder->getConfig(&configBitrate);
+        CHECK(encStatus == ENCODE_SUCCESS);
+        LOGV("got encoder config set");
+
+        configBitrate.rcParams.disableFrameSkip = 1;
+        encStatus = mVAEncoder->setConfig(&configBitrate);
+        CHECK(encStatus == ENCODE_SUCCESS);
+        LOGV("got encoder frame skip/bits stuffing set");
+    }
+
     VideoParamsHRD hrdParam;
     encStatus = mVAEncoder->getParameters(&hrdParam);
     CHECK(encStatus == ENCODE_SUCCESS);
