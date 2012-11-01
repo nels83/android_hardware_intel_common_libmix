@@ -1192,7 +1192,6 @@ static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
     /* bit offset from NAL start code to the beginning of slice data */
     slc_parms->slice_data_bit_offset = bit + byte * 8;
 
-
     if (is_emul)
     {
         WTRACE("next byte is emulation prevention byte.");
@@ -1571,21 +1570,18 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
                                 &(cxt->sc_prefix_info));
             if (ret == 1)
             {
-                cubby.phase = 0;
-
                 if (cxt->list.num_items == 0)
                 {
                     cxt->list.data[0].stpos = cubby.sc_end_pos;
                 }
                 else
                 {
-                    cxt->list.data[cxt->list.num_items - 1].edpos =
-                        cubby.sc_end_pos + cxt->list.data[cxt->list.num_items - 1].stpos;
-
                     cxt->list.data[cxt->list.num_items].stpos =
-                        cxt->list.data[cxt->list.num_items - 1].edpos;
+                        cubby.sc_end_pos + cxt->list.data[cxt->list.num_items - 1].stpos;
+                    cxt->list.data[cxt->list.num_items - 1].edpos = cxt->list.data[cxt->list.num_items].stpos - cubby.phase; /* offset before start code */
                 }
 
+                cubby.phase = 0;
                 cubby.buf = cxt->parse_cubby.buf +
                             cxt->list.data[cxt->list.num_items].stpos;
 
@@ -1689,6 +1685,12 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
     default:
         WTRACE("unknown header %d is parsed.", parser->info.nal_unit_type);
         break;
+    }
+
+    if (query_data->num_pictures == MAX_NUM_PICTURES && parser->info.img.field_pic_flag != 1)
+    {
+        WTRACE("more than one frame in the buffer is found(%d)", query_data->num_pictures);
+        return (error == VBP_OK ? VBP_MULTI : error);
     }
     return error;
 }

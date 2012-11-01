@@ -113,6 +113,12 @@ Decode_Status VideoDecoderAVC::decode(VideoDecodeBuffer *buffer) {
     }
 
     status = decodeFrame(buffer, data);
+    if (status == DECODE_MULTIPLE_FRAME) {
+        buffer->ext = &mExtensionBuffer;
+        mExtensionBuffer.extType = PACKED_FRAME_TYPE;
+        mExtensionBuffer.extSize = sizeof(mPackedFrame);
+        mExtensionBuffer.extData = (uint8_t*)&mPackedFrame;
+    }
     return status;
 }
 
@@ -226,6 +232,17 @@ Decode_Status VideoDecoderAVC::continueDecodingFrame(vbp_data_h264 *data) {
         // sanity check
         if (picData == NULL || picData->pic_parms == NULL || picData->slc_data == NULL || picData->num_slices == 0) {
             return DECODE_PARSER_FAIL;
+        }
+
+        if (picIndex > 0 &&
+            (picData->pic_parms->CurrPic.flags & (VA_PICTURE_H264_TOP_FIELD | VA_PICTURE_H264_BOTTOM_FIELD)) == 0) {
+            // it is a packed frame buffer
+            vbp_picture_data_h264 *lastPic = &data->pic_data[picIndex - 1];
+            vbp_slice_data_h264 *sliceData = &(lastPic->slc_data[lastPic->num_slices - 1]);
+            mPackedFrame.offSet = sliceData->slice_size + sliceData->slice_offset;
+            mPackedFrame.timestamp = mCurrentPTS; // use the current time stamp for the packed frame
+            ITRACE("slice data offset= %d, size = %d", sliceData->slice_offset, sliceData->slice_size);
+            return DECODE_MULTIPLE_FRAME;
         }
 
         for (uint32_t sliceIndex = 0; sliceIndex < picData->num_slices; sliceIndex++) {

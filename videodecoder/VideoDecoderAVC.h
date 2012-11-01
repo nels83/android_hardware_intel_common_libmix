@@ -77,6 +77,8 @@ private:
     uint8_t mToggleDPB; // 0 or 1
     bool mErrorConcealment;
     uint32_t mLastPictureFlags;
+    VideoExtensionBuffer mExtensionBuffer;
+    PackedFrameData mPackedFrame;
 };
 
 

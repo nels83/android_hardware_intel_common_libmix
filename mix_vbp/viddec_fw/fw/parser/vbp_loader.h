@@ -338,7 +338,8 @@ enum _vbp_parser_error
     VBP_DONE,
     VBP_MEM,
     VBP_PARM,
-    VBP_PARTIAL
+    VBP_PARTIAL,
+    VBP_MULTI
 };
 
 enum _vbp_parser_type

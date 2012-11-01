@@ -388,7 +388,10 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
         /* process parsing result */
         error = pcontext->func_process_parsing_result(pcontext, i);
 
-        if (0 != error)
+        if (VBP_MULTI == error) {
+            return VBP_OK;
+        }
+        else if (0 != error)
         {
             ETRACE("Failed to process parsing result.");
             return error;
