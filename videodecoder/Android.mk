@@ -8,7 +8,6 @@ LOCAL_SRC_FILES := \
     VideoDecoderWMV.cpp \
     VideoDecoderMPEG4.cpp \
     VideoDecoderAVC.cpp \
-    VideoDecoderVP8.cpp \
     VideoDecoderPAVC.cpp \
     VideoDecoderAVCSecure.cpp \
     VideoDecoderTrace.cpp
@@ -44,5 +43,15 @@ LOCAL_COPY_HEADERS := \
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva_videodecoder
+
+# Add source codes for Merrifield
+MERRIFIELD_PRODUCT := \
+        mrfl_vp \
+        mrfl_hvp \
+        mrfl_sle
+ifneq ($(filter $(TARGET_PRODUCT),$(MERRIFIELD_PRODUCT)),)
+LOCAL_SRC_FILES += VideoDecoderVP8.cpp
+LOCAL_CFLAGS += -DUSE_HW_VP8
+endif
 
 include $(BUILD_SHARED_LIBRARY)

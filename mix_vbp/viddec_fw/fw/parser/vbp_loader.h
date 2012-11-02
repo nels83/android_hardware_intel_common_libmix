@@ -28,8 +28,9 @@
 
 #include <va/va.h>
 
-
-
+#ifdef USE_HW_VP8
+#include <va/va_dec_vp8.h>
+#endif
 
 #ifndef TRUE
 #define TRUE 1
@@ -319,6 +320,54 @@ typedef struct _vbp_data_vc1
     vbp_picture_data_vc1* pic_data;
 } vbp_data_vc1;
 
+#ifdef USE_HW_VP8
+typedef struct _vbp_codec_data_vp8
+{
+    uint8 frame_type;
+    uint8 version_num;
+    int show_frame;
+
+    uint32 frame_width;
+    uint32 frame_height;
+
+    int refresh_alt_frame;
+    int refresh_golden_frame;
+    int refresh_last_frame;
+
+    int golden_copied;
+    int altref_copied;
+} vbp_codec_data_vp8;
+
+typedef struct _vbp_slice_data_vp8
+{
+    uint8 *buffer_addr;
+    uint32 slice_offset;
+    uint32 slice_size;
+    VASliceParameterBufferBase slc_parms;     /* pointer to slice parms */
+} vbp_slice_data_vp8;
+
+typedef struct _vbp_picture_data_vp8
+{
+    VAPictureParameterBufferVP8* pic_parms;   /* current parsed picture header */
+
+    uint32 num_slices;                        /* number of slices.  always one for VP8 */
+    vbp_slice_data_vp8 *slc_data;             /* pointer to array of slice data */
+} vbp_picture_data_vp8;
+
+typedef struct _vbp_data_vp8
+{
+    uint32 buf_number;                        /* rolling counter of buffers sent by vbp_parse */
+    vbp_codec_data_vp8 *codec_data;
+
+    uint32 num_pictures;
+
+    vbp_picture_data_vp8* pic_data;
+
+    VAProbabilityDataBufferVP8* prob_data;
+    VAIQMatrixBufferVP8* IQ_matrix_buf;
+} vbp_data_vp8;
+#endif
+
 enum _picture_type
 {
     VC1_PTYPE_I,
@@ -347,8 +396,12 @@ enum _vbp_parser_type
     VBP_VC1,
     VBP_MPEG2,
     VBP_MPEG4,
-    VBP_H264
+    VBP_H264,
+#ifdef USE_HW_VP8
+    VBP_VP8
+#endif
 };
+
 
 /*
  * open video bitstream parser to parse a specific media type.
@@ -382,7 +435,7 @@ uint32 vbp_parse(Handle hcontext, uint8 *data, uint32 size, uint8 init_data_flag
  * query parsing result.
  * @param hcontext: handle to VBP context.
  * @param data: pointer to hold a data blob that contains parsing result.
- * 				Structure of data blob is determined by the media type.
+ * Structure of data blob is determined by the media type.
  * @return VBP_OK on success, anything else on failure.
  *
  */

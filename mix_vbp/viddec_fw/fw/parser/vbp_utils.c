@@ -32,6 +32,9 @@
 #include "vbp_vc1_parser.h"
 #include "vbp_h264_parser.h"
 #include "vbp_mp42_parser.h"
+#ifdef USE_HW_VP8
+#include "vbp_vp8_parser.h"
+#endif
 
 
 /* buffer counter */
@@ -115,7 +118,15 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
         parser_name = "libmixvbp_h264.so";
 #endif
         break;
-
+#ifdef USE_HW_VP8
+    case VBP_VP8:
+#ifndef ANDROID
+        parser_name = "libmixvbp_vp8.so.0";
+#else
+        parser_name = "libmixvbp_vp8.so";
+#endif
+        break;
+#endif
     default:
         WTRACE("Unsupported parser type!");
         return VBP_TYPE;
@@ -153,6 +164,9 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
         SET_FUNC_POINTER(VBP_VC1, vc1);
         SET_FUNC_POINTER(VBP_MPEG4, mp42);
         SET_FUNC_POINTER(VBP_H264, h264);
+#ifdef USE_HW_VP8
+        SET_FUNC_POINTER(VBP_VP8, vp8);
+#endif
     }
 
     /* set entry points for parser operations:
@@ -248,7 +262,11 @@ static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
         /* OK for VC-1, MPEG2 and MPEG4. */
         if ((VBP_VC1 == pcontext->parser_type) ||
             (VBP_MPEG2 == pcontext->parser_type) ||
-            (VBP_MPEG4 == pcontext->parser_type))
+            (VBP_MPEG4 == pcontext->parser_type)
+#ifdef USE_HW_VP8
+            || (VBP_VP8 == pcontext->parser_type)
+#endif
+)
         {
             pcontext->persist_mem = NULL;
         }

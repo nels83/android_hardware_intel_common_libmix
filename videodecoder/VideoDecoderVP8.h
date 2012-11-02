@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2012 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -38,11 +38,56 @@ public:
     virtual void flush(void);
     virtual Decode_Status decode(VideoDecodeBuffer *buffer);
 
+private:
+    Decode_Status decodeFrame(VideoDecodeBuffer* buffer, vbp_data_vp8 *data);
+    Decode_Status decodePicture(vbp_data_vp8 *data, int32_t picIndex);
+    Decode_Status setReference(VAPictureParameterBufferVP8 *picParam, int32_t picIndex);
+    Decode_Status startVA(vbp_data_vp8 *data);
+    void updateReferenceFrames(vbp_data_vp8 *data);
+    void refreshLastReference(vbp_data_vp8 *data);
+    void refreshGoldenReference(vbp_data_vp8 *data);
+    void refreshAltReference(vbp_data_vp8 *data);
+    void updateFormatInfo(vbp_data_vp8 *data);
+    void invalidateReferenceFrames(int toggle);
 
 private:
     enum {
-        VP8_SURFACE_NUMBER = 10,
+        VP8_SURFACE_NUMBER = 9,
+        VP8_REF_SIZE = 3,
     };
+
+    enum {
+        VP8_KEY_FRAME = 0,
+        VP8_INTER_FRAME,
+        VP8_SKIPPED_FRAME,
+    };
+
+    enum {
+        VP8_LAST_REF_PIC = 0,
+        VP8_GOLDEN_REF_PIC,
+        VP8_ALT_REF_PIC,
+    };
+
+    enum {
+        BufferCopied_NoneToGolden   = 0,
+        BufferCopied_LastToGolden   = 1,
+        BufferCopied_AltRefToGolden = 2
+    };
+
+    enum {
+        BufferCopied_NoneToAltRef   = 0,
+        BufferCopied_LastToAltRef   = 1,
+        BufferCopied_GoldenToAltRef = 2
+    };
+
+    struct ReferenceFrameBuffer {
+        VideoSurfaceBuffer *surfaceBuffer;
+        int32_t index;
+    };
+
+    //[2] : [0 for current each reference frame, 1 for the previous each reference frame]
+    //[VP8_REF_SIZE] : [0 for last ref pic, 1 for golden ref pic, 2 for alt ref pic]
+    ReferenceFrameBuffer mRFBs[2][VP8_REF_SIZE];
 };
 
 

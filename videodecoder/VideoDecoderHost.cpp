@@ -27,6 +27,9 @@
 #include "VideoDecoderAVC.h"
 #include "VideoDecoderPAVC.h"
 #include "VideoDecoderAVCSecure.h"
+#ifdef USE_HW_VP8
+#include "VideoDecoderVP8.h"
+#endif
 #include "VideoDecoderHost.h"
 #include "VideoDecoderTrace.h"
 #include <string.h>
@@ -57,7 +60,15 @@ IVideoDecoder* createVideoDecoder(const char* mimeType) {
     } else if (strcasecmp(mimeType, "video/avc-secure") == 0) {
         VideoDecoderAVC *p = new VideoDecoderAVCSecure(mimeType);
         return (IVideoDecoder *)p;
-    } else {
+    }
+#ifdef USE_HW_VP8
+    else if (strcasecmp(mimeType, "video/vp8") == 0 ||
+        strcasecmp(mimeType, "video/x-vnd.on2.vp8") == 0) {
+        VideoDecoderVP8 *p = new VideoDecoderVP8(mimeType);
+        return (IVideoDecoder *)p;
+    }
+#endif
+    else {
         ETRACE("Unknown mime type: %s", mimeType);
     }
     return NULL;
