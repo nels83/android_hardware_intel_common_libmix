@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009, 2012 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -119,6 +119,9 @@ uint32 vbp_init_parser_entries_vc1(vbp_context *pcontext)
         ETRACE ("Failed to set entry point.");
         return VBP_LOAD;
     }
+
+    /* entry point not needed */
+    pcontext->parser_ops->flush = NULL;
 
     return VBP_OK;
 }

@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009, 2012 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -137,6 +137,10 @@ uint32 vbp_init_parser_entries_mp42( vbp_context *pcontext)
         return VBP_LOAD;
     }
 #endif
+
+    /* entry point not needed */
+    pcontext->parser_ops->flush = NULL;
+
     return VBP_OK;
 }
 

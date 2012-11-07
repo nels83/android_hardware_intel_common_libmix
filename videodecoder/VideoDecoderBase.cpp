@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009-2011 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009-2012 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -199,6 +199,11 @@ void VideoDecoderBase::flush(void) {
     mOutputHead = NULL;
     mOutputTail = NULL;
     mDecodingFrame = false;
+
+    // flush vbp parser
+    if (mParserHandle && (vbp_flush(mParserHandle) != VBP_OK)) {
+        WTRACE("Failed to flush parser. Continue");
+    }
 
     // initialize surface buffer without resetting mapped/raw data
     initSurfaceBuffer(false);

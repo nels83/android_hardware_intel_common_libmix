@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009, 2012 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -187,6 +187,14 @@ uint32 vbp_init_parser_entries_h264(vbp_context *pcontext)
         return VBP_LOAD;
     }
 #endif
+
+    pcontext->parser_ops->flush = dlsym(pcontext->fd_parser, "viddec_h264_flush");;
+    if (NULL == pcontext->parser_ops->flush)
+    {
+        ETRACE ("Failed to set entry point." );
+        return VBP_LOAD;
+    }
+
     /* entry point not needed */
     pcontext->parser_ops->is_frame_start = NULL;
     return VBP_OK;

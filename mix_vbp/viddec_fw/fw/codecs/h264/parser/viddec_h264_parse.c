@@ -562,6 +562,37 @@ static void viddec_h264_get_context_size(viddec_parser_memory_sizes_t *size)
                          + sizeof(int32_t) * MAX_NUM_REF_FRAMES_IN_PIC_ORDER_CNT_CYCLE;
 }
 
+/* ------------------------------------------------------------------------------------------ */
+/* ------------------------------------------------------------------------------------------ */
+/* ------------------------------------------------------------------------------------------ */
+#ifdef VBP
+void viddec_h264_flush(void *parent, void *ctxt)
+#else
+static void viddec_h264_flush(void *parent, void *ctxt)
+#endif
+{
+    int i;
+    struct h264_viddec_parser* parser = ctxt;
+    h264_Info * pInfo = &(parser->info);
+
+    /* flush the dpb and output all */
+    h264_dpb_flush_dpb(pInfo, 1, pInfo->img.second_field, pInfo->active_SPS.num_ref_frames);
+
+    /* reset the dpb to the initial state, avoid parser store
+       wrong data to dpb in next slice parsing */
+    h264_DecodedPictureBuffer *p_dpb = &pInfo->dpb;
+    for (i = 0; i < NUM_DPB_FRAME_STORES; i++)
+    {
+        p_dpb->fs[i].fs_idc = MPD_DPB_FS_NULL_IDC;
+        p_dpb->fs_dpb_idc[i] = MPD_DPB_FS_NULL_IDC;
+    }
+    p_dpb->used_size = 0;
+    p_dpb->fs_dec_idc = MPD_DPB_FS_NULL_IDC;
+    p_dpb->fs_non_exist_idc = MPD_DPB_FS_NULL_IDC;
+
+    return;
+}
+
 #ifndef VBP
 void viddec_h264_get_ops(viddec_parser_ops_t *ops)
 {
@@ -571,6 +602,7 @@ void viddec_h264_get_ops(viddec_parser_ops_t *ops)
     ops->get_cxt_size = viddec_h264_get_context_size;
     ops->is_wkld_done = viddec_h264_wkld_done;
     ops->is_frame_start = viddec_h264_is_frame_start;
+    ops->flush = viddec_h264_flush;
     return;
 }
 #endif

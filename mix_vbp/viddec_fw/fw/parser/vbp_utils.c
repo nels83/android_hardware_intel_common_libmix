@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009, 2012 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -571,11 +571,16 @@ uint32 vbp_utils_query(vbp_context *pcontext, void **data)
 
 /**
  *
- * flush parsing buffer. Currently it is no op.
+ * flush parsing buffer. Currently always succeed.
  *
  */
 uint32 vbp_utils_flush(vbp_context *pcontext)
 {
+    viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
+    viddec_parser_ops_t *ops = pcontext->parser_ops;
+    if (ops->flush != NULL) {
+        ops->flush((void *)cxt, (void *)&(cxt->codec_data[0]));
+    }
     return VBP_OK;
 }
 

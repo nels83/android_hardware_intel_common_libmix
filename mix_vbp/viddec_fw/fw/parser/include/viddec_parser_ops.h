@@ -25,6 +25,8 @@ typedef    uint32_t (*fn_is_wkld_done)(void *parent, void *ctxt, uint32_t next_s
 typedef    uint32_t (*fn_is_frame_start)(void *ctxt);
 typedef    uint32_t (*fn_gen_contrib_tags)(void *parent, uint32_t ignore_partial);
 typedef    uint32_t (*fn_gen_assoc_tags)(void *parent);
+typedef    void (*fn_flush_parser) (void *parent, void *ctxt);
+
 
 typedef struct
 {
@@ -36,6 +38,7 @@ typedef struct
     fn_is_frame_start is_frame_start;
     fn_gen_contrib_tags gen_contrib_tags;
     fn_gen_assoc_tags gen_assoc_tags;
+    fn_flush_parser flush;
 } viddec_parser_ops_t;
 
 
