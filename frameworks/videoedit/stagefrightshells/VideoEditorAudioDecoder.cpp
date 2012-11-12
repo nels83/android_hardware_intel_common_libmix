@@ -349,6 +349,7 @@ M4OSA_ERR VideoEditorAudioDecoder_parse_AAC_DSI(M4OSA_Int8* pDSI,
     M4OSA_ERR err = M4NO_ERROR;
     M4OSA_UInt32 offset = 0;
     M4OSA_Int32 result = 0;
+    M4OSA_Int32 extensionAudioObjectType = 0;
 
     ALOGV("VideoEditorAudioDecoder_parse_AAC_DSI begin");
 
@@ -386,6 +387,11 @@ M4OSA_ERR VideoEditorAudioDecoder_parse_AAC_DSI(M4OSA_Int8* pDSI,
     // Get the frequency index
     err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 4, &result, &offset);
     VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+    if (result == 0x0f) {
+        // Get the frequency index again
+        err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 24, &result, &offset);
+        VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+    }
     VIDEOEDITOR_CHECK((0 <= result) && (FREQ_TABLE_SIZE > result),
         M4ERR_PARAMETER);
     pProperties->aSampFreq = AD_AAC_FREQ_TABLE[result];
@@ -395,6 +401,76 @@ M4OSA_ERR VideoEditorAudioDecoder_parse_AAC_DSI(M4OSA_Int8* pDSI,
     err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 4, &result, &offset);
     VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
     pProperties->aNumChan = (M4OSA_UInt32)result;
+
+    if (pProperties->aAudioObjectType == 5) {
+        extensionAudioObjectType = pProperties->aAudioObjectType;
+        // Get extension sampling frequency index
+        err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 4, &result, &offset);
+        VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        if (result == 0x0f) {
+            err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 24, &result, &offset);
+            VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        }
+        VIDEOEDITOR_CHECK((0 <= result) && (FREQ_TABLE_SIZE > result),
+            M4ERR_PARAMETER);
+        pProperties->aExtensionSampFreq = AD_AAC_FREQ_TABLE[result];
+        // Get the object type again
+        err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 5, &result, &offset);
+        VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        pProperties->aAudioObjectType = (M4OSA_Int32)result;
+    }
+
+    // It's for implicit signal the presence of SBR data with AAC-LC  audio object type(AOT = 2)
+    if (pProperties->aAudioObjectType == 2) { /* parseGASpecificConfig begin*/
+        // Get frame length flag
+        err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 1, &result, &offset);
+        VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        // Get depends on core coder
+        err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 1, &result, &offset);
+        VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        if (result) {
+            // Get core coder delay
+            err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 1, &result, &offset);
+            VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        }
+        // Get extension flag
+        err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 1, &result, &offset);
+        VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        if (result) {
+            // Get extension flag3
+            err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 1, &result, &offset);
+            VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        }
+    }/* parseGASpecificConfig end*/
+
+    if (extensionAudioObjectType != 5 && (dsiSize*8 - offset) >= 16) {
+        // get sync extension type
+        err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 11, &result, &offset);
+           VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+        if (result == 0x2b7) {
+            ALOGV("found syncExtension");
+            // Get extension Audio Object Type
+            err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 5, &extensionAudioObjectType, &offset);
+            VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+            // get SBR present flag
+            err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 1, &result, &offset);
+            VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+            pProperties->aSBRPresent = result;
+            if (result == 1) {
+                // Get extension sampling frequency index
+                err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 4, &result, &offset);
+                VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+                if (result == 0x0f) {
+                    // Get extension sampling frequency index again
+                    err = VideoEditorAudioDecoder_getBits(pDSI, dsiSize, 24, &result, &offset);
+                    VIDEOEDITOR_CHECK(M4NO_ERROR == err, err);
+                }
+                VIDEOEDITOR_CHECK((0 <= result) && (FREQ_TABLE_SIZE > result),
+                    M4ERR_PARAMETER);
+                pProperties->aExtensionSampFreq = AD_AAC_FREQ_TABLE[result];
+            }
+        }
+    }
 
     // Set the max PCM samples per channel
     pProperties->aMaxPCMSamplesPerCh = (pProperties->aSBRPresent) ? 2048 : 1024;
