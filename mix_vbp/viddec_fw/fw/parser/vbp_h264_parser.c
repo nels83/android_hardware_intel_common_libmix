@@ -1472,6 +1472,9 @@ static inline uint32_t vbp_get_NAL_length_h264(uint8_t* p, int *NAL_length_size)
 * instead, it is comprised of size of NAL unit and payload
 * of NAL unit. See spec 15 (Sample format)
 */
+
+/* Start code prefix is 001 which is 3 bytes. */
+#define H264_SC_SIZE 3
 uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
 {
     viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
@@ -1586,7 +1589,7 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
                 {
                     cxt->list.data[cxt->list.num_items].stpos =
                         cubby.sc_end_pos + cxt->list.data[cxt->list.num_items - 1].stpos;
-                    cxt->list.data[cxt->list.num_items - 1].edpos = cxt->list.data[cxt->list.num_items].stpos - cubby.phase; /* offset before start code */
+                    cxt->list.data[cxt->list.num_items - 1].edpos = cxt->list.data[cxt->list.num_items].stpos - H264_SC_SIZE;
                 }
 
                 cubby.phase = 0;
