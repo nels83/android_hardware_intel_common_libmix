@@ -1,4 +1,4 @@
-ifeq ($(strip $(USE_INTEL_ASF_EXTRACTOR)),true)
+ifeq ($(strip $(USE_INTEL_VA)),true)
 
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
@@ -9,7 +9,6 @@ LOCAL_COPY_HEADERS := VAVideoDecoder.h
 LOCAL_SRC_FILES := \
     VAVideoDecoder.cpp \
 
-#LOCAL_SHARED_LIBRARIES += libasfparser
 
 LOCAL_C_INCLUDES := \
     $(TOP)/frameworks/av/media/libstagefright/include \
