@@ -44,6 +44,7 @@ typedef enum {
     MEM_MODE_GFXHANDLE = 32,
     MEM_MODE_KBUFHANDLE = 64,
     MEM_MODE_ION = 128,
+    MEM_MODE_NONECACHE_USRPTR = 256,
 }MemMode;
 
 typedef struct {

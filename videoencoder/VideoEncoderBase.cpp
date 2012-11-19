@@ -1684,7 +1684,10 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
     vaSurfaceAttrib.luma_stride = map->vinfo.lumaStride;
     vaSurfaceAttrib.buffers[0] = map->value;
     vaSurfaceAttrib.pixel_format = map->vinfo.format;
-    vaSurfaceAttrib.type = VAExternalMemoryUserPointer;
+    if (map->vinfo.mode == MEM_MODE_NONECACHE_USRPTR)
+        vaSurfaceAttrib.type = VAExternalMemoryNoneCacheUserPointer;
+    else
+        vaSurfaceAttrib.type = VAExternalMemoryUserPointer;
 
     vaStatus = vaCreateSurfacesWithAttribute(
             mVADisplay, map->vinfo.width, map->vinfo.height, VA_RT_FORMAT_YUV420,
@@ -1721,6 +1724,7 @@ LOG_I("surfaceMapping mode=%d, format=%d, lumaStride=%d, width=%d, height=%d, va
             status = surfaceMappingForKbufHandle(map);
             break;
         case MEM_MODE_MALLOC:
+        case MEM_MODE_NONECACHE_USRPTR:
             status = surfaceMappingForMalloc(map);
             break;
         case MEM_MODE_ION:
