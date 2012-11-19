@@ -128,6 +128,16 @@ status_t VAVideoDecoder::start(MetaData *params) {
         LOGW("No configuration data found!");
     }
 
+    // A threshold is used here to avoid mediaserver allocate too big
+    // memory (like 3GB) and crash in MPEG4Source::start. The
+    // threshold is set to be input port size limit for Intel decoders.
+    int32_t max_size;
+    if (meta->findInt32(kKeyMaxInputSize, &max_size)) {
+        if (max_size > MAXINPUTSIZE || max_size < 0) {
+            LOGE("Invalid kKeyMaxInputSize!");
+            return ERROR_MALFORMED;
+        }
+    }
     configBuffer.flag |= WANT_RAW_OUTPUT;
     mFormat->setInt32(kKeyColorFormat, OMX_COLOR_FormatYUV420SemiPlanar);
     mFormat->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_RAW);

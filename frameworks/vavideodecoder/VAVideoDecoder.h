@@ -68,6 +68,11 @@ private:
     enum {
         NUM_OF_MEDIA_BUFFER = 20,
     };
+    // The maximum input size is set to be size of one 1080P 4:4:4 image.
+    // It is calculated as 1920x1080x3 = 6220800 bytes.
+   enum {
+        MAXINPUTSIZE = 6220800,
+   };
     sp<MediaSource> mSource;
     bool mStarted;
     bool mRawOutput;
