@@ -199,7 +199,8 @@ uint32 vbp_process_parsing_result_mp42(vbp_context *pcontext, int list_index)
                 {
                     // this should never happen!!!!
                     WTRACE ("Short video header is parsed.\n");
-                    vbp_on_vop_svh_mp42(pcontext, list_index);
+                    // vbp_on_vop_svh_mp42(pcontext, list_index);
+                    return VBP_TYPE;
                 }
             }
             break;

@@ -442,6 +442,11 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
     int32_t                 getbits=0;
 
 //DEB("entering mp4_Parse_VideoObjectLayer: bs_err: %d, ret: %d\n", parser->bitstream_error, ret);
+
+    // Trying to parse more header data as it is more important than frame data
+    if (parser->bitstream_error > MP4_HDR_ERROR_MASK)
+        return ret;
+
     do {
         vidObjLay->VideoObjectPlane.sprite_transmit_mode = MP4_SPRITE_TRANSMIT_MODE_PIECE;
 
@@ -579,8 +584,10 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
     } while (0);
 
     mp4_set_hdr_bitstream_error(parser, true, ret);
-    if (ret != MP4_STATUS_OK)
+    if (ret != MP4_STATUS_OK) {
         parser->bitstream_error |= MP4_BS_ERROR_HDR_NONDEC;
+        return ret;
+    }
 //DEB("before wkld mp4_Parse_VideoObjectLayer: bs_err: %d, ret: %d\n", parser->bitstream_error, ret);
 
     // POPULATE WORKLOAD ITEM

@@ -495,6 +495,9 @@ Decode_Status VideoDecoderMPEG4::setReference(VAPictureParameterBufferMPEG4 *pic
         case MP4_VOP_TYPE_B:
             picParam->vop_fields.bits.backward_reference_vop_coding_type = mLastVOPCodingType;
             // WEIRD, CHECK AGAIN !!!!!!!
+            if (mLastReference == NULL || mForwardReference == NULL) {
+                return DECODE_NO_REFERENCE;
+            }
             picParam->forward_reference_picture = mLastReference->renderBuffer.surface;
             picParam->backward_reference_picture = mForwardReference->renderBuffer.surface;
             break;
