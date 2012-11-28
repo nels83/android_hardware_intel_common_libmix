@@ -45,11 +45,11 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva_videodecoder
 
 # Add source codes for Merrifield
-MERRIFIELD_PRODUCT := \
+MERRIFIELD_DEVICE := \
         mrfl_vp \
         mrfl_hvp \
         mrfl_sle
-ifneq ($(filter $(TARGET_PRODUCT),$(MERRIFIELD_PRODUCT)),)
+ifneq ($(filter $(REF_DEVICE_NAME),$(MERRIFIELD_DEVICE)),)
 LOCAL_SRC_FILES += VideoDecoderVP8.cpp
 LOCAL_CFLAGS += -DUSE_HW_VP8
 endif
