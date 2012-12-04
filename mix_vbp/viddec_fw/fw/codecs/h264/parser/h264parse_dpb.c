@@ -3492,7 +3492,7 @@ void h264_dpb_flush_dpb (h264_Info* pInfo,int32_t output_all, int32_t keep_compl
 
     // output frames in POC order
     if (output_all) {
-        while (p_dpb->used_size - keep_complement) {
+        while ((p_dpb->used_size > 0) && (p_dpb->used_size - keep_complement)) {
             h264_dpb_queue_update(pInfo, 1, 0, 0,num_ref_frames);
         }
     }

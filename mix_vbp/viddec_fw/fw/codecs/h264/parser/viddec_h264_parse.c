@@ -575,8 +575,8 @@ static void viddec_h264_flush(void *parent, void *ctxt)
     struct h264_viddec_parser* parser = ctxt;
     h264_Info * pInfo = &(parser->info);
 
-    /* flush the dpb and output all */
-    h264_dpb_flush_dpb(pInfo, 1, pInfo->img.second_field, pInfo->active_SPS.num_ref_frames);
+    /* just flush dpb and disable output */
+    h264_dpb_flush_dpb(pInfo, 0, pInfo->img.second_field, pInfo->active_SPS.num_ref_frames);
 
     /* reset the dpb to the initial state, avoid parser store
        wrong data to dpb in next slice parsing */
