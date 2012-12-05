@@ -8,5 +8,5 @@ include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/mix_vbp/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/asfparser/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/videodecoder/Android.mk
 include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/videoencoder/Android.mk
-
+include $(VENDORS_INTEL_MRST_LIBMIX_ROOT)/imagedecoder/Android.mk
 endif
