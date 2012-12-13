@@ -228,10 +228,8 @@ mp4_Parse_VOL_sprite(void *parent,  viddec_mp4_parser_t *parser)
             cxt->no_of_sprite_warping_points = code >> 3;
             if (cxt->no_of_sprite_warping_points > 1)
             {
-                DEB("Error: mp4_Parse_VideoObject:bad no_of_sprite_warping_points %d\n",
+                DEB("Warning: mp4_Parse_VideoObject:bad no_of_sprite_warping_points %d\n",
                     cxt->no_of_sprite_warping_points);
-                ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
-                break;
             }
 
             if ((vidObjLay->sprite_enable == MP4_SPRITE_GMC) && (cxt->sprite_brightness_change))

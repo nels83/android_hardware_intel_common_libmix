@@ -278,8 +278,6 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data) {
         int codingType = picParam->vop_fields.bits.vop_coding_type;
         if (codingType == MP4_VOP_TYPE_S && picParam->no_of_sprite_warping_points > 1) {
             WTRACE("Hardware only supports up to one warping point (stationary or translation)");
-            // TODO:  we actually can't decode this frame
-            return DECODE_FAIL;
         }
 
         if (picData->vop_coded == 0) {
@@ -371,7 +369,7 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data) {
             mAcquiredBuffer->renderBuffer.flag = 0;
             mAcquiredBuffer->renderBuffer.timeStamp = mCurrentPTS;
 
-            if (codingType == MP4_VOP_TYPE_I || codingType == MP4_VOP_TYPE_P) {
+            if (codingType != MP4_VOP_TYPE_B) {
                 mLastVOPCodingType = codingType;
                 mLastVOPTimeIncrement = picData->vop_time_increment;
             }
