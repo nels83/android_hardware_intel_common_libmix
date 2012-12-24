@@ -675,9 +675,12 @@ void h264_update_frame_type(h264_Info * pInfo )
     {
         if (pInfo->nal_unit_type == h264_NAL_UNIT_TYPE_IDR)
         {
-            pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (0x1 << FRAME_TYPE_STRUCTRUE_OFFSET)|(FRAME_TYPE_IDR << FRAME_TYPE_FRAME_OFFSET);
+            if (pInfo->dpb.fs_dec_idc < NUM_DPB_FRAME_STORES)
+            {
+                pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (0x1 << FRAME_TYPE_STRUCTRUE_OFFSET)|(FRAME_TYPE_IDR << FRAME_TYPE_FRAME_OFFSET);
             //pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = 0xff;
             //pInfo->dpb.fs[0].pic_type = pInfo->dpb.fs_dec_idc;
+            }
 
         }
         else
