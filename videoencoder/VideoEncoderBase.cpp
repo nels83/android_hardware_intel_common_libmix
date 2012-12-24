@@ -1563,7 +1563,14 @@ Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle(SurfaceMap *map) {
 
     vaSurfaceAttrib.count = 1;
     // OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
-    vaSurfaceAttrib.luma_stride = (mComParams.resolution.width + 0x1ff) & (~0x1ff);
+    if (mComParams.resolution.width <= 512)
+        vaSurfaceAttrib.luma_stride = 512;
+    else if (mComParams.resolution.width > 512 && mComParams.resolution.width <= 1024)
+        vaSurfaceAttrib.luma_stride = 1024;
+    else if (mComParams.resolution.width > 1024 && mComParams.resolution.width <= 1280)
+        vaSurfaceAttrib.luma_stride = 1280;
+    else
+        vaSurfaceAttrib.luma_stride = 2048;
     vaSurfaceAttrib.pixel_format = map->vinfo.format;
     vaSurfaceAttrib.width = mComParams.resolution.width;
     vaSurfaceAttrib.height = mComParams.resolution.height;
