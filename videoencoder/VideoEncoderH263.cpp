@@ -14,6 +14,7 @@
 
 VideoEncoderH263::VideoEncoderH263() {
     mComParams.profile = (VAProfile)PROFILE_H263BASELINE;
+    mAutoReferenceSurfaceNum = 2;
 }
 
 Encode_Status VideoEncoderH263::sendEncodeCommand(EncodeTask *task) {
@@ -86,8 +87,14 @@ Encode_Status VideoEncoderH263::renderPictureParams(EncodeTask *task) {
     LOG_V( "Begin\n\n");
 
     // set picture params for HW
-    h263PictureParams.reference_picture = task->ref_surface[0];
-    h263PictureParams.reconstructed_picture = task->rec_surface;
+    if(mAutoReference == false){
+        h263PictureParams.reference_picture = task->ref_surface;
+        h263PictureParams.reconstructed_picture = task->rec_surface;
+    }else {
+        h263PictureParams.reference_picture = mAutoRefSurfaces[0];
+        h263PictureParams.reconstructed_picture = mAutoRefSurfaces[1];
+    }
+
     h263PictureParams.coded_buf = task->coded_buffer;
     h263PictureParams.picture_width = mComParams.resolution.width;
     h263PictureParams.picture_height = mComParams.resolution.height;

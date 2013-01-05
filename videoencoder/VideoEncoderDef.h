@@ -142,7 +142,7 @@ typedef struct {
     VideoOutputFormat format; //output format
     int64_t timeStamp; //reserved
     FrameType type;
-    uint8_t *in_data; //indicate corresponding input data
+    void *priv; //indicate corresponding input data
 } VideoEncOutputBuffer;
 
 typedef struct {
@@ -152,6 +152,7 @@ typedef struct {
     int64_t timeStamp; //reserved
     FrameType type; //frame type expected to be encoded
     int flag; // flag to indicate buffer property
+    void *priv; //indicate corresponding input data
 } VideoEncRawBuffer;
 
 struct VideoEncSurfaceBuffer {
@@ -288,6 +289,7 @@ enum VideoParamConfigType {
     VideoParamsTypeUsrptrBuffer,
     VideoParamsTypeHRD,
     VideoParamsTypeStoreMetaDataInBuffers,
+    VideoParamsTypeProfileLevel,
 
     VideoConfigTypeFrameRate,
     VideoConfigTypeBitRate,
@@ -474,6 +476,18 @@ struct VideoParamsStoreMetaDataInBuffers : VideoParamConfigSet {
     }
 
     bool isEnabled;
+};
+
+struct VideoParamsProfileLevel : VideoParamConfigSet {
+
+    VideoParamsProfileLevel() {
+        type = VideoParamsTypeProfileLevel;
+        size = sizeof(VideoParamsProfileLevel);
+    }
+
+    VAProfile profile;
+    uint32_t level;
+    bool isSupported;
 };
 
 struct VideoConfigFrameRate : VideoParamConfigSet {

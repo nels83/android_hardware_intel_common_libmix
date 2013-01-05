@@ -17,6 +17,7 @@ VideoEncoderMP4::VideoEncoderMP4()
     :mProfileLevelIndication(3)
     ,mFixedVOPTimeIncrement(0) {
     mComParams.profile = (VAProfile)PROFILE_MPEG4SIMPLE;
+    mAutoReferenceSurfaceNum = 2;
 }
 
 Encode_Status VideoEncoderMP4::getHeaderPos(
@@ -175,8 +176,14 @@ Encode_Status VideoEncoderMP4::renderPictureParams(EncodeTask *task) {
     LOG_V( "Begin\n\n");
 
     // set picture params for HW
-    mpeg4_pic_param.reference_picture = task->ref_surface[0];
-    mpeg4_pic_param.reconstructed_picture = task->rec_surface;
+    if(mAutoReference == false){
+        mpeg4_pic_param.reference_picture = task->ref_surface;
+        mpeg4_pic_param.reconstructed_picture = task->rec_surface;
+    }else {
+        mpeg4_pic_param.reference_picture = mAutoRefSurfaces[0];
+        mpeg4_pic_param.reconstructed_picture = mAutoRefSurfaces[1];
+    }
+
     mpeg4_pic_param.coded_buf = task->coded_buffer;
     mpeg4_pic_param.picture_width = mComParams.resolution.width;
     mpeg4_pic_param.picture_height = mComParams.resolution.height;

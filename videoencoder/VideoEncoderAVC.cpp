@@ -15,6 +15,13 @@
 
 VideoEncoderAVC::VideoEncoderAVC()
     :VideoEncoderBase() {
+    if(VideoEncoderBase::queryProfileLevelConfig(mVADisplay, VAProfileH264High) == ENCODE_SUCCESS){
+        mComParams.profile = VAProfileH264High;
+        mComParams.level = 42;
+    }else if(VideoEncoderBase::queryProfileLevelConfig(mVADisplay, VAProfileH264Main) == ENCODE_SUCCESS){
+        mComParams.profile = VAProfileH264Main;
+        mComParams.level = 41;
+    }
     mVideoParamsAVC.basicUnitSize = 0;
     mVideoParamsAVC.VUIFlag = 0;
     mVideoParamsAVC.sliceNum.iSliceNum = 2;
@@ -30,6 +37,7 @@ VideoEncoderAVC::VideoEncoderAVC()
     mVideoParamsAVC.crop.BottomOffset = 0;
     mVideoParamsAVC.SAR.SarWidth = 0;
     mVideoParamsAVC.SAR.SarHeight = 0;
+    mAutoReferenceSurfaceNum = 4;
 }
 
 Encode_Status VideoEncoderAVC::start() {
@@ -59,6 +67,12 @@ Encode_Status VideoEncoderAVC::derivedSetParams(VideoParamConfigSet *videoEncPar
     if (encParamsAVC->size != sizeof (VideoParamsAVC)) {
         return ENCODE_INVALID_PARAMS;
     }
+
+    if(encParamsAVC->ipPeriod == 0 || encParamsAVC->ipPeriod >4)
+        return ENCODE_INVALID_PARAMS;
+
+    if((mComParams.intraPeriod >1)&&(mComParams.intraPeriod % encParamsAVC->ipPeriod !=0))
+        return ENCODE_INVALID_PARAMS;
 
     mVideoParamsAVC = *encParamsAVC;
     return ENCODE_SUCCESS;
@@ -93,6 +107,11 @@ Encode_Status VideoEncoderAVC::derivedSetConfig(VideoParamConfigSet *videoEncCon
             if (configAVCIntraPeriod->size != sizeof (VideoConfigAVCIntraPeriod)) {
                 return ENCODE_INVALID_PARAMS;
             }
+
+            if(configAVCIntraPeriod->ipPeriod == 0 || configAVCIntraPeriod->ipPeriod >4)
+                return ENCODE_INVALID_PARAMS;
+            if((configAVCIntraPeriod->intraPeriod >1)&&(configAVCIntraPeriod->intraPeriod % configAVCIntraPeriod->ipPeriod !=0))
+                return ENCODE_INVALID_PARAMS;
 
             mVideoParamsAVC.idrInterval = configAVCIntraPeriod->idrInterval;
             mVideoParamsAVC.ipPeriod = configAVCIntraPeriod->ipPeriod;
@@ -199,29 +218,34 @@ Encode_Status VideoEncoderAVC::updateFrameInfo(EncodeTask* task) {
     uint32_t idrPeroid = mComParams.intraPeriod * mVideoParamsAVC.idrInterval;
     FrameType frametype;
     uint32_t frame_num = mFrameNum;
+    uint32_t intraPeriod = mComParams.intraPeriod;
 
-    if (mVideoParamsAVC.idrInterval != 0) {
+    if (idrPeroid != 0) {
         if(mVideoParamsAVC.ipPeriod > 1)
             frame_num = frame_num % (idrPeroid + 1);
-        else  if(mComParams.intraPeriod != 0)
+        else
             frame_num = frame_num % idrPeroid ;
+    }else{
+        if (mComParams.intraPeriod == 0)
+            intraPeriod = 0xFFFFFFFF;
     }
+
 
     if(frame_num ==0){
         frametype = FTYPE_IDR;
-    }else if(mComParams.intraPeriod ==0)
+    }else if(intraPeriod ==1)
         // only I frame need intraPeriod=idrInterval=ipPeriod=0
         frametype = FTYPE_I;
     else if(mVideoParamsAVC.ipPeriod == 1){ // no B frame
-        if(mComParams.intraPeriod != 0 && (frame_num >  1) &&((frame_num -1)%mComParams.intraPeriod == 0))
+        if((frame_num >  1) &&((frame_num -1)%intraPeriod == 0))
             frametype = FTYPE_I;
         else
             frametype = FTYPE_P;
-    } else { 
-        if(mComParams.intraPeriod != 0 &&((frame_num-1)%mComParams.intraPeriod == 0)&&(frame_num >mComParams.intraPeriod))
+    } else {
+        if(((frame_num-1)%intraPeriod == 0)&&(frame_num >intraPeriod))
             frametype = FTYPE_I;
         else{
-            frame_num = frame_num%mComParams.intraPeriod;
+            frame_num = frame_num%intraPeriod;
             if(frame_num == 0)
                 frametype = FTYPE_B;
             else if((frame_num-1)%mVideoParamsAVC.ipPeriod == 0)
@@ -887,17 +911,19 @@ Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
 
     LOG_V( "Begin\n\n");
     // set picture params for HW
-    avcPicParams.ReferenceFrames[0].picture_id= task->ref_surface[0];
-    avcPicParams.CurrPic.picture_id= task->rec_surface;
+    if(mAutoReference == false){
+        avcPicParams.ReferenceFrames[0].picture_id= task->ref_surface;
+        avcPicParams.CurrPic.picture_id= task->rec_surface;
+    }else {
+        for(int i =0; i< mAutoReferenceSurfaceNum; i++)
+            avcPicParams.ReferenceFrames[i].picture_id = mAutoRefSurfaces[i];
+    }
     avcPicParams.coded_buf = task->coded_buffer;
-    //avcPicParams.picture_width = mComParams.resolution.width;
-    //avcPicParams.picture_height = mComParams.resolution.height;
     avcPicParams.last_picture = 0;
 
     LOG_V("======h264 picture params======\n");
     LOG_I( "reference_picture = 0x%08x\n", avcPicParams.ReferenceFrames[0].picture_id);
     LOG_I( "reconstructed_picture = 0x%08x\n", avcPicParams.CurrPic.picture_id);
-//    LOG_I( "coded_buf_index = %d\n", mCodedBufIndex);
     LOG_I( "coded_buf = 0x%08x\n", avcPicParams.coded_buf);
     //LOG_I( "picture_width = %d\n", avcPicParams.picture_width);
     //LOG_I( "picture_height = %d\n\n", avcPicParams.picture_height);

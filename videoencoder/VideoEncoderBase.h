@@ -17,7 +17,6 @@
 #include <utils/List.h>
 #include <utils/threads.h>
 
-//#define AUTO_REFERENCE
 struct SurfaceMap {
     VASurfaceID surface;
     MetadataBufferType type;
@@ -28,14 +27,14 @@ struct SurfaceMap {
 
 struct EncodeTask {
     VASurfaceID enc_surface;
-    VASurfaceID ref_surface[2];
+    VASurfaceID ref_surface;
     VASurfaceID rec_surface;
     VABufferID coded_buffer;
 
     FrameType type;
     int flag;
     int64_t timestamp;  //corresponding input frame timestamp
-    uint8_t *in_data;  //input buffer data
+    void *priv;  //input buffer data
 
     bool completed;   //if encode task is done complet by HW
 };
@@ -77,6 +76,7 @@ protected:
     Encode_Status renderDynamicFrameRate();
     Encode_Status renderDynamicBitrate();
     Encode_Status renderHrd();
+    Encode_Status queryProfileLevelConfig(VADisplay dpy, VAProfile profile);
 
 private:
     void setDefaultParams(void);
@@ -96,6 +96,7 @@ private:
     Encode_Status prepareForOutput(VideoEncOutputBuffer *outBuffer, bool *useLocalBuffer);
     Encode_Status cleanupForOutput();
     Encode_Status outputAllData(VideoEncOutputBuffer *outBuffer);
+    Encode_Status queryAutoReferenceConfig(VAProfile profile);
 
 protected:
 
@@ -125,6 +126,7 @@ protected:
     VABufferID mFrameRateParamBuf;
     VABufferID mPicParamBuf;
     VABufferID mSliceParamBuf;
+    VASurfaceID* mAutoRefSurfaces;
 
     android::List <SurfaceMap *> mSrcSurfaceMapList;  //all mapped surface info list from input buffer
     android::List <EncodeTask *> mEncodeTaskList;  //all encode tasks list
@@ -134,6 +136,8 @@ protected:
     VASurfaceID mRecSurface;        //reconstructed surface, only used in base
     uint32_t mFrameNum;
     uint32_t mCodedBufSize;
+    bool mAutoReference;
+    uint32_t mAutoReferenceSurfaceNum;
 
     bool mSliceSizeOverflow;
 

@@ -41,7 +41,6 @@ VideoEncoderBase::VideoEncoderBase()
     ,mVAEntrypoint(VAEntrypointEncSlice)
     ,mCodedBufSize(0)
     ,mNewHeader(false)
-    //,mAutoReference(17 /*VAConfigAttribEncAutoReference*/)
     ,mRenderMaxSliceSize(false)
     ,mRenderQP (false)
     ,mRenderAIR(false)
@@ -53,7 +52,10 @@ VideoEncoderBase::VideoEncoderBase()
     ,mSliceParamBuf(0)
     ,mRefSurface(VA_INVALID_SURFACE)
     ,mRecSurface(VA_INVALID_SURFACE)
+    ,mAutoRefSurfaces(NULL)
     ,mFrameNum(0)
+    ,mAutoReference(false)
+    ,mAutoReferenceSurfaceNum(4)
     ,mSliceSizeOverflow(false)
     ,mCurOutputTask(NULL)
     ,mOutCodedBuffer(0)
@@ -85,7 +87,6 @@ VideoEncoderBase::VideoEncoderBase()
         LOG_E( "Failed vaInitialize, vaStatus = %d\n", vaStatus);
         mInitialized = false;
     }
-
 }
 
 VideoEncoderBase::~VideoEncoderBase() {
@@ -118,25 +119,32 @@ Encode_Status VideoEncoderBase::start() {
         return ENCODE_ALREADY_INIT;
     }
 
-    VAConfigAttrib vaAttrib[2];
+    queryAutoReferenceConfig(mComParams.profile);
+
+    VAConfigAttrib vaAttrib[3];
     vaAttrib[0].type = VAConfigAttribRTFormat;
     vaAttrib[1].type = VAConfigAttribRateControl;
+    vaAttrib[2].type = VAConfigAttribEncAutoReference;
     vaAttrib[0].value = VA_RT_FORMAT_YUV420;
     vaAttrib[1].value = mComParams.rcMode;
+    vaAttrib[2].value = mAutoReference ? 1 : VA_ATTRIB_NOT_SUPPORTED;
 
     LOG_V( "======VA Configuration======\n");
     LOG_I( "profile = %d\n", mComParams.profile);
     LOG_I( "mVAEntrypoint = %d\n", mVAEntrypoint);
     LOG_I( "vaAttrib[0].type = %d\n", vaAttrib[0].type);
     LOG_I( "vaAttrib[1].type = %d\n", vaAttrib[1].type);
+    LOG_I( "vaAttrib[2].type = %d\n", vaAttrib[2].type);
     LOG_I( "vaAttrib[0].value (Format) = %d\n", vaAttrib[0].value);
     LOG_I( "vaAttrib[1].value (RC mode) = %d\n", vaAttrib[1].value);
+    LOG_I( "vaAttrib[2].value (AutoReference) = %d\n", vaAttrib[2].value);
 
     LOG_V( "vaCreateConfig\n");
 
     vaStatus = vaCreateConfig(
             mVADisplay, mComParams.profile, mVAEntrypoint,
             &vaAttrib[0], 2, &(mVAConfig));
+//            &vaAttrib[0], 3, &(mVAConfig));  //uncomment this after psb_video supports
     CHECK_VA_STATUS_RETURN("vaCreateConfig");
 
     if (mComParams.rcMode == VA_RC_VCM) {
@@ -150,7 +158,12 @@ Encode_Status VideoEncoderBase::start() {
 
     VASurfaceID surfaces[2];
     VASurfaceAttributeTPI attribute_tpi;
-    uint32_t stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
+    uint32_t stride_aligned;
+    if(mAutoReference == false)
+        stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
+    else
+        stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;  //on Merr, stride must be 64 aligned.
+
     uint32_t height_aligned = ((mComParams.resolution.height + 15) / 16 ) * 16;
 
     attribute_tpi.size = stride_aligned * height_aligned * 3 / 2;
@@ -163,21 +176,25 @@ Encode_Status VideoEncoderBase::start() {
     attribute_tpi.pixel_format = VA_FOURCC_NV12;
     attribute_tpi.type = VAExternalMemoryNULL;
 
-#ifndef AUTO_REFERENCE
+    if(mAutoReference == false){
         vaCreateSurfacesWithAttribute(mVADisplay, stride_aligned, height_aligned,
                 VA_RT_FORMAT_YUV420, 2, surfaces, &attribute_tpi);
         CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
         mRefSurface = surfaces[0];
         mRecSurface = surfaces[1];
-#endif
+    }else {
+        mAutoRefSurfaces = new VASurfaceID [mAutoReferenceSurfaceNum];
+        vaCreateSurfacesWithAttribute(mVADisplay, stride_aligned, height_aligned,
+                VA_RT_FORMAT_YUV420, mAutoReferenceSurfaceNum, mAutoRefSurfaces, &attribute_tpi);
+        CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
+    }
 
     //Prepare all Surfaces to be added into Context
     uint32_t contextSurfaceCnt;
-#ifndef AUTO_REFERENCE
+    if(mAutoReference == false )
         contextSurfaceCnt = 2 + mSrcSurfaceMapList.size();
-#else
-        contextSurfaceCnt = mSrcSurfaceMapList.size();
-#endif
+    else
+        contextSurfaceCnt = mAutoReferenceSurfaceNum + mSrcSurfaceMapList.size();
 
     VASurfaceID *contextSurfaces = new VASurfaceID[contextSurfaceCnt];
     int32_t index = -1;
@@ -189,10 +206,13 @@ Encode_Status VideoEncoderBase::start() {
         (*map_node)->added = true;
     }
 
-#ifndef AUTO_REFERENCE
+    if(mAutoReference == false){
         contextSurfaces[++index] = mRefSurface;
         contextSurfaces[++index] = mRecSurface;
-#endif
+    } else {
+        for (int i=0; i < mAutoReferenceSurfaceNum; i++)
+            contextSurfaces[++index] = mAutoRefSurfaces[i];
+    }
 
     //Initialize and save the VA context ID
     LOG_V( "vaCreateContext\n");
@@ -288,14 +308,14 @@ Encode_Status VideoEncoderBase::encode(VideoEncRawBuffer *inBuffer, uint32_t tim
     task->enc_surface = sid;
     task->coded_buffer = coded_buf;
     task->timestamp = inBuffer->timeStamp;
-    task->in_data = inBuffer->data;
+    task->priv = inBuffer->priv;
 
     //Setup frame info, like flag ( SYNCFRAME), frame number, type etc
     task->type = inBuffer->type;
     task->flag = inBuffer->flag;
     PrepareFrameInfo(task);
 
-#ifndef AUTO_REFERENCE
+    if(mAutoReference == false){
         //Setup ref /rec frames
         //TODO: B frame support, temporary use same logic
         switch (inBuffer->type) {
@@ -310,8 +330,7 @@ Encode_Status VideoEncoderBase::encode(VideoEncRawBuffer *inBuffer, uint32_t tim
                     mRefSurface = tmpSurface;
                 }
 
-                task->ref_surface[0] = mRefSurface;
-                task->ref_surface[1] = VA_INVALID_SURFACE;
+                task->ref_surface = mRefSurface;
                 task->rec_surface = mRecSurface;
 
                 break;
@@ -322,12 +341,10 @@ Encode_Status VideoEncoderBase::encode(VideoEncRawBuffer *inBuffer, uint32_t tim
                 ret = ENCODE_NOT_SUPPORTED;
                 goto CLEAN_UP;
         }
-#else
-        task->ref_surface[0] = VA_INVALID_SURFACE;
-        task->ref_surface[1] = VA_INVALID_SURFACE;
+    }else {
+        task->ref_surface = VA_INVALID_SURFACE;
         task->rec_surface = VA_INVALID_SURFACE;
-#endif
-
+    }
     //======Start Encoding, add task to list======
     LOG_V("Start Encoding vaSurface=0x%08x\n", task->enc_surface);
 
@@ -464,6 +481,7 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
     outBuffer->flag = mCurOutputTask->flag;
     outBuffer->type = mCurOutputTask->type;
     outBuffer->timeStamp = mCurOutputTask->timestamp;
+    outBuffer->priv = mCurOutputTask->priv;
 
     if (outBuffer->format == OUTPUT_EVERYTHING || outBuffer->format == OUTPUT_FRAME_DATA) {
         ret = outputAllData(outBuffer);
@@ -529,6 +547,10 @@ Encode_Status VideoEncoderBase::stop() {
     if (!mStarted) {
         LOG_V("Encoder has been stopped\n");
         return ENCODE_SUCCESS;
+    }
+    if (mAutoRefSurfaces) {
+        delete[] mAutoRefSurfaces;
+        mAutoRefSurfaces = NULL;
     }
 
     mCodedBuffer_Lock.lock();
@@ -698,6 +720,42 @@ Encode_Status VideoEncoderBase::cleanupForOutput() {
     return ENCODE_SUCCESS;
 }
 
+Encode_Status VideoEncoderBase::queryProfileLevelConfig(VADisplay dpy, VAProfile profile) {
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEntrypoint entryPtr[8];
+    int i, entryPtrNum;
+
+    if(profile ==  VAProfileH264Main) //need to be fixed
+        return ENCODE_NOT_SUPPORTED;
+
+    vaStatus = vaQueryConfigEntrypoints(dpy, profile, entryPtr, &entryPtrNum);
+    CHECK_VA_STATUS_RETURN("vaQueryConfigEntrypoints");
+
+    for(i=0; i<entryPtrNum; i++){
+        if(entryPtr[i] == VAEntrypointEncSlice)
+            return ENCODE_SUCCESS;
+    }
+
+    return ENCODE_NOT_SUPPORTED;
+}
+
+Encode_Status VideoEncoderBase::queryAutoReferenceConfig(VAProfile profile) {
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAConfigAttrib attrib_list;
+    attrib_list.type = VAConfigAttribEncAutoReference;
+    attrib_list.value = VA_ATTRIB_NOT_SUPPORTED;
+
+    vaStatus = vaGetConfigAttributes(mVADisplay, profile, VAEntrypointEncSlice, &attrib_list, 1);
+    if(attrib_list.value == VA_ATTRIB_NOT_SUPPORTED )
+        mAutoReference = false;
+    else
+        mAutoReference = true;
+
+    return ENCODE_SUCCESS;
+}
+
 Encode_Status VideoEncoderBase::outputAllData(VideoEncOutputBuffer *outBuffer) {
 
     // Data size been copied for every single call
@@ -753,7 +811,7 @@ void VideoEncoderBase::setDefaultParams() {
 
     // Set default value for input parameters
     mComParams.profile = VAProfileH264Baseline;
-    mComParams.level = 40;
+    mComParams.level = 41;
     mComParams.rawFormat = RAW_FORMAT_NV12;
     mComParams.frameRate.frameRateNum = 30;
     mComParams.frameRate.frameRateDenom = 1;
@@ -941,6 +999,30 @@ Encode_Status VideoEncoderBase::getParameters(
             metadata->isEnabled = mStoreMetaDataInBuffers.isEnabled;
 
             break;
+        }
+
+        case VideoParamsTypeProfileLevel: {
+            VideoParamsProfileLevel *profilelevel =
+                reinterpret_cast <VideoParamsProfileLevel *> (videoEncParams);
+
+            if (profilelevel->size != sizeof (VideoParamsProfileLevel)) {
+                return ENCODE_INVALID_PARAMS;
+            }
+
+            profilelevel->level = 0;
+            if(queryProfileLevelConfig(mVADisplay, profilelevel->profile) == ENCODE_SUCCESS){
+                profilelevel->isSupported = true;
+                if(profilelevel->profile == VAProfileH264High)
+                    profilelevel->level = 42;
+                else if(profilelevel->profile == VAProfileH264Main)
+                     profilelevel->level = 42;
+                else if(profilelevel->profile == VAProfileH264Baseline)
+                     profilelevel->level = 41;
+                else{
+                    profilelevel->level = 0;
+                    profilelevel->isSupported = false;
+                }
+            }
         }
 
         case VideoParamsTypeAVC:
