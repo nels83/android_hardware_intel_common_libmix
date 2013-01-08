@@ -40,6 +40,11 @@ extern "C" {
 typedef unsigned int Display;
 #endif
 
+// TODO: check what is the best number. Must be at least 2 to support one backward reference frame.
+// Currently set to 8 to support 7 backward reference frames. This value is used for AVC frame reordering only.
+// e.g:
+// POC: 4P,  8P,  10P,  6B and mNextOutputPOC = 5
+#define OUTPUT_WINDOW_SIZE 8
 
 class VideoDecoderBase : public IVideoDecoder {
 public:
@@ -144,8 +149,9 @@ private:
 protected:
     void ManageReference(bool enable) {mManageReference = enable;}
     void setOutputMethod(OUTPUT_METHOD method) {mOutputMethod = method;}
-    void setOutputWindowSize(int32_t size) {mOutputWindowSize = size;}
+    void setOutputWindowSize(int32_t size) {mOutputWindowSize = (size < OUTPUT_WINDOW_SIZE) ? size : OUTPUT_WINDOW_SIZE;}
     void querySurfaceRenderStatus(VideoSurfaceBuffer* surface);
+    void enableLowDelayMode(bool enable) {mLowDelay = enable;}
 };
 
 

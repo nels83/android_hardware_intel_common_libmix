@@ -33,12 +33,6 @@
 #define MINIMUM_POC  0x80000000
 #define ANDROID_DISPLAY_HANDLE 0x18C34078
 
-// TODO: check what is the best number. Must be at least 2 to support one backward reference frame.
-// Currently set to 8 to support 7 backward reference frames. This value is used for AVC frame reordering only.
-// e.g:
-// POC: 4P,  8P,  10P,  6B and mNextOutputPOC = 5
-#define OUTPUT_WINDOW_SIZE 8
-
 VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
     : mDisplay(NULL),
       mVADisplay(NULL),
@@ -442,7 +436,7 @@ VideoSurfaceBuffer* VideoDecoderBase::findOutputByPoc(bool draining) {
             output = p;
             outputleastpoc = p;
         }
-        if (poc == mNextOutputPOC || count == OUTPUT_WINDOW_SIZE) {
+        if (poc == mNextOutputPOC || count == mOutputWindowSize) {
             if (output != NULL) {
                 // this indicates two cases:
                 // 1) the next output POC is found.

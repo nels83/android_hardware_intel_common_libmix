@@ -605,13 +605,20 @@ Decode_Status VideoDecoderAVC::startVA(vbp_data_h264 *data) {
             vaProfile = VAProfileH264ConstrainedBaseline;
         }
     }
+
+    VideoDecoderBase::setOutputWindowSize(DPBSize);
+
    // for 1080p, limit the total surface to 19, according the hardware limitation
    // change the max surface number from 19->10 to workaround memory shortage
    // remove the workaround
     if(mVideoFormatInfo.height == 1088 && DPBSize + AVC_EXTRA_SURFACE_NUMBER > 19) {
         DPBSize = 19 - AVC_EXTRA_SURFACE_NUMBER;
     }
-    VideoDecoderBase::setOutputWindowSize(DPBSize);
+
+    // for baseline profile, enable low delay mode automatically
+    if (data->codec_data->profile_idc == 66) {
+        enableLowDelayMode(true);
+    }
     return VideoDecoderBase::setupVA(DPBSize + AVC_EXTRA_SURFACE_NUMBER, vaProfile);
 }
 
