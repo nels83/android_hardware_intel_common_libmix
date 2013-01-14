@@ -334,7 +334,7 @@ int AsfHeaderParser::onExtendedStreamPropertiesObject(uint8_t *buffer, uint32_t 
 
 int AsfHeaderParser::parseHeaderExtensionObject(uint8_t* buffer, uint32_t size) {
     // No empty space, padding, leading, or trailing bytes are allowed in the extention data
-    int status;
+    int status = ASF_PARSER_SUCCESS;
     do {
         if (size < sizeof(AsfObject)) {
             return ASF_PARSER_BAD_DATA;
