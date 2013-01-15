@@ -2426,7 +2426,7 @@ void h264_dpb_gaps_in_frame_num_mem_management(h264_Info * pInfo)
     int32_t		temp_frame_num = 0;
     int32_t		idx, prev_idc;
     int32_t 	prev_frame_num_plus1_wrap;
-    uint32_t	temp;
+    uint32_t	temp = 0;
     int32_t MaxFrameNum = 1 << (pInfo->active_SPS.log2_max_frame_num_minus4 + 4);
     seq_param_set_used_ptr  active_sps = &pInfo->active_SPS;
     h264_DecodedPictureBuffer *p_dpb = &pInfo->dpb;
@@ -2467,9 +2467,11 @@ void h264_dpb_gaps_in_frame_num_mem_management(h264_Info * pInfo)
     */
     else if (pInfo->img.frame_num != pInfo->img.PreviousFrameNum)
     {
-        if (MaxFrameNum)
+        if (MaxFrameNum) {
             ldiv_mod_u((uint32_t)(pInfo->img.PreviousFrameNum + 1), (uint32_t)MaxFrameNum, &temp);
-
+        } else {
+            temp = (uint32_t)pInfo->img.PreviousFrameNum + 1;
+        }
         prev_frame_num_plus1_wrap = temp;
         if (pInfo->img.frame_num != prev_frame_num_plus1_wrap)
         {

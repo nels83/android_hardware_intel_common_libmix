@@ -454,6 +454,8 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
     VC1_GET_BITS(1, tempValue);
     bpp->invert = (uint8_t) tempValue;
 
+    bpp->imode = -1;
+
     if ((status = vc1_DecodeHuffmanOne(ctxt, &bpp->imode,VC1_BITPLANE_IMODE_TBL)) != VC1_STATUS_OK)
     {
         return status;

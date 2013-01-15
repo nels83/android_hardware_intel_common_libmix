@@ -476,6 +476,10 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
         {
             picture_data = vbp_malloc_set0(vbp_picture_data_mp42, 1);
             query_data->picture_data = picture_data;
+            if (picture_data == NULL) {
+                query_data->number_picture_data = 0;
+                return;
+            }
         }
         query_data->number_picture_data = 1;
     }
@@ -491,6 +495,9 @@ void vbp_fill_picture_param(vbp_context *pcontext, uint8 new_picture_flag)
         if (picture_data->next_picture_data == NULL)
         {
             picture_data->next_picture_data = vbp_malloc_set0(vbp_picture_data_mp42, 1);
+            if (picture_data->next_picture_data == NULL) {
+                return;
+            }
         }
 
         query_data->number_picture_data++;
