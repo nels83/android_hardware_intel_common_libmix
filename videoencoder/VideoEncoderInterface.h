@@ -17,13 +17,14 @@ public:
     virtual Encode_Status start(void) = 0;
     virtual Encode_Status stop(void) = 0;
     virtual void flush(void) = 0;
-    virtual Encode_Status encode(VideoEncRawBuffer *inBuffer, uint32_t timeout = FUNC_BLOCK) = 0;
-    virtual Encode_Status getOutput(VideoEncOutputBuffer *outBuffer, uint32_t timeout = FUNC_BLOCK) = 0;
+    virtual Encode_Status encode(VideoEncRawBuffer *inBuffer) = 0;
+    virtual Encode_Status getOutput(VideoEncOutputBuffer *outBuffer) = 0;
     virtual Encode_Status getParameters(VideoParamConfigSet *videoEncParams) = 0;
     virtual Encode_Status setParameters(VideoParamConfigSet *videoEncParams) = 0;
     virtual Encode_Status getConfig(VideoParamConfigSet *videoEncConfig) = 0;
     virtual Encode_Status setConfig(VideoParamConfigSet *videoEncConfig) = 0;
     virtual Encode_Status getMaxOutSize(uint32_t *maxSize) = 0;
+    virtual Encode_Status getStatistics(VideoStatistics *videoStat) = 0;
 };
 
 #endif /* VIDEO_ENCODER_INTERFACE_H_ */

@@ -2,6 +2,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 #VIDEO_ENC_LOG_ENABLE := true
+#VIDEO_ENC_STATISTICS_ENABLE := true
 
 LOCAL_SRC_FILES :=              \
     VideoEncoderBase.cpp        \
@@ -15,13 +16,11 @@ LOCAL_SRC_FILES :=              \
 LOCAL_C_INCLUDES :=             \
     $(LOCAL_PATH)               \
     $(TARGET_OUT_HEADERS)/libva \
-    $(TOPDIR)/frameworks/native/include \
 
 #LOCAL_LDLIBS += -lpthread
 
 LOCAL_SHARED_LIBRARIES :=       \
         libcutils               \
-        libutils               \
         libva                   \
         libva-android           \
         libva-tpi		\

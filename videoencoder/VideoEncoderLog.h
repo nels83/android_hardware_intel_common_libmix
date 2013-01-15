@@ -23,8 +23,7 @@
     __android_log_print(level, comp, "%s():%d: "format, \
     __FUNCTION__, __LINE__, ##__VA_ARGS__)
 
-#define VIDEO_ENC_LOG_ENABLE
-#if  1
+#if 1
 #ifdef VIDEO_ENC_LOG_ENABLE
 #define LOG_V(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_VERBOSE, format, ##__VA_ARGS__)
 #define LOG_I(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_INFO, format, ##__VA_ARGS__)

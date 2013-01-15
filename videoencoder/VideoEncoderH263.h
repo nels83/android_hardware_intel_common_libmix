@@ -20,7 +20,7 @@ public:
     virtual ~VideoEncoderH263() {};
 
 protected:
-    virtual Encode_Status sendEncodeCommand(EncodeTask *task);
+    virtual Encode_Status sendEncodeCommand(void);
     virtual Encode_Status derivedSetParams(VideoParamConfigSet *videoEncParams) {
         return ENCODE_SUCCESS;
     }
@@ -33,16 +33,12 @@ protected:
     virtual Encode_Status derivedSetConfig(VideoParamConfigSet *videoEncConfig) {
         return ENCODE_SUCCESS;
     }
-    virtual Encode_Status getExtFormatOutput(VideoEncOutputBuffer *outBuffer) {
-        return ENCODE_NOT_SUPPORTED;
-    }
-    //virtual Encode_Status updateFrameInfo(EncodeTask* task);
 
     // Local Methods
 private:
-    Encode_Status renderSequenceParams(EncodeTask *task);
-    Encode_Status renderPictureParams(EncodeTask *task);
-    Encode_Status renderSliceParams(EncodeTask *task);
+    Encode_Status renderSequenceParams();
+    Encode_Status renderPictureParams();
+    Encode_Status renderSliceParams();
 };
 
 #endif /* __VIDEO_ENCODER_H263_H__ */

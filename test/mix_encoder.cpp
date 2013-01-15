@@ -257,7 +257,7 @@ Encode_Status SetVideoEncoderParam() {
     memset(&tmpStoreMetaDataInBuffers,0x00,sizeof(VideoParamsStoreMetaDataInBuffers));
     gVideoEncoder->getParameters(&tmpStoreMetaDataInBuffers);
     gVideoEncoder->setParameters(&tmpStoreMetaDataInBuffers);
-#if 0
+
     VideoParamsUpstreamBuffer tmpVideoParamsUpstreamBuffer;
     tmpVideoParamsUpstreamBuffer.bufCnt = 0;
     gVideoEncoder->setParameters(&tmpVideoParamsUpstreamBuffer);
@@ -275,7 +275,7 @@ Encode_Status SetVideoEncoderParam() {
     VideoParamsUsrptrBuffer tmpVideoParamsUsrptrBuffer;
     tmpVideoParamsUsrptrBuffer.width = 0;
     gVideoEncoder->getParameters(&tmpVideoParamsUsrptrBuffer);
-#endif
+
     //---------------------add for libmix encode code coverage test
     // VideoEncodeBase.cpp file setConfig && getConfig code coverage test
     // only for VCM mode
@@ -346,9 +346,6 @@ Encode_Status SetVideoEncoderParam() {
         // for VideoConfigTypeAVCIntraPeriod derivedSetConfig && derivedGetConfig
         VideoConfigAVCIntraPeriod configAVCIntraPeriod;
         gVideoEncoder->getConfig(&configAVCIntraPeriod);
-        configAVCIntraPeriod.ipPeriod = 1;
-        configAVCIntraPeriod.intraPeriod = 30;
-        configAVCIntraPeriod.idrInterval = 1;
         gVideoEncoder->setConfig(&configAVCIntraPeriod);
         VideoConfigTypeIDRReq tmpVideoConfigTypeIDRReq;
         gVideoEncoder->setConfig(&tmpVideoConfigTypeIDRReq);
@@ -992,24 +989,30 @@ for(int i=0; i<1; i++)
         InBuf.data = data;
         InBuf.size = size;
         InBuf.bufAvailable = true;
-        InBuf.type = FTYPE_UNKNOWN;
-        InBuf.flag = 0;
 
         ret = gVideoEncoder->encode(&InBuf);
         CHECK_ENCODE_STATUS("encode");
 
-        if (i > 0) {
         ret = gVideoEncoder->getOutput(&OutBuf);
         CHECK_ENCODE_STATUS("getOutput");
-//        printf("OutBuf.dataSize = %d, flag=0x%08x  .........\n", OutBuf.dataSize, OutBuf.flag);
+        CHECK_ENCODE_STATUS_RETURN("getOutput");
+    //    printf("OutBuf.dataSize = %d  .........\n", OutBuf.dataSize);
         fwrite(OutBuf.data, 1, OutBuf.dataSize, file);
-        }
+        
         printf("Encoding %d Frames \r", i+1);
         fflush(stdout);
     }	
-        ret = gVideoEncoder->getOutput(&OutBuf);
     fclose(file);
     
+    VideoStatistics stat;
+    if (gVideoEncoder->getStatistics(&stat) == ENCODE_SUCCESS)
+    {
+        printf("\nVideoStatistics\n");
+        printf("Encoded %d frames, Skip %d frames, encode time: average( %d us), max( %d us/Frame %d), min( %d us/Frame %d)\n", \
+		stat.total_frames, stat.skipped_frames, stat.average_encode_time, stat.max_encode_time, stat.max_encode_frame, \
+		stat.min_encode_time, stat.min_encode_frame );
+    }
+
     gVideoEncoder->stop();
     releaseVideoEncoder(gVideoEncoder);
     gVideoEncoder = NULL;

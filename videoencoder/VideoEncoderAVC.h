@@ -18,6 +18,7 @@ public:
     ~VideoEncoderAVC() {};
 
     virtual Encode_Status start();
+    virtual Encode_Status getOutput(VideoEncOutputBuffer *outBuffer);
 
     virtual Encode_Status derivedSetParams(VideoParamConfigSet *videoEncParams);
     virtual Encode_Status derivedGetParams(VideoParamConfigSet *videoEncParams);
@@ -26,9 +27,8 @@ public:
 
 protected:
 
-    virtual Encode_Status sendEncodeCommand(EncodeTask *task);
-    virtual Encode_Status getExtFormatOutput(VideoEncOutputBuffer *outBuffer);
-    virtual Encode_Status updateFrameInfo(EncodeTask* task);
+    virtual Encode_Status sendEncodeCommand(void);
+
 private:
     // Local Methods
 
@@ -40,9 +40,9 @@ private:
 
     Encode_Status renderMaxSliceSize();
     Encode_Status renderAIR();
-    Encode_Status renderSequenceParams(EncodeTask *task);
-    Encode_Status renderPictureParams(EncodeTask *task);
-    Encode_Status renderSliceParams(EncodeTask *task);
+    Encode_Status renderSequenceParams();
+    Encode_Status renderPictureParams();
+    Encode_Status renderSliceParams();
     int calcLevel(int numMbs);
 
 public:

@@ -14,30 +14,15 @@
 #include "VideoEncoderDef.h"
 #include "VideoEncoderInterface.h"
 #include "IntelMetadataBuffer.h"
-#include <utils/List.h>
-#include <utils/threads.h>
 
-//#define AUTO_REFERENCE
 struct SurfaceMap {
     VASurfaceID surface;
     MetadataBufferType type;
     int32_t value;
     ValueInfo vinfo;
+    uint32_t index;
     bool added;
-};
-
-struct EncodeTask {
-    VASurfaceID enc_surface;
-    VASurfaceID ref_surface[2];
-    VASurfaceID rec_surface;
-    VABufferID coded_buffer;
-
-    FrameType type;
-    int flag;
-    int64_t timestamp;  //corresponding input frame timestamp
-    uint8_t *in_data;  //input buffer data
-
-    bool completed;   //if encode task is done complet by HW
+    SurfaceMap *next;
 };
 
 class VideoEncoderBase : IVideoEncoder {
@@ -49,7 +34,7 @@ public:
     virtual Encode_Status start(void);
     virtual void flush(void);
     virtual Encode_Status stop(void);
-    virtual Encode_Status encode(VideoEncRawBuffer *inBuffer, uint32_t timeout);
+    virtual Encode_Status encode(VideoEncRawBuffer *inBuffer);
 
     /*
     * getOutput can be called several time for a frame (such as first time  codec data, and second time others)
@@ -57,26 +42,30 @@ public:
     * If the buffer passed to encoded is not big enough, this API call will return ENCODE_BUFFER_TOO_SMALL
     * and caller should provide a big enough buffer and call again
     */
-    virtual Encode_Status getOutput(VideoEncOutputBuffer *outBuffer, uint32_t timeout);
+    virtual Encode_Status getOutput(VideoEncOutputBuffer *outBuffer);
 
     virtual Encode_Status getParameters(VideoParamConfigSet *videoEncParams);
     virtual Encode_Status setParameters(VideoParamConfigSet *videoEncParams);
     virtual Encode_Status setConfig(VideoParamConfigSet *videoEncConfig);
     virtual Encode_Status getConfig(VideoParamConfigSet *videoEncConfig);
+
     virtual Encode_Status getMaxOutSize(uint32_t *maxSize);
+    virtual Encode_Status getStatistics(VideoStatistics *videoStat);
 
 protected:
-    virtual Encode_Status sendEncodeCommand(EncodeTask* task) = 0;
+    virtual Encode_Status sendEncodeCommand(void) = 0;
     virtual Encode_Status derivedSetParams(VideoParamConfigSet *videoEncParams) = 0;
     virtual Encode_Status derivedGetParams(VideoParamConfigSet *videoEncParams) = 0;
     virtual Encode_Status derivedGetConfig(VideoParamConfigSet *videoEncConfig) = 0;
     virtual Encode_Status derivedSetConfig(VideoParamConfigSet *videoEncConfig) = 0;
-    virtual Encode_Status getExtFormatOutput(VideoEncOutputBuffer *outBuffer) = 0;
-    virtual Encode_Status updateFrameInfo(EncodeTask* task) ;
 
+    Encode_Status prepareForOutput(VideoEncOutputBuffer *outBuffer, bool *useLocalBuffer);
+    Encode_Status cleanupForOutput();
+    Encode_Status outputAllData(VideoEncOutputBuffer *outBuffer);
     Encode_Status renderDynamicFrameRate();
     Encode_Status renderDynamicBitrate();
     Encode_Status renderHrd();
+    void setKeyFrame(int32_t keyFramePeriod);
 
 private:
     void setDefaultParams(void);
@@ -89,29 +78,41 @@ private:
     Encode_Status surfaceMappingForKbufHandle(SurfaceMap *map);
     Encode_Status surfaceMappingForMalloc(SurfaceMap *map);
     Encode_Status surfaceMapping(SurfaceMap *map);
-    SurfaceMap *findSurfaceMapByValue(int32_t value);
-    Encode_Status manageSrcSurface(VideoEncRawBuffer *inBuffer, VASurfaceID *sid);
-    void PrepareFrameInfo(EncodeTask* task);
 
-    Encode_Status prepareForOutput(VideoEncOutputBuffer *outBuffer, bool *useLocalBuffer);
-    Encode_Status cleanupForOutput();
-    Encode_Status outputAllData(VideoEncOutputBuffer *outBuffer);
+    SurfaceMap *appendSurfaceMap(
+            SurfaceMap *head, SurfaceMap *map);
+    SurfaceMap *removeSurfaceMap(
+            SurfaceMap *head, SurfaceMap *map);
+    SurfaceMap *findSurfaceMapByValue(
+            SurfaceMap *head, int32_t value);
+
+    Encode_Status manageSrcSurface(VideoEncRawBuffer *inBuffer);
+    void updateProperities(void);
+    void decideFrameType(void);
+//    Encode_Status uploadDataToSurface(VideoEncRawBuffer *inBuffer);
+    Encode_Status syncEncode(VideoEncRawBuffer *inBuffer);
+    Encode_Status asyncEncode(VideoEncRawBuffer *inBuffer);
 
 protected:
 
     bool mInitialized;
-    bool mStarted;
     VADisplay mVADisplay;
     VAContextID mVAContext;
     VAConfigID mVAConfig;
     VAEntrypoint mVAEntrypoint;
 
+    VACodedBufferSegment *mCurSegment;
+    uint32_t mOffsetInSeg;
+    uint32_t mTotalSize;
+    uint32_t mTotalSizeCopied;
 
     VideoParamsCommon mComParams;
     VideoParamsHRD mHrdParam;
     VideoParamsStoreMetaDataInBuffers mStoreMetaDataInBuffers;
 
+    bool mForceKeyFrame;
     bool mNewHeader;
+    bool mFirstFrame;
 
     bool mRenderMaxSliceSize; //Max Slice Size
     bool mRenderQP;
@@ -120,36 +121,50 @@ protected:
     bool mRenderBitRate;
     bool mRenderHrd;
 
+    VABufferID mVACodedBuffer[2];
+    VABufferID mLastCodedBuffer;
+    VABufferID mOutCodedBuffer;
     VABufferID mSeqParamBuf;
     VABufferID mRcParamBuf;
     VABufferID mFrameRateParamBuf;
     VABufferID mPicParamBuf;
     VABufferID mSliceParamBuf;
 
-    android::List <SurfaceMap *> mSrcSurfaceMapList;  //all mapped surface info list from input buffer
-    android::List <EncodeTask *> mEncodeTaskList;  //all encode tasks list
-    android::List <VABufferID> mVACodedBufferList;  //all available codedbuffer list
+    VASurfaceID *mSurfaces;
+    uint32_t mSurfaceCnt;
 
-    VASurfaceID mRefSurface;        //reference surface, only used in base
-    VASurfaceID mRecSurface;        //reconstructed surface, only used in base
+    SurfaceMap *mSrcSurfaceMapList;
+
+    //for new design
+    VASurfaceID mCurSurface;        //current input surface to be encoded 
+    VASurfaceID mRefSurface;        //reference surface
+    VASurfaceID mRecSurface;        //reconstructed surface
+    VASurfaceID mLastSurface;       //last surface
+
+    VideoEncRawBuffer *mLastInputRawBuffer;
+
+    uint32_t mEncodedFrames;
     uint32_t mFrameNum;
     uint32_t mCodedBufSize;
+    uint32_t mCodedBufIndex;
 
+    bool mPicSkipped;
+    bool mIsIntra;
     bool mSliceSizeOverflow;
-
-    //Current Outputting task
-    EncodeTask *mCurOutputTask;
-
-    //Current outputting CodedBuffer status
-    VABufferID mOutCodedBuffer;
     bool mCodedBufferMapped;
-    VACodedBufferSegment *mCurSegment;
-    uint32_t mOffsetInSeg;
-    uint32_t mTotalSize;
-    uint32_t mTotalSizeCopied;
-    android::Mutex               mCodedBuffer_Lock, mEncodeTask_Lock;
-    android::Condition           mCodedBuffer_Cond, mEncodeTask_Cond;
+    bool mDataCopiedOut;
+    bool mKeyFrame;
 
-    bool mFrameSkipped;
+    int32_t  mInitCheck;
+
+#ifdef VIDEO_ENC_STATISTICS_ENABLE
+    VideoStatistics mVideoStat;
+#endif
+
+    // Constants
+    static const uint32_t VENCODER_NUMBER_EXTRA_SURFACES_SHARED_MODE = 2;
+    static const uint32_t VENCODER_NUMBER_EXTRA_SURFACES_NON_SHARED_MODE = 8;
 };
+
+
 #endif /* __VIDEO_ENCODER_BASE_H__ */

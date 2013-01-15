@@ -45,10 +45,6 @@ LOCAL_SHARED_LIBRARIES := 	\
         libva-android           \
         libva-tpi		\
 	libgui			\
-	libui			\
-	libutils		\
-	libcutils		\
-	libhardware		\
 	libbinder
 
 LOCAL_MODULE_TAGS := optional
