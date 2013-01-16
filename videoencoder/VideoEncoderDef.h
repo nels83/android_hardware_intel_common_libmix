@@ -32,7 +32,9 @@ enum {
     ENCODE_SUCCESS = 0,
     ENCODE_ALREADY_INIT = 1,
     ENCODE_SLICESIZE_OVERFLOW = 2,
-    ENCODE_BUFFER_TOO_SMALL = 3 // The buffer passed to encode is too small to contain encoded data
+    ENCODE_BUFFER_TOO_SMALL = 3, // The buffer passed to encode is too small to contain encoded data
+    ENCODE_DEVICE_BUSY = 4,
+    ENCODE_DATA_NOT_READY = 5,
 };
 
 typedef enum {
@@ -42,6 +44,7 @@ typedef enum {
     OUTPUT_ONE_NAL = 4,
     OUTPUT_ONE_NAL_WITHOUT_STARTCODE = 8,
     OUTPUT_LENGTH_PREFIXED = 16,
+    OUTPUT_CODEDBUFFER = 32,
     OUTPUT_BUFFER_LAST
 } VideoOutputFormat;
 
@@ -102,6 +105,23 @@ enum VideoBufferSharingMode {
     BUFFER_LAST
 };
 
+typedef enum {
+    FTYPE_UNKNOWN = 0, // Unknown
+    FTYPE_I = 1, // General I-frame type
+    FTYPE_P = 2, // General P-frame type
+    FTYPE_B = 3, // General B-frame type
+    FTYPE_SI = 4, // H.263 SI-frame type
+    FTYPE_SP = 5, // H.263 SP-frame type
+    FTYPE_EI = 6, // H.264 EI-frame type
+    FTYPE_EP = 7, // H.264 EP-frame type
+    FTYPE_S = 8, // MPEG-4 S-frame type
+    FTYPE_IDR = 9, // IDR-frame type
+}FrameType;
+
+//function call mode
+#define FUNC_BLOCK        0xFFFFFFFF
+#define FUNC_NONBLOCK        0
+
 // Output buffer flag
 #define ENCODE_BUFFERFLAG_ENDOFFRAME       0x00000001
 #define ENCODE_BUFFERFLAG_PARTIALFRAME     0x00000002
@@ -110,6 +130,8 @@ enum VideoBufferSharingMode {
 #define ENCODE_BUFFERFLAG_DATACORRUPT      0x00000010
 #define ENCODE_BUFFERFLAG_DATAINVALID      0x00000020
 #define ENCODE_BUFFERFLAG_SLICEOVERFOLOW   0x00000040
+#define ENCODE_BUFFERFLAG_ENDOFSTREAM     0x00000080
+#define ENCODE_BUFFERFLAG_NSTOPFRAME        0x00000100
 
 typedef struct {
     uint8_t *data;
@@ -118,14 +140,18 @@ typedef struct {
     uint32_t remainingSize;
     int flag; //Key frame, Codec Data etc
     VideoOutputFormat format; //output format
-    uint64_t timeStamp; //reserved
+    int64_t timeStamp; //reserved
+    FrameType type;
+    uint8_t *in_data; //indicate corresponding input data
 } VideoEncOutputBuffer;
 
 typedef struct {
     uint8_t *data;
     uint32_t size;
     bool bufAvailable; //To indicate whether this buffer can be reused
-    uint64_t timeStamp; //reserved
+    int64_t timeStamp; //reserved
+    FrameType type; //frame type expected to be encoded
+    int flag; // flag to indicate buffer property
 } VideoEncRawBuffer;
 
 struct VideoEncSurfaceBuffer {
@@ -304,6 +330,8 @@ struct VideoParamsCommon : VideoParamConfigSet {
     AirParams airParams;
     uint32_t disableDeblocking;
     bool syncEncMode;
+    //CodedBuffer properties
+    uint32_t codedBufNum;
 
     VideoParamsCommon() {
         type = VideoParamsTypeCommon;
@@ -327,6 +355,7 @@ struct VideoParamsCommon : VideoParamConfigSet {
         this->airParams = other.airParams;
         this->disableDeblocking = other.disableDeblocking;
         this->syncEncMode = other.syncEncMode;
+        this->codedBufNum = other.codedBufNum;
         return *this;
     }
 };
@@ -336,10 +365,23 @@ struct VideoParamsAVC : VideoParamConfigSet {
     uint8_t VUIFlag;
     int32_t maxSliceSize;
     uint32_t idrInterval;
+    uint32_t ipPeriod;
+    uint32_t refFrames;
     SliceNum sliceNum;
     AVCDelimiterType delimiterType;
     Cropping crop;
     SamplingAspectRatio SAR;
+    uint32_t refIdx10ActiveMinus1;
+    uint32_t refIdx11ActiveMinus1;
+    bool bFrameMBsOnly;
+    bool bMBAFF;
+    bool bEntropyCodingCABAC;
+    bool bWeightedPPrediction;
+    uint32_t weightedBipredicitonMode;
+    bool bConstIpred ;
+    bool bDirect8x8Inference;
+    bool bDirectSpatialTemporal;
+    uint32_t cabacInitIdc;
 
     VideoParamsAVC() {
         type = VideoParamsTypeAVC;
@@ -354,6 +396,8 @@ struct VideoParamsAVC : VideoParamConfigSet {
         this->VUIFlag = other.VUIFlag;
         this->maxSliceSize = other.maxSliceSize;
         this->idrInterval = other.idrInterval;
+        this->ipPeriod = other.ipPeriod;
+        this->refFrames = other.refFrames;
         this->sliceNum = other.sliceNum;
         this->delimiterType = other.delimiterType;
         this->crop.LeftOffset = other.crop.LeftOffset;
@@ -363,6 +407,17 @@ struct VideoParamsAVC : VideoParamConfigSet {
         this->SAR.SarWidth = other.SAR.SarWidth;
         this->SAR.SarHeight = other.SAR.SarHeight;
 
+        this->refIdx10ActiveMinus1 = other.refIdx10ActiveMinus1;
+        this->refIdx11ActiveMinus1 = other.refIdx11ActiveMinus1;
+        this->bFrameMBsOnly = other.bFrameMBsOnly;
+        this->bMBAFF = other.bMBAFF;
+        this->bEntropyCodingCABAC = other.bEntropyCodingCABAC;
+        this->bWeightedPPrediction = other.bWeightedPPrediction;
+        this->weightedBipredicitonMode = other.weightedBipredicitonMode;
+        this->bConstIpred = other.bConstIpred;
+        this->bDirect8x8Inference = other.bDirect8x8Inference;
+        this->bDirectSpatialTemporal = other.bDirectSpatialTemporal;
+        this->cabacInitIdc = other.cabacInitIdc;
         return *this;
     }
 };
@@ -450,6 +505,7 @@ struct VideoConfigAVCIntraPeriod : VideoParamConfigSet {
 
     uint32_t idrInterval;  //How many Intra frame will have a IDR frame
     uint32_t intraPeriod;
+    uint32_t ipPeriod;
 };
 
 struct VideoConfigNALSize : VideoParamConfigSet {
@@ -511,15 +567,5 @@ struct VideoConfigSliceNum : VideoParamConfigSet {
 
     SliceNum sliceNum;
 };
-
-typedef struct {
-    uint32_t total_frames; 
-    uint32_t skipped_frames;
-    uint32_t average_encode_time;
-    uint32_t max_encode_time;
-    uint32_t max_encode_frame;
-    uint32_t min_encode_time;
-    uint32_t min_encode_frame;
-}VideoStatistics;
 
 #endif /*  __VIDEO_ENCODER_DEF_H__ */

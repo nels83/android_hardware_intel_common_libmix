@@ -19,11 +19,10 @@ public:
     VideoEncoderMP4();
     virtual ~VideoEncoderMP4() {};
 
-    Encode_Status getOutput(VideoEncOutputBuffer *outBuffer);
+//    Encode_Status getOutput(VideoEncOutputBuffer *outBuffer);
 
 protected:
-    virtual Encode_Status sendEncodeCommand(void);
-
+    virtual Encode_Status sendEncodeCommand(EncodeTask *task);
     virtual Encode_Status derivedSetParams(VideoParamConfigSet *videoEncParams) {
         return ENCODE_SUCCESS;
     }
@@ -36,13 +35,16 @@ protected:
     virtual Encode_Status derivedSetConfig(VideoParamConfigSet *videoEncConfig) {
         return ENCODE_SUCCESS;
     }
+    virtual Encode_Status getExtFormatOutput(VideoEncOutputBuffer *outBuffer);
+    //virtual Encode_Status updateFrameInfo(EncodeTask* task);
+
     // Local Methods
 private:
     Encode_Status getHeaderPos(uint8_t *inBuffer, uint32_t bufSize, uint32_t *headerSize);
     Encode_Status outputConfigData(VideoEncOutputBuffer *outBuffer);
-    Encode_Status renderSequenceParams();
-    Encode_Status renderPictureParams();
-    Encode_Status renderSliceParams();
+    Encode_Status renderSequenceParams(EncodeTask *task);
+    Encode_Status renderPictureParams(EncodeTask *task);
+    Encode_Status renderSliceParams(EncodeTask *task);
 
     unsigned char mProfileLevelIndication;
     uint32_t mFixedVOPTimeIncrement;
