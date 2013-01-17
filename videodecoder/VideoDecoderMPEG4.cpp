@@ -181,9 +181,6 @@ Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data) {
         // for example: {PB} B N P B B P...
         if (picData->vop_coded == 1 && codingType != MP4_VOP_TYPE_B) {
             WTRACE("Invalid coding type while waiting for n-vop for packed frame.");
-            // timestamp of P frame in the queue is not correct.
-            // TODO: handle timestamp
-            flush();
             mExpectingNVOP = false;
         }
     }
