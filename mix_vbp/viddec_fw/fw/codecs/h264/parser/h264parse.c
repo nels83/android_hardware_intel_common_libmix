@@ -27,7 +27,6 @@ h264_Status h264_Scaling_List(void *parent, uint8_t *scalingList, int32_t sizeOf
     int32_t j, scanj;
     int32_t delta_scale, lastScale, nextScale;
 
-#if 0
     const uint8_t ZZ_SCAN[16]  =
         {  0,  1,  4,  8,  5,  2,  3,  6,  9, 12, 13, 10,  7, 11, 14, 15
         };
@@ -38,7 +37,6 @@ h264_Status h264_Scaling_List(void *parent, uint8_t *scalingList, int32_t sizeOf
            35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
            58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63
         };
-#endif
 
     lastScale      = 8;
     nextScale      = 8;
@@ -46,7 +44,7 @@ h264_Status h264_Scaling_List(void *parent, uint8_t *scalingList, int32_t sizeOf
 
     for (j=0; j<sizeOfScalingList; j++)
     {
-        //scanj = (sizeOfScalingList==16)?ZZ_SCAN[j]:ZZ_SCAN8[j];
+        scanj = (sizeOfScalingList==16)?ZZ_SCAN[j]:ZZ_SCAN8[j];
 
         if (nextScale!=0)
         {
@@ -57,7 +55,6 @@ h264_Status h264_Scaling_List(void *parent, uint8_t *scalingList, int32_t sizeOf
 
         scalingList[scanj] = (nextScale==0) ? lastScale:nextScale;
         lastScale = scalingList[scanj];
-        scanj ++;
     }
 
     return H264_STATUS_OK;
