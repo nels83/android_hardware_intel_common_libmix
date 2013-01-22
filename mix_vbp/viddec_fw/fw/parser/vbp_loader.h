@@ -334,6 +334,12 @@ typedef struct _vbp_codec_data_vp8
     int refresh_golden_frame;
     int refresh_last_frame;
 
+    /* cropping information */
+    int crop_top;
+    int crop_bottom;
+    int crop_left;
+    int crop_right;
+
     int golden_copied;
     int altref_copied;
 } vbp_codec_data_vp8;

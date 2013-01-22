@@ -49,6 +49,7 @@ private:
     void refreshAltReference(vbp_data_vp8 *data);
     void updateFormatInfo(vbp_data_vp8 *data);
     void invalidateReferenceFrames(int toggle);
+    void clearAsReference(int toggle, int ref_type);
 
 private:
     enum {

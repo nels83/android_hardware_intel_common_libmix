@@ -48,7 +48,8 @@ LOCAL_MODULE := libva_videodecoder
 MERRIFIELD_DEVICE := \
         mrfl_vp \
         mrfl_hvp \
-        mrfl_sle
+        mrfl_sle \
+        merr_vv
 ifneq ($(filter $(REF_DEVICE_NAME),$(MERRIFIELD_DEVICE)),)
 LOCAL_SRC_FILES += VideoDecoderVP8.cpp
 LOCAL_CFLAGS += -DUSE_HW_VP8

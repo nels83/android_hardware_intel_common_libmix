@@ -64,6 +64,8 @@ uint32 vbp_init_parser_entries_vp8(vbp_context *pcontext)
     /* entry point not needed */
     pcontext->parser_ops->is_frame_start = NULL;
 
+    pcontext->parser_ops->flush = NULL;
+
     return VBP_OK;
 }
 
@@ -302,20 +304,7 @@ static void vbp_add_probs_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *quer
     VAProbabilityDataBufferVP8 *prob_data = query_data->prob_data;
 
     /* DCT coefficients probability */
-    int i, j, k, l;
-    for (i = 0; i < 4; i++)
-    {
-        for (j = 0; j < 8; j++)
-        {
-            for (k = 0; k < 3; k++)
-            {
-                for (l = 0; l < 11; l++)
-                {
-                    prob_data->dct_coeff_probs[i][j][k][l] = fc->DCT_Coefficients[i][j][k][l];
-                }
-            }
-        }
-    }
+    memcpy(prob_data->dct_coeff_probs, fc->DCT_Coefficients, 4*8*3*11*sizeof(uint8_t));
 }
 
 static void vbp_set_codec_data_vp8(vp8_viddec_parser *parser, vbp_codec_data_vp8* codec_data)
@@ -326,10 +315,13 @@ static void vbp_set_codec_data_vp8(vp8_viddec_parser *parser, vbp_codec_data_vp8
     codec_data->version_num = pi->frame_tag.version;
     codec_data->show_frame = pi->frame_tag.show_frame;
 
-    //codec_data->frame_width = pi->width;
-    //codec_data->frame_height = pi->height;
     codec_data->frame_width = ((pi->width + 15) / 16) * 16;
     codec_data->frame_height = ((pi->height + 15) / 16) * 16;
+
+    codec_data->crop_top = 0;
+    codec_data->crop_bottom = codec_data->frame_height - pi->height;
+    codec_data->crop_left = 0;
+    codec_data->crop_right = codec_data->frame_width - pi->width;
 
     codec_data->refresh_alt_frame = pi->refresh_af;
     codec_data->refresh_golden_frame = pi->refresh_gf;

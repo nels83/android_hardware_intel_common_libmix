@@ -48,7 +48,8 @@ endif
 MERRIFIELD_DEVICE := \
         mrfl_vp \
         mrfl_hvp \
-        mrfl_sle
+        mrfl_sle \
+        merr_vv
 ifneq ($(filter $(REF_DEVICE_NAME),$(MERRIFIELD_DEVICE)),)
 LOCAL_SRC_FILES += vbp_vp8_parser.c
 LOCAL_C_INCLUDES += $(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/vp8/include

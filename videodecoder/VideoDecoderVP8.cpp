@@ -45,6 +45,13 @@ void VideoDecoderVP8::invalidateReferenceFrames(int toggle) {
     }
 }
 
+void VideoDecoderVP8::clearAsReference(int toggle, int ref_type) {
+    ReferenceFrameBuffer ref = mRFBs[toggle][ref_type];
+    if (ref.surfaceBuffer) {
+        ref.surfaceBuffer->asReferernce = false;
+    }
+}
+
 void VideoDecoderVP8::updateFormatInfo(vbp_data_vp8 *data) {
     int32_t width = data->codec_data->frame_width;
     int32_t height = data->codec_data->frame_height;
@@ -59,6 +66,12 @@ void VideoDecoderVP8::updateFormatInfo(vbp_data_vp8 *data) {
         mSizeChanged = true;
         ITRACE("Video size is changed.");
     }
+
+    mVideoFormatInfo.cropLeft = data->codec_data->crop_left;
+    mVideoFormatInfo.cropRight = data->codec_data->crop_right;
+    mVideoFormatInfo.cropTop = data->codec_data->crop_top;
+    mVideoFormatInfo.cropBottom = data->codec_data->crop_bottom;
+    ITRACE("Cropping: left = %d, top = %d, right = %d, bottom = %d", data->codec_data->crop_left, data->codec_data->crop_top, data->codec_data->crop_bottom);
 
     mVideoFormatInfo.valid = true;
 }
@@ -105,6 +118,9 @@ void VideoDecoderVP8::stop(void) {
 
 void VideoDecoderVP8::flush(void) {
     VideoDecoderBase::flush();
+
+    invalidateReferenceFrames(0);
+    invalidateReferenceFrames(1);
 }
 
 Decode_Status VideoDecoderVP8::decode(VideoDecodeBuffer *buffer) {
@@ -142,6 +158,14 @@ Decode_Status VideoDecoderVP8::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
     if (0 == data->num_pictures || NULL == data->pic_data) {
         WTRACE("Number of pictures is 0.");
         return DECODE_SUCCESS;
+    }
+
+    if (VP8_KEY_FRAME == data->codec_data->frame_type) {
+        updateFormatInfo(data);
+        if (mSizeChanged == true) {
+            mSizeChanged = false;
+            return DECODE_FORMAT_CHANGE;
+        }
     }
 
     if (data->codec_data->frame_type == VP8_SKIPPED_FRAME) {
@@ -310,6 +334,20 @@ void VideoDecoderVP8::updateReferenceFrames(vbp_data_vp8 *data) {
 
     /* Refresh alternative frame reference buffer using the currently reconstructed frame */
     refreshAltReference(data);
+
+    /* Update reference frames */
+    for (int i = 0; i < VP8_REF_SIZE; i++) {
+        VideoSurfaceBuffer *p = mRFBs[1][i].surfaceBuffer;
+        int j;
+        for (j = 0; j < VP8_REF_SIZE; j++) {
+            if (p == mRFBs[0][j].surfaceBuffer) {
+                break;
+            }
+            if (j == VP8_REF_SIZE) {
+                clearAsReference(1, i);
+            }
+        }
+    }
 }
 
 void VideoDecoderVP8::refreshLastReference(vbp_data_vp8 *data) {
@@ -321,13 +359,6 @@ void VideoDecoderVP8::refreshLastReference(vbp_data_vp8 *data) {
     if (data->codec_data->refresh_last_frame) {
         mRFBs[0][VP8_LAST_REF_PIC].surfaceBuffer = mAcquiredBuffer;
         mRFBs[0][VP8_LAST_REF_PIC].index = mAcquiredBuffer->renderBuffer.surface;
-
-        if (mRFBs[1][VP8_LAST_REF_PIC].surfaceBuffer) {
-            mRFBs[1][VP8_LAST_REF_PIC].surfaceBuffer->asReferernce = false;
-        }
-    }
-
-    if (mRFBs[0][VP8_LAST_REF_PIC].surfaceBuffer) {
         mRFBs[0][VP8_LAST_REF_PIC].surfaceBuffer->asReferernce = true;
     }
 }
@@ -353,13 +384,6 @@ void VideoDecoderVP8::refreshGoldenReference(vbp_data_vp8 *data) {
     if (data->codec_data->refresh_golden_frame) {
         mRFBs[0][VP8_GOLDEN_REF_PIC].surfaceBuffer = mAcquiredBuffer;
         mRFBs[0][VP8_GOLDEN_REF_PIC].index = mAcquiredBuffer->renderBuffer.surface;
-
-        if (mRFBs[1][VP8_GOLDEN_REF_PIC].surfaceBuffer) {
-            mRFBs[1][VP8_GOLDEN_REF_PIC].surfaceBuffer->asReferernce = false;
-        }
-    }
-
-    if (mRFBs[0][VP8_GOLDEN_REF_PIC].surfaceBuffer) {
         mRFBs[0][VP8_GOLDEN_REF_PIC].surfaceBuffer->asReferernce = true;
     }
 }
@@ -385,13 +409,6 @@ void VideoDecoderVP8::refreshAltReference(vbp_data_vp8 *data) {
     if (data->codec_data->refresh_alt_frame) {
         mRFBs[0][VP8_ALT_REF_PIC].surfaceBuffer = mAcquiredBuffer;
         mRFBs[0][VP8_ALT_REF_PIC].index = mAcquiredBuffer->renderBuffer.surface;
-
-        if (mRFBs[1][VP8_ALT_REF_PIC].surfaceBuffer) {
-            mRFBs[1][VP8_ALT_REF_PIC].surfaceBuffer->asReferernce = false;
-        }
-    }
-
-    if (mRFBs[0][VP8_ALT_REF_PIC].surfaceBuffer) {
         mRFBs[0][VP8_ALT_REF_PIC].surfaceBuffer->asReferernce = true;
     }
 }
