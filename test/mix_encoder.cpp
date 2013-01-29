@@ -15,6 +15,7 @@
 
 #include <ui/PixelFormat.h>
 #include <hardware/gralloc.h>
+#include <hal/hal_public.h>
 
 #define CHECK_ENCODE_STATUS(FUNC)\
     if (ret < ENCODE_SUCCESS) { \
@@ -53,9 +54,9 @@ static uint32_t gEncFrames = 15;
 static const int gSrcFrames = 15;
 
 static uint32_t gAllocatedSize;
-static uint32_t gWidth = 1280;
-static uint32_t gHeight = 720;
-static uint32_t gStride = 1280;
+static uint32_t gSrcWidth = 1280;
+static uint32_t gSrcHeight = 720;
+static uint32_t gSrcStride = 1280;
 static uint32_t gFrameRate = 30;
 static uint32_t gEncodeWidth = 0;
 static uint32_t gEncodeHeight = 0;
@@ -63,7 +64,7 @@ static uint32_t gEncodeHeight = 0;
 static char* gFile = (char*)"out.264";
 
 static uint32_t gMode = 0; //0:Camera malloc , 1: WiDi clone, 2: WiDi ext, 3: WiDi user, 4: Raw, 5: SurfaceMediaSource
-static const char* gModeString[9] = {"Camera malloc", "WiDi clone", "WiDi ext", "WiDi user", "Raw", "GrallocSource(Composer)", "GrallocSource(Gralloc)","MappingSurfaceForCI","Camera malloc For Extra Value"};
+static const char* gModeString[10] = {"Camera malloc", "WiDi clone", "WiDi ext", "WiDi user", "Raw", "GrallocSource(Composer)", "GrallocSource(Gralloc)", "GrallocSource(Camerav2)", "MappingSurfaceForCI", "Camera malloc For Extra Value"};
 static const char* gRCModeString[4] ={"NO_RC", "CBR", "VBR", "VCM"};
 
 
@@ -131,15 +132,15 @@ static void gfx_init()
         printf("FATAL: can't find the %s module", GRALLOC_HARDWARE_MODULE_ID);
         exit(-1);
     }
-    
+
     gAllocMod = (gralloc_module_t const *)gModule;
 
     err = gralloc_open(gModule, &gAllocDev);
     if (err) {
         printf("FATAL: gralloc open failed\n");
         exit(-1);
-    } 
-    
+    }
+
 }
 
 static int gfx_alloc(uint32_t w, uint32_t h, int format,
@@ -153,7 +154,7 @@ static int gfx_alloc(uint32_t w, uint32_t h, int format,
                w, h, format, usage, err, strerror(-err));
         exit(-1);
     }
-    
+
     return err;
 }
 
@@ -166,7 +167,7 @@ static int gfx_free(buffer_handle_t handle)
         printf("free(...) failed %d (%s)\n", err, strerror(-err));
         exit(-1);
     }
-    
+
     return err;
 }
 
@@ -184,7 +185,7 @@ static int gfx_lock(buffer_handle_t handle,
         printf("lock(...) failed %d (%s)", err, strerror(-err));
         exit(-1);
     }
-    
+
     return err;
 }
 
@@ -195,20 +196,21 @@ static int gfx_unlock(buffer_handle_t handle)
 
     err = gAllocMod->unlock(gAllocMod, handle);
     if (err) {
-        printf("unlock(...) failed %d (%s)", err, strerror(-err));
+        printf("unlock(...) failed %d (%s)\n", err, strerror(-err));
         exit(-1);
     }
-    
+
     return err;
 }
-    
+
 Encode_Status SetVideoEncoderParam() {
 
     Encode_Status ret = ENCODE_SUCCESS;
 
     ret = gVideoEncoder->getParameters(&gEncoderParams);
     CHECK_ENCODE_STATUS("getParameters");
-    
+
+    printf("Set Encoding Width=%d, Height=%d\n", gEncodeWidth, gEncodeHeight);
     gEncoderParams.resolution.height = gEncodeHeight;
     gEncoderParams.resolution.width = gEncodeWidth;
     gEncoderParams.frameRate.frameRateDenom = 1;
@@ -240,7 +242,7 @@ Encode_Status SetVideoEncoderParam() {
     gEncoderParams->rcParams.targetPercentage = 0;
     gEncoderParams->rcParams.bitRate = 10000;
     gEncoderParams->rcMode = RATE_CONTROL_CBR;
-    gEncoderParams->refreshType = VIDEO_ENC_NONIR;    
+    gEncoderParams->refreshType = VIDEO_ENC_NONIR;
 #endif
 
     ret = gVideoEncoder->setParameters(&gEncoderParams);
@@ -325,7 +327,7 @@ Encode_Status SetVideoEncoderParam() {
         // VideoEncodeAVC.cpp file derivedSetConfig && derivedGetConfig code coverage test
         // for VideoConfigTypeNALSize derivedSetConfig && derivedGetConfig
         VideoConfigNALSize configNalSize;
-        configNalSize.maxSliceSize = 8*gWidth*gHeight*1.5;
+        configNalSize.maxSliceSize = 8*gEncodeWidth*gEncodeHeight*1.5;
         gVideoEncoder->setConfig(&configNalSize);
         gVideoEncoder->getConfig(&configNalSize);
 
@@ -360,8 +362,8 @@ Encode_Status SetVideoEncoderParam() {
 
         ret = gVideoEncoder->setParameters(&gStoreMetaDataInBuffers);
         CHECK_ENCODE_STATUS("setParameters StoreMetaDataInBuffers");
-    }    
-    
+    }
+
     return ret;
 }
 
@@ -380,31 +382,31 @@ static int YUV_generator_planar(int width, int height,
         int jj, xpos, ypos;
 
         ypos = (row / box_width) & 0x1;
-                    
+
         for (jj=0; jj<width; jj++) {
             xpos = ((row_shift + jj) / box_width) & 0x1;
-                        
+
             if ((xpos == 0) && (ypos == 0))
                 Y_row[jj] = 0xeb;
             if ((xpos == 1) && (ypos == 1))
                 Y_row[jj] = 0xeb;
-                        
+
             if ((xpos == 1) && (ypos == 0))
                 Y_row[jj] = 0x10;
             if ((xpos == 0) && (ypos == 1))
                 Y_row[jj] = 0x10;
         }
     }
-  
+
     /* copy UV data */
-    for( row =0; row < height/2; row++) { 
+    for( row =0; row < height/2; row++) {
         if (UV_interleave) {
             unsigned char *UV_row = U_start + row * U_pitch;
             memset (UV_row,0x80,width);
         } else {
             unsigned char *U_row = U_start + row * U_pitch;
             unsigned char *V_row = V_start + row * V_pitch;
-            
+
             memset (U_row,0x80,width/2);
             memset (V_row,0x80,width/2);
         }
@@ -419,16 +421,16 @@ static int YUV_generator_planar(int width, int height,
 //malloc external memory, and not need to set into encoder before start()
 void MallocExternalMemoryWithExtraValues()
 {
-    uint32_t size = gWidth * gHeight * 3 /2;
+    uint32_t size = gSrcWidth * gSrcHeight * 3 /2;
 
     ValueInfo* vinfo = new ValueInfo;
     vinfo->mode = MEM_MODE_MALLOC;
     vinfo->handle = 0;
     vinfo->size = size;
-    vinfo->width = gWidth;
-    vinfo->height = gHeight;
-    vinfo->lumaStride = gStride;
-    vinfo->chromStride = gStride;
+    vinfo->width = gSrcWidth;
+    vinfo->height = gSrcHeight;
+    vinfo->lumaStride = gSrcStride;
+    vinfo->chromStride = gSrcStride;
     vinfo->format = STRING_TO_FOURCC("NV12");
     vinfo->s3dformat = 0xFFFFFFFF;
 
@@ -447,23 +449,23 @@ void MallocExternalMemoryWithExtraValues()
 //malloc external memory, and not need to set into encoder before start()
 void MallocExternalMemory()
 {
-    uint32_t size = gWidth * gHeight * 3 /2;
+    uint32_t size = gSrcStride * gSrcHeight * 3 /2;
 
     ValueInfo* vinfo = new ValueInfo;
     vinfo->mode = MEM_MODE_MALLOC;
     vinfo->handle = 0;
     vinfo->size = size;
-    vinfo->width = gWidth;
-    vinfo->height = gHeight;
-    vinfo->lumaStride = gStride;
-    vinfo->chromStride = gStride;
+    vinfo->width = gSrcWidth;
+    vinfo->height = gSrcHeight;
+    vinfo->lumaStride = gSrcStride;
+    vinfo->chromStride = gSrcStride;
     vinfo->format = STRING_TO_FOURCC("NV12");
     vinfo->s3dformat = 0xFFFFFFFF;
 
     for(int i = 0; i < gSrcFrames; i ++)
     {
         gMallocPtr[i] = (uint8_t*)malloc(size + 4095);
-        gUsrptr[i] = (uint8_t*)((((int )gMallocPtr[i] + 4095) / 4096 ) * 4096);
+        gUsrptr[i] = (uint8_t*)((((uint32_t )gMallocPtr[i] + 4095) / 4096 ) * 4096);
 
         gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
 
@@ -480,12 +482,12 @@ void GetAllUsrptr()
 
     paramsUsrptrBuffer.type = VideoParamsTypeUsrptrBuffer;
     paramsUsrptrBuffer.size =  sizeof(VideoParamsUsrptrBuffer);
-    paramsUsrptrBuffer.expectedSize = gWidth * gHeight * 3 / 2;
+    paramsUsrptrBuffer.expectedSize = gSrcWidth * gSrcHeight * 3 / 2;
     paramsUsrptrBuffer.format = STRING_TO_FOURCC("NV12");
-    paramsUsrptrBuffer.width = gWidth;
-    paramsUsrptrBuffer.height = gHeight;
+    paramsUsrptrBuffer.width = gSrcWidth;
+    paramsUsrptrBuffer.height = gSrcHeight;
 
-    for(int i = 0; i < gSrcFrames; i ++) 
+    for(int i = 0; i < gSrcFrames; i ++)
     {
         ret = gVideoEncoder->getParameters(&paramsUsrptrBuffer);
         if(ret != ENCODE_SUCCESS  ) {
@@ -495,11 +497,11 @@ void GetAllUsrptr()
         }
         gAllocatedSize = paramsUsrptrBuffer.actualSize;
         gUsrptr[i] = paramsUsrptrBuffer.usrPtr;
-        gStride = paramsUsrptrBuffer.stride;
+        gSrcStride = paramsUsrptrBuffer.stride;
 
         gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeEncoder, (int32_t)gUsrptr[i]);
     }
-    
+
 }
 
 void CreateUserSurfaces(int mode)
@@ -508,9 +510,9 @@ void CreateUserSurfaces(int mode)
     int majorVersion = -1;
     int minorVersion = -1;
     VAStatus vaStatus;
-  	
+
     gVADisplay = vaGetDisplay(&display);
-    
+
     if (gVADisplay == NULL) {
         printf("vaGetDisplay failed.");
     }
@@ -522,17 +524,17 @@ void CreateUserSurfaces(int mode)
 
     VASurfaceAttributeTPI attribute_tpi;
 
-    attribute_tpi.size = gWidth * gHeight * 3 /2;
-    attribute_tpi.luma_stride = gWidth;
-    attribute_tpi.chroma_u_stride = gWidth;
-    attribute_tpi.chroma_v_stride = gWidth;
+    attribute_tpi.size = gSrcWidth * gSrcHeight * 3 /2;
+    attribute_tpi.luma_stride = gSrcWidth;
+    attribute_tpi.chroma_u_stride = gSrcWidth;
+    attribute_tpi.chroma_v_stride = gSrcWidth;
     attribute_tpi.luma_offset = 0;
-    attribute_tpi.chroma_u_offset = gWidth * gHeight;
-    attribute_tpi.chroma_v_offset = gWidth * gHeight;
+    attribute_tpi.chroma_u_offset = gSrcWidth * gSrcHeight;
+    attribute_tpi.chroma_v_offset = gSrcWidth * gSrcHeight;
     attribute_tpi.pixel_format = VA_FOURCC_NV12;
     attribute_tpi.type = VAExternalMemoryNULL;
 
-    vaStatus = vaCreateSurfacesWithAttribute(gVADisplay, gWidth, gHeight, VA_RT_FORMAT_YUV420,
+    vaStatus = vaCreateSurfacesWithAttribute(gVADisplay, gSrcWidth, gSrcHeight, VA_RT_FORMAT_YUV420,
             gSrcFrames, gSurface, &attribute_tpi);
 
     if (vaStatus != VA_STATUS_SUCCESS) {
@@ -546,10 +548,10 @@ void CreateUserSurfaces(int mode)
         upstreamParam.bufferMode = BUFFER_SHARING_KBUFHANDLE;
 
     ExternalBufferAttrib attrib;
-    attrib.realWidth = gWidth;
-    attrib.realHeight = gHeight;
-    attrib.lumaStride = gStride;
-    attrib.chromStride = gStride;
+    attrib.realWidth = gSrcWidth;
+    attrib.realHeight = gSrcHeight;
+    attrib.lumaStride = gSrcStride;
+    attrib.chromStride = gSrcStride;
     attrib.format = VA_FOURCC_NV12;
     upstreamParam.bufAttrib = &attrib;
 
@@ -562,7 +564,7 @@ void CreateUserSurfaces(int mode)
         uint32_t lumaOffset = 0;
         uint32_t chromaUOffset = 0;
         uint32_t chromaVOffset = 0;
-        
+
         for(int i = 0; i < gSrcFrames; i++) {
             vaStatus = vaLockSurface(
                     gVADisplay, (VASurfaceID)gSurface[i],
@@ -587,7 +589,7 @@ void CreateUserSurfaces(int mode)
 
     }else{
 
-        for (int i = 0; i < gSrcFrames; i++) 
+        for (int i = 0; i < gSrcFrames; i++)
             list[i] = gSurface[i];
     }
 
@@ -600,8 +602,8 @@ void CreateUserSurfaces(int mode)
         printf("Failed setParameters, Status = %d\n", ret);
     }
     delete list;
-        
-    //get usrptr for uploading src pictures        
+
+    //get usrptr for uploading src pictures
     VAImage surface_image;
     for (int i=0; i<gSrcFrames; i++) {
         vaStatus = vaDeriveImage(gVADisplay, gSurface[i], &surface_image);
@@ -613,11 +615,11 @@ void CreateUserSurfaces(int mode)
         if (vaStatus != VA_STATUS_SUCCESS) {
             printf("Failed vaMapBuffer, vaStatus = %d\n", vaStatus);
         }
-        
+
         vaUnmapBuffer(gVADisplay, surface_image.buf);
         vaDestroyImage(gVADisplay, surface_image.image_id);
 
-        if (mode == 0) 
+        if (mode == 0)
             gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeUser, gSurface[i]);
         else
             gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeUser, gkBufHandle[i]);
@@ -626,16 +628,16 @@ void CreateUserSurfaces(int mode)
 
 void CreateSurfaceMappingForCI()
 {
-    uint32_t size = gWidth * gHeight * 3 /2;
+    uint32_t size = gSrcWidth * gSrcHeight * 3 /2;
 
     ValueInfo* vinfo = new ValueInfo;
     vinfo->mode = MEM_MODE_CI;
     vinfo->handle = 0;
     vinfo->size = size;
-    vinfo->width = gWidth;
-    vinfo->height = gHeight;
-    vinfo->lumaStride = gStride;
-    vinfo->chromStride = gStride;
+    vinfo->width = gSrcWidth;
+    vinfo->height = gSrcHeight;
+    vinfo->lumaStride = gSrcStride;
+    vinfo->chromStride = gSrcStride;
     vinfo->format = STRING_TO_FOURCC("NV12");
     vinfo->s3dformat = 0xFFFFFFFF;
 
@@ -649,85 +651,69 @@ void CreateSurfaceMappingForCI()
     }
     delete vinfo;
 }
-void CreateGfxhandle()
+void CreateGfxhandle(int color)
 {
     sp<ISurfaceComposer> composer(ComposerService::getComposerService());
     gGraphicBufferAlloc = composer->createGraphicBufferAlloc();
-    
-    uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_SW_WRITE_OFTEN | GraphicBuffer::USAGE_SW_READ_OFTEN; // | GraphicBuffer::USAGE_HW_COMPOSER;
-//    int format = HAL_PIXEL_FORMAT_YV12;
-    int format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
+
+    uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_HW_COMPOSER;
+    int format = HAL_PIXEL_FORMAT_NV12;
+    if (color == 1)
+        format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
+
     int32_t error;
-/*
-    int adjusted_width, adjusted_height;
-    if (0) {
-        ;
-    } else if (512 >= gWidth) {
-        adjusted_width = 512;
-    } else if (1024 >= gWidth) {
-        adjusted_width = 1024;
-    } else if (1280 >= gWidth) {
-        adjusted_width = 1280;
-    } else if (2048 >= gWidth) {
-        adjusted_width = 2048;
-    } else if (4096 >= gWidth) {
-        adjusted_width = 4096;
-    } else {
-        adjusted_width = (gWidth + 0x1f) & ~0x1f;
-    }
 
-    adjusted_height = (gHeight + 0x1f) & ~0x1f;
-
-printf("adjust width=%d, height=%d\n", adjusted_width, adjusted_height);
-*/
     for(int i = 0; i < gSrcFrames; i ++)
     {
         sp<GraphicBuffer> graphicBuffer(
                 gGraphicBufferAlloc->createGraphicBuffer(
-                                gWidth, gHeight, format, usage, &error));
-//                                adjusted_width, adjusted_height, format, usage, &error));
+                                gSrcWidth, gSrcHeight, format, usage, &error));
 
         gGraphicBuffer[i] = graphicBuffer;
-        graphicBuffer->lock(GraphicBuffer::USAGE_SW_WRITE_OFTEN, (void**)(&gUsrptr[i]));
+        graphicBuffer->lock(usage | GraphicBuffer::USAGE_SW_WRITE_OFTEN, (void**)(&gUsrptr[i]));
         gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)gGraphicBuffer[i]->handle);
         graphicBuffer->unlock();
+
+        IMG_native_handle_t* h = (IMG_native_handle_t*) gGraphicBuffer[i]->handle;
+        gSrcStride = h->iWidth;
+        gSrcHeight = h->iHeight;
     }
 }
 
-void CreateGralloc()
+void CreateGralloc(int color)
 {
-    int usage = GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_HW_TEXTURE;
-//    int format = HAL_PIXEL_FORMAT_YV12;
-    int format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
+    int usage = GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_HW_COMPOSER;
+    int format = HAL_PIXEL_FORMAT_NV12;
+    if (color == 1)
+        format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
 
     gfx_init();
 
-    void* vaddr;
     buffer_handle_t handle;
-    
+
     for(int i = 0; i < gSrcFrames; i ++)
     {
-        gfx_alloc(gWidth, gHeight, format, usage, &handle, (int32_t*)&gStride);
-        gfx_lock(handle, GRALLOC_USAGE_SW_WRITE_OFTEN, 0, 0, gWidth, gHeight, &vaddr);
-        printf("vaddr= %p\n", vaddr);
-        gUsrptr[i] = (uint8_t*)vaddr;
+        gfx_alloc(gSrcWidth, gSrcHeight, format, usage, &handle, (int32_t*)&gSrcStride);
+        gfx_lock(handle, usage | GRALLOC_USAGE_SW_WRITE_OFTEN, 0, 0, gSrcWidth, gSrcHeight, (void**)(&gUsrptr[i]));
         gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)handle);
         gfx_unlock(handle);
+        IMG_native_handle_t* h = (IMG_native_handle_t*) handle;
+        gSrcHeight = h->iHeight;
     }
 }
 
 int CheckArgs(int argc, char* argv[])
 {
     char c;
-    
-    while ((c =getopt(argc, argv,"b:c:r:w:h:m:f:n:s:o:e:z:?") ) != EOF) {
+
+    while ((c =getopt(argc, argv,"b:c:r:w:h:k:g:m:f:n:s:o:e:z:?") ) != EOF) {
         switch (c) {
                 case 'w':
-                    gWidth = atoi(optarg);
-                    gStride = gWidth;
+                    gSrcWidth = atoi(optarg);
+                    gSrcStride = gSrcWidth;
                     break;
                 case 'h':
-                    gHeight = atoi(optarg);
+                    gSrcHeight = atoi(optarg);
                     break;
                 case 'n':
                     gEncFrames = atoi(optarg);
@@ -767,28 +753,34 @@ int CheckArgs(int argc, char* argv[])
                     break;
                 case '?':
                 default:
-                     printf("\n./mix_encode -c <Codec> -b <Bit rate> -r <Rate control> -w <Width> -h <Height> -k <EncodeWidth> -g <EncodeHight> -n <Frame_num> -m <Mode> -s <Sync mode> -f <Output file>\n");
+                    printf("\n./mix_encode -c <Codec> -b <Bit rate> -r <Rate control> -w <SrcWidth> -h <SrcHeight> -k <EncodeWidth> -g <EncodeHight> -n <Frame_num> -m <Mode> -s <Sync mode> -f <Output file>\n");
               	     printf("\nCodec:\n");
               	     printf("0: H264 (default)\n1: MPEG4\n2: H263\n");
               	     printf("\nRate control:\n");
               	     printf("0: NO_RC \n1: CBR (default)\n2: VBR\n3: VCM\n");
               	     printf("\nMode:\n");
-              	     printf("0: Camera malloc (default)\n1: WiDi clone\n2: WiDi ext\n3: WiDi user\n4: Raw\n5: GrallocSource(Composer)\n6: GrallocSource(Gralloc)\n");
-                     exit(0);   
+              	     printf("0: Camera malloc (default)\n1: WiDi clone\n2: WiDi ext\n3: WiDi user\n4: Raw\n5: GrallocSource(Composer)\n6: GrallocSource(Gralloc)\n7: GrallocSource(Camera)\n");
+                     exit(0);
         }
-    }
-
-    if (gMode == 5 || gMode == 6)
-    {
-        gWidth = ((gWidth + 15 ) / 16 ) * 16;
-        gHeight = ((gHeight + 15 ) / 16 ) * 16;
     }
 
     if (gEncodeWidth == 0 || gEncodeHeight == 0)
     {
-        gEncodeWidth = gWidth;
-        gEncodeHeight = gHeight;
+        gEncodeWidth = gSrcWidth;
+        gEncodeHeight = gSrcHeight;
     }
+
+    gSrcWidth = ((gSrcWidth + 15 ) / 16 ) * 16;
+    gSrcHeight = ((gSrcHeight + 15 ) / 16 ) * 16;
+    gSrcStride = gSrcWidth;
+    
+    if (gMode == 4)
+    {
+        gEncodeWidth = gSrcWidth;
+        gEncodeHeight = gSrcHeight;
+        gSrcStride = gSrcWidth;
+    }
+
     return 0;
 }
 
@@ -844,7 +836,7 @@ int main(int argc, char* argv[])
             break;
         case  3:
             gRC = RATE_CONTROL_VCM;
-            break; 
+            break;
         default:
             printf("Not support this rate control mode\n");
             return 1;
@@ -884,7 +876,7 @@ int main(int argc, char* argv[])
     else
        printf("\nStart codec is null only for code coverage test  ....\n");
 //add for video encode libmix code coverage test--end
-    printf("Mode is %s, RC mode is %s, Width=%d, Height=%d, Bitrate=%dbps, EncodeFrames=%d, SyncMode=%d, file is %s, outputnalformat is %s\n\n", gModeString[gMode], gRCModeString[gRCMode], gWidth, gHeight, gBitrate, gEncFrames, gSyncEncMode, gFile,gOutPutFormatString[gOutPutFormat]);
+    printf("Mode is %s, RC mode is %s, Width=%d, Height=%d, Bitrate=%dbps, EncodeFrames=%d, SyncMode=%d, file is %s, outputnalformat is %s\n\n", gModeString[gMode], gRCModeString[gRCMode], gSrcWidth, gSrcHeight, gBitrate, gEncFrames, gSyncEncMode, gFile,gOutPutFormatString[gOutPutFormat]);
 
 //sleep(10);
 
@@ -926,15 +918,18 @@ for(int i=0; i<1; i++)
             MallocExternalMemory();
             break;
         case 5: //SurfaceMediaSource
-            CreateGfxhandle();
+            CreateGfxhandle(1);
             break;
         case 6: //Gralloc
-            CreateGralloc();
+            CreateGralloc(1);
             break;
-        case 7: //SurfaceMappingForCI
+        case 7: //Gralloc nv12 format
+            CreateGfxhandle(0);
+            break;
+        case 8: //SurfaceMappingForCI
             CreateSurfaceMappingForCI();
             break;
-        case 8:  //Camera malloc with extra values
+        case 9:  //Camera malloc with extra values
             MallocExternalMemoryWithExtraValues();
             break;
         default:
@@ -942,9 +937,10 @@ for(int i=0; i<1; i++)
     }
 
     //upload src data
+    printf("Fill src picture width=%d, Height=%d\n", gSrcStride, gSrcHeight);
     for(int i=0; i<gSrcFrames; i++)
-        YUV_generator_planar(gWidth, gHeight, gUsrptr[i], gWidth, gUsrptr[i]+gWidth*gHeight, gWidth, 0, 0, 1);
-    
+        YUV_generator_planar(gSrcStride, gSrcHeight, gUsrptr[i], gSrcStride, gUsrptr[i]+gSrcStride*gSrcHeight, gSrcStride, 0, 0, 1);
+
     //start
     ret = gVideoEncoder->start();
     CHECK_ENCODE_STATUS("start");
@@ -958,7 +954,7 @@ for(int i=0; i<1; i++)
     }
 
     //input buffers
-    VideoEncRawBuffer InBuf;    
+    VideoEncRawBuffer InBuf;
     uint8_t *data;
     uint32_t size;
 
@@ -977,7 +973,7 @@ for(int i=0; i<1; i++)
     OutBuf.data = out;
     OutBuf.format = goutputformat;
 
-    printf("\n"); 
+    printf("\n");
     for(unsigned int i=0; i<gEncFrames; i++)
     {
         if (gMode != 4)
@@ -987,7 +983,7 @@ for(int i=0; i<1; i++)
         }else
         {
             data = gUsrptr[i % gSrcFrames];
-            size = gWidth * gHeight * 3 /2;
+            size = gSrcWidth * gSrcHeight * 3 /2;
         }
         InBuf.data = data;
         InBuf.size = size;
@@ -1006,14 +1002,14 @@ for(int i=0; i<1; i++)
         }
         printf("Encoding %d Frames \r", i+1);
         fflush(stdout);
-    }	
+    }
         ret = gVideoEncoder->getOutput(&OutBuf);
     fclose(file);
-    
+
     gVideoEncoder->stop();
     releaseVideoEncoder(gVideoEncoder);
     gVideoEncoder = NULL;
-    
+
     switch(gMode)
     {
         case 0: //camera malloc
@@ -1040,14 +1036,14 @@ for(int i=0; i<1; i++)
         case 6: //Gralloc
             buffer_handle_t handle;
             for(int i=0; i<gSrcFrames; i++)
-            {            
+            {
                 if (gIMB[i] != NULL)
                 {
                     gIMB[i]->GetValue((int32_t&)handle);
                     gfx_free(handle);
                 }
-            }        
-            break;            
+            }
+            break;
     }
 
     for(int i=0; i<gSrcFrames; i++)
@@ -1055,10 +1051,10 @@ for(int i=0; i<1; i++)
         if (gIMB[i] != NULL)
             delete gIMB[i];
     }
-        
+
     printf("\nComplete Encoding, ByeBye ....\n");
 
-}    
+}
 
     return 1;
 }

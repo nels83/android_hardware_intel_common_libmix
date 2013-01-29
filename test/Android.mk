@@ -35,6 +35,7 @@ LOCAL_SRC_FILES :=              \
 LOCAL_C_INCLUDES :=             \
     $(TARGET_OUT_HEADERS)/libva \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
+    $(TARGET_OUT_HEADERS)/pvr \
     $(TOP)/frameworks/base/include/display \
     $(LOCAL_PATH)
 

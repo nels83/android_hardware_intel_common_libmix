@@ -16,6 +16,7 @@ LOCAL_C_INCLUDES :=             \
     $(LOCAL_PATH)               \
     $(TARGET_OUT_HEADERS)/libva \
     $(TOPDIR)/frameworks/native/include \
+    $(TARGET_OUT_HEADERS)/pvr
 
 #LOCAL_LDLIBS += -lpthread
 
