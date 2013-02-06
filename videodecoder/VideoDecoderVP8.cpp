@@ -343,9 +343,9 @@ void VideoDecoderVP8::updateReferenceFrames(vbp_data_vp8 *data) {
             if (p == mRFBs[0][j].surfaceBuffer) {
                 break;
             }
-            if (j == VP8_REF_SIZE) {
-                clearAsReference(1, i);
-            }
+        }
+        if (j == VP8_REF_SIZE) {
+            clearAsReference(1, i);
         }
     }
 }
