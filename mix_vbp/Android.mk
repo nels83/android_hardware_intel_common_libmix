@@ -9,11 +9,6 @@ include $(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/mp4/parser/Android
 include $(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/vc1/parser/Android.mk
 
 # Add source codes for Merrifield
-MERRIFIELD_DEVICE := \
-        mrfl_vp \
-        mrfl_hvp \
-        mrfl_sle \
-        merr_vv
-ifneq ($(filter $(REF_DEVICE_NAME),$(MERRIFIELD_DEVICE)),)
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
 include $(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/vp8/parser/Android.mk
 endif
