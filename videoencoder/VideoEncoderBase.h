@@ -19,6 +19,7 @@
 
 struct SurfaceMap {
     VASurfaceID surface;
+    VASurfaceID surface_backup;
     MetadataBufferType type;
     int32_t value;
     ValueInfo vinfo;
@@ -97,6 +98,7 @@ private:
     Encode_Status cleanupForOutput();
     Encode_Status outputAllData(VideoEncOutputBuffer *outBuffer);
     Encode_Status queryAutoReferenceConfig(VAProfile profile);
+    Encode_Status copySurfaces(VASurfaceID srcId, VASurfaceID destId);
 
 protected:
 

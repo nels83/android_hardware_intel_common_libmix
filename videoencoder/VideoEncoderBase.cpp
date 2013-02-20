@@ -575,6 +575,8 @@ Encode_Status VideoEncoderBase::stop() {
         if (! (*mSrcSurfaceMapList.begin())->added) {
             LOG_V( "Rlease the Src Surface Buffer not added into vaContext\n");
             vaDestroySurfaces(mVADisplay, &((*mSrcSurfaceMapList.begin())->surface), 1);
+            if ((*mSrcSurfaceMapList.begin())->surface_backup != VA_INVALID_SURFACE)
+                vaDestroySurfaces(mVADisplay, &((*mSrcSurfaceMapList.begin())->surface_backup), 1);
         }
         delete (*mSrcSurfaceMapList.begin());
         mSrcSurfaceMapList.erase(mSrcSurfaceMapList.begin());
@@ -1355,6 +1357,7 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
     }
 
     map->surface = surface;
+    map->surface_backup = VA_INVALID_SURFACE;
     map->type = MetadataBufferTypeEncoder;
     map->value = (int32_t)*usrptr;
     map->vinfo.mode = (MemMode)MEM_MODE_USRPTR;
@@ -1421,6 +1424,7 @@ Encode_Status VideoEncoderBase::setUpstreamBuffer(VideoParamsUpstreamBuffer *upS
         //wrap upstream buffer into vaSurface
         SurfaceMap *map = new SurfaceMap;
 
+        map->surface_backup = VA_INVALID_SURFACE;
         map->type = MetadataBufferTypeUser;
         map->value = upStreamBuffer->bufList[i];
         map->vinfo.mode = (MemMode)upStreamBuffer->bufferMode;
@@ -1671,9 +1675,35 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
 
     CHECK_VA_STATUS_RETURN("vaCreateSurfaceFromMalloc");
 
-    LOG_I("Surface ID created from Malloc = 0x%08x", map->value);
+    LOG_I("Surface ID created from Malloc = 0x%08x\n", map->value);
 
-    map->surface = surface;
+    //Merrifield limitation, should use mAutoReference to check if on Merr
+    if ( (mAutoReference == false) || (map->vinfo.lumaStride % 64 == 0) )
+        map->surface = surface;
+    else {
+        map->surface_backup = surface;
+
+        VASurfaceID surfaceId;
+        VASurfaceAttributeTPI attribute_tpi;
+        uint32_t stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;
+
+        attribute_tpi.size = stride_aligned * mComParams.resolution.height * 3 / 2;
+        attribute_tpi.luma_stride = stride_aligned;
+        attribute_tpi.chroma_u_stride = stride_aligned;
+        attribute_tpi.chroma_v_stride = stride_aligned;
+        attribute_tpi.luma_offset = 0;
+        attribute_tpi.chroma_u_offset = stride_aligned * mComParams.resolution.height;
+        attribute_tpi.chroma_v_offset = stride_aligned * mComParams.resolution.height;
+        attribute_tpi.pixel_format = VA_FOURCC_NV12;
+        attribute_tpi.type = VAExternalMemoryNULL;
+
+        vaCreateSurfacesWithAttribute(mVADisplay, mComParams.resolution.width, mComParams.resolution.height,
+                VA_RT_FORMAT_YUV420, 1, &surfaceId, &attribute_tpi);
+        CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
+
+        map->surface = surfaceId;
+        LOG_E("Due to 64 alignment, an alternative Surface ID 0x%08x created\n", surfaceId);
+    }
 
     return ret;
 }
@@ -1756,7 +1786,11 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
         //has mapped, get surfaceID directly
         LOG_I("direct find surface %d from value %x\n", map->surface, value);
         *sid = map->surface;
-
+        if (map->surface_backup != VA_INVALID_SURFACE) {
+            //need to copy data
+            LOG_I("Need copy surfaces from %x to %x\n", map->surface_backup, *sid);
+            ret = copySurfaces(map->surface_backup, *sid);
+        }
         return ret;
     }
 
@@ -1802,6 +1836,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
     if (pvinfo){
         //map according info, and add to surfacemap list
         map = new SurfaceMap;
+        map->surface_backup = VA_INVALID_SURFACE;
         map->type = type;
         map->value = value;
         memcpy(&(map->vinfo), pvinfo, sizeof(ValueInfo));
@@ -1818,6 +1853,11 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
         }
 
         *sid = map->surface;
+        if (map->surface_backup != VA_INVALID_SURFACE) {
+            //need to copy data
+            LOG_I("Need copy surfaces from %x to %x\n", map->surface_backup, *sid);
+            ret = copySurfaces(map->surface_backup, *sid);
+        }
 
     } else {
         //can't map due to no info
@@ -1829,6 +1869,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
         //map more using same ValueInfo
         for(unsigned int i=0; i<extravalues_count; i++) {
             map = new SurfaceMap;
+            map->surface_backup = VA_INVALID_SURFACE;
             map->type = type;
             map->value = extravalues[i];
             memcpy(&(map->vinfo), pvinfo, sizeof(ValueInfo));
@@ -1986,3 +2027,109 @@ SurfaceMap *VideoEncoderBase::findSurfaceMapByValue(int32_t value) {
 
     return NULL;
 }
+
+Encode_Status VideoEncoderBase::copySurfaces(VASurfaceID srcId, VASurfaceID destId) {
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+
+    uint32_t width = mComParams.resolution.width;
+    uint32_t height = mComParams.resolution.height;
+
+    uint32_t i, j;
+
+    VAImage srcImage, destImage;
+    uint8_t *pSrcBuffer, *pDestBuffer;
+
+    uint8_t *srcY, *dstY;
+    uint8_t *srcU, *srcV;
+    uint8_t *srcUV, *dstUV;
+
+    LOG_I("src Surface ID = 0x%08x, dest Surface ID = 0x%08x\n", (uint32_t) srcId, (uint32_t) destId);
+
+    vaStatus = vaDeriveImage(mVADisplay, srcId, &srcImage);
+    CHECK_VA_STATUS_RETURN("vaDeriveImage");
+    vaStatus = vaMapBuffer(mVADisplay, srcImage.buf, (void **)&pSrcBuffer);
+    CHECK_VA_STATUS_RETURN("vaMapBuffer");
+
+    LOG_V("Src Image information\n");
+    LOG_I("srcImage.pitches[0] = %d\n", srcImage.pitches[0]);
+    LOG_I("srcImage.pitches[1] = %d\n", srcImage.pitches[1]);
+    LOG_I("srcImage.offsets[0] = %d\n", srcImage.offsets[0]);
+    LOG_I("srcImage.offsets[1] = %d\n", srcImage.offsets[1]);
+    LOG_I("srcImage.num_planes = %d\n", srcImage.num_planes);
+    LOG_I("srcImage.width = %d\n", srcImage.width);
+    LOG_I("srcImage.height = %d\n", srcImage.height);
+
+    vaStatus = vaDeriveImage(mVADisplay, destId, &destImage);
+    CHECK_VA_STATUS_RETURN("vaDeriveImage");
+    vaStatus = vaMapBuffer(mVADisplay, destImage.buf, (void **)&pDestBuffer);
+    CHECK_VA_STATUS_RETURN("vaMapBuffer");
+
+    LOG_V("Dest Image information\n");
+    LOG_I("destImage.pitches[0] = %d\n", destImage.pitches[0]);
+    LOG_I("destImage.pitches[1] = %d\n", destImage.pitches[1]);
+    LOG_I("destImage.offsets[0] = %d\n", destImage.offsets[0]);
+    LOG_I("destImage.offsets[1] = %d\n", destImage.offsets[1]);
+    LOG_I("destImage.num_planes = %d\n", destImage.num_planes);
+    LOG_I("destImage.width = %d\n", destImage.width);
+    LOG_I("destImage.height = %d\n", destImage.height);
+
+    if (mComParams.rawFormat == RAW_FORMAT_YUV420) {
+
+        srcY = pSrcBuffer +srcImage.offsets[0];
+        srcU = pSrcBuffer + srcImage.offsets[1];
+        srcV = pSrcBuffer + srcImage.offsets[2];
+        dstY = pDestBuffer + destImage.offsets[0];
+        dstUV = pDestBuffer + destImage.offsets[1];
+
+        for (i = 0; i < height; i ++) {
+            memcpy(dstY, srcY, width);
+            srcY += srcImage.pitches[0];
+            dstY += destImage.pitches[0];
+        }
+
+        for (i = 0; i < height / 2; i ++) {
+            for (j = 0; j < width; j+=2) {
+                dstUV [j] = srcU [j / 2];
+                dstUV [j + 1] = srcV [j / 2];
+            }
+            srcU += srcImage.pitches[1];
+            srcV += srcImage.pitches[2];
+            dstUV += destImage.pitches[1];
+        }
+    }else if (mComParams.rawFormat == RAW_FORMAT_NV12) {
+
+        srcY = pSrcBuffer + srcImage.offsets[0];
+        dstY = pDestBuffer + destImage.offsets[0];
+        srcUV = pSrcBuffer + srcImage.offsets[1];
+        dstUV = pDestBuffer + destImage.offsets[1];
+
+        for (i = 0; i < height; i++) {
+            memcpy(dstY, srcY, width);
+            srcY += srcImage.pitches[0];
+            dstY += destImage.pitches[0];
+        }
+
+        for (i = 0; i < height / 2; i++) {
+            memcpy(dstUV, srcUV, width);
+            srcUV += srcImage.pitches[1];
+            dstUV += destImage.pitches[1];
+        }
+    } else {
+        LOG_E("Raw format not supoort\n");
+        return ENCODE_FAIL;
+    }
+
+    vaStatus = vaUnmapBuffer(mVADisplay, srcImage.buf);
+    CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
+    vaStatus = vaDestroyImage(mVADisplay, srcImage.image_id);
+    CHECK_VA_STATUS_RETURN("vaDestroyImage");
+
+    vaStatus = vaUnmapBuffer(mVADisplay, destImage.buf);
+    CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
+    vaStatus = vaDestroyImage(mVADisplay, destImage.image_id);
+    CHECK_VA_STATUS_RETURN("vaDestroyImage");
+
+    return ENCODE_SUCCESS;
+}
+
