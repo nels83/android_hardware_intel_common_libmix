@@ -1021,7 +1021,7 @@ uint32 vbp_process_slices_svh_mp42(vbp_context *pcontext, int list_index)
 
     return ret;
 }
-
+#define SEARCH_SYNC_OPT
 uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
 {
     vbp_data_mp42 *query_data = (vbp_data_mp42 *) pcontext->query_data;
@@ -1089,6 +1089,7 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
 
     while (1)
     {
+#ifndef SEARCH_SYNC_OPT
         getbits = viddec_pm_peek_bits(parent, &code, resync_marker_length);
 
         // return VBP_OK as resync_marker may not be present
@@ -1100,7 +1101,37 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
             BREAK_GETBITS_FAIL(getbits, ret);
             continue;
         }
+#else
 
+        // read 3 bytes since resync_marker_length is between 17 bits and 23 bits
+        if (parent->getbits.bstrm_buf.buf_index + 3 > parent->getbits.bstrm_buf.buf_end)
+        {
+            break;
+        }
+
+        code = parent->getbits.bstrm_buf.buf[parent->getbits.bstrm_buf.buf_index] << 16 |
+                parent->getbits.bstrm_buf.buf[parent->getbits.bstrm_buf.buf_index+1] << 8 |
+                parent->getbits.bstrm_buf.buf[parent->getbits.bstrm_buf.buf_index+2];
+
+        if (code >> (24-resync_marker_length) != 1)
+        {
+            int byte0 = code & 0xff;
+            int byte1 = (code >> 8) & 0xff;
+            if (byte0 != 0)
+            {
+                parent->getbits.bstrm_buf.buf_index += 3;
+            }
+            else if (byte1 != 0)
+            {
+                parent->getbits.bstrm_buf.buf_index += 2;
+            }
+            else
+            {
+                parent->getbits.bstrm_buf.buf_index += 1;
+            }
+            continue;
+        }
+#endif
         // We found resync_marker
         viddec_pm_get_au_pos(parent, &bit_offset, &byte_offset, &is_emul);
 
@@ -1152,7 +1183,7 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
         if (bit_offset)
         {
             // byte-align parsing position
-            getbits = viddec_pm_get_bits(parent, &code, 8 - bit_offset);
+            getbits = viddec_pm_skip_bits(parent,  8 - bit_offset);
             if (getbits == -1)
             {
                 ETRACE("Failed to align parser to byte position.\n");
