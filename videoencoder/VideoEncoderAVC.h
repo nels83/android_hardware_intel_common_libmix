@@ -44,11 +44,19 @@ private:
     Encode_Status renderPictureParams(EncodeTask *task);
     Encode_Status renderSliceParams(EncodeTask *task);
     int calcLevel(int numMbs);
+    Encode_Status renderPackedSequenceParams(EncodeTask *task);
+    Encode_Status renderPackedPictureParams(EncodeTask *task);
 
 public:
 
     VideoParamsAVC mVideoParamsAVC;
     uint32_t mSliceNum;
+    VABufferID packed_seq_header_param_buf_id;
+    VABufferID packed_seq_buf_id;
+    VABufferID packed_pic_header_param_buf_id;
+    VABufferID packed_pic_buf_id;
+    VABufferID packed_sei_header_param_buf_id;   /* the SEI buffer */
+    VABufferID packed_sei_buf_id;
 
 };
 

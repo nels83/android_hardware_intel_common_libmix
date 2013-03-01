@@ -140,6 +140,8 @@ protected:
     uint32_t mCodedBufSize;
     bool mAutoReference;
     uint32_t mAutoReferenceSurfaceNum;
+    uint32_t mEncPackedHeaders;
+    uint32_t mEncMaxRefFrames;
 
     bool mSliceSizeOverflow;
 

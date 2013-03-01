@@ -46,6 +46,10 @@ ifeq ($(VIDEO_ENC_STATISTICS_ENABLE),true)
 LOCAL_CPPFLAGS += -DVIDEO_ENC_STATISTICS_ENABLE
 endif
 
+ifeq ($(REF_PRODUCT_NAME),baylake)
+    LOCAL_C_FLAGS += -DBAYLAKE
+endif
+
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva_videoencoder
 

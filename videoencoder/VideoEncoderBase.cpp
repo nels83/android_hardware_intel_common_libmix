@@ -120,10 +120,20 @@ Encode_Status VideoEncoderBase::start() {
 
     queryAutoReferenceConfig(mComParams.profile);
 
-    VAConfigAttrib vaAttrib[3];
+    VAConfigAttrib vaAttrib[5];
     vaAttrib[0].type = VAConfigAttribRTFormat;
     vaAttrib[1].type = VAConfigAttribRateControl;
     vaAttrib[2].type = VAConfigAttribEncAutoReference;
+    vaAttrib[3].type = VAConfigAttribEncPackedHeaders;
+    vaAttrib[4].type = VAConfigAttribEncMaxRefFrames;
+
+    vaStatus = vaGetConfigAttributes(mVADisplay, mComParams.profile,
+            VAEntrypointEncSlice, &vaAttrib[0], 5);
+    CHECK_VA_STATUS_RETURN("vaGetConfigAttributes");
+
+    mEncPackedHeaders = vaAttrib[3].value;
+    mEncMaxRefFrames = vaAttrib[4].value;
+
     vaAttrib[0].value = VA_RT_FORMAT_YUV420;
     vaAttrib[1].value = mComParams.rcMode;
     vaAttrib[2].value = mAutoReference ? 1 : VA_ATTRIB_NOT_SUPPORTED;
@@ -220,12 +230,11 @@ Encode_Status VideoEncoderBase::start() {
     vaStatus = vaCreateContext(mVADisplay, mVAConfig,
             mComParams.resolution.width,
             mComParams.resolution.height,
-            0, contextSurfaces, contextSurfaceCnt,
+            VA_PROGRESSIVE, contextSurfaces, contextSurfaceCnt,
             &(mVAContext));
+    CHECK_VA_STATUS_RETURN("vaCreateContext");
 
     delete [] contextSurfaces;
-
-    CHECK_VA_STATUS_RETURN("vaCreateContext");
 
     LOG_I("Success to create libva context width %d, height %d\n",
           mComParams.resolution.width, mComParams.resolution.height);
@@ -1302,13 +1311,11 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
     SurfaceMap *map = NULL;
 
     LOG_V( "Begin\n");
-
     // If encode session has been configured, we can not request surface creation anymore
     if (mStarted) {
         LOG_E( "Already Initialized, can not request VA surface anymore\n");
         return ENCODE_WRONG_STATE;
     }
-
     if (width<=0 || height<=0 ||outsize == NULL ||stride == NULL || usrptr == NULL) {
         LOG_E("width<=0 || height<=0 || outsize == NULL || stride == NULL ||usrptr == NULL\n");
         return ENCODE_NULL_PTR;
@@ -1333,7 +1340,7 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
     attribute_tpi.pixel_format = VA_FOURCC_NV12;
     attribute_tpi.type = VAExternalMemoryNULL;
 
-    vaCreateSurfacesWithAttribute(mVADisplay, width, height, VA_RT_FORMAT_YUV420,
+    vaStatus = vaCreateSurfacesWithAttribute(mVADisplay, width, height, VA_RT_FORMAT_YUV420,
             1, &surface, &attribute_tpi);
     CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
 

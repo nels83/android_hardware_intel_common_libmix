@@ -12,6 +12,7 @@
 #include "VideoEncoderAVC.h"
 #include <va/va_tpi.h>
 #include <va/va_enc_h264.h>
+#include <bitstream.h>
 
 VideoEncoderAVC::VideoEncoderAVC()
     :VideoEncoderBase() {
@@ -38,6 +39,13 @@ VideoEncoderAVC::VideoEncoderAVC()
     mVideoParamsAVC.SAR.SarWidth = 0;
     mVideoParamsAVC.SAR.SarHeight = 0;
     mAutoReferenceSurfaceNum = 4;
+
+    packed_seq_header_param_buf_id = VA_INVALID_ID;
+    packed_seq_buf_id = VA_INVALID_ID;
+    packed_pic_header_param_buf_id = VA_INVALID_ID;
+    packed_pic_buf_id = VA_INVALID_ID;
+    packed_sei_header_param_buf_id = VA_INVALID_ID;   /* the SEI buffer */
+    packed_sei_buf_id = VA_INVALID_ID;
 }
 
 Encode_Status VideoEncoderAVC::start() {
@@ -627,7 +635,6 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
     Encode_Status ret = ENCODE_SUCCESS;
 
     LOG_V( "Begin\n");
-
     if (mFrameNum == 0 || mNewHeader) {
 
         if (mRenderHrd) {
@@ -674,6 +681,14 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
 
     ret = renderPictureParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
+
+    if (mFrameNum == 0 && (mEncPackedHeaders != VA_ATTRIB_NOT_SUPPORTED)) {
+        ret = renderPackedSequenceParams(task);
+        CHECK_ENCODE_STATUS_RETURN("renderPackedSequenceParams");
+
+        ret = renderPackedPictureParams(task);
+        CHECK_ENCODE_STATUS_RETURN("renderPackedPictureParams");
+    }
 
     ret = renderSliceParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderSliceParams");
@@ -846,7 +861,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
     avcSeqParams.intra_period = mComParams.intraPeriod;
     //avcSeqParams.vui_flag = 248;
     avcSeqParams.vui_parameters_present_flag = mVideoParamsAVC.VUIFlag;
-    avcSeqParams.seq_parameter_set_id = 8;
+    avcSeqParams.seq_parameter_set_id = 0;
     if (mVideoParamsAVC.crop.LeftOffset ||
             mVideoParamsAVC.crop.RightOffset ||
             mVideoParamsAVC.crop.TopOffset ||
@@ -880,7 +895,9 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
     }
 
     // This is a temporary fix suggested by Binglin for bad encoding quality issue
-    avcSeqParams.max_num_ref_frames = 1; 
+    avcSeqParams.max_num_ref_frames = (mEncMaxRefFrames != VA_ATTRIB_NOT_SUPPORTED) ?
+        mEncMaxRefFrames : 1;
+
     if(avcSeqParams.ip_period > 1)
         avcSeqParams.max_num_ref_frames = 2; 
 
@@ -896,6 +913,17 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
     LOG_I( "initial_qp = %d\n", rcMiscParam->initial_qp);
     LOG_I( "min_qp = %d\n", rcMiscParam->min_qp);
     LOG_I( "basic_unit_size = %d\n", rcMiscParam->basic_unit_size);
+
+    // Not sure whether these settings work for all drivers
+    avcSeqParams.seq_fields.bits.frame_mbs_only_flag = 1;
+    avcSeqParams.seq_fields.bits.pic_order_cnt_type = 0;
+    avcSeqParams.seq_fields.bits.direct_8x8_inference_flag = 0;
+
+    avcSeqParams.seq_fields.bits.log2_max_frame_num_minus4 = 0;
+    avcSeqParams.seq_fields.bits.log2_max_pic_order_cnt_lsb_minus4 = 2;
+    avcSeqParams.time_scale = 900;
+    avcSeqParams.num_units_in_tick = 15;			/* Tc = num_units_in_tick / time_sacle */
+    // Not sure whether these settings work for all drivers
 
     vaStatus = vaUnmapBuffer(mVADisplay, mRcParamBuf);
     CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
@@ -917,21 +945,93 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
     return ENCODE_SUCCESS;
 }
 
+Encode_Status VideoEncoderAVC::renderPackedSequenceParams(EncodeTask *task) {
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncSequenceParameterBufferH264 *avcSeqParams;
+    VAEncPackedHeaderParameterBuffer packed_header_param_buffer;
+    unsigned char *packed_seq_buffer = NULL;
+    unsigned int length_in_bits, offset_in_bytes;
+
+    vaStatus = vaMapBuffer(mVADisplay, mSeqParamBuf, (void **)&avcSeqParams);
+    CHECK_VA_STATUS_RETURN("vaMapBuffer");
+
+    length_in_bits = build_packed_seq_buffer(&packed_seq_buffer, mComParams.profile, avcSeqParams);
+    packed_header_param_buffer.type = VAEncPackedHeaderSequence;
+    packed_header_param_buffer.bit_length = length_in_bits;
+    packed_header_param_buffer.has_emulation_bytes = 0;
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+            VAEncPackedHeaderParameterBufferType,
+            sizeof(packed_header_param_buffer), 1, &packed_header_param_buffer,
+            &packed_seq_header_param_buf_id);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+            VAEncPackedHeaderDataBufferType,
+            (length_in_bits + 7) / 8, 1, packed_seq_buffer,
+            &packed_seq_buf_id);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &packed_seq_header_param_buf_id, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &packed_seq_buf_id, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+
+    vaStatus = vaUnmapBuffer(mVADisplay, mSeqParamBuf);
+    CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
+
+    free(packed_seq_buffer);
+    return vaStatus;
+}
 
 Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncPictureParameterBufferH264 avcPicParams = {};
+    uint32_t RefFrmIdx;
 
     LOG_V( "Begin\n\n");
     // set picture params for HW
-    if(mAutoReference == false){
+    if (mAutoReference == false) {
+        for (RefFrmIdx = 0; RefFrmIdx < 16; RefFrmIdx++) {
+            avcPicParams.ReferenceFrames[RefFrmIdx].picture_id = VA_INVALID_ID;
+            avcPicParams.ReferenceFrames[RefFrmIdx].flags = VA_PICTURE_H264_INVALID;
+        }
         avcPicParams.ReferenceFrames[0].picture_id= task->ref_surface;
+        avcPicParams.ReferenceFrames[0].flags = VA_PICTURE_H264_SHORT_TERM_REFERENCE;
         avcPicParams.CurrPic.picture_id= task->rec_surface;
+        // Not sure whether these settings work for all drivers
+        avcPicParams.CurrPic.TopFieldOrderCnt = mFrameNum * 2;
+
+        avcPicParams.pic_fields.bits.transform_8x8_mode_flag = 0;
+        avcPicParams.seq_parameter_set_id = 0;
+        avcPicParams.pic_parameter_set_id = 0;
+
+        avcPicParams.last_picture = 0;
+        avcPicParams.frame_num = 0;
+
+        avcPicParams.pic_init_qp = 26;
+        avcPicParams.num_ref_idx_l0_active_minus1 = 0;
+        avcPicParams.num_ref_idx_l1_active_minus1 = 0;
+
+        avcPicParams.pic_fields.bits.idr_pic_flag = 0;
+        avcPicParams.pic_fields.bits.reference_pic_flag = 0;
+        avcPicParams.pic_fields.bits.entropy_coding_mode_flag = 1;
+        avcPicParams.pic_fields.bits.weighted_pred_flag = 0;
+        avcPicParams.pic_fields.bits.weighted_bipred_idc = 0;
+        avcPicParams.pic_fields.bits.transform_8x8_mode_flag = 0;
+        avcPicParams.pic_fields.bits.deblocking_filter_control_present_flag = 1;
+
+        avcPicParams.frame_num = mFrameNum;
+        avcPicParams.pic_fields.bits.idr_pic_flag = (mFrameNum == 0);
+        avcPicParams.pic_fields.bits.reference_pic_flag = 1;
+        // Not sure whether these settings work for all drivers
     }else {
         for(int i =0; i< mAutoReferenceSurfaceNum; i++)
             avcPicParams.ReferenceFrames[i].picture_id = mAutoRefSurfaces[i];
     }
+
     avcPicParams.coded_buf = task->coded_buffer;
     avcPicParams.last_picture = 0;
 
@@ -957,6 +1057,45 @@ Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
     return ENCODE_SUCCESS;
 }
 
+Encode_Status VideoEncoderAVC::renderPackedPictureParams(EncodeTask *task) {
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncPictureParameterBufferH264 *avcPicParams;
+    VAEncPackedHeaderParameterBuffer packed_header_param_buffer;
+    unsigned char *packed_pic_buffer = NULL;
+    unsigned int length_in_bits, offset_in_bytes;
+
+    vaStatus = vaMapBuffer(mVADisplay, mPicParamBuf, (void **)&avcPicParams);
+    CHECK_VA_STATUS_RETURN("vaMapBuffer");
+
+    length_in_bits = build_packed_pic_buffer(&packed_pic_buffer, avcPicParams);
+    packed_header_param_buffer.type = VAEncPackedHeaderPicture;
+    packed_header_param_buffer.bit_length = length_in_bits;
+    packed_header_param_buffer.has_emulation_bytes = 0;
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+            VAEncPackedHeaderParameterBufferType,
+            sizeof(packed_header_param_buffer), 1, &packed_header_param_buffer,
+            &packed_pic_header_param_buf_id);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+            VAEncPackedHeaderDataBufferType,
+            (length_in_bits + 7) / 8, 1, packed_pic_buffer,
+            &packed_pic_buf_id);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &packed_pic_header_param_buf_id, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &packed_pic_buf_id, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+
+    vaStatus = vaUnmapBuffer(mVADisplay, mSeqParamBuf);
+    CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
+
+    free(packed_pic_buffer);
+    return vaStatus;
+}
 
 Encode_Status VideoEncoderAVC::renderSliceParams(EncodeTask *task) {
 
@@ -970,6 +1109,7 @@ Encode_Status VideoEncoderAVC::renderSliceParams(EncodeTask *task) {
     uint32_t actualSliceHeightInMB = 0;
     uint32_t startRowInMB = 0;
     uint32_t modulus = 0;
+    uint32_t RefFrmIdx;
 
     LOG_V( "Begin\n\n");
 
@@ -1046,6 +1186,26 @@ Encode_Status VideoEncoderAVC::renderSliceParams(EncodeTask *task) {
         LOG_I( "slice_height_in_mb = %d\n", (int) currentSlice->num_macroblocks);
         LOG_I( "slice.type = %d\n", (int) currentSlice->slice_type);
         LOG_I("disable_deblocking_filter_idc = %d\n\n", (int) currentSlice->disable_deblocking_filter_idc);
+
+        // Not sure whether these settings work for all drivers
+        currentSlice->pic_parameter_set_id = 0;
+        currentSlice->pic_order_cnt_lsb = mFrameNum * 2;
+        currentSlice->direct_spatial_mv_pred_flag = 0;
+        currentSlice->num_ref_idx_l0_active_minus1 = 0;      /* FIXME: ??? */
+        currentSlice->num_ref_idx_l1_active_minus1 = 0;
+        currentSlice->cabac_init_idc = 0;
+        currentSlice->slice_qp_delta = 0;
+        currentSlice->disable_deblocking_filter_idc = 0;
+        currentSlice->slice_alpha_c0_offset_div2 = 2;
+        currentSlice->slice_beta_offset_div2 = 2;
+        currentSlice->idr_pic_id = 0;
+        for (RefFrmIdx = 0; RefFrmIdx < 32; RefFrmIdx++) {
+            currentSlice->RefPicList0[RefFrmIdx].picture_id = VA_INVALID_ID;
+            currentSlice->RefPicList0[RefFrmIdx].flags = VA_PICTURE_H264_INVALID;
+        }
+        currentSlice->RefPicList0[0].picture_id = task->ref_surface;
+        currentSlice->RefPicList0[0].flags = VA_PICTURE_H264_SHORT_TERM_REFERENCE;
+        // Not sure whether these settings work for all drivers
 
         startRowInMB += actualSliceHeightInMB;
     }
