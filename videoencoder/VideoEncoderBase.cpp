@@ -920,7 +920,8 @@ Encode_Status VideoEncoderBase::setParameters(
         case VideoParamsTypeAVC:
         case VideoParamsTypeH263:
         case VideoParamsTypeMP4:
-        case VideoParamsTypeVC1: {
+        case VideoParamsTypeVC1:
+        case VideoParamsTypeVP8: {
             ret = derivedSetParams(videoEncParams);
             break;
         }
@@ -1030,7 +1031,8 @@ Encode_Status VideoEncoderBase::getParameters(
         case VideoParamsTypeAVC:
         case VideoParamsTypeH263:
         case VideoParamsTypeMP4:
-        case VideoParamsTypeVC1: {
+        case VideoParamsTypeVC1:
+        case VideoParamsTypeVP8: {
             derivedGetParams(videoEncParams);
             break;
         }
@@ -1125,7 +1127,8 @@ Encode_Status VideoEncoderBase::setConfig(VideoParamConfigSet *videoEncConfig) {
         case VideoConfigTypeAVCIntraPeriod:
         case VideoConfigTypeNALSize:
         case VideoConfigTypeIDRRequest:
-        case VideoConfigTypeSliceNum: {
+        case VideoConfigTypeSliceNum:
+        case VideoConfigTypeVP8: {
 
             ret = derivedSetConfig(videoEncConfig);
             break;
@@ -1210,7 +1213,8 @@ Encode_Status VideoEncoderBase::getConfig(VideoParamConfigSet *videoEncConfig) {
         case VideoConfigTypeAVCIntraPeriod:
         case VideoConfigTypeNALSize:
         case VideoConfigTypeIDRRequest:
-        case VideoConfigTypeSliceNum: {
+        case VideoConfigTypeSliceNum:
+        case VideoConfigTypeVP8: {
 
             ret = derivedGetConfig(videoEncConfig);
             break;

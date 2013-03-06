@@ -8,6 +8,7 @@ LOCAL_SRC_FILES :=              \
     VideoEncoderAVC.cpp         \
     VideoEncoderH263.cpp        \
     VideoEncoderMP4.cpp         \
+    VideoEncoderVP8.cpp         \
     VideoEncoderHost.cpp
 
 # LOCAL_CFLAGS :=

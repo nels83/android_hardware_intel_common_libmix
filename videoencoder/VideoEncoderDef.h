@@ -290,6 +290,7 @@ enum VideoParamConfigType {
     VideoParamsTypeHRD,
     VideoParamsTypeStoreMetaDataInBuffers,
     VideoParamsTypeProfileLevel,
+    VideoParamsTypeVP8,
 
     VideoConfigTypeFrameRate,
     VideoConfigTypeBitRate,
@@ -301,6 +302,7 @@ enum VideoParamConfigType {
     VideoConfigTypeNALSize,
     VideoConfigTypeIDRRequest,
     VideoConfigTypeSliceNum,
+    VideoConfigTypeVP8,
 
     VideoParamsConfigExtension
 };
@@ -580,6 +582,42 @@ struct VideoConfigSliceNum : VideoParamConfigSet {
     }
 
     SliceNum sliceNum;
+};
+
+struct VideoParamsVP8 : VideoParamConfigSet {
+
+	uint32_t profile;
+	uint32_t error_resilient;
+	uint32_t num_token_partitions;
+	uint32_t kf_auto;
+	uint32_t kf_min_dist;
+	uint32_t kf_max_dist;
+	uint32_t quality_setting;
+	uint32_t min_qp;
+	uint32_t max_qp;
+	uint32_t rc_undershoot;
+	uint32_t rc_overshoot;
+	uint32_t hrd_buf_size;
+	uint32_t hrd_buf_initial_fullness;
+	uint32_t hrd_buf_optimal_fullness;
+
+	VideoParamsVP8() {
+		type = VideoParamsTypeVP8;
+		size = sizeof(VideoParamsVP8);
+	}
+};
+
+struct VideoConfigVP8 : VideoParamConfigSet {
+
+	uint32_t force_kf;
+	uint32_t no_ref_last;
+	uint32_t no_ref_gf;
+	uint32_t no_ref_arf;
+
+	VideoConfigVP8 () {
+		type = VideoConfigTypeVP8;
+		size = sizeof(VideoConfigVP8);
+	}
 };
 
 #endif /*  __VIDEO_ENCODER_DEF_H__ */

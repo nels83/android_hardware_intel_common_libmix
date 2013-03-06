@@ -9,6 +9,7 @@
 #include "VideoEncoderMP4.h"
 #include "VideoEncoderH263.h"
 #include "VideoEncoderAVC.h"
+#include "VideoEncoderVP8.h"
 #include "VideoEncoderHost.h"
 #include "VideoEncoderLog.h"
 #include <string.h>
@@ -30,6 +31,9 @@ IVideoEncoder *createVideoEncoder(const char *mimeType) {
     } else if (strcasecmp(mimeType, "video/mpeg4") == 0 ||
             strcasecmp(mimeType, "video/mp4v-es") == 0) {
         VideoEncoderMP4 *p = new VideoEncoderMP4();
+        return (IVideoEncoder *)p;
+    } else if (strcasecmp(mimeType, "video/x-webm") == 0) {
+        VideoEncoderVP8 *p = new VideoEncoderVP8();
         return (IVideoEncoder *)p;
     } else {
         LOG_E ("Unknown mime type: %s", mimeType);
