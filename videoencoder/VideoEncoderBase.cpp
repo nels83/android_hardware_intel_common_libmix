@@ -157,13 +157,15 @@ Encode_Status VideoEncoderBase::start() {
 
     VASurfaceID surfaces[2];
     VASurfaceAttributeTPI attribute_tpi;
-    uint32_t stride_aligned;
-    if(mAutoReference == false)
+    uint32_t stride_aligned, height_aligned;
+    if(mAutoReference == false){
         stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
-    else
+        height_aligned = ((mComParams.resolution.height + 15) / 16 ) * 16;
+    }else{
         stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;  //on Merr, stride must be 64 aligned.
+        height_aligned = ((mComParams.resolution.height + 31) / 32 ) * 32;
+    }
 
-    uint32_t height_aligned = ((mComParams.resolution.height + 15) / 16 ) * 16;
 
     attribute_tpi.size = stride_aligned * height_aligned * 3 / 2;
     attribute_tpi.luma_stride = stride_aligned;
