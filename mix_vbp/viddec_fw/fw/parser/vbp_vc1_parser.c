@@ -1013,6 +1013,7 @@ static void vbp_pack_picture_params_vc1(
         (picLayerHeader->TRANSACFRM2 > 0) ? picLayerHeader->TRANSACFRM2 - 1 : 0;
 
     pic_parms->transform_fields.bits.intra_transform_dc_table = picLayerHeader->TRANSDCTAB;
+    pic_parms->sequence_fields.bits.profile = seqLayerHeader->PROFILE;
 }
 
 
