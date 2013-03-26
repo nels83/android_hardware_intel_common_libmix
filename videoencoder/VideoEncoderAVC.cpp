@@ -856,8 +856,22 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
         avcSeqParams.frame_crop_right_offset = mVideoParamsAVC.crop.RightOffset;
         avcSeqParams.frame_crop_top_offset = mVideoParamsAVC.crop.TopOffset;
         avcSeqParams.frame_crop_bottom_offset = mVideoParamsAVC.crop.BottomOffset;
-    } else
+    } else {
         avcSeqParams.frame_cropping_flag = false;
+
+        if (mComParams.resolution.width & 0xf) {
+            avcSeqParams.frame_cropping_flag = true;
+            uint32_t AWidth = (mComParams.resolution.width + 0xf) & (~0xf);
+            avcSeqParams.frame_crop_right_offset = ( AWidth - mComParams.resolution.width ) / 2;
+        }
+
+        if (mComParams.resolution.height & 0xf) {
+            avcSeqParams.frame_cropping_flag = true;
+            uint32_t AHeight = (mComParams.resolution.height + 0xf) & (~0xf);
+            avcSeqParams.frame_crop_bottom_offset = ( AHeight - mComParams.resolution.height ) / 2;
+        }
+    }
+
     if(avcSeqParams.vui_parameters_present_flag && (mVideoParamsAVC.SAR.SarWidth || mVideoParamsAVC.SAR.SarHeight)) {
         avcSeqParams.vui_fields.bits.aspect_ratio_info_present_flag = true;
         avcSeqParams.aspect_ratio_idc = 0xff /* Extended_SAR */;
