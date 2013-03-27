@@ -21,11 +21,7 @@
 static const char *AVC_MIME_TYPE = "video/h264";
 static const char *MPEG4_MIME_TYPE = "video/mpeg4";
 static const char *H263_MIME_TYPE = "video/h263";
-//add for video encode libmix code coverage test--start
-//add two mine type define only for code coverage test
-static const char *MPEG4_MIME_TYPE_SP= "video/mp4v-es";
-static const char *MEDIA_MIMETYPE_IMAGE_JPEG = "image/jpeg";
-//add for video encode libmix code coverage test--end
+
 static const int box_width = 128;
 
 static VideoParamsAVC gVideoParamsAVC;
@@ -267,67 +263,6 @@ Encode_Status SetVideoEncoderParam() {
     tmpVideoParamsUsrptrBuffer.width = 0;
     gVideoEncoder->getParameters(&tmpVideoParamsUsrptrBuffer);
 #endif
-    //---------------------add for libmix encode code coverage test
-    // VideoEncodeBase.cpp file setConfig && getConfig code coverage test
-    // only for VCM mode
-    if(gRC == RATE_CONTROL_VCM)
-    {
-        // for setConfig && getConfig default case
-        VideoConfigAIR configAIR1;
-        memset(&configAIR1,0x00,sizeof(VideoConfigAIR));
-        gVideoEncoder->setConfig(&configAIR1);
-        gVideoEncoder->getConfig(&configAIR1);
-
-        // VideoConfigTypeAIR setConfig and getConfig
-        VideoConfigAIR configAIR;
-        configAIR.airParams.airAuto = 0;
-        configAIR.airParams.airMBs = 0;
-        configAIR.airParams.airThreshold = 0;
-        gVideoEncoder->setConfig(&configAIR);
-        gVideoEncoder->getConfig(&configAIR);
-
-        // VideoConfigTypeBitRate setConfig and getConfig
-        VideoConfigBitRate configBitRate;
-        configBitRate.rcParams.bitRate = gBitrate;
-        configBitRate.rcParams.initQP = 15;
-        configBitRate.rcParams.minQP = 1;
-        configBitRate.rcParams.windowSize = 50;
-        configBitRate.rcParams.targetPercentage = 95;
-        gVideoEncoder->setConfig(&configBitRate);
-        gVideoEncoder->getConfig(&configBitRate);
-
-        // for VideoConfigTypeSliceNum derivedSetConfig && derivedGetConfig
-        VideoConfigSliceNum configSliceNum;
-        gVideoEncoder->getConfig(&configSliceNum);
-        gVideoEncoder->setConfig(&configSliceNum);
-
-        VideoConfigIntraRefreshType configIntraRefreshType;
-        configIntraRefreshType.refreshType = VIDEO_ENC_AIR;//VIDEO_ENC_AIR
-        gVideoEncoder->setConfig(&configIntraRefreshType);
-        gVideoEncoder->getConfig(&configIntraRefreshType);
-
-        // VideoConfigTypeFrameRate setConfig and getConfig
-        VideoConfigFrameRate configFrameRate;
-        configFrameRate.frameRate.frameRateDenom = 1;
-        configFrameRate.frameRate.frameRateNum = gFrameRate;
-        gVideoEncoder->setConfig(&configFrameRate);
-        gVideoEncoder->getConfig(&configFrameRate);
-
-        // VideoEncodeAVC.cpp file derivedSetConfig && derivedGetConfig code coverage test
-        // for VideoConfigTypeNALSize derivedSetConfig && derivedGetConfig
-        VideoConfigNALSize configNalSize;
-        configNalSize.maxSliceSize = 8*gEncodeWidth*gEncodeHeight*1.5;
-        gVideoEncoder->setConfig(&configNalSize);
-        gVideoEncoder->getConfig(&configNalSize);
-
-        VideoParamsHRD paramsHRD;
-        paramsHRD.bufferSize = (uint32_t)(gBitrate/gFrameRate) * 1024 * 8;
-        paramsHRD.initBufferFullness = (uint32_t)(gBitrate/gFrameRate);
-        gVideoEncoder->setParameters(&paramsHRD);
-        gVideoEncoder->getParameters(&paramsHRD);
-    }
-    else
-    {
         // VideoConfigTypeCyclicFrameInterval setConfig and getConfig
         VideoConfigCyclicFrameInterval configCyclicFrameInterval;
         configCyclicFrameInterval.cyclicFrameInterval = 30;
@@ -343,7 +278,7 @@ Encode_Status SetVideoEncoderParam() {
         gVideoEncoder->setConfig(&configAVCIntraPeriod);
         VideoConfigTypeIDRReq tmpVideoConfigTypeIDRReq;
         gVideoEncoder->setConfig(&tmpVideoConfigTypeIDRReq);
-    }
+ 
 
     if (gMode != 4)
     {
@@ -803,20 +738,9 @@ int main(int argc, char* argv[])
         case 2:
             codec = H263_MIME_TYPE;
             break;
-//add for video encode libmix code coverage test--start
-        case 3:
-           codec = MPEG4_MIME_TYPE_SP;
-           break;
-        case 4:
-           codec = MEDIA_MIMETYPE_IMAGE_JPEG;
-           break;
-        case 5:
-           codec = NULL;
-           break;
         default:
             printf("Not support this type codec\n");
             return 1;
-//add for video encode libmix code coverage test--end
     }
 
     switch(gRCMode)
@@ -866,12 +790,11 @@ int main(int argc, char* argv[])
             return 1;
     }
 
-//add for video encode libmix code coverage test--start
     if(codec != NULL)
        printf("\nStart %s Encoding ....\n", codec);
     else
        printf("\nStart codec is null only for code coverage test  ....\n");
-//add for video encode libmix code coverage test--end
+
     printf("Mode is %s, RC mode is %s, Width=%d, Height=%d, Bitrate=%dbps, EncodeFrames=%d, SyncMode=%d, file is %s, outputnalformat is %s\n\n", gModeString[gMode], gRCModeString[gRCMode], gSrcWidth, gSrcHeight, gBitrate, gEncFrames, gSyncEncMode, gFile,gOutPutFormatString[gOutPutFormat]);
 
 //sleep(10);
@@ -885,11 +808,6 @@ for(int i=0; i<1; i++)
         printf("Finishing code coverage test  ....\n");
         return 1;
     }
-
-    // Adding for code coverage test
-    // VideoEncoderBase.cpp uncalled function
-    // VideoEncoderBase::flush()
-    gVideoEncoder->flush();
 
     //set parameter
     SetVideoEncoderParam();
