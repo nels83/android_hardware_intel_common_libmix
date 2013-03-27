@@ -41,7 +41,8 @@ IVideoDecoder* createVideoDecoder(const char* mimeType) {
     }
 
     if (strcasecmp(mimeType, "video/wmv") == 0 ||
-        strcasecmp(mimeType, "video/vc1") == 0) {
+        strcasecmp(mimeType, "video/vc1") == 0 ||
+        strcasecmp(mimeType, "video/x-ms-wmv") == 0) {
         VideoDecoderWMV *p = new VideoDecoderWMV(mimeType);
         return (IVideoDecoder *)p;
     } else if (strcasecmp(mimeType, "video/avc") == 0 ||
