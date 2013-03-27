@@ -11,6 +11,9 @@
 #include "IntelMetadataBuffer.h"
 #include <va/va_tpi.h>
 #include <va/va_android.h>
+#ifdef IMG_GFX
+#include <hal/hal_public.h>
+#endif
 
 // API declaration
 extern "C" {
@@ -1551,21 +1554,33 @@ Encode_Status VideoEncoderBase::surfaceMappingForGfxHandle(SurfaceMap *map) {
     LOG_I("gfxhandle = %d\n", map->value);
 
     vaSurfaceAttrib.count = 1;
+#ifdef IMG_GFX
     // color fmrat may be OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar or HAL_PIXEL_FORMAT_NV12
-    //IMG_native_handle_t* h = (IMG_native_handle_t*) map->value;
-    //LOG_I("IMG_native_handle_t h->iWidth=%d, h->iHeight=%d, h->iFormat=%x\n", h->iWidth, h->iHeight, h->iFormat);
+    IMG_native_handle_t* h = (IMG_native_handle_t*) map->value;
+    LOG_I("IMG_native_handle_t h->iWidth=%d, h->iHeight=%d, h->iFormat=%x\n", h->iWidth, h->iHeight, h->iFormat);
+    vaSurfaceAttrib.luma_stride = h->iWidth;
+    vaSurfaceAttrib.pixel_format = h->iFormat;
+    vaSurfaceAttrib.width = h->iWidth;
+    vaSurfaceAttrib.height = h->iHeight;
 
+#else
     vaSurfaceAttrib.luma_stride = map->vinfo.lumaStride;
     vaSurfaceAttrib.pixel_format = map->vinfo.format;
     vaSurfaceAttrib.width = map->vinfo.width;
     vaSurfaceAttrib.height = map->vinfo.height;
+#endif
     vaSurfaceAttrib.type = VAExternalMemoryAndroidGrallocBuffer;
     vaSurfaceAttrib.buffers[0] = (uint32_t) map->value;
 
     vaStatus = vaCreateSurfacesWithAttribute(
             mVADisplay,
+#ifdef IMG_GFX
+            h->iWidth,
+            h->iHeight,
+#else
             map->vinfo.width,
             map->vinfo.height,
+#endif
             VA_RT_FORMAT_YUV420,
             1,
             &surface,
