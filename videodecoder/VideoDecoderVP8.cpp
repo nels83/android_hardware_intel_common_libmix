@@ -263,7 +263,7 @@ Decode_Status VideoDecoderVP8::decodePicture(vbp_data_vp8 *data, int32_t picInde
                        mVADisplay,
                        mVAContext,
                        VASliceParameterBufferType,
-                       sizeof(VASliceParameterBufferBase),
+                       sizeof(VASliceParameterBufferVP8),
                        1,
                        &(picData->slc_data[i].slc_parms),
                        &bufferIDs[bufferIDCount]);

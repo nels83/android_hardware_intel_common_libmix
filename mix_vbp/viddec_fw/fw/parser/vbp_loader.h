@@ -349,7 +349,7 @@ typedef struct _vbp_slice_data_vp8
     uint8 *buffer_addr;
     uint32 slice_offset;
     uint32 slice_size;
-    VASliceParameterBufferBase slc_parms;     /* pointer to slice parms */
+    VASliceParameterBufferVP8 slc_parms;     /* pointer to slice parms */
 } vbp_slice_data_vp8;
 
 typedef struct _vbp_picture_data_vp8

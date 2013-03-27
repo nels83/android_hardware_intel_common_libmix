@@ -239,18 +239,18 @@ uint32 vbp_process_parsing_result_vp8( vbp_context *pcontext, int i)
     switch (parser->info.frame_tag.frame_type)
     {
     case KEY_FRAME:
-        ITRACE("This is a key frame.");
+        //ITRACE("This is a key frame.");
         parser->info.decoded_frame_number++;
         break;
     case INTER_FRAME:
-        ITRACE("This is an inter frame.");
+        //ITRACE("This is an inter frame.");
         parser->info.decoded_frame_number++;
         break;
     case SKIPPED_FRAME:
-        ITRACE("This is skipped frame. We have done nothing.");
+        WTRACE("This is skipped frame. We have done nothing.");
         break;
     default:
-        WTRACE("Unknown frame type %d", parser->info.frame_tag.frame_type);
+        ETRACE("Unknown frame type %d", parser->info.frame_tag.frame_type);
         break;
     }
 
@@ -359,7 +359,6 @@ static uint32_t vbp_add_pic_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *qu
     pic_parms->pic_fields.value = 0;
     pic_parms->pic_fields.bits.key_frame = pi->frame_tag.frame_type;
     pic_parms->pic_fields.bits.version = pi->frame_tag.version;
-    pic_parms->partition_size[0] = pi->frame_tag.first_part_size;
 
     /* Segmentation */
     pic_parms->pic_fields.bits.segmentation_enabled = pi->Segmentation.Enabled;
@@ -413,14 +412,6 @@ static uint32_t vbp_add_pic_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *qu
     pic_parms->pic_fields.bits.mb_no_coeff_skip = pi->mb_no_coeff_skip;
     pic_parms->pic_fields.bits.mb_skip_coeff = pi->mb_skip_coeff;
 
-
-    /* Token Partitions */
-    pic_parms->num_of_partitions = pi->partition_count;
-    for (i = 1; i < 9; i++)
-    {
-        pic_parms->partition_size[i] = pi->partition_size[i - 1];
-    }
-
     pic_parms->prob_skip_false = pi->prob_skip_false;
     pic_parms->prob_intra = pi->prob_intra;
     pic_parms->prob_last = pi->prob_lf;
@@ -446,9 +437,6 @@ static uint32_t vbp_add_pic_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *qu
     pic_parms->alt_ref_frame = VA_INVALID_SURFACE;
     pic_parms->out_of_loop_frame = VA_INVALID_SURFACE; //Reserved for future use
 
-    /* the offset to the first bit of MB from the first byte of slice data */
-    pic_parms->macroblock_offset = pi->header_bits;
-
     /* specify the slice number */
     pic_data->num_slices = 0;
 
@@ -459,6 +447,7 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
 {
     vp8_Info *pi = &(parser->info);
     uint32_t pic_index = query_data->num_pictures - 1;
+    uint32_t part_index = 0;
     if (pic_index < 0)
     {
         ETRACE("Invalid picture data index.");
@@ -472,7 +461,7 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
     slc_data->slice_offset = 0;
     slc_data->slice_size = pi->source_sz;
 
-    VASliceParameterBufferBase *slc_parms = &(slc_data->slc_parms);
+    VASliceParameterBufferVP8 *slc_parms = &(slc_data->slc_parms);
     /* number of bytes in the slice data buffer for this slice */
     slc_parms->slice_data_size = slc_data->slice_size;
 
@@ -481,6 +470,20 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
 
     /* see VA_SLICE_DATA_FLAG_XXX definitions */
     slc_parms->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
+
+    /* the offset to the first bit of MB from the first byte of slice data */
+    slc_parms->macroblock_offset = pi->header_bits;
+
+    /* Token Partitions */
+    slc_parms->num_of_partitions = pi->partition_count;
+    slc_parms->partition_size[0] = pi->frame_tag.first_part_size;
+    for (part_index = 1; part_index < 9; part_index++)
+    {
+        slc_parms->partition_size[part_index] = pi->partition_size[part_index - 1];
+    }
+
+    /* This field specifies the offset to the first byte of partition data */
+    slc_parms->partition_data_offset = slc_parms->slice_data_offset;
 
     pic_data->num_slices++;
     if (pic_data->num_slices > VP8_MAX_NUM_SLICES) {
