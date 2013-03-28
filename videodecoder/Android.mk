@@ -44,8 +44,11 @@ LOCAL_COPY_HEADERS := \
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva_videodecoder
 
-# Add source codes for Merrifield
-ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+PLATFORM_SUPPORT_VP8 := \
+    merrifield \
+    baytrail
+
+ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_VP8)),)
 LOCAL_SRC_FILES += VideoDecoderVP8.cpp
 LOCAL_CFLAGS += -DUSE_HW_VP8
 endif

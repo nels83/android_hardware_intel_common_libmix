@@ -45,7 +45,11 @@ LOCAL_CFLAGS += -DVBP_TRACE
 LOCAL_SHARED_LIBRARIES += liblog
 endif
 
-ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+PLATFORM_SUPPORT_VP8 := \
+    merrifield \
+    baytrail
+
+ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_VP8)),)
 LOCAL_SRC_FILES += vbp_vp8_parser.c
 LOCAL_C_INCLUDES += $(VENDORS_INTEL_MRST_MIXVBP_ROOT)/viddec_fw/fw/codecs/vp8/include
 LOCAL_CFLAGS += -DUSE_HW_VP8
