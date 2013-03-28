@@ -953,6 +953,8 @@ Encode_Status VideoEncoderAVC::renderPackedSequenceParams(EncodeTask *task) {
     unsigned char *packed_seq_buffer = NULL;
     unsigned int length_in_bits, offset_in_bytes;
 
+    LOG_V("Begin\n");
+
     vaStatus = vaMapBuffer(mVADisplay, mSeqParamBuf, (void **)&avcSeqParams);
     CHECK_VA_STATUS_RETURN("vaMapBuffer");
 
@@ -982,6 +984,9 @@ Encode_Status VideoEncoderAVC::renderPackedSequenceParams(EncodeTask *task) {
     CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
 
     free(packed_seq_buffer);
+
+    LOG_V("End\n");
+
     return vaStatus;
 }
 
@@ -1017,7 +1022,7 @@ Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
 
         avcPicParams.pic_fields.bits.idr_pic_flag = 0;
         avcPicParams.pic_fields.bits.reference_pic_flag = 0;
-        avcPicParams.pic_fields.bits.entropy_coding_mode_flag = 1;
+        avcPicParams.pic_fields.bits.entropy_coding_mode_flag = 0;
         avcPicParams.pic_fields.bits.weighted_pred_flag = 0;
         avcPicParams.pic_fields.bits.weighted_bipred_idc = 0;
         avcPicParams.pic_fields.bits.transform_8x8_mode_flag = 0;
@@ -1065,6 +1070,8 @@ Encode_Status VideoEncoderAVC::renderPackedPictureParams(EncodeTask *task) {
     unsigned char *packed_pic_buffer = NULL;
     unsigned int length_in_bits, offset_in_bytes;
 
+    LOG_V("Begin\n");
+
     vaStatus = vaMapBuffer(mVADisplay, mPicParamBuf, (void **)&avcPicParams);
     CHECK_VA_STATUS_RETURN("vaMapBuffer");
 
@@ -1094,6 +1101,9 @@ Encode_Status VideoEncoderAVC::renderPackedPictureParams(EncodeTask *task) {
     CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
 
     free(packed_pic_buffer);
+
+    LOG_V("End\n");
+
     return vaStatus;
 }
 

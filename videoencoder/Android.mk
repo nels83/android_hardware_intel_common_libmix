@@ -2,6 +2,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 #VIDEO_ENC_LOG_ENABLE := true
+#NO_BUFFER_SHARE := true
 
 LOCAL_SRC_FILES :=              \
     VideoEncoderBase.cpp        \
@@ -40,6 +41,10 @@ LOCAL_COPY_HEADERS := \
 
 ifeq ($(VIDEO_ENC_LOG_ENABLE),true)
 LOCAL_CPPFLAGS += -DVIDEO_ENC_LOG_ENABLE
+endif
+
+ifeq ($(NO_BUFFER_SHARE),true)
+LOCAL_CPPFLAGS += -DNO_BUFFER_SHARE
 endif
 
 ifeq ($(VIDEO_ENC_STATISTICS_ENABLE),true)

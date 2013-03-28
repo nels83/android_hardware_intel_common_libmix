@@ -231,8 +231,13 @@ Encode_Status VideoEncoderBase::start() {
     //Initialize and save the VA context ID
     LOG_V( "vaCreateContext\n");
     vaStatus = vaCreateContext(mVADisplay, mVAConfig,
+#ifdef IMG_GFX
             mComParams.resolution.width,
             mComParams.resolution.height,
+#else
+            stride_aligned,
+            height_aligned,
+#endif
             VA_PROGRESSIVE, contextSurfaces, contextSurfaceCnt,
             &(mVAContext));
     CHECK_VA_STATUS_RETURN("vaCreateContext");
@@ -652,6 +657,21 @@ Encode_Status VideoEncoderBase::prepareForOutput(
 
             mTotalSize += vaCodedSeg->size;
             status = vaCodedSeg->status;
+#ifndef IMG_GFX
+            uint8_t *pTemp;
+            uint32_t ii;
+            pTemp = (uint8_t*)vaCodedSeg->buf;
+            for(ii = 0; ii < 16;){
+                if (*(pTemp + ii) == 0xFF)
+                    ii++;
+                else
+                    break;
+            }
+            if (ii > 0) {
+                mOffsetInSeg = ii;
+            }
+#endif
+
 
             if (!mSliceSizeOverflow) {
                 mSliceSizeOverflow = status & VA_CODED_BUF_STATUS_SLICE_OVERFLOW_MASK;
@@ -1671,6 +1691,51 @@ Encode_Status VideoEncoderBase::surfaceMappingForCI(SurfaceMap *map) {
     return ret;
 }
 
+#if NO_BUFFER_SHARE
+static VAStatus upload_yuv_to_surface(VADisplay va_dpy,
+        SurfaceMap *map, VASurfaceID surface_id, int picture_width,
+        int picture_height)
+{
+    VAImage surface_image;
+    VAStatus vaStatus;
+    unsigned char *surface_p = NULL;
+    unsigned char *y_src, *uv_src;
+    unsigned char *y_dst, *uv_dst;
+    int y_size = map->vinfo.height * map->vinfo.lumaStride;
+    int row, col;
+
+    vaStatus = vaDeriveImage(va_dpy, surface_id, &surface_image);
+    CHECK_VA_STATUS_RETURN("vaDeriveImage");
+
+    vaStatus = vaMapBuffer(va_dpy, surface_image.buf, (void**)&surface_p);
+    CHECK_VA_STATUS_RETURN("vaMapBuffer");
+
+    y_src = (unsigned char*)map->value;
+    uv_src = (unsigned char*)map->value + y_size; /* UV offset for NV12 */
+
+    y_dst = surface_p + surface_image.offsets[0];
+    uv_dst = surface_p + surface_image.offsets[1]; /* UV offset for NV12 */
+
+    /* Y plane */
+    for (row = 0; row < picture_height; row++) {
+        memcpy(y_dst, y_src, picture_width);
+        y_dst += surface_image.pitches[0];
+        y_src += map->vinfo.lumaStride;
+    }
+
+    for (row = 0; row < (picture_height / 2); row++) {
+        memcpy(uv_dst, uv_src, picture_width);
+        uv_dst += surface_image.pitches[1];
+        uv_src += map->vinfo.chromStride;
+    }
+
+    vaUnmapBuffer(va_dpy, surface_image.buf);
+    vaDestroyImage(va_dpy, surface_image.image_id);
+
+    return vaStatus;
+}
+#endif
+
 Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
 
     if (!map)
@@ -1679,7 +1744,18 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Encode_Status ret = ENCODE_SUCCESS;
     VASurfaceID surface;
+#if NO_BUFFER_SHARE
+    vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,
+            map->vinfo.width, map->vinfo.height, &surface, 1,
+            NULL, 0);
+    CHECK_VA_STATUS_RETURN("vaCreateSurfaces");
+    map->surface = surface;
 
+    vaStatus = upload_yuv_to_surface(mVADisplay, map, surface,
+            mComParams.resolution.width, mComParams.resolution.height);
+    CHECK_ENCODE_STATUS_RETURN("upload_yuv_to_surface");
+
+#else
     VASurfaceAttributeTPI vaSurfaceAttrib;
     uint32_t buf;
 
@@ -1731,6 +1807,7 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
         map->surface = surfaceId;
         LOG_E("Due to 64 alignment, an alternative Surface ID 0x%08x created\n", surfaceId);
     }
+#endif
 
     return ret;
 }
