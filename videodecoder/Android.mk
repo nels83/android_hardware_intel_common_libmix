@@ -21,6 +21,10 @@ LOCAL_C_INCLUDES := \
 
 #LOCAL_LDLIBS += -lpthread
 
+ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
+LOCAL_CFLAGS += -DLOAD_PVR_DRIVER
+endif
+
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libmixvbp \

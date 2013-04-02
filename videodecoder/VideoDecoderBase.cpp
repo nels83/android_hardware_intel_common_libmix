@@ -279,6 +279,13 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
     }
     //VTRACE("Output POC %d for display (pts = %.2f)", output->pictureOrder, output->renderBuffer.timeStamp/1E6);
     vaStatus = vaSetTimestampForSurface(mVADisplay, output->renderBuffer.surface, output->renderBuffer.timeStamp);
+
+#ifdef LOAD_PVR_DRIVER
+    if (useGraphicBuffer ) {
+        vaSyncSurface(mVADisplay, output->renderBuffer.surface);
+    }
+#endif
+
     return &(output->renderBuffer);
 }
 
@@ -735,9 +742,18 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         return DECODE_DRIVER_FAIL;
     }
 
+#ifdef LOAD_PVR_DRIVER
+    ITRACE("load pvr driver.\n");
+    setenv("LIBVA_DRIVER_NAME", "pvr", 1);
+#endif
+
     int majorVersion, minorVersion;
     vaStatus = vaInitialize(mVADisplay, &majorVersion, &minorVersion);
     CHECK_VA_STATUS("vaInitialize");
+
+#ifdef LOAD_PVR_DRIVER
+    unsetenv("LIBVA_DRIVER_NAME");
+#endif
 
     if (mConfigBuffer.frameRate > 45 && mVideoFormatInfo.height >= 1080) {
         // ugly workaround here
