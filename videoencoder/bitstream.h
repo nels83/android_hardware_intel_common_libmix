@@ -1,3 +1,26 @@
+/*
+ * Copyright (c) 2012 Intel Corporation. All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sub license, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the
+ * next paragraph) shall be included in all copies or substantial portions
+ * of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+ * IN NO EVENT SHALL PRECISION INSIGHT AND/OR ITS SUPPLIERS BE LIABLE FOR
+ * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 #ifndef __BITSTREAM_H__
 #define __BITSTREAM_H__
 
@@ -61,6 +84,8 @@ static void bitstream_put_ui(bitstream *bs, unsigned int val, int size_in_bits)
         if (pos + 1 == bs->max_size_in_dword) {
             bs->max_size_in_dword += BITSTREAM_ALLOCATE_STEPPING;
             bs->buffer = (unsigned int*)realloc(bs->buffer, bs->max_size_in_dword * sizeof(unsigned int));
+            if (bs->buffer == NULL)
+                abort();
         }
 
         bs->buffer[pos + 1] = val;
@@ -154,8 +179,8 @@ static void nal_header(bitstream *bs, int nal_ref_idc, int nal_unit_type)
 
 static void sps_rbsp(bitstream *bs, VAProfile profile, int frame_bit_rate, VAEncSequenceParameterBufferH264 *seq_param)
 {
-    int profile_idc;
-    int constraint_set_flag;
+    int profile_idc = 0;
+    int constraint_set_flag = 0;
 
     if (profile == VAProfileH264High) {
         profile_idc = PROFILE_IDC_HIGH;
