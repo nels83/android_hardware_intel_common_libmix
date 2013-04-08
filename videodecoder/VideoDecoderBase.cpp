@@ -233,6 +233,9 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
             mOutputTail = NULL;
         }
         vaStatus = vaSetTimestampForSurface(mVADisplay, outputByPos->renderBuffer.surface, outputByPos->renderBuffer.timeStamp);
+        if (mConfigBuffer.nativeWindow == NULL && useGraphicBuffer) {
+           vaSyncSurface(mVADisplay, outputByPos->renderBuffer.surface);
+        }
         return &(outputByPos->renderBuffer);
     }
 
@@ -285,6 +288,10 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
         vaSyncSurface(mVADisplay, output->renderBuffer.surface);
     }
 #endif
+
+    if (mConfigBuffer.nativeWindow == NULL && useGraphicBuffer) {
+        vaSyncSurface(mVADisplay, output->renderBuffer.surface);
+    }
 
     return &(output->renderBuffer);
 }
