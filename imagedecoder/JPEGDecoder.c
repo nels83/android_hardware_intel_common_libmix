@@ -53,18 +53,11 @@ Decode_Status jdva_initialize (jd_libva_struct * jd_libva_ptr) {
    * them here and return false is meaningless, same situation for all internal methods
    * related to VA API
   */
-    int va_major_version;
-    int va_minor_version;
-#if 0
-    int va_max_num_profiles, va_max_num_entrypoints, va_max_num_attribs;
-    int va_num_profiles,  va_num_entrypoints;
-
-    VAProfile *va_profiles = NULL;
-    VAEntrypoint *va_entrypoints = NULL;
-#endif
+    uint32_t va_major_version = 0;
+    uint32_t va_minor_version = 0;
     VAStatus va_status = VA_STATUS_SUCCESS;
     Decode_Status status = DECODE_SUCCESS;
-    int index;
+    uint32_t index;
 
     if (jd_libva_ptr->initialized)
         return DECODE_NOT_STARTED;
@@ -86,54 +79,7 @@ Decode_Status jdva_initialize (jd_libva_struct * jd_libva_ptr) {
         status = DECODE_DRIVER_FAIL;
         goto cleanup;
     }
-#if 0
-    /*get the max number for profiles/entrypoints/attribs*/
-    va_max_num_profiles = vaMaxNumProfiles(jd_libva_ptr->va_display);
-    va_max_num_entrypoints = vaMaxNumEntrypoints(jd_libva_ptr->va_display);
-    va_max_num_attribs = vaMaxNumConfigAttributes(jd_libva_ptr->va_display);
 
-    va_profiles = malloc (sizeof(VAProfile)*va_max_num_profiles);
-    va_entrypoints = malloc(sizeof(VAEntrypoint)*va_max_num_entrypoints);
-
-    if (va_profiles == NULL || va_entrypoints ==NULL) {
-        jd_libva_ptr->initialized = TRUE; // make sure we can call into jva_deinitialize()
-        jdva_deinitialize (jd_libva_ptr);
-        return DECODE_MEMORY_FAIL;
-    }
-
-    va_status = vaQueryConfigProfiles (jd_libva_ptr->va_display, va_profiles, &va_num_profiles);
-
-    if (va_status != VA_STATUS_SUCCESS) {
-        ETRACE("vaQueryConfigProfiles failed. va_status = 0x%x", va_status);
-        status = DECODE_DRIVER_FAIL;
-        goto cleanup;
-    }
-
-    /*check whether profile is supported*/
-    for(index= 0; index < va_num_profiles; index++) {
-        if(VAProfileJPEGBaseline == va_profiles[index])
-            break;
-    }
-
-    if(index == va_num_profiles) {
-        WTRACE("Profile not surportted\n");
-        status = DECODE_FAIL;
-        goto cleanup;
-
-    }
-
-    va_status = vaQueryConfigEntrypoints(jd_libva_ptr->va_display, VAProfileJPEGBaseline, va_entrypoints, &va_num_entrypoints);
-    if (va_status != VA_STATUS_SUCCESS) {
-        ETRACE("vaQueryConfigProfiles failed. va_status = 0x%x", va_status);
-        status = DECODE_DRIVER_FAIL;
-        goto cleanup;
-    }
-    /* traverse entrypoints arrary to see whether VLD is there */
-    for (index = 0; index < va_num_entrypoints; index ++) {
-        if (va_entrypoints[index] == VAEntrypointVLD)
-            break;
-    }
-#endif
     VAConfigAttrib attrib;
     attrib.type = VAConfigAttribRTFormat;
     va_status = vaGetConfigAttributes(jd_libva_ptr->va_display, VAProfileJPEGBaseline, VAEntrypointVLD, &attrib, 1);
@@ -166,7 +112,7 @@ cleanup:
     if (va_entrypoints)
         free (va_entrypoints);
 #endif
-    if (!status) {
+    if (status) {
         jd_libva_ptr->initialized = TRUE; // make sure we can call into jva_deinitialize()
         jdva_deinitialize (jd_libva_ptr);
         return status;
@@ -201,7 +147,7 @@ void jdva_deinitialize (jd_libva_struct * jd_libva_ptr) {
 
 Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr) {
     VAStatus va_status = VA_STATUS_SUCCESS;
-    Decode_Status status;
+    Decode_Status status = DECODE_SUCCESS;
     jd_libva_ptr->image_width = jd_libva_ptr->picture_param_buf.picture_width;
     jd_libva_ptr->image_height = jd_libva_ptr->picture_param_buf.picture_height;
     jd_libva_ptr->surface_count = 1;
@@ -210,8 +156,8 @@ Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr) {
         return DECODE_MEMORY_FAIL;
     }
     va_status = vaCreateSurfaces(jd_libva_ptr->va_display, VA_RT_FORMAT_YUV444,
-                                    (((jd_libva_ptr->image_width + 7) & (~7)) + 15) & (~15),
-                                    (((jd_libva_ptr->image_width + 7) & (~7)) + 15) & (~15),
+                                    jd_libva_ptr->image_width,
+                                    jd_libva_ptr->image_height,
                                     jd_libva_ptr->va_surfaces,
                                     jd_libva_ptr->surface_count, NULL, 0);
     if (va_status != VA_STATUS_SUCCESS) {
@@ -220,8 +166,8 @@ Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr) {
         goto cleanup;
     }
     va_status = vaCreateContext(jd_libva_ptr->va_display, jd_libva_ptr->va_config,
-                                   (( ( jd_libva_ptr->image_width + 7 ) & ( ~7 )) + 15 ) & ( ~15 ),
-                                   ((( jd_libva_ptr->image_height + 7 ) & ( ~7 )) + 15 ) & ( ~15 ),
+                                   jd_libva_ptr->image_width,
+                                   jd_libva_ptr->image_height,
                                    0,  //VA_PROGRESSIVE
                                    jd_libva_ptr->va_surfaces,
                                    jd_libva_ptr->surface_count, &(jd_libva_ptr->va_context));
@@ -298,13 +244,13 @@ Decode_Status jdva_decode (jd_libva_struct * jd_libva_ptr, uint8_t* buf) {
     Decode_Status status = DECODE_SUCCESS;
     VAStatus va_status = VA_STATUS_SUCCESS;
     VABufferID desc_buf[5];
-    uint32_t bitstream_buffer_size;
+    uint32_t bitstream_buffer_size = 0;
     uint32_t scan_idx = 0;
     uint32_t buf_idx = 0;
     uint32_t chopping = VA_SLICE_DATA_FLAG_ALL;
-    uint32_t bytes_remaining = jd_libva_ptr->file_size;
-    uint32_t src_offset = 0;
-    bitstream_buffer_size = 1024*512*5;
+    uint32_t bytes_remaining = jd_libva_ptr->eoi_offset - jd_libva_ptr->soi_offset;
+    uint32_t src_offset = jd_libva_ptr->soi_offset;
+    bitstream_buffer_size = 1024*1024*5;
 
     va_status = vaBeginPicture(jd_libva_ptr->va_display, jd_libva_ptr->va_context, jd_libva_ptr->va_surfaces[0]);
     if (va_status != VA_STATUS_SUCCESS) {
@@ -340,7 +286,7 @@ Decode_Status jdva_decode (jd_libva_struct * jd_libva_ptr, uint8_t* buf) {
         bytes_remaining -= bytes;
         /* Get Slice Control Buffer */
         VASliceParameterBufferJPEG dest_scan_ctrl[JPEG_MAX_COMPONENTS];
-        uint32_t src_idx;
+        uint32_t src_idx = 0;
         uint32_t dest_idx = 0;
         memset(dest_scan_ctrl, 0, sizeof(dest_scan_ctrl));
         for (src_idx = scan_idx; src_idx < jd_libva_ptr->scan_ctrl_count ; src_idx++) {
@@ -365,7 +311,7 @@ Decode_Status jdva_decode (jd_libva_struct * jd_libva_ptr, uint8_t* buf) {
             }
             dest_scan_ctrl[dest_idx].slice_data_flag = chopping;
             dest_scan_ctrl[dest_idx].slice_data_offset = ((chopping == VA_SLICE_DATA_FLAG_ALL) ||      (chopping == VA_SLICE_DATA_FLAG_BEGIN) )?
-jd_libva_ptr->slice_param_buf[ src_idx ].slice_data_offset - src_offset : 0;
+jd_libva_ptr->slice_param_buf[ src_idx ].slice_data_offset : 0;
 
             const int32_t bytes_in_seg = bytes - dest_scan_ctrl[dest_idx].slice_data_offset;
             const uint32_t scan_data = (bytes_in_seg < jd_libva_ptr->slice_param_buf[src_idx].slice_data_size) ? bytes_in_seg : jd_libva_ptr->slice_param_buf[src_idx].slice_data_size ;
@@ -477,8 +423,12 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
 
     uint8_t marker = jd_libva_ptr->JPEGParser->getNextMarker(jd_libva_ptr->JPEGParser);
 
-    while (marker != CODE_EOI) {
+    while (marker != CODE_EOI &&( !jd_libva_ptr->JPEGParser->endOfBuffer(jd_libva_ptr->JPEGParser))) {
         switch (marker) {
+            case CODE_SOI: {
+                 jd_libva_ptr->soi_offset = jd_libva_ptr->JPEGParser->getByteOffset(jd_libva_ptr->JPEGParser) - 2;
+                break;
+            }
             // If the marker is an APP marker skip over the data
             case CODE_APP0:
             case CODE_APP1:
@@ -503,10 +453,15 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
             }
             // Store offset to DQT data to avoid parsing bitstream in user mode
             case CODE_DQT: {
-                jd_libva_ptr->dqt_byte_offset[dqt_ind] = jd_libva_ptr->JPEGParser->getByteOffset(jd_libva_ptr->JPEGParser);
-                dqt_ind++;
-                uint32_t bytes_to_burn = jd_libva_ptr->JPEGParser->readBytes( jd_libva_ptr->JPEGParser, 2 ) - 2;
-                jd_libva_ptr->JPEGParser->burnBytes( jd_libva_ptr->JPEGParser, bytes_to_burn );
+                if (dqt_ind < 4) {
+                    jd_libva_ptr->dqt_byte_offset[dqt_ind] = jd_libva_ptr->JPEGParser->getByteOffset(jd_libva_ptr->JPEGParser) - jd_libva_ptr->soi_offset;
+                    dqt_ind++;
+                    uint32_t bytes_to_burn = jd_libva_ptr->JPEGParser->readBytes( jd_libva_ptr->JPEGParser, 2 ) - 2;
+                    jd_libva_ptr->JPEGParser->burnBytes( jd_libva_ptr->JPEGParser, bytes_to_burn );
+                } else {
+                    ETRACE("ERROR: Decoder does not support more than 4 Quant Tables\n");
+                    return DECODE_PARSER_FAIL;
+                }
                 break;
             }
             // Throw exception for all SOF marker other than SOF0
@@ -523,7 +478,7 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
             case CODE_SOF13:
             case CODE_SOF14:
             case CODE_SOF15: {
-                fprintf(stderr, "ERROR: unsupport SOF\n");
+                ETRACE("ERROR: unsupport SOF\n");
                 break;
             }
             // Parse component information in SOF marker
@@ -531,8 +486,9 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
                 frame_marker_found = TRUE;
 
                 jd_libva_ptr->JPEGParser->burnBytes(jd_libva_ptr->JPEGParser, 2); // Throw away frame header length
-                jd_libva_ptr->picture_param_buf.sample_precision = jd_libva_ptr->JPEGParser->readNextByte(jd_libva_ptr->JPEGParser);
-                if (jd_libva_ptr->picture_param_buf.sample_precision != 8) {
+                uint8_t sample_precision = jd_libva_ptr->JPEGParser->readNextByte(jd_libva_ptr->JPEGParser);
+                if (sample_precision != 8) {
+                    ETRACE("sample_precision is not supported\n");
                     return DECODE_PARSER_FAIL;
                 }
                 // Extract pic width and height
@@ -543,7 +499,7 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
                 if (jd_libva_ptr->picture_param_buf.num_components > JPEG_MAX_COMPONENTS) {
                     return DECODE_PARSER_FAIL;
                 }
-                uint8_t comp_ind;
+                uint8_t comp_ind = 0;
                 for (comp_ind = 0; comp_ind < jd_libva_ptr->picture_param_buf.num_components; comp_ind++) {
                     jd_libva_ptr->picture_param_buf.components[comp_ind].component_id = jd_libva_ptr->JPEGParser->readNextByte(jd_libva_ptr->JPEGParser);
 
@@ -558,17 +514,22 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
             }
             // Store offset to DHT data to avoid parsing bitstream in user mode
             case CODE_DHT: {
-                jd_libva_ptr->dht_byte_offset[dht_ind] = jd_libva_ptr->JPEGParser->getByteOffset(jd_libva_ptr->JPEGParser);
-                dht_ind++;
-                uint32_t bytes_to_burn = jd_libva_ptr->JPEGParser->readBytes(jd_libva_ptr->JPEGParser, 2) - 2;
-                jd_libva_ptr->JPEGParser->burnBytes(jd_libva_ptr->JPEGParser,  bytes_to_burn );
+                if (dht_ind < 4) {
+                    jd_libva_ptr->dht_byte_offset[dht_ind] = jd_libva_ptr->JPEGParser->getByteOffset(jd_libva_ptr->JPEGParser) - jd_libva_ptr->soi_offset;
+                    dht_ind++;
+                    uint32_t bytes_to_burn = jd_libva_ptr->JPEGParser->readBytes(jd_libva_ptr->JPEGParser, 2) - 2;
+                    jd_libva_ptr->JPEGParser->burnBytes(jd_libva_ptr->JPEGParser,  bytes_to_burn );
+                } else {
+                    ETRACE("ERROR: Decoder does not support more than 4 Huff Tables\n");
+                    return DECODE_PARSER_FAIL;
+                }
                 break;
             }
             // Parse component information in SOS marker
             case CODE_SOS: {
                 jd_libva_ptr->JPEGParser->burnBytes(jd_libva_ptr->JPEGParser, 2);
                 uint32_t component_in_scan = jd_libva_ptr->JPEGParser->readNextByte(jd_libva_ptr->JPEGParser);
-                uint8_t comp_ind;
+                uint8_t comp_ind = 0;
 
                 for (comp_ind = 0; comp_ind < component_in_scan; comp_ind++) {
                     uint8_t comp_id = jd_libva_ptr->JPEGParser->readNextByte(jd_libva_ptr->JPEGParser);
@@ -596,7 +557,7 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
                     return DECODE_PARSER_FAIL;
                 }
                 // Set slice control variables needed
-                jd_libva_ptr->slice_param_buf[scan_ind].slice_data_offset = jd_libva_ptr->JPEGParser->getByteOffset(jd_libva_ptr->JPEGParser);
+                jd_libva_ptr->slice_param_buf[scan_ind].slice_data_offset = jd_libva_ptr->JPEGParser->getByteOffset(jd_libva_ptr->JPEGParser) - jd_libva_ptr->soi_offset;
                 jd_libva_ptr->slice_param_buf[scan_ind].num_components = component_in_scan;
                 if (scan_ind) {
                     /* If there is more than one scan, the slice for all but the final scan should only run up to the beginning of the next scan */
@@ -618,13 +579,18 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
         }
 
         marker = jd_libva_ptr->JPEGParser->getNextMarker(jd_libva_ptr->JPEGParser);
+        // If the EOI code is found, store the byte offset before the parsing finishes
+        if( marker == CODE_EOI ) {
+            jd_libva_ptr->eoi_offset = jd_libva_ptr->JPEGParser->getByteOffset(jd_libva_ptr->JPEGParser);
+        }
+
     }
 
     jd_libva_ptr->quant_tables_num = dqt_ind;
     jd_libva_ptr->huffman_tables_num = dht_ind;
 
     /* The slice for the last scan should run up to the end of the picture */
-    jd_libva_ptr->slice_param_buf[scan_ind - 1].slice_data_size = (jd_libva_ptr->file_size - jd_libva_ptr->slice_param_buf[scan_ind - 1].slice_data_offset);
+    jd_libva_ptr->slice_param_buf[scan_ind - 1].slice_data_size = (jd_libva_ptr->eoi_offset - jd_libva_ptr->slice_param_buf[scan_ind - 1].slice_data_offset);
 
     // throw AppException if SOF0 isn't found
     if (!frame_marker_found) {
@@ -639,7 +605,6 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
 }
 
 Decode_Status parseTableData(jd_libva_struct * jd_libva_ptr) {
-    Decode_Status status;
     CJPEGParse* parser = (CJPEGParse*)malloc(sizeof(CJPEGParse));
     if (parser == NULL)
         return DECODE_MEMORY_FAIL;
@@ -648,7 +613,7 @@ Decode_Status parseTableData(jd_libva_struct * jd_libva_ptr) {
 
     // Parse Quant tables
     memset(&jd_libva_ptr->qmatrix_buf, 0, sizeof(jd_libva_ptr->qmatrix_buf));
-    uint32_t dqt_ind;
+    uint32_t dqt_ind = 0;
     for (dqt_ind = 0; dqt_ind < jd_libva_ptr->quant_tables_num; dqt_ind++) {
         if (parser->setByteOffset(parser, jd_libva_ptr->dqt_byte_offset[dqt_ind])) {
             // uint32_t uiTableBytes = parser->readBytes( 2 ) - 2;
@@ -662,15 +627,18 @@ Decode_Status parseTableData(jd_libva_struct * jd_libva_ptr) {
                     return DECODE_PARSER_FAIL;
                 }
                 uint32_t table_id = table_info & 0xf;
-                if (table_id >= JPEG_MAX_QUANT_TABLES) {
-                    return DECODE_PARSER_FAIL;
-                }
+
                 jd_libva_ptr->qmatrix_buf.load_quantiser_table[dqt_ind] = table_id;
 
-                // Pull Quant table data from bitstream
-                uint32_t byte_ind;
-                for (byte_ind = 0; byte_ind < table_length; byte_ind++) {
-                    jd_libva_ptr->qmatrix_buf.quantiser_table[table_id][byte_ind] = parser->readNextByte(parser);
+                if (table_id < JPEG_MAX_QUANT_TABLES) {
+                    // Pull Quant table data from bitstream
+                    uint32_t byte_ind;
+                    for (byte_ind = 0; byte_ind < table_length; byte_ind++) {
+                        jd_libva_ptr->qmatrix_buf.quantiser_table[table_id][byte_ind] = parser->readNextByte(parser);
+                    }
+                } else {
+                    ETRACE("DQT table ID is not supported");
+                    parser->burnBytes(parser, table_length);
                 }
                 table_bytes -= table_length;
             } while (table_bytes);
@@ -679,7 +647,7 @@ Decode_Status parseTableData(jd_libva_struct * jd_libva_ptr) {
 
     // Parse Huffman tables
     memset(&jd_libva_ptr->hufman_table_buf, 0, sizeof(jd_libva_ptr->hufman_table_buf));
-    uint32_t dht_ind;
+    uint32_t dht_ind = 0;
     for (dht_ind = 0; dht_ind < jd_libva_ptr->huffman_tables_num; dht_ind++) {
         if (parser->setByteOffset(parser, jd_libva_ptr->dht_byte_offset[dht_ind])) {
             uint32_t table_bytes = parser->readBytes( parser, 2 ) - 2;
@@ -687,51 +655,59 @@ Decode_Status parseTableData(jd_libva_struct * jd_libva_ptr) {
                 uint32_t table_info = parser->readNextByte(parser);
                 table_bytes--;
                 uint32_t table_class = table_info >> 4; // Identifies whether the table is for AC or DC
-                if (table_class >= TABLE_CLASS_NUM) {
-                    return DECODE_PARSER_FAIL;
-                }
                 uint32_t table_id = table_info & 0xf;
-                if (table_id >= JPEG_MAX_SETS_HUFFMAN_TABLES) {
-                    return DECODE_PARSER_FAIL;
-                }
-                if (table_class == 0) {
-                    uint8_t* bits = parser->getCurrentIndex(parser);
-                    // Find out the number of entries in the table
-                    uint32_t table_entries = 0;
-                    uint32_t bit_ind;
-                    for (bit_ind = 0; bit_ind < 16; bit_ind++) {
-                        jd_libva_ptr->hufman_table_buf.huffman_table[table_id].num_dc_codes[bit_ind] = bits[bit_ind];
-                        table_entries += jd_libva_ptr->hufman_table_buf.huffman_table[table_id].num_dc_codes[bit_ind];
-                    }
 
-                    // Create table of code values
-                    parser->burnBytes(parser, 16);
-                    table_bytes -= 16;
-                    uint32_t tbl_ind;
-                    for (tbl_ind = 0; tbl_ind < table_entries; tbl_ind++) {
-                        jd_libva_ptr->hufman_table_buf.huffman_table[table_id].dc_values[tbl_ind] = parser->readNextByte(parser);
+                if ((table_class < TABLE_CLASS_NUM) && (table_id < JPEG_MAX_SETS_HUFFMAN_TABLES)) {
+                    if (table_class == 0) {
+                        uint8_t* bits = parser->getCurrentIndex(parser);
+                        // Find out the number of entries in the table
+                        uint32_t table_entries = 0;
+                        uint32_t bit_ind;
+                        for (bit_ind = 0; bit_ind < 16; bit_ind++) {
+                            jd_libva_ptr->hufman_table_buf.huffman_table[table_id].num_dc_codes[bit_ind] = bits[bit_ind];
+                            table_entries += jd_libva_ptr->hufman_table_buf.huffman_table[table_id].num_dc_codes[bit_ind];
+                        }
+
+                        // Create table of code values
+                        parser->burnBytes(parser, 16);
+                        table_bytes -= 16;
+                        uint32_t tbl_ind;
+                        for (tbl_ind = 0; tbl_ind < table_entries; tbl_ind++) {
+                            jd_libva_ptr->hufman_table_buf.huffman_table[table_id].dc_values[tbl_ind] = parser->readNextByte(parser);
+                            table_bytes--;
+                        }
+
+                    } else { // for AC class
+                        uint8_t* bits = parser->getCurrentIndex(parser);
+                        // Find out the number of entries in the table
+                        uint32_t table_entries = 0;
+                        uint32_t bit_ind = 0;
+                        for (bit_ind = 0; bit_ind < 16; bit_ind++) {
+                            jd_libva_ptr->hufman_table_buf.huffman_table[table_id].num_ac_codes[bit_ind] = bits[bit_ind];
+                            table_entries += jd_libva_ptr->hufman_table_buf.huffman_table[table_id].num_ac_codes[bit_ind];
+                        }
+
+                        // Create table of code values
+                        parser->burnBytes(parser, 16);
+                        table_bytes -= 16;
+                        uint32_t tbl_ind = 0;
+                        for (tbl_ind = 0; tbl_ind < table_entries; tbl_ind++) {
+                            jd_libva_ptr->hufman_table_buf.huffman_table[table_id].ac_values[tbl_ind] = parser->readNextByte(parser);
+                            table_bytes--;
+                        }
+                    }//end of else
+                } else {
+                    // Find out the number of entries in the table
+                    ETRACE("DHT table ID is not supported");
+                    uint32_t table_entries = 0;
+                    uint32_t bit_ind = 0;
+                    for(bit_ind = 0; bit_ind < 16; bit_ind++) {
+                        table_entries += parser->readNextByte(parser);
                         table_bytes--;
                     }
-
-                } else { // for AC class
-                    uint8_t* bits = parser->getCurrentIndex(parser);
-                    // Find out the number of entries in the table
-                    uint32_t table_entries = 0;
-                    uint32_t bit_ind;
-                    for (bit_ind = 0; bit_ind < 16; bit_ind++) {
-                        jd_libva_ptr->hufman_table_buf.huffman_table[table_id].num_ac_codes[bit_ind] = bits[bit_ind];
-                        table_entries += jd_libva_ptr->hufman_table_buf.huffman_table[table_id].num_ac_codes[bit_ind];
-                    }
-
-                    // Create table of code values
-                    parser->burnBytes(parser, 16);
-                    table_bytes -= 16;
-                    uint32_t tbl_ind;
-                    for (tbl_ind = 0; tbl_ind < table_entries; tbl_ind++) {
-                        jd_libva_ptr->hufman_table_buf.huffman_table[table_id].ac_values[tbl_ind] = parser->readNextByte(parser);
-                        table_bytes--;
-                    }
-                }//end of else
+                    parser->burnBytes(parser, table_entries);
+                    table_bytes -= table_entries;
+		}
 
             } while (table_bytes);
         }

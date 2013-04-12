@@ -58,6 +58,8 @@ typedef struct {
     uint32_t dqt_byte_offset[4];
     uint32_t huffman_tables_num;
     uint32_t quant_tables_num;
+    uint32_t soi_offset;
+    uint32_t eoi_offset;
 
     uint8_t* bitstream_buf;
     uint32_t image_width;
