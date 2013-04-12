@@ -258,14 +258,14 @@ Decode_Status jdva_decode (jd_libva_struct * jd_libva_ptr, uint8_t* buf) {
         status = DECODE_DRIVER_FAIL;
         return status;
     }
-    va_status = vaCreateBuffer(jd_libva_ptr->va_display, jd_libva_ptr->va_context, VAPictureParameterBufferType, sizeof(VAPictureParameterBufferJPEG), 1, &jd_libva_ptr->picture_param_buf, &desc_buf[buf_idx]);
+    va_status = vaCreateBuffer(jd_libva_ptr->va_display, jd_libva_ptr->va_context, VAPictureParameterBufferType, sizeof(VAPictureParameterBufferJPEGBaseline), 1, &jd_libva_ptr->picture_param_buf, &desc_buf[buf_idx]);
     if (va_status != VA_STATUS_SUCCESS) {
         ETRACE("vaCreateBuffer failed. va_status = 0x%x", va_status);
         status = DECODE_DRIVER_FAIL;
         return status;
     }
     buf_idx++;
-    va_status = vaCreateBuffer(jd_libva_ptr->va_display, jd_libva_ptr->va_context, VAIQMatrixBufferType, sizeof(VAIQMatrixParameterBufferJPEG), 1, &jd_libva_ptr->qmatrix_buf, &desc_buf[buf_idx]);
+    va_status = vaCreateBuffer(jd_libva_ptr->va_display, jd_libva_ptr->va_context, VAIQMatrixBufferType, sizeof(VAIQMatrixBufferJPEGBaseline), 1, &jd_libva_ptr->qmatrix_buf, &desc_buf[buf_idx]);
 
     if (va_status != VA_STATUS_SUCCESS) {
         ETRACE("vaCreateBuffer failed. va_status = 0x%x", va_status);
@@ -273,7 +273,7 @@ Decode_Status jdva_decode (jd_libva_struct * jd_libva_ptr, uint8_t* buf) {
         return status;
     }
     buf_idx++;
-    va_status = vaCreateBuffer(jd_libva_ptr->va_display, jd_libva_ptr->va_context, VAHuffmanTableBufferType, sizeof(VAHuffmanTableParameterBufferJPEG), 1, &jd_libva_ptr->hufman_table_buf, &desc_buf[buf_idx]);
+    va_status = vaCreateBuffer(jd_libva_ptr->va_display, jd_libva_ptr->va_context, VAHuffmanTableBufferType, sizeof(VAHuffmanTableBufferJPEGBaseline), 1, &jd_libva_ptr->hufman_table_buf, &desc_buf[buf_idx]);
     if (va_status != VA_STATUS_SUCCESS) {
         ETRACE("vaCreateBuffer failed. va_status = 0x%x", va_status);
         status = DECODE_DRIVER_FAIL;
@@ -285,7 +285,7 @@ Decode_Status jdva_decode (jd_libva_struct * jd_libva_ptr, uint8_t* buf) {
         uint32_t bytes = ( bytes_remaining < bitstream_buffer_size ) ? bytes_remaining : bitstream_buffer_size;
         bytes_remaining -= bytes;
         /* Get Slice Control Buffer */
-        VASliceParameterBufferJPEG dest_scan_ctrl[JPEG_MAX_COMPONENTS];
+        VASliceParameterBufferJPEGBaseline dest_scan_ctrl[JPEG_MAX_COMPONENTS];
         uint32_t src_idx = 0;
         uint32_t dest_idx = 0;
         memset(dest_scan_ctrl, 0, sizeof(dest_scan_ctrl));
@@ -330,7 +330,7 @@ jd_libva_ptr->slice_param_buf[ src_idx ].slice_data_offset : 0;
         }
         scan_idx = src_idx;
         /* Get Slice Control Buffer */
-        va_status = vaCreateBuffer(jd_libva_ptr->va_display, jd_libva_ptr->va_context, VASliceParameterBufferType, sizeof(VASliceParameterBufferJPEG) * dest_idx, 1, dest_scan_ctrl, &desc_buf[buf_idx]);
+        va_status = vaCreateBuffer(jd_libva_ptr->va_display, jd_libva_ptr->va_context, VASliceParameterBufferType, sizeof(VASliceParameterBufferJPEGBaseline) * dest_idx, 1, dest_scan_ctrl, &desc_buf[buf_idx]);
         if (va_status != VA_STATUS_SUCCESS) {
             ETRACE("vaCreateBuffer failed. va_status = 0x%x", va_status);
             status = DECODE_DRIVER_FAIL;

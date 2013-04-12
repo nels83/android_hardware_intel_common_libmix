@@ -49,10 +49,10 @@ typedef struct {
     VASurfaceID* va_surfaces;
     VAConfigID va_config;
 
-    VAPictureParameterBufferJPEG picture_param_buf;
-    VASliceParameterBufferJPEG slice_param_buf[JPEG_MAX_COMPONENTS];
-    VAIQMatrixParameterBufferJPEG qmatrix_buf;
-    VAHuffmanTableParameterBufferJPEG hufman_table_buf;
+    VAPictureParameterBufferJPEGBaseline picture_param_buf;
+    VASliceParameterBufferJPEGBaseline slice_param_buf[JPEG_MAX_COMPONENTS];
+    VAIQMatrixBufferJPEGBaseline qmatrix_buf;
+    VAHuffmanTableBufferJPEGBaseline hufman_table_buf;
 
     uint32_t dht_byte_offset[4];
     uint32_t dqt_byte_offset[4];
