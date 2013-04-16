@@ -37,7 +37,11 @@ extern "C" {
 }
 
 #ifndef Display
+#ifdef LOAD_PVR_DRIVER
+typedef char Display;
+#else
 typedef unsigned int Display;
+#endif
 #endif
 
 // TODO: check what is the best number. Must be at least 2 to support one backward reference frame.

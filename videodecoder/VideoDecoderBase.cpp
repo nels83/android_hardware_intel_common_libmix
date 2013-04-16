@@ -739,28 +739,28 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
     }
 
     // Display is defined as "unsigned int"
-
+#ifndef LOAD_PVR_DRIVER
     mDisplay = new Display;
     *mDisplay = ANDROID_DISPLAY_HANDLE;
-
+#else
+    if (profile >= VAProfileH264Baseline && profile <= VAProfileVC1Advanced) {
+        ITRACE("Using GEN driver");
+        mDisplay = "libva_driver_name=i965";
+    }
+    else {
+        ITRACE("Using PVR driver");
+        mDisplay = "libva_driver_name=pvr";
+    }
+#endif
     mVADisplay = vaGetDisplay(mDisplay);
     if (mVADisplay == NULL) {
         ETRACE("vaGetDisplay failed.");
         return DECODE_DRIVER_FAIL;
     }
 
-#ifdef LOAD_PVR_DRIVER
-    ITRACE("load pvr driver.\n");
-    setenv("LIBVA_DRIVER_NAME", "pvr", 1);
-#endif
-
     int majorVersion, minorVersion;
     vaStatus = vaInitialize(mVADisplay, &majorVersion, &minorVersion);
     CHECK_VA_STATUS("vaInitialize");
-
-#ifdef LOAD_PVR_DRIVER
-    unsetenv("LIBVA_DRIVER_NAME");
-#endif
 
     if (mConfigBuffer.frameRate > 45 && mVideoFormatInfo.height >= 1080) {
         // ugly workaround here
@@ -943,7 +943,9 @@ Decode_Status VideoDecoderBase::terminateVA(void) {
     }
 
     if (mDisplay) {
+#ifndef LOAD_PVR_DRIVER
         delete mDisplay;
+#endif
         mDisplay = NULL;
     }
 
