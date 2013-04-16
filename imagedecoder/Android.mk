@@ -28,6 +28,12 @@ LOCAL_SHARED_LIBRARIES += \
 LOCAL_LDLIBS += -lpthread
 LOCAL_CFLAGS += -Wno-multichar
 LOCAL_CFLAGS += -DUSE_INTEL_JPEGDEC
+
+BAYLAKE_PRODUCT := baylake
+ifneq ($(filter $(TARGET_PRODUCT),$(BAYLAKE_PRODUCT)),)
+LOCAL_CFLAGS += -D__BAYLAKE__
+endif
+
 LOCAL_MODULE:= libjpeg_hw
 LOCAL_MODULE_TAGS := optional
 

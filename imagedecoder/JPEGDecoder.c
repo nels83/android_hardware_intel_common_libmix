@@ -38,6 +38,101 @@
 #define TABLE_CLASS_AC  1
 #define TABLE_CLASS_NUM 2
 
+static int appendFile(unsigned char* _fileName, void* _buf, int _bufLen)
+{
+	static int firstOpen = 1;
+	FILE * fp = NULL;
+	if( NULL == _buf || _bufLen <= 0 ) return (-1);
+
+	if(firstOpen)
+	{
+		fp = fopen(_fileName, "wb");
+		firstOpen = 0;
+	}
+	else
+	{
+		fp = fopen(_fileName, "ab");
+	}
+
+	if( NULL == fp )
+	{
+		return (-1);
+	}
+
+	fwrite(_buf, _bufLen, 1, fp);
+
+	fclose(fp);
+	fp = NULL;
+
+	return 0;
+}
+#define DUMPYUVFILE "/data/mcgdump.yuv"
+int dump_yuv_image(VAImage va_image, unsigned char *pImage_Src,
+                   float CbCr_h_sampling_factor, float CbCr_v_sampling_factor, int actW, int actH)
+{
+  int num_bytes, nWidth, nHeight, nAWidth, nAHeight;
+  unsigned char *pSrc_Y, *pSrc_UV, *pDst, *pDst_Y, *pDst_U, *pDst_V, *pSrcTmp, *pSrc_U, *pSrc_V;
+  int i, j;
+
+  ITRACE("Image width = %d, Height = %d\n", va_image.width, va_image.height);
+
+  pSrc_Y = pImage_Src;
+  pSrc_U = pSrc_Y + va_image.offsets[1];
+  pSrc_V = pSrc_U + va_image.offsets[2];
+  ITRACE("offset = %p, %p, %p\n", pSrc_Y, pSrc_U, pSrc_V);
+  ITRACE("offset = %d, %d, %d\n", va_image.offsets[0], va_image.offsets[1], va_image.offsets[2]);
+  ITRACE("pitch = %d, %d, %d\n", va_image.pitches[0], va_image.pitches[1], va_image.pitches[2]);
+
+// Y
+  nWidth =  va_image.pitches[0];
+  nHeight = va_image.height;
+  num_bytes = nWidth * nHeight;
+  if (NULL == (pDst_Y = (unsigned char*) malloc(num_bytes))) {
+	return 0;
+  }
+  for (i = 0; i < nHeight; i++)
+  {
+    memcpy(pDst_Y + i * nWidth, pSrc_Y + i * va_image.pitches[0], nWidth);
+  }
+  ITRACE(" Y (WxH) %d x %d, bytes = %d\n", nWidth, nHeight, num_bytes);
+  appendFile(DUMPYUVFILE, pDst_Y, nWidth*nHeight);
+
+//U
+  nWidth =  va_image.pitches[0] * CbCr_h_sampling_factor;
+  nHeight = va_image.height * CbCr_v_sampling_factor;
+  num_bytes = nWidth * nHeight;
+  if (NULL == (pDst_U = (unsigned char*) malloc(num_bytes))) {
+	return 0;
+  }
+  for (i = 0; i < nHeight; i++)
+  {
+      memcpy(pDst_U + i * nWidth, pSrc_U + i * va_image.pitches[1], nWidth);
+  }
+  ITRACE(" U (WxH) %d x %d, bytes = %d\n", nWidth, nHeight, num_bytes);
+  appendFile(DUMPYUVFILE, pDst_U, nWidth*nHeight);
+
+  pSrc_V = pSrc_U + nHeight * va_image.pitches[1];
+
+//V
+  nWidth =  va_image.pitches[0] * CbCr_h_sampling_factor;
+  nHeight = va_image.height * CbCr_v_sampling_factor;
+  num_bytes = nWidth * nHeight;
+  if (NULL == (pDst_V = (unsigned char*) malloc(num_bytes))) {
+	return 0;
+  }
+  for (i = 0; i < nHeight; i++)
+  {
+      memcpy(pDst_V + i * nWidth, pSrc_V + i * va_image.pitches[2], nWidth);
+  }
+  ITRACE(" V (WxH) %d x %d, bytes = %d\n", nWidth, nHeight, num_bytes);
+  appendFile(DUMPYUVFILE, pDst_V, nWidth*nHeight);
+
+  if(pDst != NULL)
+	free(pDst);
+
+  return 0;
+}
+
 /*
  * Initialize VA API related stuff
  *
@@ -145,6 +240,62 @@ void jdva_deinitialize (jd_libva_struct * jd_libva_ptr) {
     return;
 }
 
+unsigned int jdva_get_surface_format(jd_libva_struct * jd_libva_ptr, VASurfaceAttrib * fourcc) {
+    int h1, h2, h3, v1, v2, v3;
+    h1 = jd_libva_ptr->picture_param_buf.components[0].h_sampling_factor;
+    h2 = jd_libva_ptr->picture_param_buf.components[1].h_sampling_factor;
+    h3 = jd_libva_ptr->picture_param_buf.components[2].h_sampling_factor;
+    v1 = jd_libva_ptr->picture_param_buf.components[0].v_sampling_factor;
+    v2 = jd_libva_ptr->picture_param_buf.components[1].v_sampling_factor;
+    v3 = jd_libva_ptr->picture_param_buf.components[2].v_sampling_factor;
+
+    fourcc->type = VASurfaceAttribPixelFormat;
+    fourcc->flags = VA_SURFACE_ATTRIB_SETTABLE;
+    fourcc->value.type = VAGenericValueTypeInteger;
+
+    if (h1 == 2 && h2 == 1 && h3 == 1 &&
+            v1 == 2 && v2 == 1 && v3 == 1) {
+        fourcc->value.value.i = VA_FOURCC_IMC3;
+        return VA_RT_FORMAT_YUV420;
+    }
+    else if (h1 == 2 && h2 == 1 && h3 == 1 &&
+            v1 == 1 && v2 == 1 && v3 == 1) {
+        fourcc->value.value.i = VA_FOURCC_422H;
+        return VA_RT_FORMAT_YUV422;
+    }
+    else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+            v1 == 1 && v2 == 1 && v3 == 1) {
+        fourcc->value.value.i = VA_FOURCC_444P;
+        return VA_RT_FORMAT_YUV444;
+    }
+    else if (h1 == 4 && h2 == 1 && h3 == 1 &&
+            v1 == 1 && v2 == 1 && v3 == 1) {
+        fourcc->value.value.i = VA_FOURCC_411P;
+        return VA_RT_FORMAT_YUV411;
+    }
+    else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+            v1 == 2 && v2 == 1 && v3 == 1) {
+        fourcc->value.value.i = VA_FOURCC_422V;
+        return VA_RT_FORMAT_YUV422;
+    }
+    else if (h1 == 2 && h2 == 1 && h3 == 1 &&
+            v1 == 2 && v2 == 2 && v3 == 2) {
+        fourcc->value.value.i = VA_FOURCC_422H;
+        return VA_RT_FORMAT_YUV422;
+    }
+    else if (h2 == 2 && h2 == 2 && h3 == 2 &&
+            v1 == 2 && v2 == 1 && v3 == 1) {
+        fourcc->value.value.i = VA_FOURCC_422V;
+        return VA_RT_FORMAT_YUV422;
+    }
+    else
+    {
+        fourcc->value.value.i = VA_FOURCC('4','0','0','P');
+        return VA_RT_FORMAT_YUV400;
+    }
+
+}
+
 Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr) {
     VAStatus va_status = VA_STATUS_SUCCESS;
     Decode_Status status = DECODE_SUCCESS;
@@ -155,11 +306,22 @@ Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr) {
     if (jd_libva_ptr->va_surfaces == NULL) {
         return DECODE_MEMORY_FAIL;
     }
+
+    VASurfaceAttrib fourcc;
+    unsigned int surface_format = jdva_get_surface_format(jd_libva_ptr, &fourcc);
+#ifdef __BAYLAKE__
+    va_status = vaCreateSurfaces(jd_libva_ptr->va_display, surface_format,
+                                    jd_libva_ptr->image_width,
+                                    jd_libva_ptr->image_height,
+                                    jd_libva_ptr->va_surfaces,
+                                    jd_libva_ptr->surface_count, &fourcc, 1);
+#else
     va_status = vaCreateSurfaces(jd_libva_ptr->va_display, VA_RT_FORMAT_YUV444,
                                     jd_libva_ptr->image_width,
                                     jd_libva_ptr->image_height,
                                     jd_libva_ptr->va_surfaces,
                                     jd_libva_ptr->surface_count, NULL, 0);
+#endif
     if (va_status != VA_STATUS_SUCCESS) {
         ETRACE("vaCreateSurfaces failed. va_status = 0x%x", va_status);
         status = DECODE_DRIVER_FAIL;
@@ -400,6 +562,27 @@ jd_libva_ptr->slice_param_buf[ src_idx ].slice_data_offset : 0;
         ERREXIT1 (cinfo, JERR_VA_MAPBUFFER, va_status);
     }
 
+    char fcc[5];
+    fcc[0] = jd_libva_ptr->surface_image.format.fourcc & 0xff;
+    fcc[1] = (jd_libva_ptr->surface_image.format.fourcc >> 8 )& 0xff;
+    fcc[2] = (jd_libva_ptr->surface_image.format.fourcc >> 16) & 0xff;
+    fcc[3] = (jd_libva_ptr->surface_image.format.fourcc >> 24)& 0xff;
+    fcc[4] = '\0';
+    ITRACE("Derived image:");
+    ITRACE("\t%u bytes", jd_libva_ptr->surface_image.data_size);
+    ITRACE("\tfourcc='%s'", fcc);
+    ITRACE("\tpitches=[%u %u %u]", jd_libva_ptr->surface_image.pitches[0], jd_libva_ptr->surface_image.pitches[1], jd_libva_ptr->surface_image.pitches[2]);
+    ITRACE("\toffsets=[%u %u %u]", jd_libva_ptr->surface_image.offsets[0], jd_libva_ptr->surface_image.offsets[1], jd_libva_ptr->surface_image.offsets[2]);
+
+#ifdef __BAYLAKE__
+    float CbCr_h = ((float)jd_libva_ptr->picture_param_buf.components[1].h_sampling_factor) / jd_libva_ptr->picture_param_buf.components[0].h_sampling_factor;
+    float CbCr_v = ((float)jd_libva_ptr->picture_param_buf.components[1].v_sampling_factor) / jd_libva_ptr->picture_param_buf.components[0].v_sampling_factor;
+    dump_yuv_image(jd_libva_ptr->surface_image, jd_libva_ptr->image_buf,
+            CbCr_h, CbCr_v, jd_libva_ptr->image_width, jd_libva_ptr->image_height);
+#else
+    dump_yuv_image(jd_libva_ptr->surface_image, jd_libva_ptr->image_buf,
+            1, 1, jd_libva_ptr->image_width, jd_libva_ptr->image_height);
+#endif
     va_status = vaUnmapBuffer(jd_libva_ptr->va_display, jd_libva_ptr->surface_image.buf);
     if (va_status != VA_STATUS_SUCCESS) {
         ERREXIT1(cinfo, JERR_VA_MAPBUFFER, va_status);
@@ -536,7 +719,7 @@ Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr) {
                     uint8_t comp_data_ind;
                     for (comp_data_ind = 0; comp_data_ind < jd_libva_ptr->picture_param_buf.num_components; comp_data_ind++) {
                         if (comp_id == jd_libva_ptr->picture_param_buf.components[comp_data_ind].component_id) {
-                            jd_libva_ptr->slice_param_buf[scan_ind].components[comp_ind].component_selector = comp_data_ind;
+                            jd_libva_ptr->slice_param_buf[scan_ind].components[comp_ind].component_selector = comp_data_ind + 1;
                             break;
                         }
                     }
@@ -628,7 +811,7 @@ Decode_Status parseTableData(jd_libva_struct * jd_libva_ptr) {
                 }
                 uint32_t table_id = table_info & 0xf;
 
-                jd_libva_ptr->qmatrix_buf.load_quantiser_table[dqt_ind] = table_id;
+                jd_libva_ptr->qmatrix_buf.load_quantiser_table[table_id] = 1;
 
                 if (table_id < JPEG_MAX_QUANT_TABLES) {
                     // Pull Quant table data from bitstream
@@ -656,6 +839,7 @@ Decode_Status parseTableData(jd_libva_struct * jd_libva_ptr) {
                 table_bytes--;
                 uint32_t table_class = table_info >> 4; // Identifies whether the table is for AC or DC
                 uint32_t table_id = table_info & 0xf;
+                jd_libva_ptr->hufman_table_buf.load_huffman_table[table_id] = 1;
 
                 if ((table_class < TABLE_CLASS_NUM) && (table_id < JPEG_MAX_SETS_HUFFMAN_TABLES)) {
                     if (table_class == 0) {
