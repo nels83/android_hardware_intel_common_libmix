@@ -221,6 +221,7 @@ Encode_Status SetVideoEncoderParam() {
     switch(gCodec)
     {
         case 0:
+            gEncoderParams.profile = (VAProfile)VAProfileH264Baseline;
             break;
         case 1:
             gEncoderParams.profile = (VAProfile)VAProfileMPEG4Simple;

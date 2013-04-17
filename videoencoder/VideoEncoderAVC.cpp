@@ -38,6 +38,10 @@ VideoEncoderAVC::VideoEncoderAVC()
     mVideoParamsAVC.crop.BottomOffset = 0;
     mVideoParamsAVC.SAR.SarWidth = 0;
     mVideoParamsAVC.SAR.SarHeight = 0;
+    mVideoParamsAVC.bEntropyCodingCABAC = 0;
+    mVideoParamsAVC.bWeightedPPrediction = 0;
+    mVideoParamsAVC.bDirect8x8Inference = 0;
+    mVideoParamsAVC.bConstIpred = 0;
     mAutoReferenceSurfaceNum = 4;
 
     packed_seq_header_param_buf_id = VA_INVALID_ID;
@@ -83,6 +87,11 @@ Encode_Status VideoEncoderAVC::derivedSetParams(VideoParamConfigSet *videoEncPar
         return ENCODE_INVALID_PARAMS;
 
     mVideoParamsAVC = *encParamsAVC;
+    if(mComParams.profile == VAProfileH264Baseline){
+        mVideoParamsAVC.bEntropyCodingCABAC = 0;
+        mVideoParamsAVC.bDirect8x8Inference = 0;
+        mVideoParamsAVC.bWeightedPPrediction = 0;
+    }
     return ENCODE_SUCCESS;
 }
 
@@ -1037,6 +1046,7 @@ Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
             avcPicParams.ReferenceFrames[i].picture_id = mAutoRefSurfaces[i];
     }
 
+    avcPicParams.pic_fields.bits.entropy_coding_mode_flag = mVideoParamsAVC.bEntropyCodingCABAC;
     avcPicParams.coded_buf = task->coded_buffer;
     avcPicParams.last_picture = 0;
 
