@@ -1174,9 +1174,9 @@ Encode_Status VideoEncoderAVC::renderSliceParams(EncodeTask *task) {
         }
 
         // starting MB row number for this slice, suppose macroblock 16x16
-        currentSlice->macroblock_address = startRowInMB * mComParams.resolution.width /16;
+        currentSlice->macroblock_address = startRowInMB * ((mComParams.resolution.width + 0xf) & ~0xf) / 16;
         // slice height measured in MB
-        currentSlice->num_macroblocks = actualSliceHeightInMB * mComParams.resolution.width /16;
+        currentSlice->num_macroblocks = actualSliceHeightInMB * ((mComParams.resolution.width + 0xf) & ~0xf) / 16;
         if(task->type == FTYPE_I||task->type == FTYPE_IDR)
             currentSlice->slice_type = 2;
         else if(task->type == FTYPE_P)
