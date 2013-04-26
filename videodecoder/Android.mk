@@ -1,7 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-
 LOCAL_SRC_FILES := \
     VideoDecoderHost.cpp \
     VideoDecoderBase.cpp \
@@ -9,8 +8,7 @@ LOCAL_SRC_FILES := \
     VideoDecoderMPEG4.cpp \
     VideoDecoderAVC.cpp \
     VideoDecoderPAVC.cpp \
-    VideoDecoderAVCSecure.cpp \
-    VideoDecoderTrace.cpp
+    VideoDecoderTrace.cpp \
 
 # LOCAL_CFLAGS :=
 
@@ -19,11 +17,27 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/libva \
     $(TARGET_OUT_HEADERS)/libmixvbp
 
-#LOCAL_LDLIBS += -lpthread
+ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
+LOCAL_SRC_FILES += securevideo/ctp/VideoDecoderAVCSecure.cpp
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/securevideo/ctp
+endif
+
+ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
+LOCAL_SRC_FILES += securevideo/merrifield/VideoDecoderAVCSecure.cpp
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/securevideo/merrifield
+endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
+LOCAL_SRC_FILES += securevideo/baytrail/VideoDecoderAVCSecure.cpp
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/securevideo/baytrail
+
 LOCAL_CFLAGS += -DLOAD_PVR_DRIVER
 endif
+
+#LOCAL_LDLIBS += -lpthread
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
@@ -34,7 +48,6 @@ LOCAL_SHARED_LIBRARIES := \
 
 
 #LOCAL_CFLAGS += -DANDROID
-
 
 #LOCAL_SHARED_LIBRARIES += liblog
 
