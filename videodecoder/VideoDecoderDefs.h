@@ -121,7 +121,6 @@ struct VideoConfigBuffer {
     int32_t size;
     int32_t width;
     int32_t height;
-    int32_t frameRate;
     int32_t surfaceNumber;
     VAProfile profile;
     uint32_t flag;
