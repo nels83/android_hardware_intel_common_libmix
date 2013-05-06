@@ -501,11 +501,11 @@ bool VideoDecoderBase::checkBufferAvail(void) {
     for (int32_t i = 0; i < mNumSurfaces; i++) {
         buffer = mSurfaceBuffers + i;
 
-        querySurfaceRenderStatus(buffer);
         if (buffer->asReferernce == false &&
-            buffer->renderBuffer.renderDone == true &&
-            buffer->renderBuffer.driverRenderDone == true) {
-            return true;
+            buffer->renderBuffer.renderDone == true) {
+            querySurfaceRenderStatus(buffer);
+            if (buffer->renderBuffer.driverRenderDone == true)
+                return true;
         }
      }
     return false;
