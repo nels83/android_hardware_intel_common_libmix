@@ -1042,6 +1042,7 @@ Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
         avcPicParams.pic_fields.bits.reference_pic_flag = 1;
         // Not sure whether these settings work for all drivers
     }else {
+        avcPicParams.CurrPic.picture_id= VA_INVALID_SURFACE;
         for(int i =0; i< mAutoReferenceSurfaceNum; i++)
             avcPicParams.ReferenceFrames[i].picture_id = mAutoRefSurfaces[i];
     }

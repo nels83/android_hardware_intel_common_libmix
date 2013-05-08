@@ -16,18 +16,7 @@
 #include <ui/PixelFormat.h>
 #include <hardware/gralloc.h>
 #include <hal/hal_public.h>
-
-#define CHECK_ENCODE_STATUS(FUNC)\
-    if (ret < ENCODE_SUCCESS) { \
-        printf(FUNC" Failed. ret = 0x%08x\n", ret); \
-        return -1; \
-    }
-
-#define CHECK_ENCODE_STATUS_RETURN(FUNC)\
-    if (ret != ENCODE_SUCCESS) { \
-        printf(FUNC"Failed. ret = 0x%08x\n", ret); \
-        return -1; \
-    }
+#include "loadsurface.h"
 
 static const char *AVC_MIME_TYPE = "video/h264";
 static const char *MPEG4_MIME_TYPE = "video/mpeg4";
@@ -221,7 +210,6 @@ Encode_Status SetVideoEncoderParam() {
     switch(gCodec)
     {
         case 0:
-            gEncoderParams.profile = (VAProfile)VAProfileH264Baseline;
             break;
         case 1:
             gEncoderParams.profile = (VAProfile)VAProfileMPEG4Simple;
@@ -415,6 +403,13 @@ static int YUV_generator_planar(int width, int height,
 
     row_shift += 2;
     if (row_shift==box_width) row_shift = 0;
+
+    YUV_blend_with_pic(width,height,
+                       Y_start, Y_pitch,
+                       U_start, U_pitch,
+                       V_start, V_pitch,
+                       1, 70);
+ 
 
     return 0;
 }
