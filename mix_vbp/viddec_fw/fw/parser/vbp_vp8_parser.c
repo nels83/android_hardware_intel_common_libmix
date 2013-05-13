@@ -482,9 +482,6 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
         slc_parms->partition_size[part_index] = pi->partition_size[part_index - 1];
     }
 
-    /* This field specifies the offset to the first byte of partition data */
-    slc_parms->partition_data_offset = slc_parms->slice_data_offset;
-
     pic_data->num_slices++;
     if (pic_data->num_slices > VP8_MAX_NUM_SLICES) {
         ETRACE("Number of slices (%d) per picture exceeds the limit (%d).", pic_data->num_slices, VP8_MAX_NUM_SLICES);
