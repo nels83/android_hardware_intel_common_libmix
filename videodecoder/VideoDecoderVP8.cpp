@@ -160,7 +160,7 @@ Decode_Status VideoDecoderVP8::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
         return DECODE_SUCCESS;
     }
 
-    if (VP8_KEY_FRAME == data->codec_data->frame_type) {
+    if (VP8_KEY_FRAME == data->codec_data->frame_type && !mSizeChanged) {
         updateFormatInfo(data);
         if (mSizeChanged == true) {
             mSizeChanged = false;
