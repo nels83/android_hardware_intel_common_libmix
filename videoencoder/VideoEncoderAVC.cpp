@@ -903,9 +903,7 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
         avcSeqParams.sar_height = mVideoParamsAVC.SAR.SarHeight;
     }
 
-    // This is a temporary fix suggested by Binglin for bad encoding quality issue
-    avcSeqParams.max_num_ref_frames = (mEncMaxRefFrames != VA_ATTRIB_NOT_SUPPORTED) ?
-        mEncMaxRefFrames : 1;
+    avcSeqParams.max_num_ref_frames = 1;
 
     if(avcSeqParams.ip_period > 1)
         avcSeqParams.max_num_ref_frames = 2; 
