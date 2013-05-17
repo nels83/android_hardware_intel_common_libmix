@@ -4,6 +4,14 @@ include $(CLEAR_VARS)
 #VIDEO_ENC_LOG_ENABLE := true
 #NO_BUFFER_SHARE := true
 
+ifeq ($(ENABLE_IMG_GRAPHICS),)
+LOCAL_CFLAGS += -DBX_RC \
+                -DOSCL_IMPORT_REF= -DOSCL_UNUSED_ARG= -DOSCL_EXPORT_REF=
+
+LOCAL_STATIC_LIBRARIES := \
+                          libstagefright_m4vh263enc
+endif
+
 LOCAL_SRC_FILES :=              \
     VideoEncoderBase.cpp        \
     VideoEncoderAVC.cpp         \
@@ -12,6 +20,10 @@ LOCAL_SRC_FILES :=              \
     VideoEncoderVP8.cpp         \
     VideoEncoderHost.cpp
 
+ifeq ($(ENABLE_IMG_GRAPHICS),)
+    LOCAL_SRC_FILES += PVSoftMPEG4Encoder.cpp
+endif
+
 # LOCAL_CFLAGS :=
 
 LOCAL_C_INCLUDES :=             \
@@ -19,6 +31,16 @@ LOCAL_C_INCLUDES :=             \
     $(TARGET_OUT_HEADERS)/libva \
     $(TOPDIR)/frameworks/native/include \
     $(TARGET_OUT_HEADERS)/pvr
+
+ifeq ($(ENABLE_IMG_GRAPHICS),)
+LOCAL_C_INCLUDES +=             \
+    frameworks/av/media/libstagefright/codecs/m4v_h263/enc/include \
+    frameworks/av/media/libstagefright/codecs/m4v_h263/enc/src \
+    frameworks/av/media/libstagefright/codecs/common/include \
+    frameworks/native/include/media/openmax \
+    frameworks/native/include/media/hardware \
+    frameworks/av/media/libstagefright/include
+endif
 
 #LOCAL_LDLIBS += -lpthread
 

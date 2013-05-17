@@ -10,6 +10,9 @@
 #include "VideoEncoderH263.h"
 #include "VideoEncoderAVC.h"
 #include "VideoEncoderVP8.h"
+#ifndef IMG_GFX
+#include "PVSoftMPEG4Encoder.h"
+#endif
 #include "VideoEncoderHost.h"
 #include "VideoEncoderLog.h"
 #include <string.h>
@@ -26,11 +29,19 @@ IVideoEncoder *createVideoEncoder(const char *mimeType) {
         VideoEncoderAVC *p = new VideoEncoderAVC();
         return (IVideoEncoder *)p;
     } else if (strcasecmp(mimeType, "video/h263") == 0) {
+#ifdef IMG_GFX
         VideoEncoderH263 *p = new VideoEncoderH263();
+#else
+        PVSoftMPEG4Encoder *p = new PVSoftMPEG4Encoder("OMX.google.h263.encoder");
+#endif
         return (IVideoEncoder *)p;
     } else if (strcasecmp(mimeType, "video/mpeg4") == 0 ||
             strcasecmp(mimeType, "video/mp4v-es") == 0) {
+#ifdef IMG_GFX
         VideoEncoderMP4 *p = new VideoEncoderMP4();
+#else
+        PVSoftMPEG4Encoder *p = new PVSoftMPEG4Encoder("OMX.google.mpeg4.encoder");
+#endif
         return (IVideoEncoder *)p;
     } else if (strcasecmp(mimeType, "video/x-webm") == 0) {
         VideoEncoderVP8 *p = new VideoEncoderVP8();
