@@ -19,8 +19,7 @@ public:
     VideoEncoderVP8();
     virtual ~VideoEncoderVP8();
 
-    virtual Encode_Status start(void);
-    virtual Encode_Status stop(void);
+
 
 protected:
     virtual Encode_Status sendEncodeCommand(EncodeTask *task);
@@ -34,20 +33,12 @@ protected:
 
     // Local Methods
 private:
-	enum {
-		LRF = 0,
-		GRF = 1,
-		ARF = 2,
-		RCF = 3,
-		VP8_INTERNAL_FRAME_LAST
-	};
-
 	Encode_Status renderSequenceParams();
 	Encode_Status renderPictureParams(EncodeTask *task);
+	Encode_Status renderSliceParams(EncodeTask *task);
 
 	VideoConfigVP8 mVideoConfigVP8;
 	VideoParamsVP8 mVideoParamsVP8;
-	VASurfaceID mVP8InternalFrames[VP8_INTERNAL_FRAME_LAST];
 };
 
 #endif /* __VIDEO_ENCODER_VP8_H__ */

@@ -65,8 +65,8 @@ Encode_Status VideoEncoderVP8::renderSequenceParams() {
     vp8SeqParam.hrd_buf_size = mVideoParamsVP8.hrd_buf_size;
     vp8SeqParam.hrd_buf_initial_fullness = mVideoParamsVP8.hrd_buf_initial_fullness;
     vp8SeqParam.hrd_buf_optimal_fullness = mVideoParamsVP8.hrd_buf_optimal_fullness;
-    memcpy(vp8SeqParam.reference_frames, mVP8InternalFrames, sizeof(mVP8InternalFrames));
-
+//    memcpy(vp8SeqParam.reference_frames, mVP8InternalFrames, sizeof(mVP8InternalFrames));
+    memcpy(vp8SeqParam.reference_frames, mAutoRefSurfaces, sizeof(mAutoRefSurfaces) * mAutoReferenceSurfaceNum);
 
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,
@@ -110,6 +110,47 @@ Encode_Status VideoEncoderVP8::renderPictureParams(EncodeTask *task) {
 	return ret;
 }
 
+Encode_Status VideoEncoderVP8::renderSliceParams(EncodeTask *task) {
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    uint32_t sliceHeight;
+    uint32_t sliceHeightInMB;
+
+    VAEncSliceParameterBuffer sliceParams;
+
+    LOG_V( "Begin\n\n");
+
+    sliceHeight = mComParams.resolution.height;
+    sliceHeight += 15;
+    sliceHeight &= (~15);
+    sliceHeightInMB = sliceHeight / 16;
+
+    sliceParams.start_row_number = 0;
+    sliceParams.slice_height = sliceHeightInMB;
+    sliceParams.slice_flags.bits.is_intra = (task->type == FTYPE_I)?1:0;
+    sliceParams.slice_flags.bits.disable_deblocking_filter_idc = 0;
+
+    LOG_V("======VP8 slice params======\n");
+    LOG_I( "start_row_number = %d\n", (int) sliceParams.start_row_number);
+    LOG_I( "sliceHeightInMB = %d\n", (int) sliceParams.slice_height);
+    LOG_I( "is_intra = %d\n", (int) sliceParams.slice_flags.bits.is_intra);
+
+    vaStatus = vaCreateBuffer(
+            mVADisplay, mVAContext,
+            VAEncSliceParameterBufferType,
+            sizeof(VAEncSliceParameterBuffer),
+            1, &sliceParams,
+            &mSliceParamBuf);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mSliceParamBuf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+
+    LOG_V( "end\n");
+    return ENCODE_SUCCESS;
+}
+
+
 Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
 
     Encode_Status ret = ENCODE_SUCCESS;
@@ -123,58 +164,13 @@ Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
     ret = renderPictureParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
 
+    ret = renderSliceParams(task);
+    CHECK_ENCODE_STATUS_RETURN("renderSliceParams");
+
     LOG_V( "End\n");
     return ret;
 }
 
-Encode_Status VideoEncoderVP8::start() {
-    Encode_Status ret = ENCODE_SUCCESS;
-    LOG_V( "Begin\n");
-
-    ret = VideoEncoderBase::start ();
-    CHECK_ENCODE_STATUS_RETURN("VideoEncoderBase::start");
-
-    uint32_t stride_aligned = 0;
-    uint32_t height_aligned = 0;
-
-    VASurfaceAttributeTPI attribute_tpi;
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
-
-    stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
-    height_aligned = ((mComParams.resolution.height + 15) / 16 ) * 16;
-
-    attribute_tpi.size = stride_aligned * height_aligned * 3 / 2;
-    attribute_tpi.luma_stride = stride_aligned;
-    attribute_tpi.chroma_u_stride = stride_aligned;
-    attribute_tpi.chroma_v_stride = stride_aligned;
-    attribute_tpi.luma_offset = 0;
-    attribute_tpi.chroma_u_offset = stride_aligned * height_aligned;
-    attribute_tpi.chroma_v_offset = stride_aligned * height_aligned;
-    attribute_tpi.pixel_format = VA_FOURCC_NV12;
-    attribute_tpi.type = VAExternalMemoryNULL;
-
-    vaStatus = vaCreateSurfacesWithAttribute(mVADisplay, stride_aligned, height_aligned,
-            VA_RT_FORMAT_YUV420, VP8_INTERNAL_FRAME_LAST, mVP8InternalFrames, &attribute_tpi);
-    CHECK_VA_STATUS_RETURN("vaCreateSurfacesWithAttribute");
-    LOG_V( "end\n");
-    return ret;
-}
-
-Encode_Status VideoEncoderVP8::stop() {
-    Encode_Status ret = ENCODE_SUCCESS;
-	LOG_V( "Begin\n");
-
-	VAStatus vaStatus = VA_STATUS_SUCCESS;
-	vaStatus = vaDestroySurfaces(mVADisplay, mVP8InternalFrames, VP8_INTERNAL_FRAME_LAST);
-	CHECK_VA_STATUS_RETURN("vaDestroySurfaces");
-
-	ret = VideoEncoderBase::stop ();
-	CHECK_ENCODE_STATUS_RETURN("VideoEncoderBase::stop");
-
-	LOG_V( "end\n");
-
-    return ret;
-}
 
 Encode_Status VideoEncoderVP8::derivedSetParams(VideoParamConfigSet *videoEncParams) {
 

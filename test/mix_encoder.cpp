@@ -21,6 +21,7 @@
 static const char *AVC_MIME_TYPE = "video/h264";
 static const char *MPEG4_MIME_TYPE = "video/mpeg4";
 static const char *H263_MIME_TYPE = "video/h263";
+static const char *VPX_MIME_TYPE = "video/x-webm";
 
 static const int box_width = 128;
 
@@ -30,7 +31,7 @@ static VideoParamsCommon gEncoderParams;
 static VideoParamsStoreMetaDataInBuffers gStoreMetaDataInBuffers;
 static VideoRateControl gRC = RATE_CONTROL_CBR;
 
-static int gCodec = 0;  //0: H264, 1: MPEG4, 2: H263
+static int gCodec = 0;  //0: H264, 1: MPEG4, 2: H263 3: VPX
 static int gRCMode = 1; //0: NO_RC, 1: CBR, 2: VBR, 3: VCM
 static int gBitrate = 1280000;
 
@@ -686,8 +687,8 @@ int CheckArgs(int argc, char* argv[])
                 default:
                     printf("\n./mix_encode -c <Codec> -b <Bit rate> -r <Rate control> -w <SrcWidth> -h <SrcHeight> -k <EncodeWidth> -g <EncodeHight> -n <Frame_num> -m <Mode> -s <Sync mode> -f <Output file>\n");
               	     printf("\nCodec:\n");
-              	     printf("0: H264 (default)\n1: MPEG4\n2: H263\n");
-              	     printf("\nRate control:\n");
+                    printf("0: H264 (default)\n1: MPEG4\n2: H263\n3: VPX\n");
+                    printf("\nRate control:\n");
               	     printf("0: NO_RC \n1: CBR (default)\n2: VBR\n3: VCM\n");
               	     printf("\nMode:\n");
               	     printf("0: Camera malloc (default)\n1: WiDi clone\n2: WiDi ext\n3: WiDi user\n4: Raw\n5: GrallocSource(Composer)\n6: GrallocSource(Gralloc)\n7: GrallocSource(Camera)\n");
@@ -738,6 +739,10 @@ int main(int argc, char* argv[])
         case 2:
             codec = H263_MIME_TYPE;
             break;
+	case 3:
+	    codec = VPX_MIME_TYPE;
+	    break;
+
         default:
             printf("Not support this type codec\n");
             return 1;
