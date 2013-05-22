@@ -494,8 +494,8 @@ Encode_Status VideoEncoderAVC::outputCodecData(
 
     if (headerSize <= outBuffer->bufferSize) {
         memcpy(outBuffer->data, (uint8_t *)mCurSegment->buf + mOffsetInSeg, headerSize);
-        mTotalSizeCopied += headerSize;
-        mOffsetInSeg += headerSize;
+//        mTotalSizeCopied += headerSize;
+//        mOffsetInSeg += headerSize;
         outBuffer->dataSize = headerSize;
         outBuffer->remainingSize = 0;
         outBuffer->flag |= ENCODE_BUFFERFLAG_ENDOFFRAME;
