@@ -138,6 +138,8 @@ Decode_Status VideoDecoderVP8::decode(VideoDecodeBuffer *buffer) {
                  (void**)&data);
     CHECK_STATUS("VideoDecoderBase::parseBuffer");
 
+    mShowFrame = data->codec_data->show_frame;
+
     if (!mVAStarted) {
         status = startVA(data);
         CHECK_STATUS("startVA");

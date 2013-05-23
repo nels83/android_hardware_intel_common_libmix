@@ -112,6 +112,7 @@ protected:
     VideoConfigBuffer  mConfigBuffer; // only store configure meta data.
     bool mDecodingFrame; // indicate whether a frame is being decoded
     bool mSizeChanged; // indicate whether video size is changed.
+    bool mShowFrame; // indicate whether the decoded frame is for display
 
     enum {
         // TODO: move this to vbp_loader.h

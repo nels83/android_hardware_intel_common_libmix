@@ -47,6 +47,7 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
       mForwardReference(NULL),
       mDecodingFrame(false),
       mSizeChanged(false),
+      mShowFrame(true),
 
       // private member variables
       mLowDelay(false),
@@ -593,7 +594,11 @@ Decode_Status VideoDecoderBase::outputSurfaceBuffer(void) {
         CHECK_STATUS();
     }
     // frame is successfly decoded to the current surface,  it is ready for output
-    mAcquiredBuffer->renderBuffer.renderDone = false;
+    if (mShowFrame) {
+        mAcquiredBuffer->renderBuffer.renderDone = false;
+    } else {
+        mAcquiredBuffer->renderBuffer.renderDone = true;
+    }
 
     // decoder must set "asReference and referenceFrame" flags properly
 
@@ -615,13 +620,15 @@ Decode_Status VideoDecoderBase::outputSurfaceBuffer(void) {
         mLastReference = mAcquiredBuffer;
     }
     // add to the output list
-    if (mOutputHead == NULL) {
-        mOutputHead = mAcquiredBuffer;
-    } else {
-        mOutputTail->next = mAcquiredBuffer;
+    if (mShowFrame) {
+        if (mOutputHead == NULL) {
+            mOutputHead = mAcquiredBuffer;
+        } else {
+            mOutputTail->next = mAcquiredBuffer;
+        }
+        mOutputTail = mAcquiredBuffer;
+        mOutputTail->next = NULL;
     }
-    mOutputTail = mAcquiredBuffer;
-    mOutputTail->next = NULL;
 
     //VTRACE("Pushing POC %d to queue (pts = %.2f)", mAcquiredBuffer->pictureOrder, mAcquiredBuffer->renderBuffer.timeStamp/1E6);
 
