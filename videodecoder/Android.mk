@@ -17,23 +17,12 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/libva \
     $(TARGET_OUT_HEADERS)/libmixvbp
 
-ifeq ($(TARGET_BOARD_PLATFORM),clovertrail)
-LOCAL_SRC_FILES += securevideo/ctp/VideoDecoderAVCSecure.cpp
-
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/securevideo/ctp
-endif
-
-ifeq ($(TARGET_BOARD_PLATFORM),merrifield)
-LOCAL_SRC_FILES += securevideo/merrifield/VideoDecoderAVCSecure.cpp
-
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/securevideo/merrifield
+ifeq ($(USE_INTEL_SECURE_AVC),true)
+LOCAL_SRC_FILES += securevideo/$(TARGET_BOARD_PLATFORM)/VideoDecoderAVCSecure.cpp
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/securevideo/$(TARGET_BOARD_PLATFORM)
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)
-LOCAL_SRC_FILES += securevideo/baytrail/VideoDecoderAVCSecure.cpp
-
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/securevideo/baytrail
-
 LOCAL_CFLAGS += -DLOAD_PVR_DRIVER
 endif
 
@@ -61,11 +50,7 @@ LOCAL_COPY_HEADERS := \
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva_videodecoder
 
-PLATFORM_SUPPORT_VP8 := \
-    merrifield \
-    baytrail
-
-ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_VP8)),)
+ifeq ($(USE_HW_VP8),true)
 LOCAL_SRC_FILES += VideoDecoderVP8.cpp
 LOCAL_CFLAGS += -DUSE_HW_VP8
 endif

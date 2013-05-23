@@ -29,9 +29,8 @@ LOCAL_LDLIBS += -lpthread
 LOCAL_CFLAGS += -Wno-multichar
 LOCAL_CFLAGS += -DUSE_INTEL_JPEGDEC
 
-BAYLAKE_PRODUCT := baylake
-ifneq ($(filter $(TARGET_PRODUCT),$(BAYLAKE_PRODUCT)),)
-LOCAL_CFLAGS += -D__BAYLAKE__
+ifeq ($(JPEGDEC_USES_GEN),true)
+LOCAL_CFLAGS += -DJPEGDEC_USES_GEN
 endif
 
 LOCAL_MODULE:= libjpeg_hw

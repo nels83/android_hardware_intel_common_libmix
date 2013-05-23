@@ -26,7 +26,9 @@
 #include "VideoDecoderMPEG4.h"
 #include "VideoDecoderAVC.h"
 #include "VideoDecoderPAVC.h"
+#ifdef USE_INTEL_SECURE_AVC
 #include "VideoDecoderAVCSecure.h"
+#endif
 #ifdef USE_HW_VP8
 #include "VideoDecoderVP8.h"
 #endif
@@ -58,10 +60,13 @@ IVideoDecoder* createVideoDecoder(const char* mimeType) {
     } else if (strcasecmp(mimeType, "video/pavc") == 0) {
         VideoDecoderAVC *p = new VideoDecoderPAVC(mimeType);
         return (IVideoDecoder *)p;
-    } else if (strcasecmp(mimeType, "video/avc-secure") == 0) {
+    }
+#ifdef USE_INTEL_SECURE_AVC
+    else if (strcasecmp(mimeType, "video/avc-secure") == 0) {
         VideoDecoderAVC *p = new VideoDecoderAVCSecure(mimeType);
         return (IVideoDecoder *)p;
     }
+#endif
 #ifdef USE_HW_VP8
     else if (strcasecmp(mimeType, "video/vp8") == 0 ||
         strcasecmp(mimeType, "video/x-vnd.on2.vp8") == 0) {

@@ -309,7 +309,7 @@ Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr) {
 
     VASurfaceAttrib fourcc;
     unsigned int surface_format = jdva_get_surface_format(jd_libva_ptr, &fourcc);
-#ifdef __BAYLAKE__
+#ifdef JPEGDEC_USES_GEN
     va_status = vaCreateSurfaces(jd_libva_ptr->va_display, surface_format,
                                     jd_libva_ptr->image_width,
                                     jd_libva_ptr->image_height,
@@ -574,7 +574,7 @@ jd_libva_ptr->slice_param_buf[ src_idx ].slice_data_offset : 0;
     ITRACE("\tpitches=[%u %u %u]", jd_libva_ptr->surface_image.pitches[0], jd_libva_ptr->surface_image.pitches[1], jd_libva_ptr->surface_image.pitches[2]);
     ITRACE("\toffsets=[%u %u %u]", jd_libva_ptr->surface_image.offsets[0], jd_libva_ptr->surface_image.offsets[1], jd_libva_ptr->surface_image.offsets[2]);
 
-#ifdef __BAYLAKE__
+#ifdef JPEGDEC_USES_GEN
     float CbCr_h = ((float)jd_libva_ptr->picture_param_buf.components[1].h_sampling_factor) / jd_libva_ptr->picture_param_buf.components[0].h_sampling_factor;
     float CbCr_v = ((float)jd_libva_ptr->picture_param_buf.components[1].v_sampling_factor) / jd_libva_ptr->picture_param_buf.components[0].v_sampling_factor;
     dump_yuv_image(jd_libva_ptr->surface_image, jd_libva_ptr->image_buf,
