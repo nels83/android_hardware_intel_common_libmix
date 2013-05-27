@@ -592,7 +592,6 @@ struct VideoParamsVP8 : VideoParamConfigSet {
 	uint32_t kf_auto;
 	uint32_t kf_min_dist;
 	uint32_t kf_max_dist;
-	uint32_t quality_setting;
 	uint32_t min_qp;
 	uint32_t max_qp;
 	uint32_t rc_undershoot;

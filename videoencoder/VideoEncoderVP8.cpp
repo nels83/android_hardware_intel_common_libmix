@@ -19,17 +19,16 @@ VideoEncoderVP8::VideoEncoderVP8()
 	mVideoParamsVP8.profile = 0;
 	mVideoParamsVP8.error_resilient = 0;
 	mVideoParamsVP8.num_token_partitions = 4;
-	mVideoParamsVP8.kf_auto = 0;
+	mVideoParamsVP8.kf_auto = 1;
 	mVideoParamsVP8.kf_min_dist = 0;
-	mVideoParamsVP8.kf_max_dist = 0;
-	mVideoParamsVP8.quality_setting = 0;
-	mVideoParamsVP8.min_qp = 0;
-	mVideoParamsVP8.max_qp = 0;
+	mVideoParamsVP8.kf_max_dist = 30;
+	mVideoParamsVP8.min_qp = 4;
+	mVideoParamsVP8.max_qp = 63;
 	mVideoParamsVP8.rc_undershoot = 100;
 	mVideoParamsVP8.rc_overshoot = 100;
-	mVideoParamsVP8.hrd_buf_size = 500;
-	mVideoParamsVP8.hrd_buf_initial_fullness = 200;
-	mVideoParamsVP8.hrd_buf_optimal_fullness = 200;
+	mVideoParamsVP8.hrd_buf_size = 6000;
+	mVideoParamsVP8.hrd_buf_initial_fullness = 4000;
+	mVideoParamsVP8.hrd_buf_optimal_fullness = 5000;
 
 	mVideoConfigVP8.force_kf = 0;
 	mVideoConfigVP8.no_ref_last = 0;
@@ -94,6 +93,7 @@ Encode_Status VideoEncoderVP8::renderPictureParams(EncodeTask *task) {
     vp8PicParam.pic_flags.bits.no_ref_last = mVideoConfigVP8.no_ref_last;
     vp8PicParam.pic_flags.bits.no_ref_gf = mVideoConfigVP8.no_ref_gf;
     vp8PicParam.pic_flags.bits.no_ref_arf = mVideoConfigVP8.no_ref_arf;
+    vp8PicParam.pic_flags.value = 0;
 
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,
