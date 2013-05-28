@@ -101,6 +101,18 @@ Decode_Status VideoDecoderWMV::decode(VideoDecodeBuffer *buffer) {
         CHECK_STATUS("startVA");
     }
 
+    if ((mVideoFormatInfo.width != data->se_data->CODED_WIDTH ||
+        mVideoFormatInfo.height != data->se_data->CODED_HEIGHT) &&
+        data->se_data->CODED_WIDTH &&
+        data->se_data->CODED_HEIGHT) {
+        updateFormatInfo(data);
+        if (mSizeChanged) {
+            flushSurfaceBuffers();
+            mSizeChanged = false;
+            return DECODE_FORMAT_CHANGE;
+        }
+    }
+
     status = decodeFrame(buffer, data);
     CHECK_STATUS("decodeFrame");
     if (mSizeChanged) {
