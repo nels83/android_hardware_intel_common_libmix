@@ -56,3 +56,42 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := mix_encoder
 
 include $(BUILD_EXECUTABLE)
+# For mix_encoder2
+# =====================================================
+
+include $(CLEAR_VARS)
+
+#VIDEO_ENC_LOG_ENABLE := true
+
+LOCAL_SRC_FILES :=              \
+    mix_encoder2.cpp
+
+LOCAL_C_INCLUDES :=             \
+    $(TARGET_OUT_HEADERS)/libva \
+    $(TARGET_OUT_HEADERS)/libmix_videoencoder \
+    $(TARGET_OUT_HEADERS)/pvr \
+    $(TOP)/frameworks/base/include/display \
+    $(TOP)/frameworks/av/media/libstagefright \
+    $(TOP)/frameworks/native/include/media/openmax \
+    $(LOCAL_PATH)
+
+LOCAL_SHARED_LIBRARIES :=       \
+        libintelmetadatabuffer  \
+        libva_videoencoder      \
+        libva                   \
+        libva-android           \
+        libva-tpi               \
+        libgui                  \
+        libui                   \
+        libutils                \
+        libcutils               \
+        libhardware             \
+        libbinder		\
+	libstagefright		\
+	liblog			\
+	libstagefright_foundation
+
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := mix_encoder2
+
+include $(BUILD_EXECUTABLE)
