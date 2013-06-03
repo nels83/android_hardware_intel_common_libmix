@@ -388,7 +388,10 @@ Encode_Status PVSoftMPEG4Encoder::encode(VideoEncRawBuffer *inBuffer, uint32_t t
         if (mNumInputFrames == 0)
             LOG_I("%d %d %d\n", pvinfo->width,
                     pvinfo->height, pvinfo->lumaStride);
-        trimBuffer((uint8_t*)value, mTrimedInputData, pvinfo->width, pvinfo->height, pvinfo->lumaStride);
+        if (pvinfo != NULL)
+            trimBuffer((uint8_t*)value, mTrimedInputData, pvinfo->width, pvinfo->height, pvinfo->lumaStride);
+        else
+            LOG_E("failed to parse metadata info");
     } else {
         memcpy(mTrimedInputData, inBuffer->data,
                 (mVideoWidth * mVideoHeight * 3 ) >> 1);
@@ -450,6 +453,7 @@ Encode_Status PVSoftMPEG4Encoder::getOutput(VideoEncOutputBuffer *outBuffer, uin
         LOG_E("Failed to encode frame or get hink track at frame %lld",
                 mNumInputFrames);
         mSignalledError = true;
+        hintTrack.CodeType = 0;
         ret = ENCODE_FAIL;
     }
     LOG_I("dataLength %d\n", dataLength);
