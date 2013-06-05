@@ -99,11 +99,11 @@ int AsfSimpleIndexParser::seek(
     }
 
     if (offset >= mIndexInfo->indexEntriesCount) {
-        return ASF_PARSER_BAD_VALUE;
+        offset = mIndexInfo->indexEntriesCount;
     }
 
     if (INDEX_ENTRY_SIZE * offset > mIndexInfo->indexSize - INDEX_ENTRY_SIZE) {
-        return ASF_PARSER_BAD_VALUE;
+        offset = mIndexInfo->indexSize/INDEX_ENTRY_SIZE - 1;
     }
 
     targetTime = offset * mIndexInfo->indexEntryTimeInterval;
