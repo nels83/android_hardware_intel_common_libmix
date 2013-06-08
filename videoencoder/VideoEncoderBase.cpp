@@ -175,12 +175,23 @@ Encode_Status VideoEncoderBase::start() {
         stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
         height_aligned = ((mComParams.resolution.height + 15) / 16 ) * 16;
     }else{
-        stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;  //on Merr, stride must be 64 aligned.
-        height_aligned = ((mComParams.resolution.height + 31) / 32 ) * 32;
+        if(mComParams.profile == VAProfileVP8Version0_3)
+        {
+           stride_aligned = ((mComParams.resolution.width + 64 + 63) / 64 ) * 64;  //for vsp stride
+           height_aligned = ((mComParams.resolution.height + 64 + 63) / 64 ) * 64;
+        }
+        else
+        {
+           stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;  //on Merr, stride must be 64 aligned.
+           height_aligned = ((mComParams.resolution.height + 31) / 32 ) * 32;
+        }
     }
 
+    if(mComParams.profile == VAProfileVP8Version0_3)
+        attribute_tpi.size = stride_aligned * height_aligned + stride_aligned * ((((mComParams.resolution.height + 1) / 2 + 32)+63)/64) *64;// FW need w*h + w*chrom_height
+    else
+        attribute_tpi.size = stride_aligned * height_aligned * 3 / 2;
 
-    attribute_tpi.size = stride_aligned * height_aligned * 3 / 2;
     attribute_tpi.luma_stride = stride_aligned;
     attribute_tpi.chroma_u_stride = stride_aligned;
     attribute_tpi.chroma_v_stride = stride_aligned;
