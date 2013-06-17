@@ -34,6 +34,10 @@
 #include <va/va.h>
 //#include <va/va_android.h>
 #include "va/va_dec_jpeg.h"
+#include <stdio.h>
+#define HAVE_BOOLEAN
+#include "jpeglib.h"
+#include <hardware/gralloc.h>
 
 #define Display unsigned int
 #define BOOL int
@@ -78,6 +82,9 @@ typedef struct {
     uint32_t rotation;
     CJPEGParse* JPEGParser;
 
+    char ** output_image;
+    uint32_t output_lines;
+    uint32_t fourcc;
 } jd_libva_struct;
 
 typedef enum {
@@ -97,9 +104,10 @@ extern jd_libva_struct jd_libva;
 
 Decode_Status jdva_initialize (jd_libva_struct * jd_libva_ptr);
 void jdva_deinitialize (jd_libva_struct * jd_libva_ptr);
-Decode_Status jdva_decode (jd_libva_struct * jd_libva_ptr, uint8_t* buf);
+Decode_Status jdva_decode (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
 Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr);
 Decode_Status jdva_release_resource (jd_libva_struct * jd_libva_ptr);
-Decode_Status parseBitstream(jd_libva_struct * jd_libva_ptr);
-Decode_Status parseTableData(jd_libva_struct * jd_libva_ptr);
+Decode_Status parseBitstream(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
+Decode_Status parseTableData(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
+
 #endif
