@@ -73,8 +73,12 @@ uint8_t getNextMarker(CJPEGParse* parser) {
             break;
         }
     }
-
-    return readNextByte(parser);
+	/* check the next byte to make sure we don't miss the real marker*/
+	uint8_t tempNextByte = readNextByte(parser);
+	if (tempNextByte == 0xff)
+	    return readNextByte(parser);
+	else
+		return tempNextByte;
 }
 
 boolean setByteOffset(CJPEGParse* parser, uint32_t byte_offset)
