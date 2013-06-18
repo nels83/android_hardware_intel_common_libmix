@@ -708,6 +708,9 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
     }
 
     if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER){
+        if (mVideoFormatInfo.actualBufferNeeded > mConfigBuffer.surfaceNumber)
+            return DECODE_FORMAT_CHANGE;
+
         numSurface = mConfigBuffer.surfaceNumber;
         // if format has been changed in USE_NATIVE_GRAPHIC_BUFFER mode,
         // we can not setupVA here when the graphic buffer resolution is smaller than the resolution decoder really needs

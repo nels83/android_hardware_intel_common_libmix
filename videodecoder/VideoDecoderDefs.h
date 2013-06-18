@@ -179,6 +179,7 @@ struct VideoFormatInfo {
     int32_t bitrate;
     int32_t framerateNom;
     int32_t framerateDenom;
+    int32_t actualBufferNeeded;
     VideoExtensionBuffer *ext;
 };
 

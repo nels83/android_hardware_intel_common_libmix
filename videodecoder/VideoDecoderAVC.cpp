@@ -593,7 +593,6 @@ void VideoDecoderAVC::clearAsReference(int toggle) {
 
 Decode_Status VideoDecoderAVC::startVA(vbp_data_h264 *data) {
     int32_t DPBSize = getDPBSize(data);
-    updateFormatInfo(data);
 
     //Use high profile for all kinds of H.264 profiles (baseline, main and high) except for constrained baseline
     VAProfile vaProfile = VAProfileH264High;
@@ -607,6 +606,7 @@ Decode_Status VideoDecoderAVC::startVA(vbp_data_h264 *data) {
     }
 
     VideoDecoderBase::setOutputWindowSize(DPBSize);
+    updateFormatInfo(data);
 
    // for 1080p, limit the total surface to 19, according the hardware limitation
    // change the max surface number from 19->10 to workaround memory shortage
@@ -676,6 +676,17 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         data->codec_data->crop_top,
         data->codec_data->crop_right,
         data->codec_data->crop_bottom);
+
+    // The number of actual buffer needed is
+    // outputQueue + nativewindow_owned + (diff > 0 ? diff : 1) + widi_need_max + 1(available buffer)
+    // while outputQueue = DPB < 8? DPB :8
+    // and diff = Reference + 1 - ouputQueue
+    int diff = data->codec_data->num_ref_frames + 1 - mOutputWindowSize;
+    mVideoFormatInfo.actualBufferNeeded = mOutputWindowSize + 4 /* Owned by native window */
+                                          + (diff > 0 ? diff : 1)
+                                          + 6 /* WiDi maximum needs */
+                                          + 1;
+    ITRACE("actualBufferNeeded =%d", mVideoFormatInfo.actualBufferNeeded);
 
     mVideoFormatInfo.valid = true;
 }

@@ -114,6 +114,8 @@ protected:
     bool mSizeChanged; // indicate whether video size is changed.
     bool mShowFrame; // indicate whether the decoded frame is for display
 
+    int32_t mOutputWindowSize; // indicate limit of number of outstanding frames for output
+
     enum {
         // TODO: move this to vbp_loader.h
         VBP_INVALID = 0xFF,
@@ -135,7 +137,6 @@ private:
     bool mRawOutput; // whether to output NV12 raw data
     bool mManageReference;  // this should stay true for VC1/MP4 decoder, and stay false for AVC decoder. AVC  handles reference frame using DPB
     OUTPUT_METHOD mOutputMethod;
-    int32_t mOutputWindowSize; // indicate limit of number of outstanding frames for output
 
     int32_t mNumSurfaces;
     VideoSurfaceBuffer *mSurfaceBuffers;
