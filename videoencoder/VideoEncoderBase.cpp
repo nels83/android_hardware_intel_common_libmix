@@ -1799,7 +1799,11 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
 
         VASurfaceID surfaceId;
         VASurfaceAttributeTPI attribute_tpi;
-        uint32_t stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;
+        unsigned int stride_aligned;
+        if(mComParams.profile == VAProfileVP8Version0_3)
+           stride_aligned = ((mComParams.resolution.width + 31) / 32 ) * 32;
+        else
+           stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;
 
         attribute_tpi.size = stride_aligned * mComParams.resolution.height * 3 / 2;
         attribute_tpi.luma_stride = stride_aligned;
