@@ -234,9 +234,8 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
             mOutputTail = NULL;
         }
         vaStatus = vaSetTimestampForSurface(mVADisplay, outputByPos->renderBuffer.surface, outputByPos->renderBuffer.timeStamp);
-        if (mConfigBuffer.nativeWindow == NULL && useGraphicBuffer) {
-           vaSyncSurface(mVADisplay, outputByPos->renderBuffer.surface);
-        }
+        if (useGraphicBuffer)
+            vaSyncSurface(mVADisplay, outputByPos->renderBuffer.surface);
         return &(outputByPos->renderBuffer);
     }
 
@@ -284,15 +283,8 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining) {
     //VTRACE("Output POC %d for display (pts = %.2f)", output->pictureOrder, output->renderBuffer.timeStamp/1E6);
     vaStatus = vaSetTimestampForSurface(mVADisplay, output->renderBuffer.surface, output->renderBuffer.timeStamp);
 
-#ifdef LOAD_PVR_DRIVER
-    if (useGraphicBuffer ) {
+    if (useGraphicBuffer)
         vaSyncSurface(mVADisplay, output->renderBuffer.surface);
-    }
-#endif
-
-    if (mConfigBuffer.nativeWindow == NULL && useGraphicBuffer) {
-        vaSyncSurface(mVADisplay, output->renderBuffer.surface);
-    }
 
     return &(output->renderBuffer);
 }
