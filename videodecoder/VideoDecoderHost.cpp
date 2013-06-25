@@ -57,9 +57,6 @@ IVideoDecoder* createVideoDecoder(const char* mimeType) {
                strcasecmp(mimeType, "video/3gpp") == 0) {
         VideoDecoderMPEG4 *p = new VideoDecoderMPEG4(mimeType);
         return (IVideoDecoder *)p;
-    } else if (strcasecmp(mimeType, "video/pavc") == 0) {
-        VideoDecoderAVC *p = new VideoDecoderPAVC(mimeType);
-        return (IVideoDecoder *)p;
     }
 #ifdef USE_INTEL_SECURE_AVC
     else if (strcasecmp(mimeType, "video/avc-secure") == 0) {
@@ -67,6 +64,7 @@ IVideoDecoder* createVideoDecoder(const char* mimeType) {
         return (IVideoDecoder *)p;
     }
 #endif
+
 #ifdef USE_HW_VP8
     else if (strcasecmp(mimeType, "video/vp8") == 0 ||
         strcasecmp(mimeType, "video/x-vnd.on2.vp8") == 0) {

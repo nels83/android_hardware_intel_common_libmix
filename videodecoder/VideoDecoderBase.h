@@ -87,6 +87,11 @@ protected:
          return ((a + 15) & (~15));
     }
 
+#ifdef USE_AVC_SHORT_FORMAT
+    Decode_Status updateBuffer(uint8_t *buffer, int32_t size, void** vbpData);
+    Decode_Status setParserType(_vbp_parser_type type);
+    virtual Decode_Status getCodecSpecificConfigs(VAProfile profile, VAConfigID *config);
+#endif
 private:
     Decode_Status mapSurface(void);
     Decode_Status getRawDataFromSurface(void);

@@ -413,6 +413,9 @@ Decode_Status VideoDecoderAVC::updateDPB(VAPictureParameterBufferH264 *picParam)
         if (ref->flags & VA_PICTURE_H264_INVALID) {
             continue;
         }
+#ifdef USE_AVC_SHORT_FORMAT
+        ref->picture_id = findSurface(ref);
+#endif
         dpb->poc = getPOC(ref);
         // looking for the latest ref frame in the DPB with specified POC, in case frames have same POC
         dpb->surfaceBuffer = findRefSurfaceBuffer(ref);
@@ -696,15 +699,23 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         data->codec_data->crop_right,
         data->codec_data->crop_bottom);
 
+    int diff = data->codec_data->num_ref_frames + 1 - mOutputWindowSize;
+
+#ifndef USE_AVC_SHORT_FORMAT
     // The number of actual buffer needed is
     // outputQueue + nativewindow_owned + (diff > 0 ? diff : 1) + widi_need_max + 1(available buffer)
     // while outputQueue = DPB < 8? DPB :8
     // and diff = Reference + 1 - ouputQueue
-    int diff = data->codec_data->num_ref_frames + 1 - mOutputWindowSize;
     mVideoFormatInfo.actualBufferNeeded = mOutputWindowSize + 4 /* Owned by native window */
                                           + (diff > 0 ? diff : 1)
                                           + 6 /* WiDi maximum needs */
                                           + 1;
+#else
+    // This is for protected video playback on Baytrail
+    mVideoFormatInfo.actualBufferNeeded = mOutputWindowSize + 2 /* Owned by native window */
+                                      + (diff > 0 ? diff : 1)
+                                      + 1;
+#endif
     ITRACE("actualBufferNeeded =%d", mVideoFormatInfo.actualBufferNeeded);
 
     mVideoFormatInfo.valid = true;

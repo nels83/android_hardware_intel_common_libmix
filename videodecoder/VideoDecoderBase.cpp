@@ -765,6 +765,10 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
     CHECK_VA_STATUS("vaInitialize");
 
     if ((int32_t)profile != VAProfileSoftwareDecoding) {
+#ifdef USE_AVC_SHORT_FORMAT
+        status = getCodecSpecificConfigs(profile, &mVAConfig);
+        CHECK_STATUS("getCodecSpecificAttributes");
+#else
         //We are requesting RT attributes
         attrib.type = VAConfigAttribRTFormat;
         attrib.value = VA_RT_FORMAT_YUV420;
@@ -777,6 +781,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
                 1,
                 &mVAConfig);
         CHECK_VA_STATUS("vaCreateConfig");
+#endif
     }
 
     mNumSurfaces = numSurface;
@@ -787,8 +792,10 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
 
     int32_t format = VA_RT_FORMAT_YUV420;
     if (mConfigBuffer.flag & WANT_SURFACE_PROTECTION) {
+#ifndef USE_AVC_SHORT_FORMAT
         format |= VA_RT_FORMAT_PROTECTED;
         WTRACE("Surface is protected.");
+#endif
     }
     if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER) {
         mVASurfaceAttrib = new VASurfaceAttributeTPI;
@@ -807,7 +814,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
         mVASurfaceAttrib->height = mVideoFormatInfo.height;
         mVASurfaceAttrib->type = VAExternalMemoryAndroidGrallocBuffer;
         mVASurfaceAttrib->reserved[0] = (unsigned int)mConfigBuffer.nativeWindow;
-        
+
         for (int i = 0; i < mNumSurfaces; i++) {
             mVASurfaceAttrib->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
         }
@@ -1029,6 +1036,7 @@ Decode_Status VideoDecoderBase::getRawDataFromSurface(void) {
     imageFormat.fourcc = VA_FOURCC_NV12;
     imageFormat.byte_order = VA_LSB_FIRST;
     imageFormat.bits_per_pixel = 16;
+
     vaStatus = vaCreateImage(
         mVADisplay,
         &imageFormat,
@@ -1219,4 +1227,61 @@ void VideoDecoderBase::querySurfaceRenderStatus(VideoSurfaceBuffer* surface) {
     }
 
 }
+
+// This function should be called before start() to load different type of parsers
+#ifdef USE_AVC_SHORT_FORMAT
+Decode_Status VideoDecoderBase::setParserType(_vbp_parser_type type) {
+    if ((int32_t)type != VBP_INVALID) {
+        ITRACE("Parser Type = %d", (int32_t)type);
+        mParserType = type;
+        return DECODE_SUCCESS;
+    }
+    else {
+        ETRACE("Invalid parser type = %d", (int32_t)type);
+        return DECODE_NO_PARSER;
+    }
+}
+
+Decode_Status VideoDecoderBase::updateBuffer(uint8_t *buffer, int32_t size, void** vbpData) {
+    if (mParserHandle == NULL) {
+        return DECODE_NO_PARSER;
+    }
+
+    uint32_t vbpStatus;
+    if (buffer == NULL || size <= 0) {
+        return DECODE_INVALID_DATA;
+    }
+
+    vbpStatus = vbp_update(mParserHandle, buffer, size, vbpData);
+    CHECK_VBP_STATUS("vbp_update");
+
+    return DECODE_SUCCESS;
+}
+
+Decode_Status VideoDecoderBase::getCodecSpecificConfigs(
+    VAProfile profile, VAConfigID *config)
+{
+    VAStatus vaStatus;
+    VAConfigAttrib attrib;
+    attrib.type = VAConfigAttribRTFormat;
+    attrib.value = VA_RT_FORMAT_YUV420;
+
+    if (config == NULL) {
+        ETRACE("Invalid parameter!");
+        return DECODE_FAIL;
+    }
+
+    vaStatus = vaCreateConfig(
+            mVADisplay,
+            profile,
+            VAEntrypointVLD,
+            &attrib,
+            1,
+            config);
+
+    CHECK_VA_STATUS("vaCreateConfig");
+
+    return DECODE_SUCCESS;
+}
+#endif
 

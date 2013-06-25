@@ -35,6 +35,9 @@
 #ifdef USE_HW_VP8
 #include "vbp_vp8_parser.h"
 #endif
+#ifdef USE_AVC_SHORT_FORMAT
+#include "vbp_h264secure_parser.h"
+#endif
 
 
 /* buffer counter */
@@ -127,6 +130,13 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 #endif
         break;
 #endif
+
+#ifdef USE_AVC_SHORT_FORMAT
+    case VBP_H264SECURE:
+        parser_name = "libmixvbp_h264secure.so";
+        break;
+#endif
+
     default:
         WTRACE("Unsupported parser type!");
         return VBP_TYPE;
@@ -167,7 +177,15 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 #ifdef USE_HW_VP8
         SET_FUNC_POINTER(VBP_VP8, vp8);
 #endif
+#ifdef USE_AVC_SHORT_FORMAT
+        SET_FUNC_POINTER(VBP_H264SECURE, h264secure);
+#endif
     }
+#ifdef USE_AVC_SHORT_FORMAT
+    if (pcontext->parser_type == VBP_H264SECURE) {
+        pcontext->func_update_data = vbp_update_data_h264secure;
+    }
+#endif
 
     /* set entry points for parser operations:
     	init
@@ -584,3 +602,28 @@ uint32 vbp_utils_flush(vbp_context *pcontext)
     return VBP_OK;
 }
 
+
+#ifdef USE_AVC_SHORT_FORMAT
+/**
+ *
+ * provide query data back to the consumer
+ *
+ */
+uint32 vbp_utils_update(vbp_context *pcontext, void *newdata, uint32 size, void **data)
+{
+    /* entry point, not need to validate input parameters. */
+    uint32 error = VBP_OK;
+
+    error = pcontext->func_update_data(pcontext,newdata,size);
+
+    if (VBP_OK == error)
+    {
+        *data = pcontext->query_data;
+    }
+    else
+    {
+        *data = NULL;
+    }
+    return error;
+}
+#endif

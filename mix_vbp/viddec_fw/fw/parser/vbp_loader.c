@@ -173,3 +173,33 @@ uint32 vbp_flush(Handle hcontext)
 
     return error;
 }
+
+#ifdef USE_AVC_SHORT_FORMAT
+uint32 vbp_update(Handle hcontext, void *newdata, uint32 size, void **data)
+{
+    vbp_context *pcontext;
+    uint32 error = VBP_OK;
+
+    if ((NULL == hcontext) || (NULL == newdata) || (0 == size) || (NULL == data))
+    {
+        ETRACE("Invalid input parameters.");
+        return VBP_PARM;
+    }
+
+    pcontext = (vbp_context *)hcontext;
+
+    if (MAGIC_NUMBER != pcontext->identifier)
+    {
+        ETRACE("context is not initialized");
+        return VBP_INIT;
+    }
+
+    error = vbp_utils_update(pcontext, newdata, size, data);
+
+    if (VBP_OK != error)
+    {
+        ETRACE("Failed to query parsing result: %d.", error);
+    }
+    return error;
+}
+#endif

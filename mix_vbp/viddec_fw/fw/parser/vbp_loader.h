@@ -404,7 +404,10 @@ enum _vbp_parser_type
     VBP_MPEG4,
     VBP_H264,
 #ifdef USE_HW_VP8
-    VBP_VP8
+    VBP_VP8,
+#endif
+#ifdef USE_AVC_SHORT_FORMAT
+    VBP_H264SECURE,
 #endif
 };
 
@@ -457,5 +460,17 @@ uint32 vbp_query(Handle hcontext, void **data);
 uint32 vbp_flush(Handle hcontent);
 
 
+#ifdef USE_AVC_SHORT_FORMAT
+/*
+ * update the the vbp context using the new data
+ * @param hcontext: handle to VBP context.
+ * @param data: pointer to the new data buffer.
+ * @param size: size of new data buffer.
+ * @param data: pointer to hold a data blob that contains parsing result.
+ * @returns VBP_OK on success, anything else on failure.
+ *
+*/
+uint32 vbp_update(Handle hcontext, void *newdata, uint32 size, void **data);
+#endif
 
 #endif /* VBP_LOADER_H */

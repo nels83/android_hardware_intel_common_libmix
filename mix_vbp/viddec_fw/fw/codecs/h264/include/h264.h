@@ -1045,7 +1045,71 @@ extern "C" {
 }
 #endif
 
+#ifdef USE_AVC_SHORT_FORMAT
+#define MAX_OP  16
 
+typedef struct _dec_ref_pic_marking_t {
+    union {
+        uint8_t flags;
+        struct {
+            uint8_t idr_pic_flag:1;
+            uint8_t no_output_of_prior_pics_flag:1;
+            uint8_t long_term_reference_flag:1;
+            uint8_t adaptive_ref_pic_marking_mode_flag:1;
+        };
+    };
+    struct {
+        uint8_t memory_management_control_operation;
+        union {
+            struct {
+                uint8_t difference_of_pic_nums_minus1;
+            } op1;
+            struct {
+                uint8_t long_term_pic_num;
+            } op2;
+            struct {
+                uint8_t difference_of_pic_nums_minus1;
+                uint8_t long_term_frame_idx;
+            } op3;
+            struct {
+                uint8_t max_long_term_frame_idx_plus1;
+            } op4;
+            struct {
+                uint8_t long_term_frame_idx;
+            } op6;
+        };
+    } op[MAX_OP];
+} dec_ref_pic_marking_t;
+
+
+typedef struct _slice_header_t {
+    uint8_t nal_unit_type;
+    uint8_t pps_id;
+    uint8_t padding;
+    union {
+        uint8_t flags;
+        struct {
+            uint8_t field_pic_flag:1;
+            uint8_t bottom_field_flag:1;
+        };
+    };
+    uint32_t first_mb_in_slice;
+    uint32_t frame_num;
+    uint16_t idr_pic_id;
+    uint16_t pic_order_cnt_lsb;
+    int32_t delta_pic_order_cnt[2];
+    int32_t delta_pic_order_cnt_bottom;
+} slice_header_t;
+
+
+
+
+typedef struct _vbp_h264_sliceheader {
+    slice_header_t          slice_header;
+    dec_ref_pic_marking_t   ref_pic_marking;
+} vbp_h264_sliceheader;
+
+#endif
 
 
 

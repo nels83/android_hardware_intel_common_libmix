@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2009-2011 Intel Corporation.  All rights reserved.
+* Copyright (c) 2009 Intel Corporation.  All rights reserved.
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -22,30 +22,49 @@
 *
 */
 
-#ifndef VIDEO_DECODER_AVC_SECURE_H_
-#define VIDEO_DECODER_AVC_SECURE_H_
 
-#include "VideoDecoderAVC.h"
-#include "secvideoparser.h"
+#ifndef VBP_H264SECURE_PARSER_H
+#define VBP_H264SECURE_PARSER_H
 
-class VideoDecoderAVCSecure : public VideoDecoderAVC {
-public:
-    VideoDecoderAVCSecure(const char *mimeType);
-    virtual ~VideoDecoderAVCSecure();
-    virtual Decode_Status start(VideoConfigBuffer *buffer);
-    virtual void stop(void);
-    virtual Decode_Status decode(VideoDecodeBuffer *buffer);
+/*
+ * setup parser's entry points
+ */
+uint32 vbp_init_parser_entries_h264secure(vbp_context *pcontext);
 
-protected:
-    virtual Decode_Status getCodecSpecificConfigs(VAProfile profile, VAConfigID*config);
+/*
+ * allocate query data
+ */
+uint32 vbp_allocate_query_data_h264secure(vbp_context *pcontext);
 
-private:
-    virtual Decode_Status decodeSlice(vbp_data_h264 *data, uint32_t picIndex, uint32_t sliceIndex);
-private:
-    pavp_info_t mEncParam;
-    uint8_t *mNaluHeaderBuffer;
-    uint8_t *mSliceHeaderBuffer;
-    uint32_t mIsEncryptData;
-};
+/*
+ * free query data
+ */
+uint32 vbp_free_query_data_h264secure(vbp_context *pcontext);
 
-#endif /* VIDEO_DECODER_AVC_SECURE_H_ */
+/*
+ * parse initialization data
+ */
+uint32 vbp_parse_init_data_h264secure(vbp_context *pcontext);
+
+/*
+ * parse start code. Only support lenght prefixed mode. Start
+ * code prefixed is not supported.
+ */
+uint32 vbp_parse_start_code_h264secure(vbp_context *pcontext);
+
+/*
+ * process parsing result
+ */
+uint32 vbp_process_parsing_result_h264secure(vbp_context *pcontext, int list_index);
+
+/*
+ * query parsing result
+ */
+uint32 vbp_populate_query_data_h264secure(vbp_context *pcontext);
+
+/*
+ * update the parsing result with extra data
+ */
+uint32 vbp_update_data_h264secure(vbp_context *pcontext, void *newdata, uint32 size);
+
+#endif /*VBP_H264_PARSER_H*/

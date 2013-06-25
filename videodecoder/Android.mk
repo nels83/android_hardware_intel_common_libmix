@@ -8,7 +8,7 @@ LOCAL_SRC_FILES := \
     VideoDecoderMPEG4.cpp \
     VideoDecoderAVC.cpp \
     VideoDecoderPAVC.cpp \
-    VideoDecoderTrace.cpp \
+    VideoDecoderTrace.cpp
 
 # LOCAL_CFLAGS :=
 
@@ -18,9 +18,16 @@ LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/libmixvbp
 
 ifeq ($(USE_INTEL_SECURE_AVC),true)
+LOCAL_CFLAGS += -DUSE_INTEL_SECURE_AVC
 LOCAL_SRC_FILES += securevideo/$(TARGET_BOARD_PLATFORM)/VideoDecoderAVCSecure.cpp
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/securevideo/$(TARGET_BOARD_PLATFORM)
 LOCAL_CFLAGS += -DUSE_INTEL_SECURE_AVC
+endif
+
+PLATFORM_SUPPORT_AVC_SHORT_FORMAT := \
+    baytrail
+ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_AVC_SHORT_FORMAT)),)
+    LOCAL_CFLAGS += -DUSE_AVC_SHORT_FORMAT
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),baytrail)

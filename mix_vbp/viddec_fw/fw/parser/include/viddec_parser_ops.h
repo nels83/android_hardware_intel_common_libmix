@@ -26,6 +26,9 @@ typedef    uint32_t (*fn_is_frame_start)(void *ctxt);
 typedef    uint32_t (*fn_gen_contrib_tags)(void *parent, uint32_t ignore_partial);
 typedef    uint32_t (*fn_gen_assoc_tags)(void *parent);
 typedef    void (*fn_flush_parser) (void *parent, void *ctxt);
+#ifdef USE_AVC_SHORT_FORMAT
+typedef    uint32_t (*fn_update_data)(void *parent, void *data, uint32_t size);
+#endif
 
 
 typedef struct
@@ -39,6 +42,9 @@ typedef struct
     fn_gen_contrib_tags gen_contrib_tags;
     fn_gen_assoc_tags gen_assoc_tags;
     fn_flush_parser flush;
+#ifdef USE_AVC_SHORT_FORMAT
+    fn_update_data update_data;
+#endif
 } viddec_parser_ops_t;
 
 
