@@ -428,7 +428,7 @@ static uint32_t vbp_add_pic_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *qu
 
     /* Bool coder */
     pic_parms->bool_coder_ctx.range = pi->bool_coder.range;
-    pic_parms->bool_coder_ctx.value = pi->bool_coder.value;
+    pic_parms->bool_coder_ctx.value = (pi->bool_coder.value >> 24) & 0xFF;
     pic_parms->bool_coder_ctx.count = pi->bool_coder.count;
 
     //pic_parms->current_picture = VA_INVALID_SURFACE;
