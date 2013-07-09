@@ -612,6 +612,12 @@ struct VideoConfigVP8 : VideoParamConfigSet {
 	uint32_t no_ref_last;
 	uint32_t no_ref_gf;
 	uint32_t no_ref_arf;
+	uint32_t refresh_last;
+	uint32_t refresh_golden_frame;
+	uint32_t refresh_alternate_frame;
+	uint32_t refresh_entropy_probs;
+	uint32_t value;
+	unsigned char sharpness_level;
 
 	VideoConfigVP8 () {
 		type = VideoConfigTypeVP8;

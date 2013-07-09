@@ -32,8 +32,14 @@ VideoEncoderVP8::VideoEncoderVP8()
 
 	mVideoConfigVP8.force_kf = 0;
 	mVideoConfigVP8.no_ref_last = 0;
-	mVideoConfigVP8.no_ref_gf = 0;
-	mVideoConfigVP8.no_ref_arf = 0;
+	mVideoConfigVP8.no_ref_gf = 1;
+	mVideoConfigVP8.no_ref_arf = 1;
+	mVideoConfigVP8.refresh_last = 1;
+	mVideoConfigVP8.refresh_golden_frame = 1;
+	mVideoConfigVP8.refresh_alternate_frame = 1;
+	mVideoConfigVP8.refresh_entropy_probs = 0;
+	mVideoConfigVP8.value = 0;
+	mVideoConfigVP8.sharpness_level = 0;
 
 	mComParams.profile = VAProfileVP8Version0_3;
 }
@@ -93,7 +99,13 @@ Encode_Status VideoEncoderVP8::renderPictureParams(EncodeTask *task) {
     vp8PicParam.pic_flags.bits.no_ref_last = mVideoConfigVP8.no_ref_last;
     vp8PicParam.pic_flags.bits.no_ref_gf = mVideoConfigVP8.no_ref_gf;
     vp8PicParam.pic_flags.bits.no_ref_arf = mVideoConfigVP8.no_ref_arf;
-    vp8PicParam.pic_flags.value = 0;
+    vp8PicParam.pic_flags.bits.refresh_last = mVideoConfigVP8.refresh_last;
+    vp8PicParam.pic_flags.bits.refresh_golden_frame = mVideoConfigVP8.refresh_golden_frame;
+    vp8PicParam.pic_flags.bits.refresh_alternate_frame = mVideoConfigVP8.refresh_alternate_frame;
+    vp8PicParam.pic_flags.bits.refresh_entropy_probs = mVideoConfigVP8.refresh_entropy_probs;
+    vp8PicParam.pic_flags.bits.num_token_partitions = 2;
+//    vp8PicParam.pic_flags.value = mVideoConfigVP8.value;
+    vp8PicParam.sharpness_level = mVideoConfigVP8.sharpness_level;
 
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,
