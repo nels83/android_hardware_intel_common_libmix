@@ -24,8 +24,7 @@ LOCAL_SHARED_LIBRARIES += \
     libcutils \
     libva-android     \
     libva             \
-    libva-tpi         \
-	libhardware
+    libva-tpi
 
 LOCAL_LDLIBS += -lpthread
 LOCAL_CFLAGS += -Wno-multichar

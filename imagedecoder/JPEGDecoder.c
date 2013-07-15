@@ -35,11 +35,6 @@
 #include "JPEGParser.h"
 #include <string.h>
 #include "jerror.h"
-#include <hardware/gralloc.h>
-#ifdef JPEGDEC_USES_GEN
-#include "ufo/graphics.h"
-#define INTEL_VPG_GRALLOC_MODULE_PERFORM_GET_BO_NAME 4
-#endif
 
 #define JPEG_MAX_SETS_HUFFMAN_TABLES 2
 
@@ -126,7 +121,7 @@ static void write_to_YUY2(uint8_t *pDst,
                 *(pDst + 2 * col + 1) = *(pV + actual_col);
             }
         }
-        pDst += dst_stride * 2;
+        pDst += dst_stride;
         pY += pImg->pitches[0];
         uint32_t actual_row = row * v_samp_factor;
         pU = pSrc + pImg->offsets[1] + actual_row * pImg->pitches[1];
@@ -225,26 +220,12 @@ Decode_Status jdva_initialize (jd_libva_struct * jd_libva_ptr) {
         goto cleanup;
     }
 
-    VAConfigAttrib attrib;
-    attrib.type = VAConfigAttribRTFormat;
-    va_status = vaGetConfigAttributes(jd_libva_ptr->va_display, VAProfileJPEGBaseline, VAEntrypointVLD, &attrib, 1);
-    if (va_status != VA_STATUS_SUCCESS) {
-        ETRACE("vaGetConfigAttributes failed. va_status = 0x%x", va_status);
-        status = DECODE_DRIVER_FAIL;
-        goto cleanup;
-    }
-    if ((VA_RT_FORMAT_YUV444 & attrib.value) == 0) {
+    /*if ((VA_RT_FORMAT_YUV444 & attrib.value) == 0) {
         WTRACE("Format not surportted\n");
         status = DECODE_FAIL;
         goto cleanup;
-    }
+    }*/
 
-    va_status = vaCreateConfig(jd_libva_ptr->va_display, VAProfileJPEGBaseline, VAEntrypointVLD, &attrib, 1, &(jd_libva_ptr->va_config));
-    if (va_status != VA_STATUS_SUCCESS) {
-        ETRACE("vaCreateConfig failed. va_status = 0x%x", va_status);
-        status = DECODE_DRIVER_FAIL;
-        goto cleanup;
-    }
     jd_libva_ptr->initialized = TRUE;
     status = DECODE_SUCCESS;
 
@@ -293,149 +274,46 @@ void jdva_deinitialize (jd_libva_struct * jd_libva_ptr) {
 
 static Decode_Status doColorConversion(jd_libva_struct *jd_libva_ptr, VASurfaceID surface, char ** buf, uint32_t rows)
 {
-#if 0 // dump RGB to file
-        uint8_t* rgb_buf;
-        int32_t data_len = 0;
-        uint32_t surface_width, surface_height;
-        surface_width = (( ( jd_libva_ptr->image_width + 7 ) & ( ~7 )) + 15 ) & ( ~15 );
-        surface_height = (( ( jd_libva_ptr->image_height + 7 ) & ( ~7 )) + 15 ) & ( ~15 );
-
-        rgb_buf = (uint8_t*) malloc((surface_width * surface_height) << 2);
-        if(rgb_buf == NULL){
-            return DECODE_MEMORY_FAIL;
-        }
-        va_status = vaPutSurfaceBuf(jd_libva_ptr->va_display, jd_libva_ptr->va_surfaces[0], rgb_buf, &data_len, 0, 0, surface_width, surface_height, 0, 0, surface_width, surface_height, NULL, 0, 0);
-
-        buf = rgb_buf;
-    // dump RGB data
-        {
-            FILE *pf_tmp = fopen("img_out.rgb", "wb");
-            if(pf_tmp == NULL)
-                ETRACE("Open file error");
-            fwrite(rgb_buf, 1, surface_width * surface_height * 4, pf_tmp);
-            fclose(pf_tmp);
-        }
-#endif
-
 #ifdef JPEGDEC_USES_GEN
     VAImage decoded_img;
     uint8_t *decoded_buf = NULL;
+    VAImage yuy2_img;
+    uint8_t *yuy2_buf = NULL;
+    VAImage rgba_img;
+    uint8_t *rgba_buf = NULL;
     int row, col;
     VAStatus vpp_status;
     uint8_t *pSrc, *pDst;
     VADisplay display = NULL;
     VAContextID context = VA_INVALID_ID;
-    VASurfaceID dst_surface = VA_INVALID_ID, src_surface = VA_INVALID_ID;
     VAConfigID config = VA_INVALID_ID;
     VAConfigAttrib  vpp_attrib;
-    VASurfaceAttrib dst_surf_attrib, src_surf_attrib;
-    buffer_handle_t dst_handle, src_handle;
-    int32_t dst_stride, src_stride;
-    uint32_t dst_buf_name, src_buf_name;
     VAProcPipelineParameterBuffer vpp_param;
     VABufferID vpp_pipeline_buf = VA_INVALID_ID;
     int major_version, minor_version;
-    uint8_t *src_gralloc_buf, *dst_gralloc_buf;
-    hw_module_t const* module = NULL;
-    alloc_device_t *alloc_dev = NULL;
-    struct gralloc_module_t *gralloc_module = NULL;
     VAProcPipelineCaps vpp_pipeline_cap ;
     VARectangle src_rect, dst_rect;
     int err;
     Display vppdpy;
     FILE *fp;
+    VASurfaceAttrib in_fourcc, out_fourcc;
+    VASurfaceID in_surf, out_surf;
     Decode_Status status = DECODE_SUCCESS;
     VASurfaceAttribExternalBuffers vaSurfaceExternBufIn, vaSurfaceExternBufOut;
-
     decoded_img.image_id = VA_INVALID_ID;
-    vpp_status = vaDeriveImage(jd_libva_ptr->va_display, surface, &decoded_img);
+    yuy2_img.image_id = VA_INVALID_ID;
+    rgba_img.image_id = VA_INVALID_ID;
+    display = jd_libva_ptr->va_display;
+
+    vpp_status = vaDeriveImage(display, surface, &decoded_img);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
 
-    vpp_status = vaMapBuffer(jd_libva_ptr->va_display, decoded_img.buf, (void **)&decoded_buf);
-    if (vpp_status) {
-        vaDestroyImage(jd_libva_ptr->va_display, decoded_img.image_id);
-    }
+    vpp_status = vaMapBuffer(display, decoded_img.buf, (void **)&decoded_buf);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
 
     write_to_file(DECODE_DUMP_FILE, &decoded_img, decoded_buf);
 
     ITRACE("Start HW CSC: color %s=>RGBA8888", fourcc2str(jd_libva_ptr->fourcc));
-    err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-
-    gralloc_module = (struct gralloc_module_t *)module;
-    err = gralloc_open(module, &alloc_dev);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-
-    err = alloc_dev->alloc(alloc_dev,
-                           jd_libva_ptr->image_width,
-                           jd_libva_ptr->image_height,
-                           HAL_PIXEL_FORMAT_YCbCr_422_I, // YUY2
-                           GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_WRITE_MASK | GRALLOC_USAGE_SW_READ_MASK,
-                           (buffer_handle_t *)&src_handle,
-                           &src_stride);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-
-    ITRACE("src_gralloc_buf: handle=%u, stride=%u", src_handle, src_stride);
-    err = alloc_dev->alloc(alloc_dev,
-                           jd_libva_ptr->image_width,
-                           jd_libva_ptr->image_height,
-                           HAL_PIXEL_FORMAT_RGBA_8888,
-                           GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_WRITE_MASK | GRALLOC_USAGE_SW_READ_MASK,
-                           (buffer_handle_t *)&dst_handle,
-                           &dst_stride);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-    ITRACE("dst_gralloc_buf: handle=%u, stride=%u", dst_handle, dst_stride);
-
-    err = gralloc_module->perform(gralloc_module, INTEL_VPG_GRALLOC_MODULE_PERFORM_GET_BO_NAME, src_handle, &src_buf_name);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-    err = gralloc_module->perform(gralloc_module, INTEL_VPG_GRALLOC_MODULE_PERFORM_GET_BO_NAME, dst_handle, &dst_buf_name);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-
-    // copy decoded buf into the gralloc buf in YUY2 format
-    err = gralloc_module->lock(gralloc_module, src_handle,
-                               GRALLOC_USAGE_SW_WRITE_MASK,
-                               0, 0,
-                               jd_libva_ptr->image_width,
-                               jd_libva_ptr->image_height,
-                               &src_gralloc_buf);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-    ITRACE("Convert %s buf into YUY2:", fourcc2str(jd_libva_ptr->fourcc));
-
-    write_to_YUY2(src_gralloc_buf,
-                  src_stride,
-                  &decoded_img,
-                  decoded_buf);
-    err = gralloc_module->unlock(gralloc_module, src_handle);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-
-    fp = fopen(YUY2_DUMP_FILE, "wb");
-    if (fp) {
-        ITRACE("DUMP YUY2 to " YUY2_DUMP_FILE);
-        err = gralloc_module->lock(gralloc_module, src_handle,
-                                   GRALLOC_USAGE_SW_READ_MASK,
-                                   0, 0,
-                                   jd_libva_ptr->image_width,
-                                   jd_libva_ptr->image_height,
-                                   &src_gralloc_buf);
-        unsigned char *pYUV = src_gralloc_buf;
-        int loop;
-		for(loop=0;loop<jd_libva_ptr->image_height;loop++)
-		{
-            fwrite(pYUV, 2, jd_libva_ptr->image_width, fp);
-            pYUV += 2 * src_stride;
-		}
-        gralloc_module->unlock(gralloc_module, src_handle);
-		fclose(fp);
-    }
-
-    vaUnmapBuffer(jd_libva_ptr->va_display, decoded_img.buf);
-    vaDestroyImage(jd_libva_ptr->va_display, decoded_img.image_id);
-    decoded_buf= NULL;
-
-    display = vaGetDisplay (&vppdpy);
-    vpp_status = vaInitialize(display, &major_version, &minor_version);
-    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
 
     vpp_attrib.type  = VAConfigAttribRTFormat;
     vpp_attrib.value = VA_RT_FORMAT_YUV420;
@@ -457,48 +335,67 @@ static Decode_Status doColorConversion(jd_libva_struct *jd_libva_ptr, VASurfaceI
                                  &context);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
 
-    vaSurfaceExternBufIn.pixel_format  = VA_FOURCC_YUY2;
-    vaSurfaceExternBufIn.width         = jd_libva_ptr->image_width;
-    vaSurfaceExternBufIn.height        = jd_libva_ptr->image_height;
-    vaSurfaceExternBufIn.pitches[0]    = src_stride * 2; // YUY2 is 16bit
-    vaSurfaceExternBufIn.buffers       = &src_buf_name;
-    vaSurfaceExternBufIn.num_buffers   = 1;
-    vaSurfaceExternBufIn.flags         = VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM;
-    src_surf_attrib.type               = VASurfaceAttribExternalBufferDescriptor;
-    src_surf_attrib.flags              = VA_SURFACE_ATTRIB_SETTABLE;
-    src_surf_attrib.value.type         = VAGenericValueTypePointer;
-    src_surf_attrib.value.value.p      = (void *)&vaSurfaceExternBufIn;
+    in_surf = out_surf = VA_INVALID_ID;
+    in_fourcc.type = VASurfaceAttribPixelFormat;
+    in_fourcc.flags = VA_SURFACE_ATTRIB_SETTABLE;
+    in_fourcc.value.type = VAGenericValueTypeInteger;
+    in_fourcc.value.value.i = VA_FOURCC_YUY2;
     vpp_status = vaCreateSurfaces(display,
-                                  VA_RT_FORMAT_YUV422,
-                                  jd_libva_ptr->image_width,
-                                  jd_libva_ptr->image_height,
-                                  &src_surface,
-                                  1,
-                                  &src_surf_attrib,
-                                  1);
+                                    VA_RT_FORMAT_YUV422,
+                                    jd_libva_ptr->image_width,
+                                    jd_libva_ptr->image_height,
+                                    &in_surf,
+                                    1,
+                                    &in_fourcc,
+                                    1);
+    vpp_status = vaDeriveImage(display, in_surf, &yuy2_img);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
 
-    vaSurfaceExternBufOut.pixel_format = VA_FOURCC_ARGB;
-    vaSurfaceExternBufOut.width        = jd_libva_ptr->image_width;
-    vaSurfaceExternBufOut.height       = jd_libva_ptr->image_height;
-    vaSurfaceExternBufOut.pitches[0]   = dst_stride * 4; // RGBA is 32bit
-    vaSurfaceExternBufOut.buffers      = &dst_buf_name;
-    vaSurfaceExternBufOut.num_buffers  = 1;
-    vaSurfaceExternBufOut.flags        = VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM;
-    dst_surf_attrib.type               = VASurfaceAttribExternalBufferDescriptor;
-    dst_surf_attrib.flags              = VA_SURFACE_ATTRIB_SETTABLE;
-    dst_surf_attrib.value.type         = VAGenericValueTypePointer;
-    dst_surf_attrib.value.value.p      = (void *)&vaSurfaceExternBufOut;
-    vpp_status = vaCreateSurfaces(display,
-                                  VA_RT_FORMAT_RGB32,
-                                  jd_libva_ptr->image_width,
-                                  jd_libva_ptr->image_height,
-                                  &dst_surface,
-                                  1,
-                                  &dst_surf_attrib,
-                                  1);
+    vpp_status = vaMapBuffer(display, yuy2_img.buf, (void **)&yuy2_buf);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
-    ITRACE("vaCreateSurfaces got surface %u=>%u", src_surface, dst_surface);
+
+    write_to_YUY2(yuy2_buf, yuy2_img.pitches[0], &decoded_img, decoded_buf);
+    fp = fopen(YUY2_DUMP_FILE, "wb");
+    if (fp) {
+        ITRACE("DUMP YUY2 to " YUY2_DUMP_FILE);
+        unsigned char *pYUV = yuy2_buf;
+        uint32_t loop;
+		for(loop=0;loop<jd_libva_ptr->image_height;loop++)
+		{
+            fwrite(pYUV, 2, jd_libva_ptr->image_width, fp);
+            pYUV += yuy2_img.pitches[0];
+		}
+		fclose(fp);
+    }
+    vaUnmapBuffer(display, yuy2_img.buf);
+    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
+    yuy2_buf = NULL;
+    vaDestroyImage(display, yuy2_img.image_id);
+    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
+    yuy2_img.image_id = VA_INVALID_ID;
+    vaUnmapBuffer(display, decoded_img.buf);
+    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
+    decoded_buf = NULL;
+    vaDestroyImage(display, decoded_img.image_id);
+    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
+    decoded_img.image_id = VA_INVALID_ID;
+
+    out_fourcc.type = VASurfaceAttribPixelFormat;
+    out_fourcc.flags = VA_SURFACE_ATTRIB_SETTABLE;
+    out_fourcc.value.type = VAGenericValueTypeInteger;
+    out_fourcc.value.value.i = VA_FOURCC_RGBA;
+    vpp_status = vaCreateSurfaces(display,
+                                    VA_RT_FORMAT_RGB32,
+                                    jd_libva_ptr->image_width,
+                                    jd_libva_ptr->image_height,
+                                    &out_surf,
+                                    1,
+                                    &out_fourcc,
+                                    1);
+
+    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
+
+    ITRACE("vaCreateSurfaces got surface %u=>%u", in_surf, out_surf);
     //query caps for pipeline
     vpp_status = vaQueryVideoProcPipelineCaps(display,
                                               context,
@@ -514,7 +411,7 @@ static Decode_Status doColorConversion(jd_libva_struct *jd_libva_ptr, VASurfaceI
     ITRACE("from (%d, %d, %u, %u) to (%d, %d, %u, %u)",
         src_rect.x, src_rect.y, src_rect.width, src_rect.height,
         dst_rect.x, dst_rect.y, dst_rect.width, dst_rect.height);
-    vpp_param.surface                 = src_surface;
+    vpp_param.surface                 = in_surf;
     vpp_param.output_region           = &dst_rect;
     vpp_param.surface_region          = &src_rect;
     vpp_param.surface_color_standard  = VAProcColorStandardBT601;   //csc
@@ -522,7 +419,6 @@ static Decode_Status doColorConversion(jd_libva_struct *jd_libva_ptr, VASurfaceI
     vpp_param.output_color_standard   = VAProcColorStandardNone;
     vpp_param.filter_flags            = VA_FRAME_PICTURE;
     vpp_param.filters                 = NULL;
-    //vpp_param.pipeline_flags          = 1084929476;
     vpp_param.num_filters             = 0;
     vpp_param.forward_references      = 0;
     vpp_param.num_forward_references  = 0;
@@ -541,7 +437,7 @@ static Decode_Status doColorConversion(jd_libva_struct *jd_libva_ptr, VASurfaceI
 
     vpp_status = vaBeginPicture(display,
                                 context,
-                                dst_surface);
+                                out_surf);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
 
     //Render the picture
@@ -554,63 +450,68 @@ static Decode_Status doColorConversion(jd_libva_struct *jd_libva_ptr, VASurfaceI
     vpp_status = vaEndPicture(display, context);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
 
-    vpp_status = vaSyncSurface(display, dst_surface);
+    vpp_status = vaSyncSurface(display, out_surf);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
     ITRACE("Finished HW CSC YUY2=>RGBA8888");
 
-    // gralloc lock + copy
-    err = gralloc_module->lock(gralloc_module, dst_handle,
-                               GRALLOC_USAGE_SW_READ_MASK,
-                               0, 0,
-                               jd_libva_ptr->image_width,
-                               jd_libva_ptr->image_height,
-                               &dst_gralloc_buf);
     JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
     ITRACE("Copy RGBA8888 buffer (%ux%u) to skia buffer (%ux%u)",
            jd_libva_ptr->image_width,
            jd_libva_ptr->image_height,
            buf[1] - buf[0],
            rows);
-    pSrc = dst_gralloc_buf;
+
+    vpp_status = vaDeriveImage(display, out_surf, &rgba_img);
+    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
+    vpp_status = vaMapBuffer(display, rgba_img.buf, (void **)&rgba_buf);
+    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
     fp = fopen(RGBA_DUMP_FILE, "wb");
     if (fp)
-        ITRACE("dumping RGBA8888 to " RGBA_DUMP_FILE);
-    // FIXME: is it RGBA? or BGRA? or ARGB?
-    for (row = 0; row < rows; ++ row) {
-        memcpy(buf[row], pSrc, 4 * jd_libva_ptr->image_width);
+        ITRACE("DUMP RGBA to " RGBA_DUMP_FILE);
+    unsigned char *prgba = rgba_buf;
+    uint32_t loop;
+	for(loop=0;loop<jd_libva_ptr->image_height && loop < rows;loop++)
+	{
+        memcpy(buf[loop], prgba, 4 * jd_libva_ptr->image_width);
         if (fp)
-            fwrite(pSrc, 4, jd_libva_ptr->image_width, fp);
-        pSrc += dst_stride * 4;
-    }
+            fwrite(prgba, 4, jd_libva_ptr->image_width, fp);
+        prgba += rgba_img.pitches[0];
+	}
     if (fp)
-        fclose(fp);
-    gralloc_module->unlock(gralloc_module, dst_handle);
+		fclose(fp);
+    vaUnmapBuffer(display, rgba_img.buf);
+    JD_CHECK_RET(vpp_status, cleanup, DECODE_DRIVER_FAIL);
+    rgba_buf = NULL;
+    vaDestroyImage(display, rgba_img.image_id);
+    rgba_img.image_id = VA_INVALID_ID;
 
 cleanup:
     if (vpp_pipeline_buf != VA_INVALID_ID)
         vaDestroyBuffer(display, vpp_pipeline_buf);
-    if (dst_surface != VA_INVALID_ID)
-        vaDestroySurfaces(display, &dst_surface, 1);
-    if (src_surface != VA_INVALID_ID)
-        vaDestroySurfaces(display, &src_surface, 1);
+    if (in_surf != VA_INVALID_ID)
+        vaDestroySurfaces(display, &in_surf, 1);
+    if (out_surf != VA_INVALID_ID)
+        vaDestroySurfaces(display, &out_surf, 1);
+    if (rgba_buf)
+        vaUnmapBuffer(display, rgba_img.buf);
+    if (rgba_img.image_id != VA_INVALID_ID)
+        vaDestroyImage(display, rgba_img.image_id);
+    if (yuy2_buf)
+        vaUnmapBuffer(display, yuy2_img.buf);
+    if (yuy2_img.image_id != VA_INVALID_ID)
+        vaDestroyImage(display, yuy2_img.image_id);
+    if (decoded_buf)
+        vaUnmapBuffer(display, decoded_img.buf);
+    if (decoded_img.image_id != VA_INVALID_ID)
+        vaDestroyImage(display, decoded_img.image_id);
     if (context != VA_INVALID_ID)
         vaDestroyContext(display, context);
     if (config != VA_INVALID_ID)
         vaDestroyConfig(display, config);
-    if (display)
-        vaTerminate(display);
-    if (alloc_dev) {
-        alloc_dev->free(alloc_dev, dst_handle);
-        alloc_dev->free(alloc_dev, src_handle);
-        gralloc_close(alloc_dev);
-    }
     return status;
 #else
-    // TODO: CSC with Gralloc On PVR platform
+    return DECODE_SUCCESS;
 #endif
-
-
-
 }
 
 static unsigned int getSurfaceFormat(jd_libva_struct * jd_libva_ptr, VASurfaceAttrib * fourcc) {
@@ -681,33 +582,6 @@ Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr) {
         return DECODE_MEMORY_FAIL;
     }
 
-    VASurfaceAttrib fourcc;
-    unsigned int surface_format = getSurfaceFormat(jd_libva_ptr, &fourcc);
-    jd_libva_ptr->fourcc = fourcc.value.value.i;
-#ifdef JPEGDEC_USES_GEN
-    va_status = vaCreateSurfaces(jd_libva_ptr->va_display, surface_format,
-                                    jd_libva_ptr->image_width,
-                                    jd_libva_ptr->image_height,
-                                    jd_libva_ptr->va_surfaces,
-                                    jd_libva_ptr->surface_count, &fourcc, 1);
-#else
-    va_status = vaCreateSurfaces(jd_libva_ptr->va_display, VA_RT_FORMAT_YUV444,
-                                    jd_libva_ptr->image_width,
-                                    jd_libva_ptr->image_height,
-                                    jd_libva_ptr->va_surfaces,
-                                    jd_libva_ptr->surface_count, NULL, 0);
-#endif
-    JD_CHECK(va_status, cleanup);
-    va_status = vaCreateContext(jd_libva_ptr->va_display, jd_libva_ptr->va_config,
-                                   jd_libva_ptr->image_width,
-                                   jd_libva_ptr->image_height,
-                                   0,  //VA_PROGRESSIVE
-                                   jd_libva_ptr->va_surfaces,
-                                   jd_libva_ptr->surface_count, &(jd_libva_ptr->va_context));
-    if (va_status != VA_STATUS_SUCCESS) {
-        ETRACE("vaCreateContext failed. va_status = 0x%x", va_status);
-        return DECODE_DRIVER_FAIL;
-    }
 
     jd_libva_ptr->resource_allocated = TRUE;
     return status;
@@ -739,28 +613,9 @@ Decode_Status jdva_release_resource (jd_libva_struct * jd_libva_ptr) {
    * It is safe to destroy Surface/Config/Context severl times
    * and it is also safe even their value is NULL
    */
-    va_status = vaDestroySurfaces(jd_libva_ptr->va_display, jd_libva_ptr->va_surfaces, jd_libva_ptr->surface_count);
-
-    va_status = vaDestroyContext(jd_libva_ptr->va_display, jd_libva_ptr->va_context);
-    if (va_status != VA_STATUS_SUCCESS) {
-      ETRACE("vaDestroyContext failed. va_status = 0x%x", va_status);
-      return DECODE_DRIVER_FAIL;
-    }
-    jd_libva_ptr->va_context = NULL;
-
-    if (jd_libva_ptr->va_surfaces) {
-        free (jd_libva_ptr->va_surfaces);
-        jd_libva_ptr->va_surfaces = NULL;
-    }
-
-    va_status = vaDestroyConfig(jd_libva_ptr->va_display, jd_libva_ptr->va_config);
-    if (va_status != VA_STATUS_SUCCESS) {
-        ETRACE("vaDestroyConfig failed. va_status = 0x%x", va_status);
-        return DECODE_DRIVER_FAIL;
-    }
 
 cleanup:
-    jd_libva_ptr->va_config = NULL;
+    jd_libva_ptr->va_config = VA_INVALID_ID;
 
     jd_libva_ptr->resource_allocated = FALSE;
 
@@ -778,6 +633,47 @@ Decode_Status jdva_decode (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_pt
     uint32_t lines = jd_libva_ptr->output_lines;
     uint32_t chopping = VA_SLICE_DATA_FLAG_ALL;
     uint32_t bytes_remaining;
+    VAConfigAttrib attrib;
+    attrib.type = VAConfigAttribRTFormat;
+    va_status = vaGetConfigAttributes(jd_libva_ptr->va_display, VAProfileJPEGBaseline, VAEntrypointVLD, &attrib, 1);
+    if (va_status != VA_STATUS_SUCCESS) {
+        ETRACE("vaGetConfigAttributes failed. va_status = 0x%x", va_status);
+        status = DECODE_DRIVER_FAIL;
+        goto cleanup;
+    }
+    va_status = vaCreateConfig(jd_libva_ptr->va_display, VAProfileJPEGBaseline, VAEntrypointVLD, &attrib, 1, &(jd_libva_ptr->va_config));
+    if (va_status != VA_STATUS_SUCCESS) {
+        ETRACE("vaCreateConfig failed. va_status = 0x%x", va_status);
+        status = DECODE_DRIVER_FAIL;
+        goto cleanup;
+    }
+    VASurfaceAttrib fourcc;
+    unsigned int surface_format = getSurfaceFormat(jd_libva_ptr, &fourcc);
+    jd_libva_ptr->fourcc = fourcc.value.value.i;
+#ifdef JPEGDEC_USES_GEN
+    va_status = vaCreateSurfaces(jd_libva_ptr->va_display, surface_format,
+                                    jd_libva_ptr->image_width,
+                                    jd_libva_ptr->image_height,
+                                    jd_libva_ptr->va_surfaces,
+                                    jd_libva_ptr->surface_count, &fourcc, 1);
+#else
+    va_status = vaCreateSurfaces(jd_libva_ptr->va_display, VA_RT_FORMAT_YUV444,
+                                    jd_libva_ptr->image_width,
+                                    jd_libva_ptr->image_height,
+                                    jd_libva_ptr->va_surfaces,
+                                    jd_libva_ptr->surface_count, NULL, 0);
+#endif
+    JD_CHECK(va_status, cleanup);
+    va_status = vaCreateContext(jd_libva_ptr->va_display, jd_libva_ptr->va_config,
+                                   jd_libva_ptr->image_width,
+                                   jd_libva_ptr->image_height,
+                                   0,  //VA_PROGRESSIVE
+                                   jd_libva_ptr->va_surfaces,
+                                   jd_libva_ptr->surface_count, &(jd_libva_ptr->va_context));
+    if (va_status != VA_STATUS_SUCCESS) {
+        ETRACE("vaCreateContext failed. va_status = 0x%x", va_status);
+        return DECODE_DRIVER_FAIL;
+    }
 
     if (jd_libva_ptr->eoi_offset)
         bytes_remaining = jd_libva_ptr->eoi_offset - jd_libva_ptr->soi_offset;
@@ -901,11 +797,32 @@ jd_libva_ptr->slice_param_buf[ src_idx ].slice_data_offset : 0;
         WTRACE("vaSyncSurface failed. va_status = 0x%x", va_status);
     }
 
+    va_status = vaDestroyContext(jd_libva_ptr->va_display, jd_libva_ptr->va_context);
+    if (va_status != VA_STATUS_SUCCESS) {
+      ETRACE("vaDestroyContext failed. va_status = 0x%x", va_status);
+      return DECODE_DRIVER_FAIL;
+    }
+    jd_libva_ptr->va_context = VA_INVALID_ID;
+
+
+
+    va_status = vaDestroyConfig(jd_libva_ptr->va_display, jd_libva_ptr->va_config);
+    if (va_status != VA_STATUS_SUCCESS) {
+        ETRACE("vaDestroyConfig failed. va_status = 0x%x", va_status);
+        return DECODE_DRIVER_FAIL;
+    }
     status = doColorConversion(jd_libva_ptr,
                                jd_libva_ptr->va_surfaces[0],
                                buf, lines);
-
+    va_status = vaDestroySurfaces(jd_libva_ptr->va_display, jd_libva_ptr->va_surfaces, jd_libva_ptr->surface_count);
     ITRACE("Successfully decoded picture");
+
+    if (jd_libva_ptr->va_surfaces) {
+        free (jd_libva_ptr->va_surfaces);
+        jd_libva_ptr->va_surfaces = NULL;
+    }
+
+
     return status;
 cleanup:
     return DECODE_DRIVER_FAIL;
