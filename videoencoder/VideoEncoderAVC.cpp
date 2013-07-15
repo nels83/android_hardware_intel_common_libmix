@@ -870,6 +870,8 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
     avcSeqParams.intra_period = mComParams.intraPeriod;
     //avcSeqParams.vui_flag = 248;
     avcSeqParams.vui_parameters_present_flag = mVideoParamsAVC.VUIFlag;
+    avcSeqParams.num_units_in_tick = frameRateDenom;
+    avcSeqParams.time_scale = 2 * frameRateNum;
     avcSeqParams.seq_parameter_set_id = 0;
     if (mVideoParamsAVC.crop.LeftOffset ||
             mVideoParamsAVC.crop.RightOffset ||
@@ -928,8 +930,8 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
 
     avcSeqParams.seq_fields.bits.log2_max_frame_num_minus4 = 0;
     avcSeqParams.seq_fields.bits.log2_max_pic_order_cnt_lsb_minus4 = 2;
-    avcSeqParams.time_scale = 900;
-    avcSeqParams.num_units_in_tick = 15;			/* Tc = num_units_in_tick / time_sacle */
+//    avcSeqParams.time_scale = 900;
+//    avcSeqParams.num_units_in_tick = 15;			/* Tc = num_units_in_tick / time_sacle */
     // Not sure whether these settings work for all drivers
 
     vaStatus = vaUnmapBuffer(mVADisplay, mRcParamBuf);
