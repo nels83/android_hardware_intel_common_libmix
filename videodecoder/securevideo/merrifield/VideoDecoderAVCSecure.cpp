@@ -309,8 +309,7 @@ Decode_Status VideoDecoderAVCSecure::decodeSlice(vbp_data_h264 *data, uint32_t p
     uint32_t sliceOffset = mMetadata.naluInfo[naluIndex].naluOffset;
     uint32_t slice_offset_shift =  sliceOffset % 16;
     sliceParam->slice_data_offset += slice_offset_shift;
-    sliceParam->slice_data_size  += slice_offset_shift;
-    sliceData->slice_size = (sliceParam->slice_data_size + 0xF) & ~0xF;
+    sliceData->slice_size = (sliceParam->slice_data_size + slice_offset_shift + 0xF) & ~0xF;
 
     vaStatus = vaCreateBuffer(
         mVADisplay,
