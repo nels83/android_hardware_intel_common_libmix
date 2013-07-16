@@ -414,7 +414,8 @@ Decode_Status VideoDecoderAVC::updateDPB(VAPictureParameterBufferH264 *picParam)
             continue;
         }
         dpb->poc = getPOC(ref);
-        dpb->surfaceBuffer = findSurfaceBuffer(ref);
+        // looking for the latest ref frame in the DPB with specified POC, in case frames have same POC
+        dpb->surfaceBuffer = findRefSurfaceBuffer(ref);
         if (dpb->surfaceBuffer == NULL) {
             ETRACE("Reference frame %d is missing for current frame %d", dpb->poc, getPOC(&(picParam->CurrPic)));
             if (dpb->poc == getPOC(&(picParam->CurrPic))) {
@@ -559,6 +560,24 @@ VASurfaceID VideoDecoderAVC::findSurface(VAPictureH264 *pic) {
 VideoSurfaceBuffer* VideoDecoderAVC::findSurfaceBuffer(VAPictureH264 *pic) {
     DecodedPictureBuffer *dpb = mDPBs[mToggleDPB];
     for (int32_t i = 0; i < DPB_SIZE; i++, dpb++) {
+        if (dpb->poc == pic->BottomFieldOrderCnt ||
+            dpb->poc == pic->TopFieldOrderCnt) {
+            // TODO: remove these debugging codes
+            if (dpb->surfaceBuffer == NULL) {
+                ETRACE("Invalid surface buffer in the DPB for poc %d.", getPOC(pic));
+            }
+            return dpb->surfaceBuffer;
+        }
+    }
+    // ETRACE("Unable to find surface for poc %d", getPOC(pic));
+    return NULL;
+}
+
+VideoSurfaceBuffer* VideoDecoderAVC::findRefSurfaceBuffer(VAPictureH264 *pic) {
+    DecodedPictureBuffer *dpb = mDPBs[mToggleDPB];
+    // always looking for the latest one in the DPB, in case ref frames have same POC
+    dpb += (DPB_SIZE - 1);
+    for (int32_t i = DPB_SIZE; i > 0; i--, dpb--) {
         if (dpb->poc == pic->BottomFieldOrderCnt ||
             dpb->poc == pic->TopFieldOrderCnt) {
             // TODO: remove these debugging codes

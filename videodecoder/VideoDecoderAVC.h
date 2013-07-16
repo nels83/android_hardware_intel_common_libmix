@@ -50,6 +50,7 @@ protected:
     inline uint32_t getPOC(VAPictureH264 *pic); // Picture Order Count
     inline VASurfaceID findSurface(VAPictureH264 *pic);
     inline VideoSurfaceBuffer* findSurfaceBuffer(VAPictureH264 *pic);
+    inline VideoSurfaceBuffer* findRefSurfaceBuffer(VAPictureH264 *pic);
     inline void invalidateDPB(int toggle);
     inline void clearAsReference(int toggle);
     Decode_Status startVA(vbp_data_h264 *data);
