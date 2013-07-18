@@ -51,6 +51,8 @@ enum {
 static const int BOX_WIDTH = 64;
 static const int PRELOAD_FRAME_NUM = 16;
 uint32_t gNumFramesOutput = 0;
+static unsigned int pts;
+
 
 #define CHECK_ENC_STATUS(FUNC)\
     if (ret < ENCODE_SUCCESS) { \
@@ -710,6 +712,8 @@ private:
 static const char *AVC_MIME_TYPE = "video/h264";
 static const char *MPEG4_MIME_TYPE = "video/mpeg4";
 static const char *H263_MIME_TYPE = "video/h263";
+static const char *VP8_MIME_TYPE = "video/x-webm";
+
 
 class MixEncoder : public MediaSource {
 
@@ -730,6 +734,8 @@ public:
             mMixCodec = (char*) MPEG4_MIME_TYPE;
         } else if (strcmp(mime, MEDIA_MIMETYPE_VIDEO_H263) == 0) {
             mMixCodec = (char*) H263_MIME_TYPE;
+        } else if (strcmp(mime, MEDIA_MIMETYPE_VIDEO_VPX) == 0) {
+            mMixCodec = (char*) VP8_MIME_TYPE;
         } else {
             mMixCodec = (char*) AVC_MIME_TYPE;
         }
@@ -939,10 +945,11 @@ public:
         CHECK_STATUS(err);
 
         VideoOutputFormat format;
-        if (mEncodeFrameCount == 2 && (strcasecmp(mMixCodec, H263_MIME_TYPE) != 0)) {
+        if ((mEncodeFrameCount == 2 && (strcasecmp(mMixCodec, H263_MIME_TYPE) != 0))&&
+			(mEncodeFrameCount == 2 && (strcasecmp(mMixCodec, VP8_MIME_TYPE) != 0))){
             format = OUTPUT_CODEC_DATA;
             mFirstFrame = true;
-        }else
+		}else
             format = OUTPUT_EVERYTHING;
 
         err = getoutput(*buffer, format);
@@ -978,7 +985,9 @@ private:
             mEncoderParams.profile = (VAProfile)VAProfileMPEG4Simple;
         } else if (strcmp(mMixCodec, H263_MIME_TYPE) == 0) {
             mEncoderParams.profile = (VAProfile)VAProfileH263Baseline;
-        } else {
+        } else if (strcmp(mMixCodec, VP8_MIME_TYPE) == 0) {
+            mEncoderParams.profile = (VAProfile)VAProfileVP8Version0_3;
+		} else {
             mEncoderParams.profile = (VAProfile)VAProfileH264Baseline;
         }
 
@@ -1044,6 +1053,146 @@ private:
     MediaBufferGroup mGroup;
 
 };
+
+class IVFWriter : public MediaWriter {
+
+public:
+    const char* mFile;
+    FILE* mFilehandle;
+    sp<MediaSource> mSource;
+    pthread_t mThread;
+    bool mRunning;
+    bool mEOS;
+	char vp8_file_header[32];
+	
+public:
+    IVFWriter(char* file) {
+        mFile = file;
+        mRunning = false;
+    }
+
+    status_t addSource(const sp<MediaSource> &source) {
+        mSource = source;
+        return OK;
+    }
+
+    bool reachedEOS() {
+        return mEOS;
+    }
+
+    status_t start(MetaData *params = NULL) {
+
+        mSource->start();
+
+        mRunning = true;
+        mEOS = false;
+
+        mFilehandle = fopen(mFile, "w+");
+        if (mFilehandle == NULL)
+            return errno;
+
+		write_ivf_file_header(params);
+
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+        pthread_create(&mThread, &attr, IVFWriter::ThreadFunc, this);
+        pthread_attr_destroy(&attr);
+
+        return OK;
+    }
+
+    status_t stop() {
+        mRunning = false;
+        void *dummy;
+        pthread_join(mThread, &dummy);
+        fclose(mFilehandle);
+        return OK;
+    }
+
+    status_t pause() {
+        return OK;
+    }
+
+	
+	static void mem_put_le16(char *mem, unsigned int val)
+	{
+		mem[0] = val;
+		mem[1] = val>>8;
+	}
+	
+	static void mem_put_le32(char *mem, unsigned int val)
+	{
+		mem[0] = val;
+		mem[1] = val>>8;
+		mem[2] = val>>16;
+		mem[3] = val>>24;
+	}
+
+	void write_ivf_file_header(MetaData *params)	{
+
+    int width,height,framerate; 
+	params->findInt32(kKeyWidth, &width);
+    params->findInt32(kKeyHeight, &height);
+    params->findInt32(kKeyFrameRate, &framerate);
+     /* write ivf header */
+    vp8_file_header[0] = 'D';
+    vp8_file_header[1] = 'K';
+    vp8_file_header[2] = 'I';
+    vp8_file_header[3] = 'F';
+    mem_put_le16(vp8_file_header+4,  0);                     /* version */
+    mem_put_le16(vp8_file_header+6,  32);                    /* headersize */
+    mem_put_le32(vp8_file_header+8,  0x30385056);            /* headersize */
+    mem_put_le16(vp8_file_header+12, width);           /* width */
+    mem_put_le16(vp8_file_header+14, height);          /* height */
+    mem_put_le32(vp8_file_header+16, framerate);       /* rate default at 30 */
+    mem_put_le32(vp8_file_header+20, 1);                     /* scale */
+    mem_put_le32(vp8_file_header+24, 50);           /* length just hardcode to 50*/
+    mem_put_le32(vp8_file_header+28, 0);                     /* unused */
+    fwrite(vp8_file_header, 1, 32, mFilehandle);
+
+	}
+
+private:
+
+    static void *ThreadFunc(void *me) {
+        IVFWriter *writer = static_cast<IVFWriter *>(me);
+
+        status_t err = OK;
+		char vp8_frame_header[12];
+		unsigned int vp8_frame_length;
+
+
+        while (writer->mRunning) {
+            MediaBuffer* buffer;
+            err = writer->mSource->read(&buffer, NULL);
+
+            if (err == OK) {
+				vp8_frame_length = buffer->range_length();
+				mem_put_le32(vp8_frame_header, vp8_frame_length);
+				mem_put_le32(vp8_frame_header+4, pts&0xFFFFFFFF);
+				mem_put_le32(vp8_frame_header+8, pts >> 32);
+				fwrite(vp8_frame_header, 1, 12, writer->mFilehandle);
+				pts++;
+                fwrite(buffer->data()+buffer->range_offset(), 1, buffer->range_length(), writer->mFilehandle);
+				buffer->release();
+                continue;
+            }else {
+                if (err != ERROR_END_OF_STREAM)
+                    LOG("RawWriter::threadfunc err=%d\n", err);
+                writer->mEOS = true;
+                writer->mRunning = false;
+                fflush(writer->mFilehandle);
+                return NULL;
+            }
+        }
+
+        return NULL;
+    }
+
+};
+
 
 class RawWriter : public MediaWriter {
 public:
@@ -1138,7 +1287,7 @@ void usage() {
     printf("Usage: mix_encoder2 [options]\n\n");
     printf(" -a/--initQP <qp>					set initQP, default 0\n");
     printf(" -b/--bitrate <Bitrate>				set bitrate bps, default 10M\n");
-    printf(" -c/--codec <Codec>				select codec, like H264(default), MPEG4, H263\n");
+    printf(" -c/--codec <Codec>				select codec, like H264(default), MPEG4, H263, VP8\n");
     printf(" -d/--intraPeriod <period>			set IntraPeriod, default 30\n");
     printf(" -e/--encoder	 <encoder>			select encoder, like MIX(default), OMXCODEC\n");
     printf(" -f <output file>				set output file name\n");
@@ -1148,7 +1297,7 @@ void usage() {
     printf(" -l/--idrInterval					set IdrInterval, default 1\n");
     printf(" -m/--disableMetadata				disable Metadata Mode(default enabled)\n");
     printf(" -n/--count <number>				set source frame number, default 30\n");
-    printf(" -o/--outputformat <format>			set output file format, like MP4(default), RAW\n");
+    printf(" -o/--outputformat <format>			set output file format, like MP4(default), RAW, IVF(only for VP8)\n");
     printf(" -p/--fps <Bitrate>				set frame rate, default 30\n");
     printf(" -q/--minQP <qp>					set minQP, default 0\n");
     printf(" -r/--rcMode <Mode>				set rc mode, like VBR(default), CBR, VCM, NO_RC\n");
@@ -1220,9 +1369,9 @@ int main(int argc, char* argv[])
     const char *SRCTYPE[] = {"MALLOC", "VASURFACE", "GFX", "GRALLOC",
 						"CAMERASOURCE", "SURFACEMEDIASOURCE", "MEMHEAP", NULL};
     const char *ENCTYPE[] = {"MIX", "OMXCODEC", NULL};
-    const char *CODEC[] = {"H264", "MPEG4", "H263", NULL};
+    const char *CODEC[] = {"H264", "MPEG4", "H263", "VP8",NULL};
     const char *RCMODE[] = {"VBR", "CBR", "VCM", "NO_RC", NULL};
-    const char *OUTFORMAT[] = {"MP4", "RAW", NULL};
+    const char *OUTFORMAT[] = {"MP4", "RAW", "IVF", NULL};
 
     while ((c = getopt_long(argc, argv, short_opts, long_opts, NULL) ) != EOF) {
         switch (c) {
@@ -1401,7 +1550,7 @@ int main(int argc, char* argv[])
 			SrcFps, MetadataMode, Yuvfile);
     }
 
-    printf("Setup Encoder\n");
+    printf("Setup Encoder EncCodec is %d\n",EncCodec);
     //setup encoder
     sp<MetaData> enc_meta = new MetaData;
     switch (EncCodec) {
@@ -1411,6 +1560,9 @@ int main(int argc, char* argv[])
         case 2:
             enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_H263);
             break;
+		case 3: 
+			enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VPX);
+			break;
         default:
             enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_AVC);
             break;
@@ -1456,15 +1608,17 @@ int main(int argc, char* argv[])
 
     if (OutFormat == 0)
         writer = new MPEG4Writer(OutFileName);
-    else
+    else if (OutFormat == 1)
         writer = new RawWriter(OutFileName);
+	else 
+		writer = new IVFWriter(OutFileName);
 
     writer->addSource(encoder);
 
     printf("Start encoding\n");
 
     int64_t start = systemTime();
-    CHECK_EQ((status_t)OK, writer->start());
+    CHECK_EQ((status_t)OK, writer->start(enc_meta.get()));
     while (!writer->reachedEOS()) {
         usleep(100000);
     }
