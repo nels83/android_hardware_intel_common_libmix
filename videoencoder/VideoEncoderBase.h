@@ -86,7 +86,6 @@ private:
             uint32_t expectedSize, uint32_t *outsize, uint32_t *stride, uint8_t **usrptr);
     Encode_Status surfaceMappingForSurface(SurfaceMap *map);
     Encode_Status surfaceMappingForGfxHandle(SurfaceMap *map);
-    Encode_Status surfaceMappingForCI(SurfaceMap *map);
     Encode_Status surfaceMappingForKbufHandle(SurfaceMap *map);
     Encode_Status surfaceMappingForMalloc(SurfaceMap *map);
     Encode_Status surfaceMapping(SurfaceMap *map);
@@ -99,6 +98,7 @@ private:
     Encode_Status outputAllData(VideoEncOutputBuffer *outBuffer);
     Encode_Status queryAutoReferenceConfig(VAProfile profile);
     Encode_Status copySurfaces(VASurfaceID srcId, VASurfaceID destId);
+    VASurfaceID CreateSurfaceFromExternalBuf(int32_t value, ValueInfo& vinfo);
 
 protected:
 

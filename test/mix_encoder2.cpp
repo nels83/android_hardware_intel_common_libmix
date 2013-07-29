@@ -266,8 +266,6 @@ protected:
     DummySource(const DummySource &);
     DummySource &operator=(const DummySource &);
 
-//    int mMode = 0; //0:Camera malloc , 1: WiDi clone, 2: WiDi ext, 3: WiDi user, 4: Raw, 5: SurfaceMediaSource
-
     //for uploading src pictures, also for Camera malloc, WiDi clone, raw mode usrptr storage
     uint8_t* mUsrptr[PRELOAD_FRAME_NUM];
 
@@ -341,6 +339,7 @@ public:
     status_t createResource()
     {
         uint32_t size = mStride * mHeight * 3 /2;
+        size += 0x0FFF;
 
         ValueInfo vinfo;
         vinfo.mode = MEM_MODE_MALLOC;
@@ -359,7 +358,7 @@ public:
         {
             mBuffers[i] = new MemoryBase(mHeap, i * size, size);
 
-            mUsrptr[i] = (uint8_t*) mBuffers[i]->pointer();
+            mUsrptr[i] = (uint8_t*) ((int) (mBuffers[i]->pointer() + 0x0FFF) & ~0x0FFF);
 
             mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t) mUsrptr[i]);
             mIMB[i]->SetValueInfo(&vinfo);
@@ -396,9 +395,9 @@ extern "C" {
 
 class VASurfaceSource : public DummySource {
 public:
-    VASurfaceSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv) :
+    VASurfaceSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv, int mode) :
 			DummySource (width, height, stride, nFrames, fps, mdata, yuv) {
-        mMode = 1;
+        mMode = mode;
     }
 
     virtual ~VASurfaceSource() {
@@ -1005,7 +1004,7 @@ private:
         ret = mVideoEncoder->setParameters(&mStoreMetaDataInBuffers);
         CHECK_ENC_STATUS("MIX::setParameters StoreMetaDataInBuffers");
 
-        if (strcmp(mMixCodec, MPEG4_MIME_TYPE) == 0) {
+        if (strcmp(mMixCodec, AVC_MIME_TYPE) == 0) {
             VideoParamsAVC AVCParam;
             mVideoEncoder->getParameters(&AVCParam);
             AVCParam.idrInterval = mIdrInt;
@@ -1301,7 +1300,7 @@ void usage() {
     printf(" -p/--fps <Bitrate>				set frame rate, default 30\n");
     printf(" -q/--minQP <qp>					set minQP, default 0\n");
     printf(" -r/--rcMode <Mode>				set rc mode, like VBR(default), CBR, VCM, NO_RC\n");
-    printf(" -s/--src <source>				select source, like MALLOC(default), VASURFACE, GFX, GRALLOC, CAMERASOURCE, MEMHEAP\n");
+    printf(" -s/--src <source>				select source, like MALLOC(default), VASURFACE, KBUFHANDLE, GFX, GRALLOC, MEMHEAP (CAMERASOURCE, not support yet) \n");
     printf(" -w <Width> -h <Height>				set source width /height, default 1280*720\n");
     printf(" -t/--disableFrameSkip				disable frame skip, default is false\n");
     printf("\n");
@@ -1366,8 +1365,7 @@ int main(int argc, char* argv[])
 
     char c;
 
-    const char *SRCTYPE[] = {"MALLOC", "VASURFACE", "GFX", "GRALLOC",
-						"CAMERASOURCE", "SURFACEMEDIASOURCE", "MEMHEAP", NULL};
+    const char *SRCTYPE[] = {"MALLOC", "VASURFACE", "KBUFHANDLE", "GFX", "GRALLOC", "MEMHEAP", "CAMERASOURCE", "SURFACEMEDIASOURCE", NULL};
     const char *ENCTYPE[] = {"MIX", "OMXCODEC", NULL};
     const char *CODEC[] = {"H264", "MPEG4", "H263", "VP8",NULL};
     const char *RCMODE[] = {"VBR", "CBR", "VCM", "NO_RC", NULL};
@@ -1534,20 +1532,22 @@ int main(int argc, char* argv[])
 			SrcFps, MetadataMode, Yuvfile);
     } else if (SrcType == 1) {
         source = new VASurfaceSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
-			SrcFps, MetadataMode, Yuvfile);
+			SrcFps, MetadataMode, Yuvfile, 0);
     } else if (SrcType == 2) {
+        source = new VASurfaceSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
+			SrcFps, MetadataMode, Yuvfile, 1);
+    } else if (SrcType == 3) {
         source = new GfxSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
 			SrcFps, MetadataMode, Yuvfile);
-    } else if (SrcType == 3) {
+    } else if (SrcType == 4) {
         source = new GrallocSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
 			SrcFps, MetadataMode, Yuvfile);
-    } else if (SrcType == 4) {
-//        source = new CameraSource();
     } else if (SrcType == 5) {
- //       source = new SurfaceMediaSource();
-    } else if (SrcType == 6) {
         source = new MemHeapSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
 			SrcFps, MetadataMode, Yuvfile);
+    } else{
+        printf("Source Type is not supported\n");
+        return 0;
     }
 
     printf("Setup Encoder EncCodec is %d\n",EncCodec);
