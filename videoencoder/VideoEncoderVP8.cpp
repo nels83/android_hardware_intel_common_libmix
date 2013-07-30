@@ -40,7 +40,7 @@ VideoEncoderVP8::VideoEncoderVP8()
 	mVideoConfigVP8.refresh_alternate_frame = 1;
 	mVideoConfigVP8.refresh_entropy_probs = 0;
 	mVideoConfigVP8.value = 0;
-	mVideoConfigVP8.sharpness_level = 0;
+	mVideoConfigVP8.sharpness_level = 2;
 
 	mComParams.profile = VAProfileVP8Version0_3;
 }
@@ -55,6 +55,7 @@ Encode_Status VideoEncoderVP8::renderSequenceParams() {
 
     LOG_V( "Begin\n");
 
+    memset(&(vp8SeqParam),0x00, sizeof(VAEncSequenceParameterBufferVP8));
     vp8SeqParam.frame_width = mComParams.resolution.width;
     vp8SeqParam.frame_height = mComParams.resolution.height;
     vp8SeqParam.error_resilient = mVideoParamsVP8.error_resilient;
@@ -85,6 +86,7 @@ Encode_Status VideoEncoderVP8::renderPictureParams(EncodeTask *task) {
     VAEncPictureParameterBufferVP8 vp8PicParam;
     LOG_V( "Begin\n");
 
+    memset(&(vp8PicParam),0x00, sizeof(VAEncPictureParameterBufferVP8));
     vp8PicParam.coded_buf = task->coded_buffer;
     vp8PicParam.pic_flags.value = 0;
     vp8PicParam.ref_flags.bits.force_kf = mVideoConfigVP8.force_kf; //0;

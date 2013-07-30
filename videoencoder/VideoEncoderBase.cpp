@@ -1347,21 +1347,36 @@ Encode_Status  VideoEncoderBase::getMaxOutSize (uint32_t *maxSize) {
         return ENCODE_SUCCESS;
     }
 
-    // base on the rate control mode to calculate the defaule encoded buffer size
-    if (mComParams.rcMode == VA_RC_NONE) {
-        mCodedBufSize = (size * 400) / (16 * 16);
-        // set to value according to QP
-    } else {
-        mCodedBufSize = mComParams.rcParams.bitRate / 4;
+    // here, VP8 is different from AVC/H263
+    if(mComParams.profile == VAProfileVP8Version0_3) // for VP8 encode
+    {
+        // According to VIED suggestions, in CBR mode, coded buffer should be the size of 3 bytes per luma pixel
+        // in CBR_HRD mode, coded buffer size should be  5 * rc_buf_sz * rc_target_bitrate;
+        // now we just hardcode mCodedBufSize as 2M to walk round coded buffer size issue;
+        /*
+        if(mComParams.rcMode == VA_RC_CBR) // CBR_HRD mode
+            mCodedBufSize = 5 * mComParams.rcParams.bitRate * 6000;
+        else // CBR mode
+            mCodedBufSize = 3 * mComParams.resolution.width * mComParams.resolution.height;
+        */
+        mCodedBufSize = (2 * 1024 * 1024 + 31) & (~31);
     }
+    else // for AVC/H263/MPEG4 encode
+    {
+        // base on the rate control mode to calculate the defaule encoded buffer size
+        if (mComParams.rcMode == VA_RC_NONE) {
+             mCodedBufSize = (size * 400) / (16 * 16);
+             // set to value according to QP
+        } else {
+             mCodedBufSize = mComParams.rcParams.bitRate / 4;
+        }
 
-    mCodedBufSize =
-        max (mCodedBufSize , (size * 400) / (16 * 16));
+        mCodedBufSize = max (mCodedBufSize , (size * 400) / (16 * 16));
 
-    // in case got a very large user input bit rate value
-    mCodedBufSize =
-        min(mCodedBufSize, (size * 1.5 * 8));
-    mCodedBufSize =  (mCodedBufSize + 15) &(~15);
+        // in case got a very large user input bit rate value
+        mCodedBufSize = min(mCodedBufSize, (size * 1.5 * 8));
+        mCodedBufSize =  (mCodedBufSize + 15) &(~15);
+    }
 
     *maxSize = mCodedBufSize;
     return ENCODE_SUCCESS;
