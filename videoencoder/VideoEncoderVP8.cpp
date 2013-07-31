@@ -24,6 +24,7 @@ VideoEncoderVP8::VideoEncoderVP8()
 	mVideoParamsVP8.kf_max_dist = 30;
 	mVideoParamsVP8.min_qp = 4;
 	mVideoParamsVP8.max_qp = 63;
+	mVideoParamsVP8.init_qp = 26;
 	mVideoParamsVP8.rc_undershoot = 100;
 	mVideoParamsVP8.rc_overshoot = 100;
 	mVideoParamsVP8.hrd_buf_size = 6000;
@@ -51,26 +52,16 @@ Encode_Status VideoEncoderVP8::renderSequenceParams() {
     Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncSequenceParameterBufferVP8 vp8SeqParam;
-    uint32_t frameRateNum = mComParams.frameRate.frameRateNum;
-    uint32_t frameRateDenom = mComParams.frameRate.frameRateDenom;
+
     LOG_V( "Begin\n");
 
     vp8SeqParam.frame_width = mComParams.resolution.width;
     vp8SeqParam.frame_height = mComParams.resolution.height;
-    vp8SeqParam.frame_rate = (unsigned int) (frameRateNum + frameRateDenom /2) / frameRateDenom;
     vp8SeqParam.error_resilient = mVideoParamsVP8.error_resilient;
     vp8SeqParam.kf_auto = mVideoParamsVP8.kf_auto;
     vp8SeqParam.kf_min_dist = mVideoParamsVP8.kf_min_dist;
     vp8SeqParam.kf_max_dist = mVideoParamsVP8.kf_max_dist;
     vp8SeqParam.bits_per_second = mComParams.rcParams.bitRate;
-    vp8SeqParam.min_qp = mVideoParamsVP8.min_qp;
-    vp8SeqParam.max_qp = mVideoParamsVP8.max_qp;
-    vp8SeqParam.rc_undershoot = mVideoParamsVP8.rc_undershoot;
-    vp8SeqParam.rc_overshoot = mVideoParamsVP8.rc_overshoot;
-    vp8SeqParam.hrd_buf_size = mVideoParamsVP8.hrd_buf_size;
-    vp8SeqParam.hrd_buf_initial_fullness = mVideoParamsVP8.hrd_buf_initial_fullness;
-    vp8SeqParam.hrd_buf_optimal_fullness = mVideoParamsVP8.hrd_buf_optimal_fullness;
-//    memcpy(vp8SeqParam.reference_frames, mVP8InternalFrames, sizeof(mVP8InternalFrames));
     memcpy(vp8SeqParam.reference_frames, mAutoRefSurfaces, sizeof(mAutoRefSurfaces) * mAutoReferenceSurfaceNum);
 
     vaStatus = vaCreateBuffer(
@@ -95,17 +86,19 @@ Encode_Status VideoEncoderVP8::renderPictureParams(EncodeTask *task) {
     LOG_V( "Begin\n");
 
     vp8PicParam.coded_buf = task->coded_buffer;
-    vp8PicParam.pic_flags.bits.force_kf = mVideoConfigVP8.force_kf;
-    vp8PicParam.pic_flags.bits.no_ref_last = mVideoConfigVP8.no_ref_last;
-    vp8PicParam.pic_flags.bits.no_ref_gf = mVideoConfigVP8.no_ref_gf;
-    vp8PicParam.pic_flags.bits.no_ref_arf = mVideoConfigVP8.no_ref_arf;
+    vp8PicParam.pic_flags.value = 0;
+    vp8PicParam.ref_flags.bits.force_kf = mVideoConfigVP8.force_kf; //0;
+    if(!vp8PicParam.ref_flags.bits.force_kf) {
+        vp8PicParam.ref_flags.bits.no_ref_last = mVideoConfigVP8.no_ref_last;
+        vp8PicParam.ref_flags.bits.no_ref_arf = mVideoConfigVP8.no_ref_arf;
+        vp8PicParam.ref_flags.bits.no_ref_gf = mVideoConfigVP8.no_ref_gf;
+    }
+    vp8PicParam.pic_flags.bits.refresh_entropy_probs = 0;
+    vp8PicParam.sharpness_level = 2;
+    vp8PicParam.pic_flags.bits.num_token_partitions = 2;
     vp8PicParam.pic_flags.bits.refresh_last = mVideoConfigVP8.refresh_last;
     vp8PicParam.pic_flags.bits.refresh_golden_frame = mVideoConfigVP8.refresh_golden_frame;
     vp8PicParam.pic_flags.bits.refresh_alternate_frame = mVideoConfigVP8.refresh_alternate_frame;
-    vp8PicParam.pic_flags.bits.refresh_entropy_probs = mVideoConfigVP8.refresh_entropy_probs;
-    vp8PicParam.pic_flags.bits.num_token_partitions = 2;
-//    vp8PicParam.pic_flags.value = mVideoConfigVP8.value;
-    vp8PicParam.sharpness_level = mVideoConfigVP8.sharpness_level;
 
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,
@@ -122,44 +115,92 @@ Encode_Status VideoEncoderVP8::renderPictureParams(EncodeTask *task) {
 	return ret;
 }
 
-Encode_Status VideoEncoderVP8::renderSliceParams(EncodeTask *task) {
+Encode_Status VideoEncoderVP8::renderRCParams(void)
+{
+    VABufferID rc_param_buf;
+	VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncMiscParameterBuffer *misc_param, *misc_param_tmp;
+    VAEncMiscParameterRateControl *misc_rate_ctrl;
 
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
-    uint32_t sliceHeight;
-    uint32_t sliceHeightInMB;
-
-    VAEncSliceParameterBuffer sliceParams;
-
-    LOG_V( "Begin\n\n");
-
-    sliceHeight = mComParams.resolution.height;
-    sliceHeight += 15;
-    sliceHeight &= (~15);
-    sliceHeightInMB = sliceHeight / 16;
-
-    sliceParams.start_row_number = 0;
-    sliceParams.slice_height = sliceHeightInMB;
-    sliceParams.slice_flags.bits.is_intra = (task->type == FTYPE_I)?1:0;
-    sliceParams.slice_flags.bits.disable_deblocking_filter_idc = 0;
-
-    LOG_V("======VP8 slice params======\n");
-    LOG_I( "start_row_number = %d\n", (int) sliceParams.start_row_number);
-    LOG_I( "sliceHeightInMB = %d\n", (int) sliceParams.slice_height);
-    LOG_I( "is_intra = %d\n", (int) sliceParams.slice_flags.bits.is_intra);
-
-    vaStatus = vaCreateBuffer(
-            mVADisplay, mVAContext,
-            VAEncSliceParameterBufferType,
-            sizeof(VAEncSliceParameterBuffer),
-            1, &sliceParams,
-            &mSliceParamBuf);
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+                              VAEncMiscParameterBufferType,
+                              sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterRateControl),
+                              1,NULL,&rc_param_buf);
     CHECK_VA_STATUS_RETURN("vaCreateBuffer");
 
-    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &mSliceParamBuf, 1);
-    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+    vaMapBuffer(mVADisplay, rc_param_buf,(void **)&misc_param);
 
-    LOG_V( "end\n");
-    return ENCODE_SUCCESS;
+    misc_param->type = VAEncMiscParameterTypeRateControl;
+    misc_rate_ctrl = (VAEncMiscParameterRateControl *)misc_param->data;
+    memset(misc_rate_ctrl, 0, sizeof(*misc_rate_ctrl));
+    misc_rate_ctrl->bits_per_second = mComParams.rcParams.bitRate;
+    misc_rate_ctrl->target_percentage = 100;
+    misc_rate_ctrl->window_size = 1000;
+    misc_rate_ctrl->initial_qp = mVideoParamsVP8.init_qp;
+    misc_rate_ctrl->min_qp = mVideoParamsVP8.min_qp;
+    misc_rate_ctrl->basic_unit_size = 0;
+    misc_rate_ctrl->max_qp = mVideoParamsVP8.max_qp;
+
+    vaUnmapBuffer(mVADisplay, rc_param_buf);
+
+    vaStatus = vaRenderPicture(mVADisplay,mVAContext, &rc_param_buf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");;
+    return 0;
+}
+
+Encode_Status VideoEncoderVP8::renderFrameRateParams(void)
+{
+    VABufferID framerate_param_buf;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncMiscParameterBuffer *misc_param, *misc_param_tmp;
+    VAEncMiscParameterFrameRate * misc_framerate;
+    uint32_t frameRateNum = mComParams.frameRate.frameRateNum;
+    uint32_t frameRateDenom = mComParams.frameRate.frameRateDenom;
+
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+                              VAEncMiscParameterBufferType,
+                              sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterFrameRate),
+                              1,NULL,&framerate_param_buf);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaMapBuffer(mVADisplay, framerate_param_buf,(void **)&misc_param);
+    misc_param->type = VAEncMiscParameterTypeFrameRate;
+    misc_framerate = (VAEncMiscParameterFrameRate *)misc_param->data;
+    memset(misc_framerate, 0, sizeof(*misc_framerate));
+    misc_framerate->framerate = (unsigned int) (frameRateNum + frameRateDenom /2) / frameRateDenom;
+    vaUnmapBuffer(mVADisplay, framerate_param_buf);
+
+    vaStatus = vaRenderPicture(mVADisplay,mVAContext, &framerate_param_buf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");;
+
+    return 0;
+}
+
+Encode_Status VideoEncoderVP8::renderHRDParams(void)
+{
+    VABufferID hrd_param_buf;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncMiscParameterBuffer *misc_param, *misc_param_tmp;
+    VAEncMiscParameterHRD * misc_hrd; //*misc_rate_ctrl;
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+                              VAEncMiscParameterBufferType,
+                              sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterHRD),
+                              1,NULL,&hrd_param_buf);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaMapBuffer(mVADisplay, hrd_param_buf,(void **)&misc_param);
+    misc_param->type = VAEncMiscParameterTypeHRD;
+    misc_hrd = (VAEncMiscParameterHRD *)misc_param->data;
+    memset(misc_hrd, 0, sizeof(*misc_hrd));
+    misc_hrd->buffer_size = 6000;
+    misc_hrd->initial_buffer_fullness = 4000;
+    misc_hrd->optimal_buffer_fullness = 5000;
+    vaUnmapBuffer(mVADisplay, hrd_param_buf);
+
+    vaStatus = vaRenderPicture(mVADisplay,mVAContext, &hrd_param_buf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");;
+
+    return 0;
 }
 
 
@@ -169,15 +210,15 @@ Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
     LOG_V( "Begin\n");
 
     if (mFrameNum == 0) {
+        ret = renderFrameRateParams();
+        ret = renderRCParams();
+        ret = renderHRDParams();
         ret = renderSequenceParams();
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
     }
 
     ret = renderPictureParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
-
-    ret = renderSliceParams(task);
-    CHECK_ENCODE_STATUS_RETURN("renderSliceParams");
 
     LOG_V( "End\n");
     return ret;

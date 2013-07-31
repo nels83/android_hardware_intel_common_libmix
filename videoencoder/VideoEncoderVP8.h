@@ -35,7 +35,10 @@ protected:
 private:
 	Encode_Status renderSequenceParams();
 	Encode_Status renderPictureParams(EncodeTask *task);
-	Encode_Status renderSliceParams(EncodeTask *task);
+	Encode_Status renderRCParams(void);
+	Encode_Status renderHRDParams(void);
+	Encode_Status renderFrameRateParams(void);
+
 
 	VideoConfigVP8 mVideoConfigVP8;
 	VideoParamsVP8 mVideoParamsVP8;
