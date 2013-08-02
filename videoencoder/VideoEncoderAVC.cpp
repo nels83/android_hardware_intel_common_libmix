@@ -149,8 +149,10 @@ Encode_Status VideoEncoderAVC::derivedSetConfig(VideoParamConfigSet *videoEncCon
             break;
         }
         case VideoConfigTypeIDRRequest: {
-
-            mNewHeader = true;
+            if(mVideoParamsAVC.ipPeriod >1)
+                return ENCODE_FAIL;
+            else
+                mNewHeader = true;
             break;
         }
         case VideoConfigTypeSliceNum: {
@@ -645,13 +647,13 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
 
     LOG_V( "Begin\n");
     if (mFrameNum == 0 || mNewHeader) {
-
         if (mRenderHrd) {
             ret = renderHrd();
             mRenderHrd = false;
             CHECK_ENCODE_STATUS_RETURN("renderHrd");
         }
 
+        mFrameNum = 0;
         ret = renderSequenceParams(task);
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
         mNewHeader = false; //Set to require new header filed to false
@@ -1038,7 +1040,6 @@ Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
         avcPicParams.pic_fields.bits.deblocking_filter_control_present_flag = 1;
 
         avcPicParams.frame_num = mFrameNum;
-        avcPicParams.pic_fields.bits.idr_pic_flag = (mFrameNum == 0);
         avcPicParams.pic_fields.bits.reference_pic_flag = 1;
         // Not sure whether these settings work for all drivers
     }else {
@@ -1047,6 +1048,7 @@ Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
             avcPicParams.ReferenceFrames[i].picture_id = mAutoRefSurfaces[i];
     }
 
+    avcPicParams.pic_fields.bits.idr_pic_flag = (mFrameNum == 0);
     avcPicParams.pic_fields.bits.entropy_coding_mode_flag = mVideoParamsAVC.bEntropyCodingCABAC;
     avcPicParams.coded_buf = task->coded_buffer;
     avcPicParams.last_picture = 0;
