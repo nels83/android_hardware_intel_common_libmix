@@ -31,7 +31,7 @@ LOCAL_COPY_HEADERS := \
 
 LOCAL_MODULE := libmix_videovpp
 
-LOCAL_MODULE_TAGS := eng
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -41,6 +41,7 @@ LOCAL_SRC_FILES:= \
     test/main.cpp
 
 LOCAL_C_INCLUDES += \
+    $(TARGET_OUT_HEADERS)/libdrm \
     $(TARGET_OUT_HEADERS)/libva \
     $(TARGET_OUT_HEADERS)/libmix_videovpp
 
@@ -50,7 +51,7 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_MODULE := csc_vpp
 
-LOCAL_MODULE_TAGS := eng
+LOCAL_MODULE_TAGS := optional
 
 
 include $(BUILD_EXECUTABLE)

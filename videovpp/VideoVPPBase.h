@@ -17,6 +17,11 @@
 class VideoVPPBase;
 
 struct FilterConfig {
+    enum strength {
+        LOW,
+        MEDIUM,
+        HIGH,
+    };
     bool valid;
     int type;
     float min, max, step, def;
@@ -27,9 +32,14 @@ class VPParameters {
 public:
     static VPParameters* create(VideoVPPBase *);
     ~VPParameters();
-    VAStatus buildfilters(VABufferID *filter_bufs, unsigned int *num_filter_bufs);
+    VAStatus buildfilters();
+    VAStatus reset(bool start);
     void getNR(FilterConfig& NR) { memcpy(&NR, &nr, sizeof(FilterConfig)); }
-    void setNR(FilterConfig NR) { nr.cur = NR.cur; }
+    void setNR(FilterConfig::strength str) { nr.cur = str; }
+    void getDeblock(FilterConfig &DBK) { memcpy(&DBK, &deblock, sizeof(FilterConfig)); }
+    void SetDeblock(FilterConfig::strength str) { deblock.cur = str; }
+    void getSharpen(FilterConfig &SHP) { memcpy(&SHP, &sharpen, sizeof(FilterConfig)); }
+    void setSharpen(FilterConfig SHP) { sharpen.cur = SHP.cur; }
 
 private:
     bool mInitialized;
@@ -61,6 +71,8 @@ private:
     VPParameters &operator=(const VPParameters&);
 
     VAStatus init();
+
+    friend class VideoVPPBase;
 };
 
 struct RenderTarget {
@@ -73,6 +85,7 @@ struct RenderTarget {
     int height;
     int stride;
     bufType type;
+    int format;
     int pixel_format;
     int handle;
     VARectangle rect;
@@ -99,18 +112,6 @@ private:
     VASurfaceAttribExternalBuffers  SrcSurfExtBuf, DstSurfExtBuf;
     VASurfaceID SrcSurf, DstSurf;
     VASurfaceAttributeTPI attribs;
-
-    VAProcFilterType supported_filters[VAProcFilterCount];
-    unsigned int num_supported_filters;
-
-	VAProcFilterCap denoise_caps, sharpen_caps, deblock_caps;
-	VAProcFilterCapColorBalance color_balance_caps[VAProcColorBalanceCount];
-	unsigned int num_denoise_caps, num_color_balance_caps, num_sharpen_caps, num_deblock_caps;
-
-	VAProcFilterParameterBuffer denoise_buf, sharpen_buf, deblock_buf;
-	VAProcFilterParameterBufferColorBalance balance_buf[VAProcColorBalanceCount];
-
-	VABufferID sharpen_buf_id, denoise_buf_id, deblock_buf_id, balance_buf_id;
 
 	VABufferID filter_bufs[VAProcFilterCount];
 	unsigned int num_filter_bufs;

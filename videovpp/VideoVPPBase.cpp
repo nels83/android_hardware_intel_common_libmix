@@ -1,41 +1,6 @@
 #include "VideoVPPBase.h"
 
-enum {
-    HAL_PIXEL_FORMAT_NV12_TILED_INTEL = 0x100,
-    HAL_PIXEL_FORMAT_NV12_LINEAR_INTEL = 0x101,
-
-// deprecated use HAL_PIXEL_FORMAT_NV12_TILED_INTEL
-#if HAL_PIXEL_FORMAT_NV12_DEFINED
-    HAL_PIXEL_FORMAT_INTEL_NV12 = HAL_PIXEL_FORMAT_NV12,
-#else
-    HAL_PIXEL_FORMAT_INTEL_NV12 = HAL_PIXEL_FORMAT_NV12_TILED_INTEL,
-#endif
-
-// deprecated use HAL_PIXEL_FORMAT_NV12_LINEAR_INTEL
-    HAL_PIXEL_FORMAT_YUV420PackedSemiPlanar_INTEL = 0x7FA00E00,
-
-// deprecated use HAL_PIXEL_FORMAT_NV12_TILED_INTEL
-    HAL_PIXEL_FORMAT_YUV420PackedSemiPlanar_Tiled_INTEL = 0x7FA00F00,
-
-};
-
-struct mfx_gralloc_drm_handle_t {
-    native_handle_t base;
-    int magic;
-
-    int width;
-    int height;
-    int format;
-    int usage;
-
-    int name;
-    int stride;
-
-    int data_owner;
-    int data;
-};
-
-#define VPWRAPPER_NATIVE_DISPLAY  0x18c34078
+#define NATIVE_DISPLAY  0x18c34078
 
 #define CHECK_VA_STATUS(FUNC) \
     if (vret != VA_STATUS_SUCCESS) {\
@@ -74,21 +39,120 @@ VAStatus VPParameters::init() {
     for (size_t i = 0; i < num_supported_filters; i++) {
         switch(supported_filters[i]) {
             case VAProcFilterNoiseReduction:
-                {
-                    num_denoise_caps = 1;
-                    vret = vaQueryVideoProcFilterCaps(va_display, va_context,
-                            VAProcFilterNoiseReduction, &denoise_caps, &num_denoise_caps);
-                    CHECK_VA_STATUS("vaQueryVideoProcFilters");
+                num_denoise_caps = 1;
+                vret = vaQueryVideoProcFilterCaps(va_display, va_context,
+                        VAProcFilterNoiseReduction, &denoise_caps, &num_denoise_caps);
+                CHECK_VA_STATUS("vaQueryVideoProcFilterCaps");
 
-                    nr.valid = true;
-                    nr.min = denoise_caps.range.min_value;
-                    nr.max = denoise_caps.range.max_value;
-                    nr.def = denoise_caps.range.default_value;
-                    nr.step = denoise_caps.range.step;
-                    nr.cur = 0.0;
-                    printf("VAProcFilterNoiseReduction");
-                    break;
+                nr.valid = true;
+                nr.min = denoise_caps.range.min_value;
+                nr.max = denoise_caps.range.max_value;
+                nr.def = denoise_caps.range.default_value;
+                nr.step = denoise_caps.range.step;
+                nr.cur = 0.0;
+                break;
+
+            case VAProcFilterSharpening:
+                num_sharpen_caps = 1;
+                vret = vaQueryVideoProcFilterCaps(va_display, va_context,
+                        VAProcFilterSharpening, &sharpen_caps, &num_sharpen_caps);
+                CHECK_VA_STATUS("vaQueryVideoProcFilterCaps");
+
+                sharpen.valid = true;
+                sharpen.min = sharpen_caps.range.min_value;
+                sharpen.max = sharpen_caps.range.max_value;
+                sharpen.def = sharpen_caps.range.default_value;
+                sharpen.step = sharpen_caps.range.step;
+                sharpen.cur = 0.0;
+                break;
+
+            case VAProcFilterDeblocking:
+                num_denoise_caps = 1;
+                vret = vaQueryVideoProcFilterCaps(va_display, va_context,
+                        VAProcFilterDeblocking, &deblock_caps, &num_deblock_caps);
+                CHECK_VA_STATUS("vaQueryVideoProcFilterCaps");
+
+                deblock.valid = true;
+                deblock.min = deblock_caps.range.min_value;
+                deblock.max = deblock_caps.range.max_value;
+                deblock.def = deblock_caps.range.default_value;
+                deblock.step = deblock_caps.range.step;
+                deblock.cur = 0.0;
+                break;
+
+            case VAProcFilterColorBalance:
+                num_color_balance_caps = VAProcColorBalanceCount;
+                vret = vaQueryVideoProcFilterCaps(va_display, va_context,
+                        VAProcFilterColorBalance, &color_balance_caps, &num_color_balance_caps);
+                CHECK_VA_STATUS("vaQueryVideoProcFilterCaps");
+
+                for (size_t i = 0; i< num_color_balance_caps; i++) {
+                    colorbalance[i].type = color_balance_caps[i].type;
+                    colorbalance[i].valid = true;
+                    colorbalance[i].min = color_balance_caps[i].range.min_value;
+                    colorbalance[i].max = color_balance_caps[i].range.max_value;
+                    colorbalance[i].def = color_balance_caps[i].range.default_value;
+                    colorbalance[i].step = color_balance_caps[i].range.step;
+                    colorbalance[i].cur = 0.0;
                 }
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    vret = reset(true);
+    CHECK_VA_STATUS("reset");
+
+    return vret;
+}
+
+VAStatus VPParameters::buildfilters() {
+    for (size_t i = 0; i < num_supported_filters; i++) {
+        switch (supported_filters[i])  {
+            case VAProcFilterNoiseReduction:
+                if (nr.cur != -1) {
+                    denoise_buf.type = VAProcFilterNoiseReduction;
+                    denoise_buf.value = nr.min + nr.cur * nr.step;
+                    vret = vaCreateBuffer(va_display, va_context,
+                            VAProcFilterParameterBufferType,
+                            sizeof(denoise_buf), 1, &denoise_buf, &denoise_buf_id);
+                    CHECK_VA_STATUS("vaCreateBuffer");
+                    filter_bufs[num_filter_bufs] = denoise_buf_id;
+                    num_filter_bufs++;
+                }
+                break;
+
+            case VAProcFilterDeblocking:
+                if (deblock.cur != -1) {
+                    deblock_buf.type = VAProcFilterDeblocking;
+                    deblock_buf.value = deblock.min + deblock.cur * deblock.step;
+                    vret = vaCreateBuffer(va_display, va_context,
+                            VAProcFilterParameterBufferType,
+                            sizeof(deblock_buf), 1, &deblock_buf, &deblock_buf_id);
+                    CHECK_VA_STATUS("vaCreateBuffer");
+                    filter_bufs[num_filter_bufs] = deblock_buf_id;
+                    num_filter_bufs++;
+                }
+                break;
+
+            case VAProcFilterSharpening:
+                if (sharpen.cur != -1) {
+                    sharpen_buf.type = VAProcFilterSharpening;
+                    sharpen_buf.value = sharpen.cur;
+                    vret = vaCreateBuffer(va_display, va_context,
+                            VAProcFilterParameterBufferType,
+                            sizeof(sharpen_buf), 1, &sharpen_buf, &sharpen_buf_id);
+                    CHECK_VA_STATUS("vaCreateBuffer");
+                    filter_bufs[num_filter_bufs] = sharpen_buf_id;
+                    num_filter_bufs++;
+                }
+                break;
+
+            case VAProcFilterColorBalance:
+                break;
+
             default:
                 break;
         }
@@ -97,32 +161,36 @@ VAStatus VPParameters::init() {
     return vret;
 }
 
-VAStatus VPParameters::buildfilters(VABufferID *filters, unsigned int *num_filter) {
-    for (int i = 0; i < num_filter_bufs; i++) {
-        switch (supported_filters[i])  {
-            case VAProcFilterNoiseReduction:
-                {
-                    if (nr.cur != 0) {
-                        denoise_buf.type = VAProcFilterNoiseReduction;
-                        denoise_buf.value = nr.cur;
-                        vret = vaCreateBuffer(va_display, va_context,
-                                VAProcFilterParameterBufferType,
-                                sizeof(denoise_buf), 1, &denoise_buf, &denoise_buf_id);
-                        CHECK_VA_STATUS("vaCreateBuffer");
-                        filter_bufs[num_filter_bufs] = denoise_buf_id;
-                        num_filter_bufs++;
-                    }
-                    break;
-                }
-            default:
-                break;
+VAStatus VPParameters::reset(bool start) {
+    for (size_t i = 0; i < VAProcFilterCount; i++) {
+        if (start) {
+            filter_bufs[i] = VA_INVALID_ID;
+        } else {
+            if (filter_bufs[i] != VA_INVALID_ID) {
+                vret = vaDestroyBuffer(va_display, filter_bufs[i]);
+                CHECK_VA_STATUS("vaDestroyBuffer");
+                filter_bufs[i] = VA_INVALID_ID;
+            }
         }
     }
+    num_filter_bufs = 0;
 
-    memcpy(filters, filter_bufs, sizeof(VABufferID) * num_filter_bufs);
-    *num_filter = num_filter_bufs;
+    sharpen_buf_id = denoise_buf_id = deblock_buf_id = balance_buf_id = VA_INVALID_ID;
+    memset(&deblock_buf, 0, sizeof(VAProcFilterParameterBuffer));
+    memset(&sharpen_buf, 0, sizeof(VAProcFilterParameterBuffer));
+    memset(&denoise_buf, 0, sizeof(VAProcFilterParameterBuffer));
+    memset(&balance_buf, 0,
+            sizeof(VAProcFilterParameterBufferColorBalance)* VAProcColorBalanceCount);
+
+    nr.cur = deblock.cur = sharpen.cur = -1;
+    for (size_t i = 0; i < VAProcColorBalanceCount; i++)
+        colorbalance[i].cur = -1;
 
     return vret;
+}
+
+VPParameters::~VPParameters() {
+    reset(false);
 }
 
 VideoVPPBase::VideoVPPBase()
@@ -143,7 +211,7 @@ VAStatus VideoVPPBase::start() {
         return VA_STATUS_SUCCESS;
 
     int va_major_version, va_minor_version;
-    unsigned int nativeDisplay = VPWRAPPER_NATIVE_DISPLAY;
+    unsigned int nativeDisplay = NATIVE_DISPLAY;
     VAConfigAttrib vaAttrib;
 
     va_display = vaGetDisplay(&nativeDisplay);
@@ -160,23 +228,6 @@ VAStatus VideoVPPBase::start() {
     vret = vaCreateContext(va_display, va_config, width,
             height, 0, NULL, 0, &va_context);
     CHECK_VA_STATUS("vaCreateContext");
-
-    num_supported_filters = VAProcFilterCount;
-    vret = vaQueryVideoProcFilters(va_display,
-            va_context, supported_filters,
-            &num_supported_filters);
-    CHECK_VA_STATUS("vaQueryVideoProcFilters");
-
-    for (size_t i = 0; i < num_supported_filters; i++) {
-        switch(supported_filters[i]) {
-            case VAProcFilterDeblocking:
-                {
-                    break;
-                }
-            default:
-                break;
-        }
-    }
 
     mInitialized = true;
 
@@ -243,7 +294,7 @@ VAStatus VideoVPPBase::_CreateSurfaceFromGrallocHandle(RenderTarget rt, VASurfac
     VASurfaceAttrib SurfAttrib;
     VASurfaceAttribExternalBuffers  SurfExtBuf;
 
-    SurfExtBuf.pixel_format = VA_FOURCC_NV12;
+    SurfExtBuf.pixel_format = rt.pixel_format;
     SurfExtBuf.width = rt.width;
     SurfExtBuf.height = rt.height;
     SurfExtBuf.pitches[0] = rt.stride;
@@ -260,7 +311,7 @@ VAStatus VideoVPPBase::_CreateSurfaceFromGrallocHandle(RenderTarget rt, VASurfac
     SurfAttrib.value.type = VAGenericValueTypePointer;
     SurfAttrib.value.value.p = &SurfExtBuf;
 
-    vret = vaCreateSurfaces(va_display, VA_RT_FORMAT_YUV420,
+    vret = vaCreateSurfaces(va_display, rt.format,
             rt.width, rt.height, surf, 1,
             &SurfAttrib, 1);
     CHECK_VA_STATUS("vaCreateSurfaces");
@@ -277,8 +328,8 @@ VAStatus VideoVPPBase::_perform(VASurfaceID SrcSurf, VARectangle SrcRect,
     vpp_param.output_background_color = 0;
     vpp_param.output_color_standard = VAProcColorStandardBT601;
     vpp_param.filter_flags = VA_FRAME_PICTURE;
-    vpp_param.filters = NULL;
-    vpp_param.num_filters = 0;
+    vpp_param.filters = filter_bufs;
+    vpp_param.num_filters = num_filter_bufs;
     vpp_param.forward_references = NULL;
     vpp_param.num_forward_references = 0;
     vpp_param.backward_references = NULL;
@@ -305,6 +356,10 @@ VAStatus VideoVPPBase::_perform(VASurfaceID SrcSurf, VARectangle SrcRect,
         vret = vaSyncSurface(va_display, DstSurf);
         CHECK_VA_STATUS("vaSyncSurface");
     }
+
+    vret = vaDestroyBuffer(va_display, vpp_pipeline_buf);
+    CHECK_VA_STATUS("vaDestroyBuffer");
+    vpp_pipeline_buf = VA_INVALID_ID;
 
     return vret;
 }
@@ -335,8 +390,13 @@ VAStatus VideoVPPBase::perform(RenderTarget Src, RenderTarget Dst, VPParameters 
         printf("add dst surface %x\n", DstSurf);
     }
 
-    vret = vpp->buildfilters(filter_bufs, &num_filter_bufs);
-    CHECK_VA_STATUS("buildfilters");
+    if (vpp != NULL && (vpp->num_filter_bufs > 0 && vpp->num_filter_bufs < VAProcFilterCount)) {
+        memcpy(filter_bufs, vpp->filter_bufs, sizeof(VABufferID) * vpp->num_filter_bufs);
+        num_filter_bufs = vpp->num_filter_bufs;
+    } else {
+        num_filter_bufs = 0;
+    }
+
     vret = _perform(SrcSurf, Src.rect, DstSurf, Dst.rect, no_wait);
     CHECK_VA_STATUS("_perform");
 
