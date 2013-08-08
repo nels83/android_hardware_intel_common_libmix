@@ -173,6 +173,8 @@ Encode_Status VideoEncoderBase::start() {
     LOG_V( "======VA Create Surfaces for Rec/Ref frames ======\n");
 
     VASurfaceID surfaces[2];
+    VASurfaceAttrib attrib_list[2];
+    VASurfaceAttribExternalBuffers  external_refbuf;
     uint32_t stride_aligned, height_aligned;
     if(mAutoReference == false){
         stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
@@ -204,8 +206,14 @@ Encode_Status VideoEncoderBase::start() {
         mRecSurface = surfaces[1];
     }else {
         mAutoRefSurfaces = new VASurfaceID [mAutoReferenceSurfaceNum];
-        vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,
-                    stride_aligned, height_aligned, mAutoRefSurfaces, mAutoReferenceSurfaceNum, NULL, 0);
+        if(mComParams.profile == VAProfileVP8Version0_3)
+        {
+           setupVP8RefExternalBuf(stride_aligned,height_aligned,&external_refbuf,&attrib_list[0]);
+           vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,stride_aligned, height_aligned, mAutoRefSurfaces, mAutoReferenceSurfaceNum, NULL, 0);
+        }
+        else
+           vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,
+                       stride_aligned, height_aligned, mAutoRefSurfaces, mAutoReferenceSurfaceNum, NULL, 0);
     }
     CHECK_VA_STATUS_RETURN("vaCreateSurfaces");
 
@@ -1700,7 +1708,7 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
     LOG_I("Surface ID created from Malloc = 0x%08x\n", map->value);
 
     //Merrifield limitation, should use mAutoReference to check if on Merr
-    if ( (mAutoReference == false) || (map->vinfo.lumaStride % 64 == 0) )
+    if ((mComParams.profile == VAProfileVP8Version0_3)||((mAutoReference == false) || (map->vinfo.lumaStride % 64 == 0)))
         map->surface = surface;
     else {
         map->surface_backup = surface;
@@ -2222,3 +2230,39 @@ VASurfaceID VideoEncoderBase::CreateSurfaceFromExternalBuf(int32_t value, ValueI
     return surface;
 }
 
+Encode_Status VideoEncoderBase::setupVP8RefExternalBuf(uint32_t stride_aligned,
+                                                       uint32_t height_aligned,
+                                                       VASurfaceAttribExternalBuffers *buf,
+                                                       VASurfaceAttrib *attrib_list)
+{
+    int ref_height_uv = (mComParams.resolution.height/ 2 + 32 + 63) & (~63);
+    buf->pixel_format = VA_FOURCC_NV12;
+    buf->width = stride_aligned;
+    buf->height = height_aligned;
+    buf->data_size = stride_aligned * height_aligned + stride_aligned * ref_height_uv;
+    buf->num_buffers = mAutoReferenceSurfaceNum;
+    buf->num_planes = 3;
+    buf->pitches[0] = stride_aligned;
+    buf->pitches[1] = stride_aligned;
+    buf->pitches[2] = stride_aligned;
+    buf->pitches[3] = 0;
+    buf->offsets[0] = 0;
+    buf->offsets[1] = stride_aligned*height_aligned;
+    buf->offsets[2] = buf->offsets[1];
+    buf->offsets[3] = 0;
+    buf->buffers = (unsigned long *)calloc(buf->num_buffers, sizeof(unsigned long));
+    buf->flags = 0;
+    buf->private_data = NULL;
+
+    attrib_list[0].type = (VASurfaceAttribType)VASurfaceAttribMemoryType;
+    attrib_list[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
+    attrib_list[0].value.type = VAGenericValueTypeInteger;
+    attrib_list[0].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_VA;
+
+    attrib_list[1].type = (VASurfaceAttribType)VASurfaceAttribExternalBufferDescriptor;
+    attrib_list[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
+    attrib_list[1].value.type = VAGenericValueTypePointer;
+    attrib_list[1].value.value.p = (void *)buf;
+
+    return 0;
+}

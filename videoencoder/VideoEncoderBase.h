@@ -100,6 +100,11 @@ private:
     Encode_Status querySupportedSurfaceMemTypes();
     Encode_Status copySurfaces(VASurfaceID srcId, VASurfaceID destId);
     VASurfaceID CreateSurfaceFromExternalBuf(int32_t value, ValueInfo& vinfo);
+    Encode_Status setupVP8RefExternalBuf(uint32_t stride_aligned,
+                                         uint32_t height_aligned,
+                                         VASurfaceAttribExternalBuffers *buf,
+                                         VASurfaceAttrib *attrib_list);
+
 
 protected:
 
