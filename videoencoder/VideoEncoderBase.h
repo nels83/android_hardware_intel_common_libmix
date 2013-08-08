@@ -97,6 +97,7 @@ private:
     Encode_Status cleanupForOutput();
     Encode_Status outputAllData(VideoEncOutputBuffer *outBuffer);
     Encode_Status queryAutoReferenceConfig(VAProfile profile);
+    Encode_Status querySupportedSurfaceMemTypes();
     Encode_Status copySurfaces(VASurfaceID srcId, VASurfaceID destId);
     VASurfaceID CreateSurfaceFromExternalBuf(int32_t value, ValueInfo& vinfo);
 
@@ -159,5 +160,8 @@ protected:
     android::Condition           mCodedBuffer_Cond, mEncodeTask_Cond;
 
     bool mFrameSkipped;
+
+    //supported surface memory types
+    int mSupportedSurfaceMemType;
 };
 #endif /* __VIDEO_ENCODER_BASE_H__ */

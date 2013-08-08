@@ -67,7 +67,8 @@ VideoEncoderBase::VideoEncoderBase()
     ,mOffsetInSeg(0)
     ,mTotalSize(0)
     ,mTotalSizeCopied(0)
-    ,mFrameSkipped(false){
+    ,mFrameSkipped(false)
+    ,mSupportedSurfaceMemType(0){
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     // here the display can be any value, use following one
@@ -159,6 +160,8 @@ Encode_Status VideoEncoderBase::start() {
             &vaAttrib[0], 2, &(mVAConfig));
 //            &vaAttrib[0], 3, &(mVAConfig));  //uncomment this after psb_video supports
     CHECK_VA_STATUS_RETURN("vaCreateConfig");
+
+    querySupportedSurfaceMemTypes();
 
     if (mComParams.rcMode == VA_RC_VCM) {
         // Following three features are only enabled in VCM mode
@@ -627,6 +630,7 @@ CLEAN_UP:
     mTotalSize = 0;
     mTotalSizeCopied = 0;
     mFrameSkipped = false;
+    mSupportedSurfaceMemType = 0;
 
     LOG_V( "end\n");
     return ret;
@@ -788,6 +792,40 @@ Encode_Status VideoEncoderBase::queryAutoReferenceConfig(VAProfile profile) {
         mAutoReference = false;
     else
         mAutoReference = true;
+
+    return ENCODE_SUCCESS;
+}
+
+Encode_Status VideoEncoderBase::querySupportedSurfaceMemTypes() {
+
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+
+    unsigned int num = 0;
+
+    VASurfaceAttrib* attribs = NULL;
+
+    //get attribs number
+    vaStatus = vaQuerySurfaceAttributes(mVADisplay, mVAConfig, attribs, &num);
+    CHECK_VA_STATUS_RETURN("vaGetSurfaceAttributes");
+
+    if (num == 0)
+        return ENCODE_SUCCESS;
+
+    attribs = new VASurfaceAttrib[num];
+
+    vaStatus = vaQuerySurfaceAttributes(mVADisplay, mVAConfig, attribs, &num);
+    CHECK_VA_STATUS_RETURN("vaGetSurfaceAttributes");
+
+    for(int i = 0; i < num; i ++) {
+        if (attribs[i].type == VASurfaceAttribMemoryType) {
+            mSupportedSurfaceMemType = attribs[i].value.value.i;
+            break;
+        }
+        else
+            continue;
+    }
+
+    delete attribs;
 
     return ENCODE_SUCCESS;
 }
@@ -2162,6 +2200,9 @@ VASurfaceID VideoEncoderBase::CreateSurfaceFromExternalBuf(int32_t value, ValueI
             //not support
             return VA_INVALID_SURFACE;
     }
+
+    if (mSupportedSurfaceMemType & type == 0)
+        return VA_INVALID_SURFACE;
 
     attribs[0].type = (VASurfaceAttribType)VASurfaceAttribMemoryType;
     attribs[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
