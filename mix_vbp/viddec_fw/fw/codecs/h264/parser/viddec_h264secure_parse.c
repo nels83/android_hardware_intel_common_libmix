@@ -533,7 +533,7 @@ h264_Status h264secure_Parse_Dec_Ref_Pic_Marking(h264_Info* pInfo, void *newdata
         {
             do
             {
-                if (i < NUM_MMCO_OPERATIONS)
+                if (i < MAX_OP)
                 {
                     code = sliceheader_p->ref_pic_marking.op[i].memory_management_control_operation;
                     SliceHeader->sh_dec_refpic.memory_management_control_operation[i] = code;
@@ -568,7 +568,7 @@ h264_Status h264secure_Parse_Dec_Ref_Pic_Marking(h264_Info* pInfo, void *newdata
                     }
                 }
 
-                if (i >= NUM_MMCO_OPERATIONS) {
+                if (i >= MAX_OP) {
                     return H264_STATUS_ERROR;
                 }
             } while (SliceHeader->sh_dec_refpic.memory_management_control_operation[i++] != 0);

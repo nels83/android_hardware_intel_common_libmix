@@ -178,6 +178,11 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
         CHECK_STATUS("VideoDecoderBase::updateBuffer");
     }
 
+    if (data == NULL) {
+        ETRACE("Invalid data returned by parser!");
+        return DECODE_MEMORY_FAIL;
+    }
+
     if (!mVAStarted) {
          if (data->has_sps && data->has_pps) {
             status = startVA(data);
