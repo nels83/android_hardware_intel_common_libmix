@@ -194,7 +194,7 @@ Encode_Status PVSoftMPEG4Encoder::initEncParams() {
     mEncParams->timeIncRes = 1000;
     mEncParams->tickPerSrc = mEncParams->timeIncRes / mVideoFrameRate;
 
-    mEncParams->bitRate[0] = mVideoBitRate;
+    mEncParams->bitRate[0] = mVideoBitRate <= 2000000 ? mVideoBitRate : 2000000;
     mEncParams->iQuant[0] = 15;
     mEncParams->pQuant[0] = 12;
     mEncParams->quantType[0] = 0;
