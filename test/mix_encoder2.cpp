@@ -7,7 +7,8 @@
 #include <media/stagefright/MPEG4Writer.h>
 #include <media/stagefright/OMXClient.h>
 #include <media/stagefright/OMXCodec.h>
-//#include <media/MediaPlayerInterface.h>
+#include <media/stagefright/SurfaceMediaSource.h>
+
 
 //libmix
 #include <va/va_tpi.h>
@@ -21,6 +22,7 @@
 #include <gui/ISurfaceComposer.h>
 #include <gui/SurfaceComposerClient.h>
 #include <gui/IGraphicBufferAlloc.h>
+#include <gui/SurfaceTextureClient.h>
 
 #include <ui/PixelFormat.h>
 #include <hardware/gralloc.h>
@@ -66,6 +68,61 @@ static unsigned int pts;
         return err; \
     }
 
+static int YUV_generator_planar(int width, int height,
+                      unsigned char *Y_start, int Y_pitch,
+                      unsigned char *U_start, int U_pitch,
+                      unsigned char *V_start, int V_pitch,
+                      int UV_interleave)
+{
+    static int row_shift = 0;
+    int row;
+
+    /* copy Y plane */
+    for (row=0;row<height;row++) {
+        unsigned char *Y_row = Y_start + row * Y_pitch;
+        int jj, xpos, ypos;
+        ypos = (row / BOX_WIDTH) & 0x1;
+        for (jj=0; jj<width; jj++) {
+            xpos = ((row_shift + jj) / BOX_WIDTH) & 0x1;
+            if ((xpos == 0) && (ypos == 0))
+                Y_row[jj] = 0xeb;
+            if ((xpos == 1) && (ypos == 1))
+                Y_row[jj] = 0xeb;
+
+            if ((xpos == 1) && (ypos == 0))
+                Y_row[jj] = 0x10;
+            if ((xpos == 0) && (ypos == 1))
+                Y_row[jj] = 0x10;
+        }
+    }
+
+    /* copy UV data */
+    for( row =0; row < height/2; row++) {
+        if (UV_interleave) {
+            unsigned char *UV_row = U_start + row * U_pitch;
+            memset (UV_row,0x80,width);
+        } else {
+            unsigned char *U_row = U_start + row * U_pitch;
+            unsigned char *V_row = V_start + row * V_pitch;
+
+            memset (U_row,0x80,width/2);
+            memset (V_row,0x80,width/2);
+        }
+    }
+
+    row_shift += 8;
+//        if (row_shift==BOX_WIDTH) row_shift = 0;
+
+    YUV_blend_with_pic(width,height,
+                       Y_start, Y_pitch,
+                       U_start, U_pitch,
+                       V_start, V_pitch,
+                       1, 70);
+
+    return 0;
+}
+
+
 class DummySource : public MediaSource {
 
 public:
@@ -109,8 +166,9 @@ public:
         if (mYuvfile == NULL) {
             //upload src data
             LOG("Fill src picture width=%d, Height=%d\n", mStride, mHeight);
-            for(int i=0; i<PRELOAD_FRAME_NUM; i++)
+            for(int i=0; i<PRELOAD_FRAME_NUM; i++) {
                 YUV_generator_planar(mStride, mHeight, mUsrptr[i], mStride, mUsrptr[i] + mStride*mHeight, mStride, 0, 0, 1);
+            }
         }else{
             mYuvhandle = fopen(mYuvfile, "rb");
             if (mYuvhandle == NULL)
@@ -153,7 +211,6 @@ public:
                         return ferror(mYuvhandle);
                 }
                 readsize -= ret;
-
                // LOG("loading from file, ret=%d, readsize=%d\n", ret, readsize);
             }
         }
@@ -191,66 +248,7 @@ protected:
             delete mIMB[i];
     }
 
-private:
-
-    int YUV_generator_planar(int width, int height,
-                      unsigned char *Y_start, int Y_pitch,
-                      unsigned char *U_start, int U_pitch,
-                      unsigned char *V_start, int V_pitch,
-                      int UV_interleave)
-    {
-        static int row_shift = 0;
-        int row;
-
-        /* copy Y plane */
-        for (row=0;row<height;row++) {
-            unsigned char *Y_row = Y_start + row * Y_pitch;
-            int jj, xpos, ypos;
-
-            ypos = (row / BOX_WIDTH) & 0x1;
-
-            for (jj=0; jj<width; jj++) {
-                xpos = ((row_shift + jj) / BOX_WIDTH) & 0x1;
-
-                if ((xpos == 0) && (ypos == 0))
-                    Y_row[jj] = 0xeb;
-                if ((xpos == 1) && (ypos == 1))
-                    Y_row[jj] = 0xeb;
-
-                if ((xpos == 1) && (ypos == 0))
-                    Y_row[jj] = 0x10;
-                if ((xpos == 0) && (ypos == 1))
-                    Y_row[jj] = 0x10;
-            }
-        }
-
-        /* copy UV data */
-        for( row =0; row < height/2; row++) {
-            if (UV_interleave) {
-                unsigned char *UV_row = U_start + row * U_pitch;
-                memset (UV_row,0x80,width);
-            } else {
-                unsigned char *U_row = U_start + row * U_pitch;
-                unsigned char *V_row = V_start + row * V_pitch;
-
-                memset (U_row,0x80,width/2);
-                memset (V_row,0x80,width/2);
-            }
-        }
-
-        row_shift += 8;
-//        if (row_shift==BOX_WIDTH) row_shift = 0;
-
-        YUV_blend_with_pic(width,height,
-                           Y_start, Y_pitch,
-                           U_start, U_pitch,
-                           V_start, V_pitch,
-                           1, 70);
-
-        return 0;
-    }
-
-protected:
+public:
 
     bool mMetadata;
     const char* mYuvfile;
@@ -549,7 +547,7 @@ public:
         sp<ISurfaceComposer> composer(ComposerService::getComposerService());
         mGraphicBufferAlloc = composer->createGraphicBufferAlloc();
 
-        uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE;// | GraphicBuffer::USAGE_HW_COMPOSER;
+        uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_SW_WRITE_OFTEN;// | GraphicBuffer::USAGE_HW_COMPOSER;
         int format = HAL_PIXEL_FORMAT_NV12;
         if (mColor == 1)
             format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
@@ -567,11 +565,16 @@ public:
                 return UNKNOWN_ERROR;
             }
             mGraphicBuffer[i] = graphicBuffer;
-            graphicBuffer->lock(usage | GraphicBuffer::USAGE_SW_WRITE_OFTEN |GraphicBuffer::USAGE_SW_READ_OFTEN, (void**)(&mUsrptr[i]));
+
+            void* vaddr[3];
+            if (graphicBuffer->lock(usage, &vaddr[0]) != OK)
+                return UNKNOWN_ERROR;
 
             mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)mGraphicBuffer[i]->handle);
             graphicBuffer->unlock();
 
+            mUsrptr[i] = (uint8_t*)vaddr[0];
+			
             IMG_native_handle_t* h = (IMG_native_handle_t*) mGraphicBuffer[i]->handle;
             mStride = h->iWidth;
             mHeight = h->iHeight;
@@ -595,6 +598,7 @@ class GrallocSource : public DummySource {
 public:
     GrallocSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv) :
 			DummySource (width, height, stride, nFrames, fps, mdata, yuv) {
+        mColor = 0;
     }
 
     virtual ~GrallocSource () {
@@ -604,7 +608,7 @@ public:
 
     status_t createResource()
     {
-        int usage = GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_HW_COMPOSER;
+        int usage = GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_WRITE_OFTEN;
         int format = HAL_PIXEL_FORMAT_NV12;
         if (mColor == 1)
             format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
@@ -615,11 +619,15 @@ public:
         {
             if (gfx_alloc(mWidth, mHeight, format, usage, &mHandle[i], (int32_t*)&mStride) != 0)
                 return UNKNOWN_ERROR;
-            if (gfx_lock(mHandle[i], usage | GRALLOC_USAGE_SW_WRITE_OFTEN, 0, 0, mWidth, mHeight, (void**)(&mUsrptr[i])) != 0)
+            void* vaddr[3];
+
+            if (gfx_lock(mHandle[i], usage, 0, 0, mWidth, mHeight, &vaddr[0]) != 0)
                 return UNKNOWN_ERROR;
             mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)mHandle[i]);
             gfx_unlock(mHandle[i]);
+            mUsrptr[i] = (uint8_t*)vaddr[0];
             IMG_native_handle_t* h = (IMG_native_handle_t*) mHandle[i];
+            mStride = h->iWidth;
             mHeight = h->iHeight;
         }
 
@@ -708,6 +716,86 @@ private:
     int mColor;
 };
 
+class MixSurfaceMediaSource : public SurfaceMediaSource {
+
+public:
+    MixSurfaceMediaSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv)
+                                 :SurfaceMediaSource(width, height){
+        mMaxNumFrames = nFrames;
+        mFPS = fps;
+    }
+
+    virtual ~MixSurfaceMediaSource() {        
+    }
+
+    status_t start(MetaData *params) {
+		mSTC = new SurfaceTextureClient(static_cast<sp<ISurfaceTexture> >(getBufferQueue()));
+		mANW = mSTC;
+        mRunning = true;
+
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+        pthread_create(&mThread, &attr, MixSurfaceMediaSource::ThreadFunc, this);
+        pthread_attr_destroy(&attr);
+
+        SurfaceMediaSource::start(params);
+
+        return OK;
+    }
+
+    status_t stop() {
+        mRunning = false;
+//        void *dummy;
+//        pthread_join(mThread, &dummy);		
+        SurfaceMediaSource::stop();
+
+        return OK;
+    }
+
+public:
+    int mMaxNumFrames;
+    int mFPS;
+
+private:
+    sp<SurfaceTextureClient> mSTC;
+    sp<ANativeWindow> mANW;
+    pthread_t mThread;
+    bool mRunning;
+
+    static void *ThreadFunc(void *me) {
+        MixSurfaceMediaSource *source = static_cast<MixSurfaceMediaSource *>(me);
+
+        // get buffer directly from member
+	    sp<GraphicBuffer> buf;
+        
+        for ( gNumFramesOutput = 0; gNumFramesOutput < source->mMaxNumFrames; gNumFramesOutput++) {
+
+            ANativeWindowBuffer* anb;
+            native_window_set_buffers_format(source->mANW.get(), HAL_PIXEL_FORMAT_NV12);
+            native_window_dequeue_buffer_and_wait(source->mANW.get(), &anb);
+            // We do not fill the buffer in. Just queue it back.
+            sp<GraphicBuffer> buf(new GraphicBuffer(anb, false));
+#if 1
+            uint8_t* img[3];
+            buf->lock(GRALLOC_USAGE_SW_WRITE_OFTEN, (void**)(&img[0]));
+            IMG_native_handle_t* h = (IMG_native_handle_t*) buf->handle;
+            YUV_generator_planar(h->iWidth, h->iHeight, img[0], h->iWidth, img[0] + h->iWidth*h->iHeight, h->iWidth, 0, 0, 1);
+            buf->unlock();
+#endif	
+            if (NO_ERROR != source->mANW->queueBuffer(source->mANW.get(), buf->getNativeBuffer(), -1))
+                return NULL;
+            else
+                usleep(1000000 / source->mFPS);
+        }
+
+        source->stop();
+		
+        return NULL;
+    }
+};
+
 static const char *AVC_MIME_TYPE = "video/h264";
 static const char *MPEG4_MIME_TYPE = "video/mpeg4";
 static const char *H263_MIME_TYPE = "video/h263";
@@ -767,6 +855,9 @@ public:
         CHECK(success);
 
         success = meta->findInt32('difs', &mDisableFrameSkip);
+        CHECK(success);
+
+        success = meta->findInt32('sync', &mSyncMode);
         CHECK(success);
 
 //    const char *RCMODE[] = {"VBR", "CBR", "VCM", "NO_RC", NULL};
@@ -921,19 +1012,20 @@ public:
 
         //input buffers
         int loop=1;
-        if (mEncodeFrameCount == 0)
+        if (mSyncMode == 0 && mEncodeFrameCount == 0)
             loop = 2;
 
         for(int i=0; i<loop; i++) {
             MediaBuffer *src;
-
             err = mSource->read (&src);
+
             if (err == ERROR_END_OF_STREAM) {
                 LOG ("\nReach Resource EOS, still need to get final frame encoded data\n");
                 mSrcEOS = true;
+                if (mSyncMode)
+                    return ERROR_END_OF_STREAM;
             }else {
                 CHECK_STATUS(err);
-
                 err = encode(src);
                 CHECK_STATUS(err);
             }
@@ -944,16 +1036,18 @@ public:
         CHECK_STATUS(err);
 
         VideoOutputFormat format;
-        if ((mEncodeFrameCount == 2 && (strcasecmp(mMixCodec, H263_MIME_TYPE) != 0))&&
-			(mEncodeFrameCount == 2 && (strcasecmp(mMixCodec, VP8_MIME_TYPE) != 0))){
+        int n = 2;
+        if (mSyncMode)
+            n = 1;
+
+        if ((mEncodeFrameCount == n && (strcasecmp(mMixCodec, H263_MIME_TYPE) != 0))&&
+			(mEncodeFrameCount == n && (strcasecmp(mMixCodec, VP8_MIME_TYPE) != 0))){
             format = OUTPUT_CODEC_DATA;
             mFirstFrame = true;
 		}else
-            format = OUTPUT_EVERYTHING;
-
+            format = OUTPUT_EVERYTHING;;
         err = getoutput(*buffer, format);
         CHECK_STATUS(err);
-
         return OK;
     }
 
@@ -1037,8 +1131,8 @@ private:
     int mWinSize;
     int mIdrInt;
     int mDisableFrameSkip;
+    int mSyncMode;
 
-//    int mSyncMode;
     bool mFirstFrame;
     bool mSrcEOS;
 
@@ -1330,7 +1424,7 @@ int main(int argc, char* argv[])
     int IntraPeriod = 30;
     int DisableFrameSkip = 0;
     int OutFormat = 0;
-//    bool SyncMode = false;
+    int SyncMode = 0;
     char* OutFileName = "out.264";
     const char* Yuvfile = NULL;
 
@@ -1545,7 +1639,11 @@ int main(int argc, char* argv[])
     } else if (SrcType == 5) {
         source = new MemHeapSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
 			SrcFps, MetadataMode, Yuvfile);
-    } else{
+    } else if (SrcType == 7) {
+        source = new MixSurfaceMediaSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
+			SrcFps, MetadataMode, Yuvfile);
+        SyncMode = 1;
+	}else{
         printf("Source Type is not supported\n");
         return 0;
     }
@@ -1584,6 +1682,7 @@ int main(int argc, char* argv[])
     enc_meta->setInt32('wsiz', WinSize);
     enc_meta->setInt32('idri', WinSize);
     enc_meta->setInt32('difs', DisableFrameSkip);
+    enc_meta->setInt32('sync', SyncMode);
 
     uint32_t encoder_flags = 0;
     if (MetadataMode)

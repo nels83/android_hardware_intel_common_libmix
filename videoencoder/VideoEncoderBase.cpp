@@ -2186,6 +2186,7 @@ VASurfaceID VideoEncoderBase::CreateSurfaceFromExternalBuf(int32_t value, ValueI
     switch(vinfo.mode) {
         case MEM_MODE_GFXHANDLE:
             type = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
+            extbuf.pixel_format = vinfo.format;
             break;
         case MEM_MODE_KBUFHANDLE:
             type = VA_SURFACE_ATTRIB_MEM_TYPE_KERNEL_DRM;
