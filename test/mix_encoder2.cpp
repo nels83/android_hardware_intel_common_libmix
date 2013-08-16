@@ -22,7 +22,7 @@
 #include <gui/ISurfaceComposer.h>
 #include <gui/SurfaceComposerClient.h>
 #include <gui/IGraphicBufferAlloc.h>
-#include <gui/SurfaceTextureClient.h>
+#include <gui/Surface.h>
 
 #include <ui/PixelFormat.h>
 #include <hardware/gralloc.h>
@@ -88,7 +88,6 @@ static int YUV_generator_planar(int width, int height,
                 Y_row[jj] = 0xeb;
             if ((xpos == 1) && (ypos == 1))
                 Y_row[jj] = 0xeb;
-
             if ((xpos == 1) && (ypos == 0))
                 Y_row[jj] = 0x10;
             if ((xpos == 0) && (ypos == 1))
@@ -109,7 +108,6 @@ static int YUV_generator_planar(int width, int height,
             memset (V_row,0x80,width/2);
         }
     }
-
     row_shift += 8;
 //        if (row_shift==BOX_WIDTH) row_shift = 0;
 
@@ -126,25 +124,47 @@ static int YUV_generator_planar(int width, int height,
 class DummySource : public MediaSource {
 
 public:
-    DummySource(int width, int height, int stride, int nFrames, int fps,
-						bool metadata, const char* yuv)
-        : mWidth(width),
-          mHeight(height),
-          mStride(stride),
-          mMaxNumFrames(nFrames),
-          mFrameRate(fps),
-          mMetadata(metadata),
-          mYuvfile(yuv),
-          mYuvhandle(NULL){
+    DummySource(const sp<MetaData> &meta, uint32_t flag) {
+
+        bool success;
+
+        success = meta->findInt32(kKeyWidth, &mWidth);
+        CHECK(success);
+
+        success = meta->findInt32(kKeyHeight, &mHeight);
+        CHECK(success);
+
+        success = meta->findInt32(kKeyStride, &mStride);
+        CHECK(success);
+
+        success = meta->findInt32(kKeyFrameRate, &mFrameRate);
+        CHECK(success);
+
+        success = meta->findInt32(kKeyColorFormat, &mColorFormat);
+        CHECK(success);
+
+        success = meta->findCString('yuvf', &mYuvfile);
+        CHECK(success);
+
+        success = meta->findInt32('fnum', &mMaxNumFrames);
+        CHECK(success);
+
+        success = meta->findInt32('sflg', (int32_t*)&mSessionFlag);
+        CHECK(success);
+
+        mYuvhandle = NULL;
+
+        mMetadata = flag & OMXCodec::kStoreMetaDataInVideoBuffers;
 
         if (mMetadata)
             mSize = 128;
         else
-            mSize = mStride * mHeight * 3 /2;
+            mSize = mStride * mHeight * 3 / 2 ;
 
         for(int i=0; i<PRELOAD_FRAME_NUM; i++)
-            mGroup.add_buffer(new MediaBuffer(mSize));
+            mGroup.add_buffer(new MediaBuffer(mSize + 0x0FFF));
 
+        mTAG = "Dummy";
     }
 
     virtual sp<MetaData> getFormat() {
@@ -163,12 +183,37 @@ public:
         gNumFramesOutput = 0;
         createResource ();
 
-        if (mYuvfile == NULL) {
+#if 1
+        {
+            int size= mStride * mHeight * 1.5;
+            void* tmp = malloc(size);
+
+            int64_t start = systemTime();
+
+            for(int j=0; j<100; j++) {
+                for(int i=0; i<PRELOAD_FRAME_NUM; i++)
+                    memcpy(tmp, mUsrptr[i], size);
+            }
+            int64_t end = systemTime();
+            printf("read from %s mem, write to cached malloc mem, per memcpy cost = %lld us\n", mTAG, (end-start) / (100000*PRELOAD_FRAME_NUM));
+
+            for(int j=0; j<100; j++) {
+                for(int i=0; i<PRELOAD_FRAME_NUM; i++)
+                    memcpy(mUsrptr[i], tmp, size);
+            }
+            start = systemTime();
+
+            printf("read from cached malloc mem, write to %s mem, per memcpy cost = %lld us\n", mTAG, (start - end)/ (100000*PRELOAD_FRAME_NUM));
+
+        }
+#endif
+        if (mYuvfile == NULL || strlen(mYuvfile) == 0) {
             //upload src data
-            LOG("Fill src picture width=%d, Height=%d\n", mStride, mHeight);
+            LOG("Fill src pictures width=%d, Height=%d\n", mStride, mHeight);
             for(int i=0; i<PRELOAD_FRAME_NUM; i++) {
                 YUV_generator_planar(mStride, mHeight, mUsrptr[i], mStride, mUsrptr[i] + mStride*mHeight, mStride, 0, 0, 1);
             }
+            LOG("Fill src pictures end\n");
         }else{
             mYuvhandle = fopen(mYuvfile, "rb");
             if (mYuvhandle == NULL)
@@ -179,7 +224,7 @@ public:
     }
 
     virtual status_t stop() {
-        gNumFramesOutput = 0;
+//        gNumFramesOutput = 0;
         return OK;
     }
 
@@ -226,8 +271,14 @@ public:
             size = mSize;
         }
 
-        memcpy ((*buffer)->data(), data, size);
-        (*buffer)->set_range(0, size);
+        size_t offset = 0;
+        if (mMetadata)
+            memcpy ((*buffer)->data(), data, size);
+        else {
+            offset = ((int)((*buffer)->data() + 0x0FFF) & ~0x0FFF) - (int)(*buffer)->data();
+            memcpy ((*buffer)->data() + offset, data, size);
+        }
+        (*buffer)->set_range(offset, size);
         (*buffer)->meta_data()->clear();
         (*buffer)->meta_data()->setInt64(
                 kKeyTime, (gNumFramesOutput * 1000000) / mFrameRate);
@@ -246,6 +297,10 @@ protected:
     virtual ~DummySource() {
         for(int i = 0; i < PRELOAD_FRAME_NUM; i ++)
             delete mIMB[i];
+
+#ifdef INTEL_VIDEO_XPROC_SHARING
+        IntelMetadataBuffer::ClearContext(mSessionFlag, true);
+#endif
     }
 
 public:
@@ -259,6 +314,9 @@ public:
     int mFrameRate;
     int mColorFormat;
     size_t mSize;
+    unsigned int mSessionFlag;
+    const char* mTAG;
+
 //    int64_t mNumFramesOutput;
 
     DummySource(const DummySource &);
@@ -275,8 +333,10 @@ public:
 class MallocSource : public DummySource {
 public:
 
-    MallocSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv) :
-			DummySource (width, height, stride, nFrames, fps, mdata, yuv) {
+    MallocSource(const sp<MetaData> &meta, uint32_t flag) :
+			DummySource (meta, flag) {
+
+        mTAG = "Malloc";
     }
 
     ~MallocSource() {
@@ -306,7 +366,6 @@ public:
 
             //keep address 4K aligned
             mUsrptr[i] = (uint8_t*)((((uint32_t )mMallocPtr[i] + 4095) / 4096 ) * 4096);
-
             mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t) mUsrptr[i]);
             mIMB[i]->SetValueInfo(&vinfo);
 //            LOG("Malloc address=%x\n", mUsrptr[i]);
@@ -324,8 +383,9 @@ private:
 class MemHeapSource : public DummySource {
 public:
 
-    MemHeapSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv) :
-			DummySource (width, height, stride, nFrames, fps, mdata, yuv) {
+    MemHeapSource(const sp<MetaData> &meta, uint32_t flag) :
+			DummySource (meta, flag) {
+        mTAG = "MemHeap";
     }
 
     ~MemHeapSource() {
@@ -358,9 +418,16 @@ public:
 
             mUsrptr[i] = (uint8_t*) ((int) (mBuffers[i]->pointer() + 0x0FFF) & ~0x0FFF);
 
-            mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t) mUsrptr[i]);
+            mIMB[i] = new IntelMetadataBuffer();
+            mIMB[i]->SetType(MetadataBufferTypeCameraSource);
+#ifdef INTEL_VIDEO_XPROC_SHARING
+            mIMB[i]->SetSessionFlag(mSessionFlag);
+            mIMB[i]->ShareValue(mBuffers[i]);
+#else
+            mIMB[i]->SetValue((int32_t)mUsrptr[i]);
+#endif
             mIMB[i]->SetValueInfo(&vinfo);
-            LOG("MemHeap address=%x\n", mUsrptr[i]);
+            LOG("MemHeap local address=%x\n", mUsrptr[i]);
         }
 
         return OK;
@@ -393,9 +460,10 @@ extern "C" {
 
 class VASurfaceSource : public DummySource {
 public:
-    VASurfaceSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv, int mode) :
-			DummySource (width, height, stride, nFrames, fps, mdata, yuv) {
+    VASurfaceSource(const sp<MetaData> &meta, uint32_t flag, int mode) :
+			DummySource (meta, flag) {
         mMode = mode;
+        mTAG = "VASurface";
     }
 
     virtual ~VASurfaceSource() {
@@ -529,12 +597,13 @@ private:
 class GfxSource : public DummySource {
 
 public:
-    GfxSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv) :
-			DummySource (width, height, stride, nFrames, fps, mdata, yuv) {
-        mColor = 0;
+    GfxSource(const sp<MetaData> &meta, uint32_t flag) :
+			DummySource (meta, flag) {
+
         mWidth = ((mWidth + 15 ) / 16 ) * 16;
         mHeight = ((mHeight + 15 ) / 16 ) * 16;
         mStride = mWidth;
+        mTAG = "Gfx";
     }
 
     virtual ~GfxSource() {
@@ -548,17 +617,24 @@ public:
         mGraphicBufferAlloc = composer->createGraphicBufferAlloc();
 
         uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_SW_WRITE_OFTEN;// | GraphicBuffer::USAGE_HW_COMPOSER;
-        int format = HAL_PIXEL_FORMAT_NV12;
-        if (mColor == 1)
-            format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
-
         int32_t error;
+
+        ValueInfo vinfo;
+        memset(&vinfo, 0, sizeof(ValueInfo));
+        vinfo.mode = MEM_MODE_GFXHANDLE;
+        vinfo.size = 0;
+        vinfo.width = mWidth;
+        vinfo.height = mHeight;
+        vinfo.lumaStride = mStride;
+        vinfo.chromStride = mStride;
+        vinfo.format = mColorFormat;
+        vinfo.s3dformat = 0xFFFFFFFF;
 
         for(int i = 0; i < PRELOAD_FRAME_NUM; i ++)
         {
             sp<GraphicBuffer> graphicBuffer(
                     mGraphicBufferAlloc->createGraphicBuffer(
-                                    mWidth, mHeight, format, usage, &error));
+                                    mWidth, mHeight, mColorFormat, usage, &error));
 
             if (graphicBuffer.get() == NULL) {
                 printf("GFX createGraphicBuffer failed\n");
@@ -570,7 +646,16 @@ public:
             if (graphicBuffer->lock(usage, &vaddr[0]) != OK)
                 return UNKNOWN_ERROR;
 
-            mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)mGraphicBuffer[i]->handle);
+            mUsrptr[i] = (uint8_t*)vaddr[0];
+            mIMB[i] = new IntelMetadataBuffer();
+            mIMB[i]->SetType(MetadataBufferTypeCameraSource);
+#ifdef INTEL_VIDEO_XPROC_SHARING
+            mIMB[i]->SetSessionFlag(mSessionFlag);
+            mIMB[i]->ShareValue(mGraphicBuffer[i]);
+#else
+            mIMB[i]->SetValue((int32_t)mGraphicBuffer[i]->handle);
+#endif
+            mIMB[i]->SetValueInfo(&vinfo);
             graphicBuffer->unlock();
 
             mUsrptr[i] = (uint8_t*)vaddr[0];
@@ -589,16 +674,14 @@ private:
     //for gfxhandle
     sp<IGraphicBufferAlloc> mGraphicBufferAlloc;
     sp<GraphicBuffer> mGraphicBuffer[PRELOAD_FRAME_NUM];
-
-    int mColor;
 };
 
 class GrallocSource : public DummySource {
 
 public:
-    GrallocSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv) :
-			DummySource (width, height, stride, nFrames, fps, mdata, yuv) {
-        mColor = 0;
+    GrallocSource(const sp<MetaData> &meta, uint32_t flag) :
+			DummySource (meta, flag) {
+        mTAG = "Gralloc";
     }
 
     virtual ~GrallocSource () {
@@ -609,15 +692,12 @@ public:
     status_t createResource()
     {
         int usage = GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_WRITE_OFTEN;
-        int format = HAL_PIXEL_FORMAT_NV12;
-        if (mColor == 1)
-            format = 0x7FA00E00; // = OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar in OMX_IVCommon.h
 
         gfx_init();
 
         for(int i = 0; i < PRELOAD_FRAME_NUM; i ++)
         {
-            if (gfx_alloc(mWidth, mHeight, format, usage, &mHandle[i], (int32_t*)&mStride) != 0)
+            if (gfx_alloc(mWidth, mHeight, mColorFormat, usage, &mHandle[i], (int32_t*)&mStride) != 0)
                 return UNKNOWN_ERROR;
             void* vaddr[3];
 
@@ -630,7 +710,6 @@ public:
             mStride = h->iWidth;
             mHeight = h->iHeight;
         }
-
         return OK;
     }
 
@@ -713,13 +792,12 @@ private:
     alloc_device_t  *mAllocDev; /* get by gralloc_open */
 
     buffer_handle_t mHandle[PRELOAD_FRAME_NUM];
-    int mColor;
 };
 
 class MixSurfaceMediaSource : public SurfaceMediaSource {
 
 public:
-    MixSurfaceMediaSource(int width, int height, int stride, int nFrames, int fps, bool mdata, const char* yuv)
+    MixSurfaceMediaSource(int width, int height, int nFrames, int fps)
                                  :SurfaceMediaSource(width, height){
         mMaxNumFrames = nFrames;
         mFPS = fps;
@@ -729,7 +807,7 @@ public:
     }
 
     status_t start(MetaData *params) {
-		mSTC = new SurfaceTextureClient(static_cast<sp<ISurfaceTexture> >(getBufferQueue()));
+		mSTC = new Surface(getBufferQueue());
 		mANW = mSTC;
         mRunning = true;
 
@@ -759,7 +837,7 @@ public:
     int mFPS;
 
 private:
-    sp<SurfaceTextureClient> mSTC;
+    sp<Surface> mSTC;
     sp<ANativeWindow> mANW;
     pthread_t mThread;
     bool mRunning;
@@ -812,6 +890,7 @@ public:
         mEncodeFrameCount = 0;
         mSource = source;
 
+        mMeta = meta;
         const char *mime;
         bool success = meta->findCString(kKeyMIMEType, &mime);
         CHECK(success);
@@ -869,16 +948,18 @@ public:
         mRCMode = RC_MODES[rcmode];
     }
 
-    virtual sp<MetaData> getFormat() {
-        sp<MetaData> meta = new MetaData;
-        meta->setInt32(kKeyWidth, mWidth);
-        meta->setInt32(kKeyHeight, mHeight);
+    sp<MetaData> getFormat() {
+#if 0
+        mMeta = new MetaData;
+        mMeta->setInt32(kKeyWidth, mWidth);
+        mMeta->setInt32(kKeyHeight, mHeight);
 //        meta->setInt32(kKeyColorFormat, mColorFormat);
-        meta->setCString(kKeyMIMEType, mCodec);
-        return meta;
+        mMeta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_AVC);
+#endif
+        return mMeta;
     }
 
-    virtual status_t start(MetaData *params) {
+    status_t start(MetaData *params) {
         Encode_Status ret;
         status_t err;
 
@@ -906,7 +987,7 @@ public:
         return mSource->start();
     }
 
-    virtual status_t stop() {
+    status_t stop() {
         Encode_Status ret;
 
         ret = mVideoEncoder->stop();
@@ -1144,7 +1225,7 @@ private:
 
     sp<MediaSource> mSource;
     MediaBufferGroup mGroup;
-
+    sp<MetaData> mMeta;
 };
 
 class IVFWriter : public MediaWriter {
@@ -1394,9 +1475,11 @@ void usage() {
     printf(" -p/--fps <Bitrate>				set frame rate, default 30\n");
     printf(" -q/--minQP <qp>					set minQP, default 0\n");
     printf(" -r/--rcMode <Mode>				set rc mode, like VBR(default), CBR, VCM, NO_RC\n");
-    printf(" -s/--src <source>				select source, like MALLOC(default), VASURFACE, KBUFHANDLE, GFX, GRALLOC, MEMHEAP (CAMERASOURCE, not support yet) \n");
+    printf(" -s/--src <source>				select source, like MALLOC(default), VASURFACE, KBUFHANDLE, GFX, GRALLOC, MEMHEAP, SURFACEMEDIASOURCE (CAMERASOURCE, not support yet) \n");
+    printf(" -t/--sessionFlag	<sessionflag>	            set sessionflag, default is 0\n");
+    printf(" -u/--disableFrameSkip				disable frame skip, default is false\n");
     printf(" -w <Width> -h <Height>				set source width /height, default 1280*720\n");
-    printf(" -t/--disableFrameSkip				disable frame skip, default is false\n");
+
     printf("\n");
 
 }
@@ -1426,7 +1509,8 @@ int main(int argc, char* argv[])
     int OutFormat = 0;
     int SyncMode = 0;
     char* OutFileName = "out.264";
-    const char* Yuvfile = NULL;
+    const char* Yuvfile = "";
+    unsigned int SessionFlag = 0;
 
     android::ProcessState::self()->startThreadPool();
 
@@ -1453,7 +1537,8 @@ int main(int argc, char* argv[])
 						{"intraPeriod", required_argument, NULL, 'd'},
 						{"winSize", required_argument, NULL, 'j'},
 						{"idrInt", required_argument, NULL, 'l'},
-						{"disableFrameSkip", no_argument, NULL, 't'},
+						{"disableFrameSkip", no_argument, NULL, 'u'},
+						{"sessionFlag", required_argument, NULL, 't'},
 						{0, 0, 0, 0}
     };
 
@@ -1584,6 +1669,10 @@ int main(int argc, char* argv[])
                     break;
 
                 case 't':
+                    SessionFlag = atoi(optarg);
+                    break;
+
+                case 'u':
                     DisableFrameSkip = 1;
                     break;
 
@@ -1604,7 +1693,7 @@ int main(int argc, char* argv[])
     printf("=========================================\n");
     printf("Source:\n");
     printf("Type: %s, Width: %d, Height: %d, Stride: %d\n", SRCTYPE[SrcType], SrcWidth, SrcHeight, SrcStride);
-    printf("FPS: %d, YUV: %s, Metadata: %d\n", SrcFps, Yuvfile, MetadataMode);
+    printf("FPS: %d, YUV: %s, Metadata: %d, SessionFlag: 0x%08x\n", SrcFps, Yuvfile, MetadataMode, SessionFlag);
 
     printf("\nEncoder:\n");
     printf("Type: %s, Codec: %s, Width: %d, Height: %d\n", ENCTYPE[EncType], CODEC[EncCodec], EncWidth, EncHeight);
@@ -1621,29 +1710,37 @@ int main(int argc, char* argv[])
     sp<MediaWriter> writer;
 
     //setup source
+    sp<MetaData> src_meta = new MetaData;
+    src_meta->setInt32(kKeyWidth, SrcWidth);
+    src_meta->setInt32(kKeyHeight, SrcHeight);
+    src_meta->setInt32(kKeyStride, SrcStride);
+    src_meta->setInt32(kKeyFrameRate, SrcFps);
+    src_meta->setInt32(kKeyColorFormat, OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar); //HAL_PIXEL_FORMAT_NV12     OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar =  0x7FA00E00,
+
+    src_meta->setCString('yuvf', Yuvfile);
+    src_meta->setInt32('fnum', SrcFrameNum);
+    src_meta->setInt32('sflg', SessionFlag);
+
+    uint32_t src_flags = 0;
+    if (MetadataMode)
+        src_flags |= OMXCodec::kStoreMetaDataInVideoBuffers;
+
     if (SrcType == 0) {
-        source = new MallocSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
-			SrcFps, MetadataMode, Yuvfile);
+        source = new MallocSource(src_meta, src_flags);
     } else if (SrcType == 1) {
-        source = new VASurfaceSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
-			SrcFps, MetadataMode, Yuvfile, 0);
+        source = new VASurfaceSource(src_meta, src_flags, 0);
     } else if (SrcType == 2) {
-        source = new VASurfaceSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
-			SrcFps, MetadataMode, Yuvfile, 1);
+        source = new VASurfaceSource(src_meta, src_flags, 1);
     } else if (SrcType == 3) {
-        source = new GfxSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
-			SrcFps, MetadataMode, Yuvfile);
+        source = new GfxSource(src_meta, src_flags);
     } else if (SrcType == 4) {
-        source = new GrallocSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
-			SrcFps, MetadataMode, Yuvfile);
+        source = new GrallocSource(src_meta, src_flags);
     } else if (SrcType == 5) {
-        source = new MemHeapSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
-			SrcFps, MetadataMode, Yuvfile);
+        source = new MemHeapSource(src_meta, src_flags);
     } else if (SrcType == 7) {
-        source = new MixSurfaceMediaSource(SrcWidth, SrcHeight, SrcStride, SrcFrameNum,
-			SrcFps, MetadataMode, Yuvfile);
+        source = new MixSurfaceMediaSource(SrcWidth, SrcHeight, SrcFrameNum, SrcFps);
         SyncMode = 1;
-	}else{
+    }else{
         printf("Source Type is not supported\n");
         return 0;
     }
@@ -1712,16 +1809,28 @@ int main(int argc, char* argv[])
 	else 
 		writer = new IVFWriter(OutFileName);
 
-    writer->addSource(encoder);
+    status_t err;
+    err = writer->addSource(encoder);
+    if (err != OK) {
+        printf("Writer addSource failed %d\n", err);
+        return 0;
+    }
+
+    err = writer->start(enc_meta.get());
+    if (err != OK) {
+        printf("Writer start failed %d\n", err);
+        return 0;
+    }
 
     printf("Start encoding\n");
 
     int64_t start = systemTime();
-    CHECK_EQ((status_t)OK, writer->start(enc_meta.get()));
+
     while (!writer->reachedEOS()) {
         usleep(100000);
     }
-    status_t err = writer->stop();
+
+    err = writer->stop();
     int64_t end = systemTime();
 
     if (EncType == 1) {
@@ -1735,6 +1844,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    src_meta.clear();
     enc_meta.clear();
 
     printf("encoding %d frames in %lld us\n", gNumFramesOutput, (end-start)/1000);

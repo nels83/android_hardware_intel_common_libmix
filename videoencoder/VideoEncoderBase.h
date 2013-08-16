@@ -163,5 +163,9 @@ protected:
 
     //supported surface memory types
     int mSupportedSurfaceMemType;
+
+#ifdef INTEL_VIDEO_XPROC_SHARING
+    uint32_t mSessionFlag;
+#endif
 };
 #endif /* __VIDEO_ENCODER_BASE_H__ */

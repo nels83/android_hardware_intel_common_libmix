@@ -27,12 +27,25 @@
 
 #include <stdint.h>
 
+//#define INTEL_VIDEO_XPROC_SHARING
+
+#ifdef INTEL_VIDEO_XPROC_SHARING
+#include <binder/MemoryBase.h>
+#include <ui/GraphicBuffer.h>
+
+using namespace android;
+#endif
+
 #define STRING_TO_FOURCC(format) ((uint32_t)(((format)[0])|((format)[1]<<8)|((format)[2]<<16)|((format)[3]<<24)))
 
 typedef enum {
     IMB_SUCCESS = 0,
     IMB_INVAL_PARAM = 1,
     IMB_INVAL_BUFFER = 2,
+#ifdef INTEL_VIDEO_XPROC_SHARING
+    IMB_NO_SERVICE = 3,
+    IMB_SERVICE_FAIL = 4,
+#endif
 }IMB_Result;
 
 typedef enum {
@@ -57,6 +70,9 @@ typedef struct {
         uint32_t chromStride;		//picture chrom stride
         uint32_t format;		//color format
         uint32_t s3dformat;		//S3D format
+#ifdef INTEL_VIDEO_XPROC_SHARING
+        uint32_t sessionFlag;     //for buffer sharing session
+#endif
 }ValueInfo;
 
 typedef enum {
@@ -102,7 +118,52 @@ private:
 
     uint8_t* mBytes;
     uint32_t mSize;
+
+#ifdef INTEL_VIDEO_XPROC_SHARING
+public:
+    IMB_Result ShareValue(sp<MemoryBase> mem);
+    IMB_Result ShareValue(sp<GraphicBuffer> gbuffer);
+
+    IMB_Result GetSessionFlag(uint32_t &sessionflag);
+    IMB_Result SetSessionFlag(uint32_t sessionflag);
+
+    //Static, for clear context
+    static IMB_Result ClearContext(uint32_t sessionflag, bool isProvider = true);
+
+    static const uint16_t CAMERA_BASE =    0x0000;
+    static const uint16_t WIDI_BASE =      0x1000;
+    static const uint16_t WEBRTC_BASE =    0x2000;
+    static const uint16_t VIDEOEDIT_BASE = 0x3000;
+
+    static uint32_t MakeSessionFlag(uint16_t sindex, bool romoteProvider, bool remoteConsumer);
+
+private:
+    uint32_t mSessionFlag;
+#endif
+
 };
+
+#ifdef INTEL_VIDEO_XPROC_SHARING
+
+class IntelBufferSharingService : public BBinder
+{
+private:
+    static IntelBufferSharingService *gBufferService;
+
+public:
+    static status_t instantiate();
+
+    IntelBufferSharingService(){
+        LOGI("IntelBufferSharingService instance is created");
+    }
+
+    ~IntelBufferSharingService(){
+        LOGI("IntelBufferSharingService instance is destroyed");
+    }
+
+    status_t onTransact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags);
+};
+#endif
 
 #endif
 

@@ -22,6 +22,55 @@ LOCAL_MODULE := btest
 
 include $(BUILD_EXECUTABLE)
 
+# For intelmetadatabuffer cross-process buffersharing test
+# =====================================================
+
+include $(CLEAR_VARS)
+
+#VIDEO_ENC_LOG_ENABLE := true
+
+LOCAL_SRC_FILES :=              \
+    BSServer.cpp
+
+LOCAL_C_INCLUDES :=             \
+    $(LOCAL_PATH)               \
+    $(TARGET_OUT_HEADERS)/libmix_videoencoder \
+
+LOCAL_SHARED_LIBRARIES :=       \
+        libintelmetadatabuffer libutils libbinder
+
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := bserver
+
+include $(BUILD_EXECUTABLE)
+
+# For intelmetadatabuffer cross-process buffersharing test
+# =====================================================
+
+include $(CLEAR_VARS)
+
+#VIDEO_ENC_LOG_ENABLE := true
+
+LOCAL_SRC_FILES :=              \
+    BSClient.cpp
+
+LOCAL_C_INCLUDES :=             \
+    $(LOCAL_PATH)               \
+    $(TARGET_OUT_HEADERS)/libmix_videoencoder \
+
+LOCAL_SHARED_LIBRARIES :=       \
+        libintelmetadatabuffer libutils libbinder \
+        libgui                  \
+        libui                   \
+        libutils                \
+        libcutils               \
+        libhardware             \
+
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := bclient
+
+include $(BUILD_EXECUTABLE)
+
 # For mix_encoder
 # =====================================================
 

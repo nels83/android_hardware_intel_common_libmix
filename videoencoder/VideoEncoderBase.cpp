@@ -68,7 +68,11 @@ VideoEncoderBase::VideoEncoderBase()
     ,mTotalSize(0)
     ,mTotalSizeCopied(0)
     ,mFrameSkipped(false)
-    ,mSupportedSurfaceMemType(0){
+    ,mSupportedSurfaceMemType(0)
+#ifdef INTEL_VIDEO_XPROC_SHARING
+    ,mSessionFlag(0)
+#endif
+    {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     // here the display can be any value, use following one
@@ -106,6 +110,10 @@ VideoEncoderBase::~VideoEncoderBase() {
     } else {
         mVADisplay = NULL;
     }
+
+#ifdef INTEL_VIDEO_XPROC_SHARING
+    IntelMetadataBuffer::ClearContext(mSessionFlag, false);
+#endif
 }
 
 Encode_Status VideoEncoderBase::start() {
@@ -1806,6 +1814,9 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
         value = (int32_t)inBuffer->data;
     }
 
+#ifdef INTEL_VIDEO_XPROC_SHARING
+    imb.GetSessionFlag(mSessionFlag);
+#endif
 
     //find if mapped
     map = (SurfaceMap*) findSurfaceMapByValue(value);

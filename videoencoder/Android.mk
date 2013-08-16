@@ -101,6 +101,11 @@ LOCAL_COPY_HEADERS_TO  := libmix_videoencoder
 LOCAL_COPY_HEADERS := \
     IntelMetadataBuffer.h
 
+ifeq ($(INTEL_VIDEO_XPROC_SHARING),true)
+LOCAL_SHARED_LIBRARIES := liblog libutils libbinder libgui \
+                          libui libcutils libhardware
+endif
+
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libintelmetadatabuffer
 
