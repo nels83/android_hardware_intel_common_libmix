@@ -769,8 +769,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
     if (profile >= VAProfileH264Baseline && profile <= VAProfileVC1Advanced) {
         ITRACE("Using GEN driver");
         mDisplay = "libva_driver_name=i965";
-    }
-    else {
+    } else {
         ITRACE("Using PVR driver");
         mDisplay = "libva_driver_name=pvr";
     }
@@ -886,8 +885,8 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
             mNumSurfaces,
             NULL,
             0);
-    mVideoFormatInfo.surfaceWidth = mVideoFormatInfo.width;
-    mVideoFormatInfo.surfaceHeight = mVideoFormatInfo.height;
+        mVideoFormatInfo.surfaceWidth = mVideoFormatInfo.width;
+        mVideoFormatInfo.surfaceHeight = mVideoFormatInfo.height;
     }
     CHECK_VA_STATUS("vaCreateSurfaces");
 
@@ -1044,7 +1043,7 @@ Decode_Status VideoDecoderBase::parseBuffer(uint8_t *buffer, int32_t size, bool 
     return DECODE_SUCCESS;
 }
 
-Decode_Status VideoDecoderBase::mapSurface(void){
+Decode_Status VideoDecoderBase::mapSurface(void) {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAImage image;
     uint8_t *userPtr;
@@ -1208,7 +1207,7 @@ void VideoDecoderBase::initSurfaceBuffer(bool reset) {
             mSurfaceBuffers[i].renderBuffer.rawData = NULL;
             mSurfaceBuffers[i].mappedData = NULL;
         }
-        if (useGraphicBuffer){
+        if (useGraphicBuffer) {
             if (reset) {
                mSurfaceBuffers[i].renderBuffer.graphicBufferHandle = mConfigBuffer.graphicBufferHandler[i];
                mSurfaceBuffers[i].renderBuffer.renderDone = false; //default false
@@ -1220,11 +1219,9 @@ void VideoDecoderBase::initSurfaceBuffer(bool reset) {
                       break;
                    }
                }
-            }
-            else{
+            } else {
                mSurfaceBuffers[i].renderBuffer.renderDone = false;
             }
-
         } else {
             mSurfaceBuffers[i].renderBuffer.graphicBufferHandle = NULL;
             mSurfaceBuffers[i].renderBuffer.renderDone = true;
@@ -1299,8 +1296,7 @@ Decode_Status VideoDecoderBase::setParserType(_vbp_parser_type type) {
         ITRACE("Parser Type = %d", (int32_t)type);
         mParserType = type;
         return DECODE_SUCCESS;
-    }
-    else {
+    } else {
         ETRACE("Invalid parser type = %d", (int32_t)type);
         return DECODE_NO_PARSER;
     }
@@ -1322,9 +1318,7 @@ Decode_Status VideoDecoderBase::updateBuffer(uint8_t *buffer, int32_t size, void
     return DECODE_SUCCESS;
 }
 
-Decode_Status VideoDecoderBase::getCodecSpecificConfigs(
-    VAProfile profile, VAConfigID *config)
-{
+Decode_Status VideoDecoderBase::getCodecSpecificConfigs(VAProfile profile, VAConfigID *config) {
     VAStatus vaStatus;
     VAConfigAttrib attrib;
     attrib.type = VAConfigAttribRTFormat;

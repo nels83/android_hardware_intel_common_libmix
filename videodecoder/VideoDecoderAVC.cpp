@@ -676,10 +676,13 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
     if ((mVideoFormatInfo.width != width ||
         mVideoFormatInfo.height != height) &&
         width && height) {
+        if (VideoDecoderBase::alignMB(mVideoFormatInfo.width) != width ||
+            VideoDecoderBase::alignMB(mVideoFormatInfo.height) != height) {
+            mSizeChanged = true;
+            ITRACE("Video size is changed.");
+        }
         mVideoFormatInfo.width = width;
         mVideoFormatInfo.height = height;
-        mSizeChanged = true;
-        ITRACE("Video size is changed.");
     }
 
     if (data->new_sps) {

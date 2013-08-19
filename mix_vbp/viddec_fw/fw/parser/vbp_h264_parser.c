@@ -983,11 +983,16 @@ static void vbp_set_codec_data_h264(
 
 
     /* udpate sps and pps status */
-    query_data->new_sps = (seq_parameter_set_id != parser->info.active_PPS.seq_parameter_set_id) ? 1 : 0;
-    query_data->new_pps = (pic_parameter_set_id != parser->info.active_PPS.pic_parameter_set_id) ? 1 : 0;
+    query_data->new_sps = 0;
+    query_data->new_pps = 0;
+    if (query_data->has_sps && query_data->has_pps)
+    {
+        query_data->new_sps = (seq_parameter_set_id != parser->info.active_PPS.seq_parameter_set_id) ? 1 : 0;
+        query_data->new_pps = (pic_parameter_set_id != parser->info.active_PPS.pic_parameter_set_id) ? 1 : 0;
+    }
     query_data->has_sps = parser->info.active_SPS.seq_parameter_set_id != 0xff;
     query_data->has_pps = parser->info.active_PPS.seq_parameter_set_id != 0xff;
-    if ( frame_width != codec_data->frame_width || frame_height != codec_data->frame_height)
+    if (frame_width != codec_data->frame_width || frame_height != codec_data->frame_height)
     {
         query_data->new_sps = 1;
         query_data->new_pps = 1;
