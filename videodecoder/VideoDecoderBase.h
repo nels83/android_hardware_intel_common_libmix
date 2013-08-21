@@ -151,7 +151,7 @@ private:
     VideoSurfaceBuffer *mOutputHead; // head of output buffer list
     VideoSurfaceBuffer *mOutputTail;  // tail of output buffer list
     VASurfaceID *mSurfaces; // surfaces array
-    VASurfaceAttributeTPI *mVASurfaceAttrib;
+    VASurfaceAttribExternalBuffers *mVASurfaceAttrib;
     uint8_t **mSurfaceUserPtr; // mapped user space pointer
     int32_t mSurfaceAcquirePos; // position of surface to start acquiring
     int32_t mNextOutputPOC; // Picture order count of next output

@@ -808,35 +808,57 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
 #endif
     }
     if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER) {
-        mVASurfaceAttrib = new VASurfaceAttributeTPI;
+        VASurfaceAttrib attribs[2];
+        mVASurfaceAttrib = new VASurfaceAttribExternalBuffers;
         if (mVASurfaceAttrib == NULL) {
             return DECODE_MEMORY_FAIL;
         }
 
-        mVASurfaceAttrib->buffers= (unsigned int *)malloc(sizeof(unsigned int)*mNumSurfaces);
+        mVASurfaceAttrib->buffers= (unsigned long *)malloc(sizeof(unsigned long)*mNumSurfaces);
         if (mVASurfaceAttrib->buffers == NULL) {
             return DECODE_MEMORY_FAIL;
         }
-        mVASurfaceAttrib->count = mNumSurfaces;
-        mVASurfaceAttrib->luma_stride = mConfigBuffer.graphicBufferStride;
+        mVASurfaceAttrib->num_buffers = mNumSurfaces;
         mVASurfaceAttrib->pixel_format = mConfigBuffer.graphicBufferColorFormat;
         mVASurfaceAttrib->width = mVideoFormatInfo.width;
         mVASurfaceAttrib->height = mVideoFormatInfo.height;
-        mVASurfaceAttrib->type = VAExternalMemoryAndroidGrallocBuffer;
-        mVASurfaceAttrib->reserved[0] = (unsigned int)mConfigBuffer.nativeWindow;
+        mVASurfaceAttrib->data_size = mConfigBuffer.graphicBufferStride * mVideoFormatInfo.height * 1.5;
+        mVASurfaceAttrib->num_planes = 2;
+        mVASurfaceAttrib->pitches[0] = mConfigBuffer.graphicBufferStride;
+        mVASurfaceAttrib->pitches[1] = mConfigBuffer.graphicBufferStride;
+        mVASurfaceAttrib->pitches[2] = 0;
+        mVASurfaceAttrib->pitches[3] = 0;
+        mVASurfaceAttrib->offsets[0] = 0;
+        mVASurfaceAttrib->offsets[1] = mConfigBuffer.graphicBufferStride * mVideoFormatInfo.height;
+        mVASurfaceAttrib->offsets[2] = 0;
+        mVASurfaceAttrib->offsets[3] = 0;
+        mVASurfaceAttrib->private_data = (void *)mConfigBuffer.nativeWindow;
+        mVASurfaceAttrib->flags = 0;
 
         for (int i = 0; i < mNumSurfaces; i++) {
             mVASurfaceAttrib->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
         }
 
-        vaStatus = vaCreateSurfacesWithAttribute(
+        attribs[0].type = (VASurfaceAttribType)VASurfaceAttribMemoryType;
+        attribs[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
+        attribs[0].value.type = VAGenericValueTypeInteger;
+        attribs[0].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
+
+        attribs[1].type = (VASurfaceAttribType)VASurfaceAttribExternalBufferDescriptor;
+        attribs[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
+        attribs[1].value.type = VAGenericValueTypePointer;
+        attribs[1].value.value.p = (void *)mVASurfaceAttrib;
+
+        vaStatus = vaCreateSurfaces(
             mVADisplay,
-            mVideoFormatInfo.surfaceWidth,
-            mVideoFormatInfo.surfaceHeight,
             format,
-            mNumSurfaces,
+            mVideoFormatInfo.width,
+            mVideoFormatInfo.height,
             mSurfaces,
-            mVASurfaceAttrib);
+            mNumSurfaces,
+            attribs,
+            2);
+
     } else {
         vaStatus = vaCreateSurfaces(
             mVADisplay,
