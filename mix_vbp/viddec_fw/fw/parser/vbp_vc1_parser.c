@@ -863,6 +863,7 @@ static void vbp_pack_picture_params_vc1(
     pic_parms->range_reduction_frame = picLayerHeader->RANGEREDFRM;
     pic_parms->rounding_control = picLayerHeader->RNDCTRL;
     pic_parms->post_processing = picLayerHeader->POSTPROC;
+    pic_parms->post_processing = seqLayerHeader->POSTPROCFLAG;
     /* fix this.  Add RESPIC to parser.  */
     pic_parms->picture_resolution_index = 0;
     pic_parms->luma_scale = picLayerHeader->LUMSCALE;
