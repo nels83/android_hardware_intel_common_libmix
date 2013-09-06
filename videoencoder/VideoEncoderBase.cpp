@@ -172,9 +172,6 @@ Encode_Status VideoEncoderBase::start() {
 
     LOG_V( "======VA Create Surfaces for Rec/Ref frames ======\n");
 
-    VASurfaceID surfaces[2];
-    VASurfaceAttrib attrib_list[2];
-    VASurfaceAttribExternalBuffers  external_refbuf;
     uint32_t stride_aligned, height_aligned;
     if(mAutoReference == false){
         stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
@@ -199,21 +196,30 @@ Encode_Status VideoEncoderBase::start() {
         attribute_tpi.size = stride_aligned * height_aligned * 3 / 2;
 #endif
 
+    ValueInfo vinfo;
+    vinfo.mode = MEM_MODE_SURFACE;
+    vinfo.width = stride_aligned;
+    vinfo.height = height_aligned;
+    vinfo.lumaStride = stride_aligned;
+    vinfo.size = stride_aligned * height_aligned * 1.5;
+    vinfo.format = VA_FOURCC_NV12;
+
     if(mAutoReference == false){
-        vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,
-                    stride_aligned, height_aligned, surfaces, 2, NULL, 0);
-        mRefSurface = surfaces[0];
-        mRecSurface = surfaces[1];
+        mRefSurface = CreateSurfaceFromExternalBuf(0, vinfo);
+        mRecSurface = CreateSurfaceFromExternalBuf(0, vinfo);
+
     }else {
         mAutoRefSurfaces = new VASurfaceID [mAutoReferenceSurfaceNum];
-        if(mComParams.profile == VAProfileVP8Version0_3)
-        {
+
+        if(mComParams.profile == VAProfileVP8Version0_3){
+           VASurfaceAttrib attrib_list[2];
+           VASurfaceAttribExternalBuffers  external_refbuf;
            setupVP8RefExternalBuf(stride_aligned,height_aligned,&external_refbuf,&attrib_list[0]);
-           vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,stride_aligned, height_aligned, mAutoRefSurfaces, mAutoReferenceSurfaceNum, NULL, 0);
+           vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,stride_aligned, height_aligned, mAutoRefSurfaces, mAutoReferenceSurfaceNum, attrib_list, 2);
+        } else {
+            for(int i = 0; i < mAutoReferenceSurfaceNum; i ++)
+                mAutoRefSurfaces[i] = CreateSurfaceFromExternalBuf(0, vinfo);
         }
-        else
-           vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,
-                       stride_aligned, height_aligned, mAutoRefSurfaces, mAutoReferenceSurfaceNum, NULL, 0);
     }
     CHECK_VA_STATUS_RETURN("vaCreateSurfaces");
 
