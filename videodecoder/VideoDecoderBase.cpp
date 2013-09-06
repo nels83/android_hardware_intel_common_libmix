@@ -142,7 +142,6 @@ Decode_Status VideoDecoderBase::reset(VideoConfigBuffer *buffer) {
     }
     mLowDelay = buffer->flag & WANT_LOW_DELAY;
     mRawOutput = buffer->flag & WANT_RAW_OUTPUT;
-    mSignalBufferSize = 0;
     if (mRawOutput) {
         WTRACE("Output is raw data.");
     }
@@ -167,7 +166,6 @@ void VideoDecoderBase::stop(void) {
     mNumSurfaces = 0;
     mSurfaceAcquirePos = 0;
     mNextOutputPOC = MINIMUM_POC;
-
     mVideoFormatInfo.valid = false;
     if (mParserHandle){
         vbp_close(mParserHandle);
@@ -949,6 +947,10 @@ Decode_Status VideoDecoderBase::terminateVA(void) {
 
     mVAStarted = false;
     mInitialized = false;
+    mSignalBufferSize = 0;
+    for (int i = 0; i < MAX_GRAPHIC_BUFFER_NUM; i++) {
+         mSignalBufferPre[i] = NULL;
+    }
     return DECODE_SUCCESS;
 }
 
