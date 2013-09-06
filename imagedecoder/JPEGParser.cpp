@@ -33,6 +33,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+bool endOfBuffer(CJPEGParse* parser);
+
 uint8_t readNextByte(CJPEGParse* parser) {
     uint8_t byte = 0;
 
@@ -42,7 +44,7 @@ uint8_t readNextByte(CJPEGParse* parser) {
     }
 
     if (parser->parse_index == parser->buff_size) {
-        parser->end_of_buff = TRUE;
+        parser->end_of_buff = true;
     }
 
     return byte;
@@ -63,7 +65,7 @@ void burnBytes( CJPEGParse* parser, uint32_t bytes_to_burn ) {
 
     if (parser->parse_index >= parser->buff_size) {
         parser->parse_index = parser->buff_size - 1;
-        parser->end_of_buff = TRUE;
+        parser->end_of_buff = true;
     }
 }
 
@@ -73,22 +75,22 @@ uint8_t getNextMarker(CJPEGParse* parser) {
             break;
         }
     }
-	/* check the next byte to make sure we don't miss the real marker*/
-	uint8_t tempNextByte = readNextByte(parser);
-	if (tempNextByte == 0xff)
-	    return readNextByte(parser);
-	else
-		return tempNextByte;
+    /* check the next byte to make sure we don't miss the real marker*/
+    uint8_t tempNextByte = readNextByte(parser);
+    if (tempNextByte == 0xff)
+        return readNextByte(parser);
+    else
+        return tempNextByte;
 }
 
-boolean setByteOffset(CJPEGParse* parser, uint32_t byte_offset)
+bool setByteOffset(CJPEGParse* parser, uint32_t byte_offset)
 {
-    boolean offset_found = FALSE;
+    bool offset_found = false;
 
     if (byte_offset < parser->buff_size) {
         parser->parse_index = byte_offset;
-        offset_found = TRUE;
-//      end_of_buff = FALSE;
+        offset_found = true;
+//      end_of_buff = false;
     }
 
     return offset_found;
@@ -98,7 +100,7 @@ uint32_t getByteOffset(CJPEGParse* parser) {
     return parser->parse_index;
 }
 
-boolean endOfBuffer(CJPEGParse* parser) {
+bool endOfBuffer(CJPEGParse* parser) {
     return parser->end_of_buff;
 }
 
@@ -110,7 +112,7 @@ void parserInitialize(CJPEGParse* parser,  uint8_t* stream_buff, uint32_t buff_s
     parser->parse_index = 0;
     parser->buff_size = buff_size;
     parser->stream_buff = stream_buff;
-    parser->end_of_buff = FALSE;
+    parser->end_of_buff = false;
     parser->readNextByte = readNextByte;
     parser->readBytes = readBytes;
     parser->burnBytes = burnBytes;

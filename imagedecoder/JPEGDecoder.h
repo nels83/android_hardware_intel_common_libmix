@@ -1,5 +1,5 @@
 /* INTEL CONFIDENTIAL
-* Copyright (c) 2012 Intel Corporation.  All rights reserved.
+* Copyright (c) 2012, 2013 Intel Corporation.  All rights reserved.
 * Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
@@ -23,91 +23,67 @@
 *
 * Authors:
 *    Nana Guo <nana.n.guo@intel.com>
+*    Yao Cheng <yao.cheng@intel.com>
 *
 */
 
-#ifndef JDLIBVA_H
-#define JDLIBVA_H
 
-#include "JPEGParser.h"
-#include <pthread.h>
-#include <va/va.h>
-//#include <va/va_android.h>
-#include "va/va_dec_jpeg.h"
-#include <stdio.h>
-#define HAVE_BOOLEAN
-#include "jpeglib.h"
-#include <hardware/gralloc.h>
+#ifndef JPEGDEC_H
+#define JPEGDEC_H
 
-#define Display unsigned int
-#define BOOL int
+#include "../videovpp/VideoVPPBase.h"
+#include <utils/KeyedVector.h>
+#include <utils/threads.h>
+#include "JPEGCommon.h"
+using namespace android;
 
-#define JPEG_MAX_COMPONENTS 4
-#define JPEG_MAX_QUANT_TABLES 4
+struct CJPEGParse;
+class JpegBlitter;
 
-typedef struct {
-    Display * android_display;
-    uint32_t surface_count;
-    VADisplay va_display;
-    VAContextID va_context;
-    VASurfaceID* va_surfaces;
-    VAConfigID va_config;
+// Non thread-safe
+class JpegDecoder
+{
+friend class JpegBlitter;
+public:
+    struct MapHandle
+    {
+    friend class JpegDecoder;
+    public:
+        bool valid;
+    private:
+        VAImage *img;
+    };
+    JpegDecoder();
+    virtual ~JpegDecoder();
+    virtual JpegDecodeStatus init(int width, int height, RenderTarget **targets, int num);
+    virtual void deinit();
+    virtual JpegDecodeStatus parse(JpegInfo &jpginfo);
+    virtual JpegDecodeStatus decode(JpegInfo &jpginfo, RenderTarget &target);
+    virtual JpegDecodeStatus sync(RenderTarget &target);
+    virtual bool busy(RenderTarget &target) const;
+    virtual JpegDecodeStatus blit(RenderTarget &src, RenderTarget &dst);
+    virtual MapHandle mapData(RenderTarget &target, void ** data, uint32_t * offsets, uint32_t * pitches);
+    virtual void unmapData(RenderTarget &target, MapHandle maphandle);
+private:
+    bool mInitialized;
+    mutable Mutex mLock;
+    VADisplay mDisplay;
+    VAConfigID mConfigId;
+    VAContextID mContextId;
+    CJPEGParse *mParser;
+    JpegBlitter *mBlitter;
+    KeyedVector<buffer_handle_t, VASurfaceID> mGrallocSurfaceMap;
+    KeyedVector<unsigned long, VASurfaceID> mDrmSurfaceMap;
+    KeyedVector<int, VASurfaceID> mNormalSurfaceMap;
+    virtual VASurfaceID getSurfaceID(RenderTarget &target) const;
+    virtual JpegDecodeStatus parseTableData(JpegInfo &jpginfo);
+    virtual bool jpegColorFormatSupported(JpegInfo &jpginfo) const;
+    virtual JpegDecodeStatus createSurfaceFromRenderTarget(RenderTarget &target, VASurfaceID *surf_id);
+    virtual JpegDecodeStatus createSurfaceInternal(int width, int height, int pixel_format, int handle, VASurfaceID *surf_id);
+    virtual JpegDecodeStatus createSurfaceDrm(int width, int height, int pixel_format, unsigned long boname, int stride, VASurfaceID *surf_id);
+    virtual JpegDecodeStatus createSurfaceGralloc(int width, int height, int pixel_format, buffer_handle_t handle, int stride, VASurfaceID *surf_id);
+};
 
-    VAPictureParameterBufferJPEGBaseline picture_param_buf;
-    VASliceParameterBufferJPEGBaseline slice_param_buf[JPEG_MAX_COMPONENTS];
-    VAIQMatrixBufferJPEGBaseline qmatrix_buf;
-    VAHuffmanTableBufferJPEGBaseline hufman_table_buf;
-
-    uint32_t dht_byte_offset[4];
-    uint32_t dqt_byte_offset[4];
-    uint32_t huffman_tables_num;
-    uint32_t quant_tables_num;
-    uint32_t soi_offset;
-    uint32_t eoi_offset;
-
-    uint8_t* bitstream_buf;
-    uint32_t image_width;
-    uint32_t image_height;
-    uint32_t scan_ctrl_count;
-
-    uint8_t * image_buf;
-    VAImage surface_image;
-    boolean hw_state_ready;
-    boolean hw_caps_ready;
-    boolean hw_path;
-    boolean initialized;
-    boolean resource_allocated;
-
-    uint32_t file_size;
-    uint32_t rotation;
-    CJPEGParse* JPEGParser;
-
-    char ** output_image;
-    uint32_t output_lines;
-    uint32_t fourcc;
-} jd_libva_struct;
-
-typedef enum {
-    DECODE_NOT_STARTED = -6,
-    DECODE_INVALID_DATA = -5,
-    DECODE_DRIVER_FAIL = -4,
-    DECODE_PARSER_FAIL = -3,
-    DECODE_MEMORY_FAIL = -2,
-    DECODE_FAIL = -1,
-    DECODE_SUCCESS = 0,
-
-} IMAGE_DECODE_STATUS;
-
-typedef int32_t Decode_Status;
-
-extern jd_libva_struct jd_libva;
-
-Decode_Status jdva_initialize (jd_libva_struct * jd_libva_ptr);
-void jdva_deinitialize (jd_libva_struct * jd_libva_ptr);
-Decode_Status jdva_decode (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
-Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr);
-Decode_Status jdva_release_resource (jd_libva_struct * jd_libva_ptr);
-Decode_Status parseBitstream(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
-Decode_Status parseTableData(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
 
 #endif
+

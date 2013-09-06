@@ -50,9 +50,16 @@ TraceImageDecoder(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 #else
 // for Android OS
 
-//#define LOG_NDEBUG 0
-
+#ifdef LOG_TAG
+#undef LOG_TAG
+#endif
 #define LOG_TAG "ImageDecoder"
+
+#ifdef LOG_NDEBUG
+#undef LOG_NDEBUG
+#endif
+#define LOG_NDEBUG 0
+
 
 #include <utils/Log.h>
 #define ETRACE(...) ALOGE(__VA_ARGS__)

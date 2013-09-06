@@ -31,17 +31,6 @@
 
 #include <stdint.h>
 
-#ifndef boolean
-#define boolean int
-#endif
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-
 // Marker Codes
 #define CODE_SOF_BASELINE 0xC0
 #define CODE_SOF1         0xC1
@@ -87,20 +76,20 @@
 #define CODE_APP13        0xED
 #define CODE_APP14        0xEE
 #define CODE_APP15        0xEF
-typedef  struct _CJPEGParse CJPEGParse;
-struct _CJPEGParse {
+
+struct CJPEGParse {
     uint8_t* stream_buff;
     uint32_t parse_index;
     uint32_t buff_size;
-    boolean end_of_buff;
+    bool end_of_buff;
     uint8_t (*readNextByte)(CJPEGParse* parser);
     uint32_t (*readBytes)( CJPEGParse* parser, uint32_t bytes_to_read );
     void (*burnBytes)( CJPEGParse* parser, uint32_t bytes_to_burn );
     uint8_t (*getNextMarker)(CJPEGParse* parser);
     uint32_t (*getByteOffset)(CJPEGParse* parser);
-    boolean (*endOfBuffer)(CJPEGParse* parser);
+    bool (*endOfBuffer)(CJPEGParse* parser);
     uint8_t* (*getCurrentIndex)(CJPEGParse* parser);
-    boolean (*setByteOffset)( CJPEGParse* parser, uint32_t byte_offset );
+    bool (*setByteOffset)( CJPEGParse* parser, uint32_t byte_offset );
 };
 
 void parserInitialize(CJPEGParse* parser,  uint8_t* stream_buff, uint32_t buff_size);
