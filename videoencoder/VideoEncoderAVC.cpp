@@ -656,7 +656,11 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
         mFrameNum = 0;
         ret = renderSequenceParams(task);
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
-        mNewHeader = false; //Set to require new header filed to false
+        if (mNewHeader) {
+            mNewHeader = false; //Set to require new header filed to false
+            mFrameNum = 0; //reset mFrameNum to 0
+            updateFrameInfo(task); //recalculate frame info if mNewHeader is set true after PrepareFrameInfo in encode()
+        }
     }
 
     if (mRenderMaxSliceSize && mVideoParamsAVC.maxSliceSize != 0) {
