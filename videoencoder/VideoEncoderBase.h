@@ -76,7 +76,7 @@ protected:
     virtual Encode_Status updateFrameInfo(EncodeTask* task) ;
 
     Encode_Status renderDynamicFrameRate();
-    Encode_Status renderDynamicBitrate();
+    Encode_Status renderDynamicBitrate(EncodeTask* task);
     Encode_Status renderHrd();
     Encode_Status queryProfileLevelConfig(VADisplay dpy, VAProfile profile);
 

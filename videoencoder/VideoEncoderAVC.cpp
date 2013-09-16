@@ -660,7 +660,6 @@ Encode_Status VideoEncoderAVC::outputNaluLengthsPrefixed(VideoEncOutputBuffer *o
     uint32_t nalNum = 0;
 
     CHECK_NULL_RETURN_IFFAIL(mCurSegment->buf);
-	LOG_I("outputNaluLengthsPrefixed\n");
 
     while (1) {
 
@@ -676,7 +675,6 @@ Encode_Status VideoEncoderAVC::outputNaluLengthsPrefixed(VideoEncOutputBuffer *o
         CHECK_ENCODE_STATUS_RETURN("getOneNALUnit");
 
         if (nalSize + 4 <= outBuffer->bufferSize - NALUINFO_OFFSET - sizeCopiedHere) {
-			LOG_I("zhaoliang nalSize=%d, nalOffset=%d\n", nalSize, nalOffset);
 
             memcpy(outBuffer->data + NALUINFO_OFFSET + sizeCopiedHere,
                    (uint8_t *)mCurSegment->buf + mOffsetInSeg, nalSize + nalOffset);
@@ -700,8 +698,6 @@ Encode_Status VideoEncoderAVC::outputNaluLengthsPrefixed(VideoEncOutputBuffer *o
 
         *nalLength = nalSize + nalOffset;
 
-		LOG_I("nalLength=%d\n", nalSize + nalOffset);
-
         // check if all data in current segment has been copied out
         if (mCurSegment->size == mOffsetInSeg) {
             if (mCurSegment->next != NULL) {
@@ -720,7 +716,6 @@ Encode_Status VideoEncoderAVC::outputNaluLengthsPrefixed(VideoEncOutputBuffer *o
 
     outBuffer->offset = NALUINFO_OFFSET;
     uint32_t *nalHead = (uint32_t *) outBuffer->data;
-    LOG_I("zhaoliang nalHead =%x\n", nalHead);
     *nalHead = 0x4E414C4C; //'nall'
     *(++nalHead) = nalNum;
 
@@ -731,6 +726,7 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
     Encode_Status ret = ENCODE_SUCCESS;
 
     LOG_V( "Begin\n");
+
     if (mFrameNum == 0 || mNewHeader) {
         if (mRenderHrd) {
             ret = renderHrd();
@@ -754,11 +750,12 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
         mRenderMaxSliceSize = false;
     }
 
-    if (mRenderBitRate) {
-        ret = VideoEncoderBase::renderDynamicBitrate();
-        CHECK_ENCODE_STATUS_RETURN("renderDynamicBitrate");
+    if (mComParams.rcParams.enableIntraFrameQPControl && (task->type == FTYPE_IDR || task->type == FTYPE_I))
+        mRenderBitRate = true;
 
-        mRenderBitRate = false;
+    if (mRenderBitRate) {
+        ret = VideoEncoderBase::renderDynamicBitrate(task);
+        CHECK_ENCODE_STATUS_RETURN("renderDynamicBitrate");
     }
 
     if (mRenderAIR &&
@@ -990,6 +987,11 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
             (unsigned int) (frameRateNum + frameRateDenom /2 ) / frameRateDenom;
     rcMiscParam->initial_qp = mComParams.rcParams.initQP;
     rcMiscParam->min_qp = mComParams.rcParams.minQP;
+    rcMiscParam->max_qp = mComParams.rcParams.maxQP;
+    if (mComParams.rcParams.enableIntraFrameQPControl) {
+        rcMiscParam->min_qp = mComParams.rcParams.I_minQP;
+        rcMiscParam->max_qp = mComParams.rcParams.I_maxQP;
+    }
     rcMiscParam->window_size = mComParams.rcParams.windowSize;
     //target bitrate is sent to libva through Sequence Parameter Buffer
     rcMiscParam->bits_per_second = 0;

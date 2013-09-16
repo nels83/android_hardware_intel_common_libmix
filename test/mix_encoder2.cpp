@@ -1045,6 +1045,25 @@ public:
         InBuf.priv = (void*)in;
 
 #if 0
+        if (mEncodeFrameCount == 1) {
+            VideoConfigBitRate configBitrate;
+            mVideoEncoder->getConfig(&configBitrate);
+            configBitrate.rcParams.minQP = 0;
+            configBitrate.rcParams.maxQP = 0;
+            mVideoEncoder->setConfig(&configBitrate);
+        }
+
+        if (mEncodeFrameCount == 40) {
+            VideoConfigBitRate configBitrate;
+            mVideoEncoder->getConfig(&configBitrate);
+            configBitrate.rcParams.minQP = 0;
+            configBitrate.rcParams.maxQP = 0;
+            mVideoEncoder->setConfig(&configBitrate);
+        }
+
+#endif
+
+#if 0
         if (mEncodeFrameCount > 1 && mEncodeFrameCount % 60 == 0){
             VideoParamConfigSet configIDRRequest;
             configIDRRequest.type = VideoConfigTypeIDRRequest;
@@ -1207,7 +1226,12 @@ private:
         mEncoderParams.rcParams.bitRate = mBitrate;
         mEncoderParams.rcParams.initQP = mInitQP;
         mEncoderParams.rcParams.minQP = mMinQP;
+        mEncoderParams.rcParams.maxQP = 0;
+        mEncoderParams.rcParams.I_minQP = 0;
+        mEncoderParams.rcParams.I_maxQP = 0;
         mEncoderParams.rcParams.windowSize = mWinSize;
+        mEncoderParams.rcParams.disableBitsStuffing = 1;
+        mEncoderParams.rcParams.enableIntraFrameQPControl = 0;  //change to 1 to enable I frame qp control
         mEncoderParams.intraPeriod = mIntraPeriod;
 
         ret = mVideoEncoder->setParameters(&mEncoderParams);
@@ -1225,10 +1249,10 @@ private:
             mVideoEncoder->setParameters(&AVCParam);
         }
 
-#if 1
+#if 0 
         VideoConfigBitRate configBitrate;
         mVideoEncoder->getConfig(&configBitrate);
-        configBitrate.rcParams.disableBitsStuffing = 0;
+        configBitrate.rcParams.disableBitsStuffing = 1;
         configBitrate.rcParams.disableFrameSkip = mDisableFrameSkip;
         mVideoEncoder->setConfig(&configBitrate);
 #endif

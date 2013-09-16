@@ -877,11 +877,15 @@ void VideoEncoderBase::setDefaultParams() {
     mComParams.rcMode = RATE_CONTROL_NONE;
     mComParams.rcParams.initQP = 15;
     mComParams.rcParams.minQP = 0;
+    mComParams.rcParams.maxQP = 0;
+    mComParams.rcParams.I_minQP = 0;
+    mComParams.rcParams.I_maxQP = 0;
     mComParams.rcParams.bitRate = 640000;
     mComParams.rcParams.targetPercentage= 0;
     mComParams.rcParams.windowSize = 0;
     mComParams.rcParams.disableFrameSkip = 0;
     mComParams.rcParams.disableBitsStuffing = 1;
+    mComParams.rcParams.enableIntraFrameQPControl = 0;
     mComParams.cyclicFrameInterval = 30;
     mComParams.refreshType = VIDEO_ENC_NONIR;
     mComParams.airParams.airMBs = 0;
@@ -1662,7 +1666,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
     return ret;
 }
 
-Encode_Status VideoEncoderBase::renderDynamicBitrate() {
+Encode_Status VideoEncoderBase::renderDynamicBitrate(EncodeTask* task) {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
 
     LOG_V( "Begin\n\n");
@@ -1688,7 +1692,17 @@ Encode_Status VideoEncoderBase::renderDynamicBitrate() {
 
     bitrateControlParam->bits_per_second = mComParams.rcParams.bitRate;
     bitrateControlParam->initial_qp = mComParams.rcParams.initQP;
-    bitrateControlParam->min_qp = mComParams.rcParams.minQP;
+    if(mComParams.rcParams.enableIntraFrameQPControl && (task->type == FTYPE_IDR || task->type == FTYPE_I)) {
+        bitrateControlParam->min_qp = mComParams.rcParams.I_minQP;
+        bitrateControlParam->max_qp = mComParams.rcParams.I_maxQP;
+        mRenderBitRate = true;
+        LOG_I("apply I min/max qp for IDR or I frame\n");
+    } else {
+        bitrateControlParam->min_qp = mComParams.rcParams.minQP;
+        bitrateControlParam->max_qp = mComParams.rcParams.maxQP;
+        mRenderBitRate = false;
+        LOG_I("revert to original min/max qp after IDR or I frame\n");
+    }
     bitrateControlParam->target_percentage = mComParams.rcParams.targetPercentage;
     bitrateControlParam->window_size = mComParams.rcParams.windowSize;
     bitrateControlParam->rc_flags.bits.disable_frame_skip = mComParams.rcParams.disableFrameSkip;
@@ -1698,6 +1712,7 @@ Encode_Status VideoEncoderBase::renderDynamicBitrate() {
     LOG_I("bits_per_second = %d\n", bitrateControlParam->bits_per_second);
     LOG_I("initial_qp = %d\n", bitrateControlParam->initial_qp);
     LOG_I("min_qp = %d\n", bitrateControlParam->min_qp);
+    LOG_I("max_qp = %d\n", bitrateControlParam->max_qp);
     LOG_I("target_percentage = %d\n", bitrateControlParam->target_percentage);
     LOG_I("window_size = %d\n", bitrateControlParam->window_size);
     LOG_I("disable_frame_skip = %d\n", bitrateControlParam->rc_flags.bits.disable_frame_skip);

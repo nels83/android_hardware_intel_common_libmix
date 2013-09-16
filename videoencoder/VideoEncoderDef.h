@@ -223,10 +223,14 @@ struct VideoRateControlParams {
     uint32_t bitRate;
     uint32_t initQP;
     uint32_t minQP;
+    uint32_t maxQP;
+    uint32_t I_minQP;
+    uint32_t I_maxQP;
     uint32_t windowSize;
     uint32_t targetPercentage;
     uint32_t disableFrameSkip;
     uint32_t disableBitsStuffing;
+    uint32_t enableIntraFrameQPControl;
 
     VideoRateControlParams &operator=(const VideoRateControlParams &other) {
         if (this == &other) return *this;
@@ -234,10 +238,15 @@ struct VideoRateControlParams {
         this->bitRate = other.bitRate;
         this->initQP = other.initQP;
         this->minQP = other.minQP;
+        this->maxQP = other.maxQP;
+        this->I_minQP = other.I_minQP;
+        this->I_maxQP = other.I_maxQP;
         this->windowSize = other.windowSize;
         this->targetPercentage = other.targetPercentage;
         this->disableFrameSkip = other.disableFrameSkip;
         this->disableBitsStuffing = other.disableBitsStuffing;
+        this->enableIntraFrameQPControl = other.enableIntraFrameQPControl;
+
         return *this;
     }
 };
