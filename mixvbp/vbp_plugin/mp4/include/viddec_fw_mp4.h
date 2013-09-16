@@ -1,7 +1,8 @@
 #ifndef VIDDEC_FW_MP4_H
 #define VIDDEC_FW_MP4_H
 
-#include "viddec_fw_workload.h"
+#include "viddec_fw_common_defs.h"
+#include "viddec_fw_frame_attr.h"
 
 enum viddec_fw_mp4_ref_frame_id
 {
@@ -9,19 +10,6 @@ enum viddec_fw_mp4_ref_frame_id
     VIDDEC_MP4_FRAME_PAST = 1,
     VIDDEC_MP4_FRAME_FUTURE = 2,
     VIDDEC_MP4_FRAME_MAX = 3,
-};
-
-enum mp4_workload_item_type
-{
-    VIDDEC_WORKLOAD_MP4_PAST_FRAME = VIDDEC_WORKLOAD_REF_FRAME_SOURCE_0,
-    VIDDEC_WORKLOAD_MP4_FUTURE_FRAME,
-    VIDDEC_WORKLOAD_MP4_VOL_INFO = VIDDEC_WORKLOAD_DECODER_SPECIFIC,
-    VIDDEC_WORKLOAD_MP4_VOP_INFO,
-    VIDDEC_WORKLOAD_MP4_BVOP_INFO,
-    VIDDEC_WORKLOAD_MP4_SPRT_TRAJ,
-    VIDDEC_WORKLOAD_MP4_IQUANT,
-    VIDDEC_WORKLOAD_MP4_NIQUANT,
-    VIDDEC_WORKLOAD_MP4_SVH,
 };
 
 enum viddec_fw_mp4_vop_coding_type_t

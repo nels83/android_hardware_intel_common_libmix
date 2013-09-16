@@ -225,12 +225,6 @@ static uint32 vbp_utils_free_parser_memory(vbp_context *pcontext)
         pcontext->func_free_query_data(pcontext);
     }
 
-    free(pcontext->workload2);
-    pcontext->workload2 = NULL;
-
-    free(pcontext->workload1);
-    pcontext->workload1 = NULL;
-
     free(pcontext->persist_mem);
     pcontext->persist_mem = NULL;
 
@@ -295,26 +289,6 @@ static uint32 vbp_utils_allocate_parser_memory(vbp_context *pcontext)
             error =  VBP_TYPE;
             goto cleanup;
         }
-    }
-
-    /* allocate a new workload with 1000 items. */
-    pcontext->workload1 = malloc(sizeof(viddec_workload_t) +
-                                       (MAX_WORKLOAD_ITEMS * sizeof(viddec_workload_item_t)));
-    if (NULL == pcontext->workload1)
-    {
-        ETRACE("Failed to allocate memory");
-        error = VBP_MEM;
-        goto cleanup;
-    }
-
-    /* allocate a second workload with 1000 items. */
-    pcontext->workload2 = malloc(sizeof(viddec_workload_t) +
-                                       (MAX_WORKLOAD_ITEMS * sizeof(viddec_workload_item_t)));
-    if (NULL == pcontext->workload2)
-    {
-        ETRACE("Failed to allocate memory");
-        error = VBP_MEM;
-        goto cleanup;
     }
 
     /* allocate format-specific query data */
@@ -475,7 +449,6 @@ uint32 vbp_utils_create_context(uint32 parser_type, vbp_context **ppcontext)
     }
 
     viddec_pm_utils_bstream_init(&(pcontext->parser_cxt->getbits), NULL, 0);
-    pcontext->parser_cxt->cur_buf.list_index = -1;
     pcontext->parser_cxt->parse_cubby.phase = 0;
 
     /* invoke the entry point to initialize the parser. */

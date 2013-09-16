@@ -130,11 +130,6 @@ void vc1_parse_emit_second_field_start(void *parent, vc1_viddec_parser_t *parser
 void vc1_parse_emit_current_slice(void *parent, vc1_viddec_parser_t *parser);
 
 
-
-
-/* function to handle user data */
-vc1_Status vc1_ParseAndAppendUserData(void* ctxt, uint32_t sc);
-
 /*@}*/
 
 #endif /* _VC1PARSE_H_. */

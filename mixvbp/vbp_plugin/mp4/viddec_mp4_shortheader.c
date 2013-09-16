@@ -346,22 +346,5 @@ mp4_Status_t mp4_Parse_VideoObject_svh(void *parent, viddec_mp4_parser_t *parser
 
     mp4_set_hdr_bitstream_error(parser, false, ret);
 
-    // POPULATE WORKLOAD ITEM
-    {
-        viddec_workload_item_t wi;
-
-        wi.vwi_type = VIDDEC_WORKLOAD_MPEG4_VIDEO_PLANE_SHORT;
-
-        wi.mp4_vpsh.info = 0;
-        wi.mp4_vpsh.pad1 = 0;
-        wi.mp4_vpsh.pad2 = 0;
-
-        viddec_fw_mp4_vpsh_set_source_format(&wi.mp4_vpsh, svh->source_format);
-
-        ret = (mp4_Status_t)viddec_pm_append_workitem(parent, &wi, false);
-        if (ret == 1)
-            ret = MP4_STATUS_OK;
-    }
-
     return ret;
 }

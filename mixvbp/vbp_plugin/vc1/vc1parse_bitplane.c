@@ -533,8 +533,7 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
     if (bpp->imode != VC1_BITPLANE_RAW_MODE)
     {
         uint32_t* pl;
-        int sizeinbytes,nitems,i;
-        viddec_workload_item_t    wi;
+        int sizeinbytes,i;
         uint32_t *bit_dw;
 
         pInfo->metadata.bp_raw[bpnum - VIDDEC_WORKLOAD_VC1_BITPLANE0] = false;
@@ -544,22 +543,6 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
         pl = bpp->databits;
         bit_dw = bpp->databits;
 
-        // How many payloads must be generated
-        nitems = (sizeinbytes + (sizeof(wi.data.data_payload) - 1)) /
-                 sizeof(wi.data.data_payload);
-
-        // Dump DMEM to an array of workitems
-        for ( i = 0; i < nitems; i++ )
-        {
-            wi.vwi_type           =  bpnum;
-            wi.data.data_offset   = (char *)pl - (char *)bit_dw; // offset within struct
-
-            wi.data.data_payload[0] = pl[0];
-            wi.data.data_payload[1] = pl[1];
-            pl += 2;
-
-            viddec_pm_append_workitem( ctxt, &wi, false);
-        }
     }
 
 #ifdef VBP

@@ -25,7 +25,6 @@
 
 #include "viddec_parser_ops.h"
 
-#include "viddec_fw_workload.h"
 #include "viddec_pm.h"
 
 #include <utils/Log.h>

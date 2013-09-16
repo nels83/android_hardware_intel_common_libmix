@@ -7,6 +7,4 @@ mp4_Status_t mp4_Parse_VisualSequence(void *parent, viddec_mp4_parser_t *parser)
 
 mp4_Status_t mp4_Parse_VisualObject(void *parent, viddec_mp4_parser_t *parser);
 
-mp4_Status_t mp4_Parse_UserData(void *parent, viddec_mp4_parser_t *parser);
-
 #endif

@@ -58,8 +58,6 @@
 #ifndef VIDDEC_FW_FRAME_ATTR_H
 #define VIDDEC_FW_FRAME_ATTR_H
 
-#include "viddec_fw_item_types.h"
-
 #define VIDDEC_PANSCAN_MAX_OFFSETS 4
 #define VIDDEC_MAX_CPB_CNT 32
 

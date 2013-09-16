@@ -37,10 +37,10 @@ enum {
 #endif
 #endif
 
-#include "viddec_fw_workload.h"
-#include "vc1parse_common_defs.h"
+#include "viddec_fw_common_defs.h"
+#include "viddec_fw_frame_attr.h"
 #include "vc1common.h"
-
+#include "vc1parse_common_defs.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

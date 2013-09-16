@@ -28,6 +28,7 @@
 #include "vbp_loader.h"
 #include "vbp_utils.h"
 #include "vbp_vp8_parser.h"
+#include "viddec_fw_common_defs.h"
 
 uint32 vbp_init_parser_entries_vp8(vbp_context *pcontext)
 {

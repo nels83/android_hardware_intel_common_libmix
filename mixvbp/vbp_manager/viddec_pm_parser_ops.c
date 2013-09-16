@@ -3,6 +3,7 @@
 #include "viddec_pm.h"
 #include "viddec_parser_ops.h"
 #include "viddec_pm_utils_bstream.h"
+#include "viddec_fw_common_defs.h"
 
 int32_t viddec_pm_get_bits(void *parent, uint32_t *data, uint32_t num_bits)
 {
@@ -86,12 +87,3 @@ void viddec_pm_set_late_frame_detect(void *parent)
     cxt->late_frame_detect = true;
 }
 
-int32_t viddec_pm_append_workitem(void *parent, viddec_workload_item_t *item, uint32_t next)
-{
-    return 1;
-}
-
-void viddec_pm_setup_userdata(viddec_workload_item_t *wi)
-{
-    wi=wi;
-}

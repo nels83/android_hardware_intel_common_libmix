@@ -21,9 +21,8 @@
 #endif
 
 #include "stdint.h"
-#include "viddec_debug.h"
 
-#include "viddec_fw_workload.h"
+#include "viddec_fw_common_defs.h"
 #include "h264parse_sei.h"
 
 #ifdef VBP
@@ -947,17 +946,6 @@ extern "C" {
         //uint32_t h264_dpb_mpr_bf_poc[16];        // 0x304
     } h264_pic_data;
 
-    enum h264_workload_item_type
-    {
-        VIDDEC_WORKLOAD_H264_SLICE_REG = VIDDEC_WORKLOAD_DECODER_SPECIFIC,
-        VIDDEC_WORKLOAD_H264_PIC_REG,
-        VIDDEC_WORKLOAD_H264_DPB_FRAME_POC,
-        VIDDEC_WORKLOAD_H264_SH_BITS_OFFSET,
-        VIDDEC_WORKLOAD_H264_PWT_BITS_OFFSET,
-        VIDDEC_WORKLOAD_H264_PWT_ES_BYTES,
-        VIDDEC_WORKLOAD_H264_SCALING_MATRIX,
-        VIDDEC_WORKLOAD_H264_DEBUG
-    };
 
 
 

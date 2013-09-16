@@ -85,9 +85,6 @@ struct vbp_context_t
     /* parser context */
     viddec_pm_cxt_t *parser_cxt;
 
-    /* work load */
-    viddec_workload_t *workload1, *workload2;
-
     /* persistent memory for parser */
     uint32 *persist_mem;
 

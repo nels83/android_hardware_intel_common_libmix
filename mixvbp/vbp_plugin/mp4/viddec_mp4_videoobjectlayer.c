@@ -587,43 +587,6 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
         parser->bitstream_error |= MP4_BS_ERROR_HDR_NONDEC;
         return ret;
     }
-//DEB("before wkld mp4_Parse_VideoObjectLayer: bs_err: %d, ret: %d\n", parser->bitstream_error, ret);
 
-    // POPULATE WORKLOAD ITEM
-/*
-    {
-        viddec_workload_item_t wi;
-        viddec_workload_t *wl = viddec_pm_get_header(parent);
-
-        wi.vwi_type = VIDDEC_WORKLOAD_MPEG4_VIDEO_OBJ;
-
-        wi.mp4_vol.vol_aspect_ratio = 0;
-        wi.mp4_vol.vol_bit_rate = 0;
-        wi.mp4_vol.vol_frame_rate = 0;
-
-        viddec_fw_mp4_vol_set_aspect_ratio_info(&wi.mp4_vol, vidObjLay->aspect_ratio_info);
-        viddec_fw_mp4_vol_set_par_width(&wi.mp4_vol, vidObjLay->aspect_ratio_info_par_width);
-        viddec_fw_mp4_vol_set_par_height(&wi.mp4_vol, vidObjLay->aspect_ratio_info_par_height);
-        viddec_fw_mp4_vol_set_control_param(&wi.mp4_vol, vidObjLay->is_vol_control_parameters);
-        viddec_fw_mp4_vol_set_chroma_format(&wi.mp4_vol, vidObjLay->VOLControlParameters.chroma_format);
-        viddec_fw_mp4_vol_set_interlaced(&wi.mp4_vol, vidObjLay->interlaced);
-        viddec_fw_mp4_vol_set_fixed_vop_rate(&wi.mp4_vol, vidObjLay->fixed_vop_rate);
-
-        viddec_fw_mp4_vol_set_vbv_param(&wi.mp4_vol, vidObjLay->VOLControlParameters.vbv_parameters);
-        viddec_fw_mp4_vol_set_bit_rate(&wi.mp4_vol, vidObjLay->VOLControlParameters.bit_rate);
-
-        viddec_fw_mp4_vol_set_fixed_vop_time_increment(&wi.mp4_vol, vidObjLay->fixed_vop_time_increment);
-        viddec_fw_mp4_vol_set_vop_time_increment_resolution(&wi.mp4_vol, vidObjLay->vop_time_increment_resolution);
-
-        ret = (mp4_Status_t)viddec_pm_append_workitem(parent, &wi, false);
-        if (ret == 1)
-            ret = MP4_STATUS_OK;
-
-        memset(&(wl->attrs), 0, sizeof(viddec_frame_attributes_t));
-
-        wl->attrs.cont_size.width = vidObjLay->video_object_layer_width;
-        wl->attrs.cont_size.height = vidObjLay->video_object_layer_height;
-    }
-*/
     return ret;
 }

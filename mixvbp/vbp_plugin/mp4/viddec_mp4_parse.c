@@ -98,7 +98,6 @@ uint32_t viddec_mp4_parse(void *parent, void *ctxt)
         }
         case MP4_SC_USER_DATA:
         {   /* Copy userdata to user-visible buffer (EMIT) */
-            status = mp4_Parse_UserData(parent, cxt);
             DEB("MP4_USER_DATA_SC: \n");
             break;
         }

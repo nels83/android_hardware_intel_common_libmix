@@ -6,7 +6,6 @@ LOCAL_SRC_FILES :=                           \
 	viddec_mp4_visualobject.c            \
 	viddec_mp4_decodevideoobjectplane.c  \
 	viddec_mp4_parse.c                   \
-	viddec_fw_mp4_workload.c             \
 	viddec_mp4_videoobjectplane.c        \
 	viddec_parse_sc_mp4.c                \
 	viddec_mp4_shortheader.c             \

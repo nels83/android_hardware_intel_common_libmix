@@ -278,7 +278,6 @@ static uint32_t viddec_vc1_parse(void *parent, void *ctxt)
     case vc1_SCSliceUser:
     case vc1_SCFieldUser:
     {/* Handle user data */
-        status = vc1_ParseAndAppendUserData(parent, sc); //parse and add items
         parser->sc_seen_since_last_wkld |= VC1_SC_UD;
 #ifdef VBP
         parser->start_code = VC1_SC_UD;
