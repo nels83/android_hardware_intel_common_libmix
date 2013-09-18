@@ -340,7 +340,7 @@ static uint32 vbp_parse_start_code_helper_vc1(
                          cxt->list.data[cxt->list.num_items].stpos -
                          PREFIX_SIZE;
 
-            if (start_code >= 0x0A && start_code <= 0x0F)
+            if ((start_code >= 0x0A && start_code <= 0x0F) || (start_code >= 0x1B && start_code <= 0x1F))
             {
                 /* only put known start code to the list
                  * 0x0A: end of sequence
@@ -349,6 +349,7 @@ static uint32 vbp_parse_start_code_helper_vc1(
                  * 0x0D: field header
                  * 0x0E: entry point header
                  * 0x0F: sequence header
+                 * 0x1B ~ 0x1F: user data
                  */
                 cxt->list.num_items++;
             }
@@ -1030,6 +1031,9 @@ static void vbp_pack_slice_data_vc1(
     uint8 is_emul;
     viddec_pm_get_au_pos(cxt, &bit, &byte, &is_emul);
 
+    vc1_viddec_parser_t *parser = (vc1_viddec_parser_t *)cxt->codec_data;
+    vc1_PictureLayerHeader *picLayerHeader = &(parser->info.picLayerHeader);
+
     vbp_slice_data_vc1 *slc_data = &(pic_data->slc_data[pic_data->num_slices]);
     VASliceParameterBufferVC1 *slc_parms = &(slc_data->slc_parms);
 
@@ -1047,8 +1051,8 @@ static void vbp_pack_slice_data_vc1(
 
     slc_parms->macroblock_offset = bit + byte * 8;
 
-    /* fix this.  we need o get the slice_vertical_position from the code */
-    slc_parms->slice_vertical_position = pic_data->num_slices;
+    /* get the slice_vertical_position from the code */
+    slc_parms->slice_vertical_position = (picLayerHeader->SLICE_ADDR % (pic_data->pic_parms->coded_height / 16));
 
     pic_data->num_slices++;
 }
