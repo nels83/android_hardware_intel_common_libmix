@@ -102,6 +102,9 @@ typedef enum {
     // indicate whether video decoder buffer contains secure data
     IS_SECURE_DATA = 0x8000,
 
+    // indicate it's the last output frame of the sequence
+    IS_EOS = 0x10000,
+
 } VIDEO_BUFFER_FLAG;
 
 struct VideoDecodeBuffer {
