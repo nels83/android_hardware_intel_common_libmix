@@ -50,8 +50,13 @@
 #include <media/stagefright/MetaData.h>
 #include <media/stagefright/Utils.h>
 
+#include <ui/GraphicBufferMapper.h>
+#include <ui/Rect.h>
+
 #include "PVSoftMPEG4Encoder.h"
 #include "VideoEncoderLog.h"
+
+#define ALIGN(x, align)                  (((x) + (align) - 1) & (~((align) - 1)))
 
 inline static void ConvertYUV420SemiPlanarToYUV420Planar(
         uint8_t *inyuv, uint8_t* outyuv,
@@ -85,13 +90,13 @@ inline static void ConvertYUV420SemiPlanarToYUV420Planar(
 
 inline static void trimBuffer(uint8_t *dataIn, uint8_t *dataOut,
         int32_t width, int32_t height,
-        int32_t stride) {
+        int32_t alignedHeight, int32_t stride) {
     int32_t h;
     uint8_t *y_start, *uv_start, *_y_start, *_uv_start;
     y_start = dataOut;
     uv_start = dataOut + width * height;
     _y_start = dataIn;
-    _uv_start = dataIn + stride * height;
+    _uv_start = dataIn + stride * alignedHeight;
 
     for (h = 0; h < height; h++)
         memcpy(y_start + h * width, _y_start + h * stride, width);
@@ -421,19 +426,31 @@ Encode_Status PVSoftMPEG4Encoder::encode(VideoEncRawBuffer *inBuffer, uint32_t t
         IntelMetadataBuffer imb;
         int32_t type;
         int32_t value;
+        uint8_t *img;
+        const android::Rect rect(mVideoWidth, mVideoHeight);
+        android::status_t res;
         ValueInfo vinfo;
         ValueInfo *pvinfo = &vinfo;
         CHECK(IMB_SUCCESS == imb.UnSerialize(inBuffer->data, inBuffer->size));
         imb.GetType((::MetadataBufferType&)type);
         imb.GetValue(value);
         imb.GetValueInfo(pvinfo);
-        if (mNumInputFrames == 0)
-            LOG_I("%d %d %d\n", pvinfo->width,
-                    pvinfo->height, pvinfo->lumaStride);
+        if(pvinfo == NULL) {
+            res = android::GraphicBufferMapper::get().lock((buffer_handle_t)value,
+                    GRALLOC_USAGE_SW_READ_MASK,
+                    rect, (void**)&img);
+        } else {
+            img = (uint8_t*)value;
+        }
         if (pvinfo != NULL)
-            trimBuffer((uint8_t*)value, mTrimedInputData, pvinfo->width, pvinfo->height, pvinfo->lumaStride);
-        else
-            LOG_E("failed to parse metadata info");
+            trimBuffer(img, mTrimedInputData, pvinfo->width, pvinfo->height,
+                   pvinfo->height, pvinfo->lumaStride);
+        else {
+            //NV12 Y-TILED
+            trimBuffer(img, mTrimedInputData, mVideoWidth, mVideoHeight,
+                    ALIGN(mVideoHeight, 32), ALIGN(mVideoWidth, 128));
+            android::GraphicBufferMapper::get().unlock((buffer_handle_t)value);
+        }
     } else {
         memcpy(mTrimedInputData, inBuffer->data,
                 (mVideoWidth * mVideoHeight * 3 ) >> 1);

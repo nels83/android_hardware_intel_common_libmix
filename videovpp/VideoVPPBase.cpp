@@ -336,6 +336,7 @@ VAStatus VideoVPPBase::_perform(VASurfaceID SrcSurf, VARectangle SrcRect,
     vpp_param.num_backward_references = 0;
     vpp_param.blend_state = NULL;
     vpp_param.rotation_state = VA_ROTATION_NONE;
+    vpp_param.mirror_state = VA_MIRROR_NONE;
 
     vret = vaCreateBuffer(va_display, va_context,
             VAProcPipelineParameterBufferType,

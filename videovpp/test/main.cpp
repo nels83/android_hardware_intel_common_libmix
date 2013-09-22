@@ -29,6 +29,8 @@ enum {
     HAL_PIXEL_FORMAT_INTEL_NV12 = HAL_PIXEL_FORMAT_NV12_TILED_INTEL,
 #endif
 
+    HAL_PIXEL_FORMAT_YCrCb_422_H_INTEL = 0x102, // YV16
+
 // deprecated use HAL_PIXEL_FORMAT_NV12_LINEAR_INTEL
     HAL_PIXEL_FORMAT_YUV420PackedSemiPlanar_INTEL = 0x7FA00E00,
 
@@ -146,9 +148,10 @@ int main(int argc, char *argv[])
     gralloc_module = (struct gralloc_module_t*)module;
     res = gralloc_open(module, &mAllocDev);
     res = mAllocDev->alloc(mAllocDev, width, height,
-            HAL_PIXEL_FORMAT_YCbCr_422_I,
-            GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE |
-            GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK,
+            //HAL_PIXEL_FORMAT_YCbCr_422_I,
+            HAL_PIXEL_FORMAT_YCrCb_422_H_INTEL,
+            GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE,// |
+            //GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK,
             &handle_YUY2, &stride_YUY2);
     if (res != 0)
         printf("%d: alloc()\n", __LINE__);
@@ -162,25 +165,38 @@ int main(int argc, char *argv[])
         if (res != 0) {
             printf("lock error\n");
         } else {
-            res = fread(vaddr[0], 1, width * height * 2, fIn);
+            //res = fread(vaddr[0], 1, width * height * 2, fIn);
+            for (i = 0; i < height; i++)
+                res += fread(vaddr[0] + i * pGrallocHandle->pitch, 1, width, fIn);
+            for (i = 0; i < height; i++)
+                res += fread(vaddr[0] + (2 * height + i) * pGrallocHandle->pitch, 1,
+                        width / 2, fIn);
+            for (i = 0; i < height; i++)
+                res += fread(vaddr[0] + (height + i) * pGrallocHandle->pitch, 1,
+                        width / 2, fIn);
             printf("fread %d\n", res);
             gralloc_module->unlock(gralloc_module, handle_YUY2);
         }
         Src.width = pGrallocHandle->width;
         Src.height = pGrallocHandle->height;
         Src.stride = pGrallocHandle->pitch;
+        //Src.format = VA_RT_FORMAT_YUV422;
+        //Src.pixel_format = VA_FOURCC_YUY2;
         Src.format = VA_RT_FORMAT_YUV422;
-        Src.pixel_format = VA_FOURCC_YUY2;
-        Src.type = RenderTarget::KERNEL_DRM;
-        Src.handle = pGrallocHandle->name;
+        Src.pixel_format = VA_FOURCC_422H;
+        //Src.type = RenderTarget::KERNEL_DRM;
+        //Src.handle = pGrallocHandle->name;
+        Src.type = RenderTarget::ANDROID_GRALLOC;
+        Src.handle = (unsigned int)handle_YUY2;
         Src.rect.x = Src.rect.y = 0;
         Src.rect.width = Src.width;
         Src.rect.height = Src.height;
     }
     res = mAllocDev->alloc(mAllocDev, width, height,
-            HAL_PIXEL_FORMAT_NV12_TILED_INTEL,
-            GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE |
-            GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK,
+            //HAL_PIXEL_FORMAT_NV12_TILED_INTEL,
+            HAL_PIXEL_FORMAT_YCbCr_422_I,
+            GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE,// |
+            //GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK,
             &handle_NV12, &stride_NV12);
     if (res != 0)
         printf("%d: alloc()\n", __LINE__);
@@ -191,8 +207,10 @@ int main(int argc, char *argv[])
         Dst.width = pGrallocHandle->width;
         Dst.height = pGrallocHandle->height;
         Dst.stride = pGrallocHandle->pitch;
-        Dst.format = VA_RT_FORMAT_YUV420;
-        Dst.pixel_format = VA_FOURCC_NV12;
+        //Dst.format = VA_RT_FORMAT_YUV420;
+        //Dst.pixel_format = VA_FOURCC_NV12;
+        Dst.format = VA_RT_FORMAT_YUV422;
+        Dst.pixel_format = VA_FOURCC_YUY2;
         Dst.type = RenderTarget::KERNEL_DRM;
         Dst.handle = pGrallocHandle->name;
         Dst.rect.x = 0;
@@ -239,6 +257,7 @@ int main(int argc, char *argv[])
             unsigned char *pY = (unsigned char*)vaddr[0];
             unsigned char *pUV = pY + stride_NV12 * ALIGN(height, 32);
             //unsigned char *pUV = pY + stride_NV12 * height;
+            /*
             for (res =0, i = 0; i < height; i++) {
                 res += fwrite(pY, 1, width, fOut);
                 pY += stride_NV12;
@@ -248,6 +267,9 @@ int main(int argc, char *argv[])
                 res += fwrite(pUV, 1, width, fOut);
                 pUV += stride_NV12;
             }
+            */
+            for (i = 0; i < height; i++)
+                res += fwrite(vaddr[0] + i * Dst.stride, 1, width * 2, fOut);
             printf("fwrite %d\n", res);
             gralloc_module->unlock(gralloc_module, handle_NV12);
         }
