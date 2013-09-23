@@ -79,7 +79,7 @@ protected:
     virtual VideoSurfaceBuffer* findOutputByPoc(bool draining = false);
     virtual VideoSurfaceBuffer* findOutputByPct(bool draining = false);
     virtual VideoSurfaceBuffer* findOutputByPts(bool draining = false);
-    virtual Decode_Status setupVA(int32_t numSurface, VAProfile profile);
+    virtual Decode_Status setupVA(int32_t numSurface, VAProfile profile, int32_t numExtraSurface = 0);
     virtual Decode_Status terminateVA(void);
     virtual Decode_Status parseBuffer(uint8_t *buffer, int32_t size, bool config, void** vbpData);
 
@@ -107,6 +107,8 @@ protected:
     VADisplay mVADisplay;
     VAContextID mVAContext;
     VAConfigID mVAConfig;
+    VASurfaceID *mExtraSurfaces; // extra surfaces array
+    int32_t mNumExtraSurfaces;
     bool mVAStarted;
     uint64_t mCurrentPTS; // current presentation time stamp (unit is unknown, depend on the framework: GStreamer 100-nanosec, Android: microsecond)
     // the following three member variables should be set using

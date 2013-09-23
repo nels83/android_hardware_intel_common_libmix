@@ -30,7 +30,11 @@ VideoDecoderWMV::VideoDecoderWMV(const char *mimeType)
     : VideoDecoderBase(mimeType, VBP_VC1),
       mBufferIDs(NULL),
       mNumBufferIDs(0),
-      mConfigDataParsed(false) {
+      mConfigDataParsed(false),
+      mRangeMapped(false),
+      mDeblockedCurrPicIndex(0),
+      mDeblockedLastPicIndex(1),
+      mDeblockedForwardPicIndex(2) {
 }
 
 
@@ -64,12 +68,22 @@ void VideoDecoderWMV::stop(void) {
     }
     mNumBufferIDs = 0;
     mConfigDataParsed = false;
+    mRangeMapped = false;
+
+    mDeblockedCurrPicIndex = 0;
+    mDeblockedLastPicIndex = 1;
+    mDeblockedForwardPicIndex = 2;
 
     VideoDecoderBase::stop();
 }
 
 void VideoDecoderWMV::flush(void) {
     VideoDecoderBase::flush();
+
+    mRangeMapped = false;
+    mDeblockedCurrPicIndex = 0;
+    mDeblockedLastPicIndex = 1;
+    mDeblockedForwardPicIndex = 2;
 }
 
 Decode_Status VideoDecoderWMV::decode(VideoDecodeBuffer *buffer) {
@@ -152,6 +166,9 @@ Decode_Status VideoDecoderWMV::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
     } else {
         mAcquiredBuffer->renderBuffer.scanFormat = VA_FRAME_PICTURE;
     }
+
+    mRangeMapped = (data->se_data->RANGE_MAPY_FLAG || data->se_data->RANGE_MAPUV_FLAG || data->se_data->RANGERED);
+
     int frameType = data->pic_data[0].pic_parms->picture_fields.bits.picture_type;
     mAcquiredBuffer->referenceFrame = (frameType == VC1_PTYPE_I || frameType == VC1_PTYPE_P);
 
@@ -164,6 +181,10 @@ Decode_Status VideoDecoderWMV::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
             endDecodingFrame(true);
             return status;
         }
+    }
+
+    if (mRangeMapped) {
+        updateDeblockedPicIndexes(frameType);
     }
 
     // let outputSurfaceBuffer handle "asReference" for VC1
@@ -189,9 +210,9 @@ Decode_Status VideoDecoderWMV::decodePicture(vbp_data_vc1 *data, int32_t picInde
     status = setReference(picParams, picIndex, mAcquiredBuffer->renderBuffer.surface);
     CHECK_STATUS("setReference");
 
-    if (data->se_data->LOOPFILTER) {
-        //Loop filter handling
-        picParams->inloop_decoded_picture = mAcquiredBuffer->renderBuffer.surface;
+    if (mRangeMapped) {
+        // keep the destination surface for the picture after decoding and in-loop filtering
+        picParams->inloop_decoded_picture = mExtraSurfaces[mDeblockedCurrPicIndex];
     } else {
         picParams->inloop_decoded_picture = VA_INVALID_SURFACE;
     }
@@ -334,6 +355,21 @@ Decode_Status VideoDecoderWMV::setReference(
     return DECODE_SUCCESS;
 }
 
+void VideoDecoderWMV::updateDeblockedPicIndexes(int frameType) {
+    int32_t curPicIndex = mDeblockedCurrPicIndex;
+
+    /* Out Loop (range map) buffers */
+    if (frameType != VC1_PTYPE_SKIPPED) {
+        if ((frameType == VC1_PTYPE_I) || (frameType == VC1_PTYPE_P)) {
+            mDeblockedCurrPicIndex = mDeblockedLastPicIndex;
+            mDeblockedLastPicIndex = curPicIndex;
+        } else {
+            mDeblockedCurrPicIndex = mDeblockedForwardPicIndex;
+            mDeblockedForwardPicIndex = curPicIndex;
+        }
+    }
+}
+
 Decode_Status VideoDecoderWMV::updateConfigData(
         uint8_t *configData,
         int32_t configDataLen,
@@ -393,7 +429,7 @@ Decode_Status VideoDecoderWMV::startVA(vbp_data_vc1 *data) {
         break;
     }
 
-    return VideoDecoderBase::setupVA(VC1_SURFACE_NUMBER, vaProfile);
+    return VideoDecoderBase::setupVA(VC1_SURFACE_NUMBER, vaProfile, VC1_EXTRA_SURFACE_NUMBER);
 }
 
 void VideoDecoderWMV::updateFormatInfo(vbp_data_vc1 *data) {

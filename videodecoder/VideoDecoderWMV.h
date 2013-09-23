@@ -42,6 +42,7 @@ private:
     Decode_Status decodeFrame(VideoDecodeBuffer *buffer, vbp_data_vc1 *data);
     Decode_Status decodePicture(vbp_data_vc1 *data, int32_t picIndex);
     Decode_Status setReference(VAPictureParameterBufferVC1 *params, int32_t picIndex, VASurfaceID current);
+    void updateDeblockedPicIndexes(int frameType);
     Decode_Status updateConfigData(uint8_t *configData, int32_t configDataLen, uint8_t **newConfigData, int32_t *newConfigDataLen);
     Decode_Status startVA(vbp_data_vc1 *data);
     void updateFormatInfo(vbp_data_vc1 *data);
@@ -51,11 +52,17 @@ private:
 private:
     enum {
         VC1_SURFACE_NUMBER = 10,
+        VC1_EXTRA_SURFACE_NUMBER = 3,
     };
 
     VABufferID *mBufferIDs;
     int32_t mNumBufferIDs;
     bool mConfigDataParsed;
+    bool mRangeMapped;
+
+    int32_t mDeblockedCurrPicIndex;
+    int32_t mDeblockedLastPicIndex;
+    int32_t mDeblockedForwardPicIndex;
 };
 
 

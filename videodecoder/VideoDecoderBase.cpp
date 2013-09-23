@@ -702,7 +702,7 @@ exit:
 }
 
 
-Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
+Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, int32_t numExtraSurface) {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     Decode_Status status;
     VAConfigAttrib attrib;
@@ -789,7 +789,9 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
     }
 
     mNumSurfaces = numSurface;
-    mSurfaces = new VASurfaceID [mNumSurfaces];
+    mNumExtraSurfaces = numExtraSurface;
+    mSurfaces = new VASurfaceID [mNumSurfaces + mNumExtraSurfaces];
+    mExtraSurfaces = mSurfaces + mNumSurfaces;
     if (mSurfaces == NULL) {
         return DECODE_MEMORY_FAIL;
     }
@@ -846,6 +848,19 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
     }
     CHECK_VA_STATUS("vaCreateSurfaces");
 
+    if (mNumExtraSurfaces != 0) {
+        vaStatus = vaCreateSurfaces(
+            mVADisplay,
+            format,
+            mVideoFormatInfo.width,
+            mVideoFormatInfo.height,
+            mExtraSurfaces,
+            mNumExtraSurfaces,
+            NULL,
+            0);
+        CHECK_VA_STATUS("vaCreateSurfaces");
+    }
+
     mVideoFormatInfo.surfaceNumber = mNumSurfaces;
     mVideoFormatInfo.ctxSurfaces = mSurfaces;
 
@@ -857,7 +872,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile) {
                 mVideoFormatInfo.height,
                 0,
                 mSurfaces,
-                mNumSurfaces,
+                mNumSurfaces + mNumExtraSurfaces,
                 &mVAContext);
         CHECK_VA_STATUS("vaCreateContext");
     }
@@ -924,7 +939,7 @@ Decode_Status VideoDecoderBase::terminateVA(void) {
 
     if (mSurfaces)
     {
-        vaDestroySurfaces(mVADisplay, mSurfaces, mNumSurfaces);
+        vaDestroySurfaces(mVADisplay, mSurfaces, mNumSurfaces + mNumExtraSurfaces);
         delete [] mSurfaces;
         mSurfaces = NULL;
     }
