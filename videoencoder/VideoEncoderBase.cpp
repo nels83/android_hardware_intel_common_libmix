@@ -177,24 +177,10 @@ Encode_Status VideoEncoderBase::start() {
         stride_aligned = ((mComParams.resolution.width + 15) / 16 ) * 16;
         height_aligned = ((mComParams.resolution.height + 15) / 16 ) * 16;
     }else{
-        if(mComParams.profile == VAProfileVP8Version0_3)
-        {
-           stride_aligned = ((mComParams.resolution.width + 64 + 63) / 64 ) * 64;  //for vsp stride
-           height_aligned = ((mComParams.resolution.height + 64 + 63) / 64 ) * 64;
-        }
-        else
-        {
+           // this alignment is used for AVC. For vp8 encode, driver will handle the alignment
            stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;  //on Merr, stride must be 64 aligned.
            height_aligned = ((mComParams.resolution.height + 31) / 32 ) * 32;
-        }
     }
-
-#if 0
-    if(mComParams.profile == VAProfileVP8Version0_3)
-        attribute_tpi.size = stride_aligned * height_aligned + stride_aligned * ((((mComParams.resolution.height + 1) / 2 + 32)+63)/64) *64;// FW need w*h + w*chrom_height
-    else
-        attribute_tpi.size = stride_aligned * height_aligned * 3 / 2;
-#endif
 
     ValueInfo vinfo;
     vinfo.mode = MEM_MODE_SURFACE;
@@ -210,16 +196,8 @@ Encode_Status VideoEncoderBase::start() {
 
     }else {
         mAutoRefSurfaces = new VASurfaceID [mAutoReferenceSurfaceNum];
-
-        if(mComParams.profile == VAProfileVP8Version0_3){
-           VASurfaceAttrib attrib_list[2];
-           VASurfaceAttribExternalBuffers  external_refbuf;
-           setupVP8RefExternalBuf(stride_aligned,height_aligned,&external_refbuf,&attrib_list[0]);
-           vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,stride_aligned, height_aligned, mAutoRefSurfaces, mAutoReferenceSurfaceNum, attrib_list, 2);
-        } else {
-            for(int i = 0; i < mAutoReferenceSurfaceNum; i ++)
+        for(int i = 0; i < mAutoReferenceSurfaceNum; i ++)
                 mAutoRefSurfaces[i] = CreateSurfaceFromExternalBuf(0, vinfo);
-        }
     }
     CHECK_VA_STATUS_RETURN("vaCreateSurfaces");
 
@@ -1214,8 +1192,8 @@ Encode_Status VideoEncoderBase::setConfig(VideoParamConfigSet *videoEncConfig) {
         case VideoConfigTypeNALSize:
         case VideoConfigTypeIDRRequest:
         case VideoConfigTypeSliceNum:
-        case VideoConfigTypeVP8: {
-
+        case VideoConfigTypeVP8:
+        case VideoConfigTypeVP8ReferenceFrame: {
             ret = derivedSetConfig(videoEncConfig);
             break;
         }
@@ -1737,12 +1715,8 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
         //TODO: need optimization for both width/height not aligned case
         VASurfaceID surfaceId;
         unsigned int stride_aligned;
-        if(mComParams.profile == VAProfileVP8Version0_3)
-            stride_aligned = ((mComParams.resolution.width + 31) / 32 ) * 32;
-        else
-            stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;
-
-            vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,
+        stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;
+        vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,
                     stride_aligned, map->vinfo.height, &surfaceId, 1, NULL, 0);
 
         map->surface = surfaceId;
@@ -2250,41 +2224,4 @@ VASurfaceID VideoEncoderBase::CreateSurfaceFromExternalBuf(int32_t value, ValueI
         LOG_E("vaCreateSurfaces failed. vaStatus = %d\n", vaStatus);
 
     return surface;
-}
-
-Encode_Status VideoEncoderBase::setupVP8RefExternalBuf(uint32_t stride_aligned,
-                                                       uint32_t height_aligned,
-                                                       VASurfaceAttribExternalBuffers *buf,
-                                                       VASurfaceAttrib *attrib_list)
-{
-    int ref_height_uv = (mComParams.resolution.height/ 2 + 32 + 63) & (~63);
-    buf->pixel_format = VA_FOURCC_NV12;
-    buf->width = stride_aligned;
-    buf->height = height_aligned;
-    buf->data_size = stride_aligned * height_aligned + stride_aligned * ref_height_uv;
-    buf->num_buffers = mAutoReferenceSurfaceNum;
-    buf->num_planes = 3;
-    buf->pitches[0] = stride_aligned;
-    buf->pitches[1] = stride_aligned;
-    buf->pitches[2] = stride_aligned;
-    buf->pitches[3] = 0;
-    buf->offsets[0] = 0;
-    buf->offsets[1] = stride_aligned*height_aligned;
-    buf->offsets[2] = buf->offsets[1];
-    buf->offsets[3] = 0;
-    buf->buffers = (unsigned long *)calloc(buf->num_buffers, sizeof(unsigned long));
-    buf->flags = 0;
-    buf->private_data = NULL;
-
-    attrib_list[0].type = (VASurfaceAttribType)VASurfaceAttribMemoryType;
-    attrib_list[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
-    attrib_list[0].value.type = VAGenericValueTypeInteger;
-    attrib_list[0].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_VA;
-
-    attrib_list[1].type = (VASurfaceAttribType)VASurfaceAttribExternalBufferDescriptor;
-    attrib_list[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
-    attrib_list[1].value.type = VAGenericValueTypePointer;
-    attrib_list[1].value.value.p = (void *)buf;
-
-    return 0;
 }
