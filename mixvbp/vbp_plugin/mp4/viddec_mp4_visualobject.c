@@ -1,4 +1,5 @@
 #include <vbp_common.h>
+#include <vbp_trace.h>
 #include "viddec_mp4_visualobject.h"
 
 static inline uint8_t mp4_pvt_isValid_verID(uint8_t id)
@@ -64,7 +65,7 @@ static mp4_Status_t mp4_Parse_video_signal_type(void *parent, mp4_VideoSignalTyp
 
 void mp4_set_hdr_bitstream_error(viddec_mp4_parser_t *parser, uint8_t hdr_flag, mp4_Status_t parse_status)
 {
-    //DEB("Entering mp4_set_hdr_bitstream_error: bs_err: 0x%x, hdr: %d, parse_status: %d\n",
+    //VTRACE("Entering mp4_set_hdr_bitstream_error: bs_err: 0x%x, hdr: %d, parse_status: %d\n",
     //  parser->bitstream_error, hdr_flag, parse_status);
 
     if (hdr_flag)
@@ -87,7 +88,7 @@ void mp4_set_hdr_bitstream_error(viddec_mp4_parser_t *parser, uint8_t hdr_flag, 
             parser->bitstream_error |= MP4_BS_ERROR_FRM_NONDEC;
     }
 
-    //DEB("Exiting mp4_set_hdr_bitstream_error: bs_err: 0x%x\n", parser->bitstream_error);
+    //VTRACE("Exiting mp4_set_hdr_bitstream_error: bs_err: 0x%x\n", parser->bitstream_error);
 
     return;
 } // mp4_set_hdr_bitstream_error
@@ -161,7 +162,7 @@ mp4_Status_t mp4_Parse_VisualObject(void *parent, viddec_mp4_parser_t *parser)
             }
             else
             {
-                DEB("Warning: Unsupported visual_object_verid\n");
+                ETRACE("Warning: Unsupported visual_object_verid\n");
                 parser->bitstream_error |= MP4_BS_ERROR_HDR_UNSUP;
                 // Continue parsing as it is not a required field for decoder
             }
@@ -173,7 +174,7 @@ mp4_Status_t mp4_Parse_VisualObject(void *parent, viddec_mp4_parser_t *parser)
         if (visObj->visual_object_type != MP4_VISUAL_OBJECT_TYPE_VIDEO)
         {
             /* VIDEO is the only supported type */
-            DEB("Error: Unsupported object: visual_object_type != video ID\n");
+            ETRACE("Error: Unsupported object: visual_object_type != video ID\n");
             parser->bitstream_error |= MP4_BS_ERROR_HDR_UNSUP;
             break;
         }

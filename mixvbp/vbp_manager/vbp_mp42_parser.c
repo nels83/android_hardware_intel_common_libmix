@@ -105,16 +105,8 @@ uint32 vbp_init_parser_entries_mp42( vbp_context *pcontext)
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-#ifdef VBP
+
     pcontext->parser_ops->parse_sc = NULL;
-#else
-    pcontext->parser_ops->parse_sc = dlsym(pcontext->fd_parser, "viddec_parse_sc_mp4");
-    if (pcontext->parser_ops->parse_sc == NULL)
-    {
-        ETRACE ("Failed to set entry point." );
-        return VBP_LOAD;
-    }
-#endif
     pcontext->parser_ops->parse_syntax = dlsym(pcontext->fd_parser, "viddec_mp4_parse");
     if (pcontext->parser_ops->parse_syntax == NULL)
     {
@@ -128,16 +120,6 @@ uint32 vbp_init_parser_entries_mp42( vbp_context *pcontext)
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-#ifdef VBP
-    pcontext->parser_ops->is_wkld_done = NULL;
-#else
-    pcontext->parser_ops->is_wkld_done = dlsym(pcontext->fd_parser, "viddec_mp4_wkld_done");
-    if (pcontext->parser_ops->is_wkld_done == NULL)
-    {
-        ETRACE ("Failed to set entry point." );
-        return VBP_LOAD;
-    }
-#endif
 
     /* entry point not needed */
     pcontext->parser_ops->flush = NULL;
@@ -663,6 +645,21 @@ void vbp_on_vop_svh_mp42(vbp_context *pcontext, int list_index)
     vbp_fill_slice_data(pcontext, list_index);
 }
 
+/* Parse for Sc code of pattern 0x00 0x00 0xXX in the current buffer. Returns either sc found or success.
+   The conext is updated with current phase and sc_code position in the buffer.
+
+   What is phase?: phase is a value between [0-4], we keep track of consecutive '0's with this.
+   Any time a '0' is found its incremented by 1(uptp 2) and reset to '0' if a zero not found.
+   if 0xXX code is found and current phase is 2, its changed to 3 which means we found the pattern
+   we are looking for. Its incremented to 4 once we see a byte after this pattern.
+
+   For MP4 there are two startcode patterns LVH & SVH. LVH is same as other codecs (00 00 01), SVH
+   A.K.A H263 is (00 00 8X). So we have to look for both kind of start codes. The spec doesn't
+   explicitly say if both of them can exist in a stream? So current implemenation will assume
+   that only one of them is present in a given stream to simplify implementation. The reason it can
+   get complicated is resync marker in LVH can potentially be (00 00 8) which will cause false detect
+   of SVH start code.
+*/
 uint32 vbp_get_sc_pos_mp42(
     uint8 *buf,
     uint32 length,
@@ -824,6 +821,7 @@ uint32 vbp_parse_video_packet_header_mp42(
 
     if (vidObjLay->video_object_layer_shape != MP4_SHAPE_TYPE_RECTANGULAR)
     {
+        ETRACE("VOL shape: %d is not supported",vidObjLay->video_object_layer_shape);
         return VBP_DATA;
     }
 
@@ -941,6 +939,7 @@ uint32 vbp_parse_video_packet_header_mp42(
         if (vidObjLay->newpred_enable)
         {
             // New pred mode not supported in HW, but, does libva support this?
+            ETRACE("New pred mode not supported in HW");
             ret = VBP_DATA;
             break;
         }
@@ -1067,6 +1066,7 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
     if (parser_cxt->info.VisualObject.VideoObject.resync_marker_disable)
     {
         // no resync_marker
+        VTRACE("resync marker is disabled");
         return VBP_OK;
     }
 
@@ -1078,6 +1078,7 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
         getbits = viddec_pm_get_bits(parent, &code, 8 - bit_offset);
         if (getbits == -1)
         {
+            WTRACE("FAILURE!!!! getbits %s : %d", __FUNCTION__, __LINE__);
             return VBP_DATA;
         }
     }

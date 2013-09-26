@@ -1,4 +1,5 @@
 #include <vbp_common.h>
+#include <vbp_trace.h>
 #include "viddec_mp4_videoobjectplane.h"
 
 mp4_Status_t mp4_Parse_GroupOfVideoObjectPlane(void *parent, viddec_mp4_parser_t *parser)
@@ -25,7 +26,7 @@ mp4_Status_t mp4_Parse_GroupOfVideoObjectPlane(void *parent, viddec_mp4_parser_t
         code = code >> 6;
         if ((code & 1) == 0)
         {/* SGA:Should we ignore marker bit? */
-            DEB("Error:mp4_Parse_GroupOfVideoObjectPlane: Invalid marker\n");
+            ETRACE("Error:mp4_Parse_GroupOfVideoObjectPlane: Invalid marker\n");
         }
         code = code >>1;
         data->time_code_minutes = code & 0x3F;
@@ -249,7 +250,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane(void *parent, viddec_mp4_parser_t *parse
         if (vidObjLay->newpred_enable)
         {
             /* New pred mode not supported in HW */
-            DEB("Error: mp4_Parse_VideoObjectPlane: New pred in vidObjPlane is not supported\n");
+            ETRACE("Error: mp4_Parse_VideoObjectPlane: New pred in vidObjPlane is not supported\n");
             ret = MP4_STATUS_NOTSUPPORT;
             break;
         }
@@ -274,7 +275,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane(void *parent, viddec_mp4_parser_t *parse
             vidObjPlane->vop_reduced_resolution = code;
             if (vidObjPlane->vop_reduced_resolution)
             {
-                DEB("Error: mp4_Parse_VideoObjectPlane: Reduced Resolution vidObjPlane is not supported\n");
+                ETRACE("Error: mp4_Parse_VideoObjectPlane: Reduced Resolution vidObjPlane is not supported\n");
                 ret = MP4_STATUS_NOTSUPPORT;
                 break;
             }
@@ -356,7 +357,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane(void *parent, viddec_mp4_parser_t *parse
                 vidObjPlane->vop_fcode_forward = code & 0x7;
                 if (vidObjPlane->vop_fcode_forward == 0)
                 {
-                    DEB("Error: vop_fcode_forward == 0\n");
+                    ETRACE("Error: vop_fcode_forward == 0\n");
                     break;
                 }
             }
@@ -368,7 +369,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane(void *parent, viddec_mp4_parser_t *parse
                 vidObjPlane->vop_fcode_backward = code &0x7;
                 if (vidObjPlane->vop_fcode_backward == 0)
                 {
-                    DEB("Error: vop_fcode_backward == 0\n");
+                    ETRACE("Error: vop_fcode_backward == 0\n");
                     break;
                 }
             }

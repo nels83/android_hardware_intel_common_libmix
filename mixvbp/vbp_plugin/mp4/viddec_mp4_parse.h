@@ -511,18 +511,18 @@ typedef struct
 #define BREAK_GETBITS_FAIL(x, ret) {            \
         if(x == -1){                            \
             ret = MP4_STATUS_PARSE_ERROR;       \
+            ETRACE("ERROR in GETBITS (%s : %d)", __FILE__, __LINE__); \
             break;}                             \
     }
 
 #define BREAK_GETBITS_REQD_MISSING(x, ret) {            \
         if(x == -1){                            \
             ret = MP4_STATUS_REQD_DATA_ERROR;       \
+            ETRACE("ERROR in GETBITS_REQD (%s : %d)", __FILE__, __LINE__); \
             break;}                             \
     }
 
 extern void *memset(void *s, int32_t c, uint32_t n);
-
-uint32_t viddec_fw_mp4_emit_workload(void *parent, void *ctxt);
 
 void mp4_set_hdr_bitstream_error(viddec_mp4_parser_t *parser, uint8_t hdr_flag, mp4_Status_t parse_status);
 

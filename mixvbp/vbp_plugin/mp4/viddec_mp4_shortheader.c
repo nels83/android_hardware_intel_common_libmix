@@ -1,4 +1,5 @@
 #include <vbp_common.h>
+#include <vbp_trace.h>
 #include "viddec_mp4_shortheader.h"
 
 typedef struct
@@ -59,7 +60,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane_svh(void *parent, viddec_mp4_parser_t *p
         svh->source_format = (data & 0x7);
         if (svh->source_format == 0 || svh->source_format == 6)
         {
-            DEB("Error: Bad value for VideoPlaneWithShortHeader.source_format\n");
+            ETRACE("Error: Bad value for VideoPlaneWithShortHeader.source_format\n");
             ret = MP4_STATUS_NOTSUPPORT;
             break;
         }
@@ -108,7 +109,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane_svh(void *parent, viddec_mp4_parser_t *p
                     svh->source_format = (data & 0x7);
                     if (svh->source_format < 1 || svh->source_format > 6)
                     {
-                        DEB("Error: bad value of source_format\n");
+                        ETRACE("Error: bad value of source_format\n");
                         ret = MP4_STATUS_PARSE_ERROR;
                         break;
                     }
@@ -149,7 +150,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane_svh(void *parent, viddec_mp4_parser_t *p
                 svh->picture_coding_type = (data & 0x7);
                 if (svh->picture_coding_type > 1)
                 {
-                    DEB("Info: only support I and P frames\n");
+                    ETRACE("Info: only support I and P frames\n");
                     ret = MP4_STATUS_NOTSUPPORT;
                     break;
                 }
@@ -192,7 +193,7 @@ mp4_Status_t mp4_Parse_VideoObjectPlane_svh(void *parent, viddec_mp4_parser_t *p
             }
             else
             {
-                DEB("Info: don't support to handle the other case of Update Full Extended PTYPE\n");
+                ETRACE("Info: don't support to handle the other case of Update Full Extended PTYPE\n");
                 ret = MP4_STATUS_NOTSUPPORT;
                 break;
             }
@@ -332,13 +333,13 @@ mp4_Status_t mp4_Parse_VideoObject_svh(void *parent, viddec_mp4_parser_t *parser
             {
                 k = 4;
             }
-	     svh->num_macroblocks_in_gob = (((vol->video_object_layer_width + 15) & ~15) /16)*k;
+            svh->num_macroblocks_in_gob = (((vol->video_object_layer_width + 15) & ~15) /16)*k;
             svh->num_gobs_in_vop = (((vol->video_object_layer_height + 15) & ~15)/(16*k));
             svh->num_rows_in_gob = k;
         }
         else
         {
-            DEB("Error: Bad value for VideoPlaneWithShortHeader.source_format\n");
+            ETRACE("Error: Bad value for VideoPlaneWithShortHeader.source_format\n");
             ret = MP4_STATUS_NOTSUPPORT;
             return ret;
         }

@@ -1,5 +1,6 @@
 #include <string.h>
 #include <vbp_common.h>
+#include <vbp_trace.h>
 #include "viddec_mp4_videoobjectlayer.h"
 #ifndef VBP
 const unsigned char mp4_DefaultIntraQuantMatrix[64] = {
@@ -139,7 +140,7 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
 
         if (cxt->chroma_format != MP4_CHROMA_FORMAT_420)
         {
-            DEB("Warning: mp4_Parse_VideoObject:vol_control_parameters.chroma_format != 4:2:0\n");
+            ETRACE("Warning: mp4_Parse_VideoObject:vol_control_parameters.chroma_format != 4:2:0\n");
             cxt->chroma_format= MP4_CHROMA_FORMAT_420;
             parser->bitstream_error |= MP4_BS_ERROR_HDR_UNSUP;
             ret = MP4_STATUS_NOTSUPPORT;
@@ -155,7 +156,7 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
 
             if (cxt->bit_rate == 0)
             {
-                DEB("Error: mp4_Parse_VideoObject:vidObjLay->VOLControlParameters.bit_rate = 0\n");
+                ETRACE("Error: mp4_Parse_VideoObject:vidObjLay->VOLControlParameters.bit_rate = 0\n");
                 parser->bitstream_error |= MP4_BS_ERROR_HDR_UNSUP;
                 ret = MP4_STATUS_NOTSUPPORT;
                 // Do we need to really break here? Why not just set an error and proceed
@@ -169,7 +170,7 @@ mp4_pvt_VOL_volcontrolparameters(void *parent, viddec_mp4_parser_t *parser)
             cxt->vbv_buffer_size |= ( (code >> 4) & 0x7FFF);
             if (cxt->vbv_buffer_size == 0)
             {
-                DEB("Error: mp4_Parse_VideoObject:vidObjLay->VOLControlParameters.vbv_buffer_size = 0\n");
+                ETRACE("Error: mp4_Parse_VideoObject:vidObjLay->VOLControlParameters.vbv_buffer_size = 0\n");
                 parser->bitstream_error |= MP4_BS_ERROR_HDR_UNSUP;
                 ret = MP4_STATUS_NOTSUPPORT;
                 // Do we need to really break here? Why not just set an error and proceed
@@ -217,7 +218,7 @@ mp4_Parse_VOL_sprite(void *parent,  viddec_mp4_parser_t *parser)
             if (sprite_enable != MP4_SPRITE_GMC)
             {
                 /* This is not a supported type by HW */
-                DEB("ERROR: mp4_Parse_VideoObject:sprite_enable = %.2X\n", sprite_enable);
+                ETRACE("ERROR: mp4_Parse_VideoObject:sprite_enable = %.2X\n", sprite_enable);
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
@@ -229,20 +230,20 @@ mp4_Parse_VOL_sprite(void *parent,  viddec_mp4_parser_t *parser)
             cxt->no_of_sprite_warping_points = code >> 3;
             if (cxt->no_of_sprite_warping_points > 1)
             {
-                DEB("Warning: mp4_Parse_VideoObject:bad no_of_sprite_warping_points %d\n",
+                ETRACE("Warning: mp4_Parse_VideoObject:bad no_of_sprite_warping_points %d\n",
                     cxt->no_of_sprite_warping_points);
             }
 
             if ((vidObjLay->sprite_enable == MP4_SPRITE_GMC) && (cxt->sprite_brightness_change))
             {
-                DEB("Error: mp4_Parse_VideoObject:sprite_brightness_change should be 0 for GMC sprites\n");
+                ETRACE("Error: mp4_Parse_VideoObject:sprite_brightness_change should be 0 for GMC sprites\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
 
             if (vidObjLay->sprite_enable != MP4_SPRITE_GMC)
             {
-                DEB("ERROR: mp4_Parse_VideoObject:sprite_enable = %.2X\n", sprite_enable);
+                ETRACE("ERROR: mp4_Parse_VideoObject:sprite_enable = %.2X\n", sprite_enable);
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
@@ -330,7 +331,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
                 (vidObjLay->video_object_layer_shape != MP4_SHAPE_TYPE_RECTANGULAR))
         {
             /*  not supported shape*/
-            DEB("Error: mp4_Parse_VideoObject: sadct_disable, not supp\n");
+            ETRACE("Error: mp4_Parse_VideoObject: sadct_disable, not supp\n");
             ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
             break;
         }
@@ -341,7 +342,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
         if (vidObjLay->not_8_bit)
         {
             /*  8 bit is only supported mode*/
-            DEB("Error: mp4_Parse_VideoObject: not_8_bit, not supp\n");
+            ETRACE("Error: mp4_Parse_VideoObject: not_8_bit, not supp\n");
             ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
             break;
         }
@@ -354,7 +355,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
         if (vidObjLay->video_object_layer_shape == MP4_SHAPE_TYPE_GRAYSCALE)
         {
             /* Should not get here as shape is checked earlier */
-            DEB("Error: mp4_Parse_VideoObject: GRAYSCALE, not supp\n");
+            ETRACE("Error: mp4_Parse_VideoObject: GRAYSCALE, not supp\n");
             ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
             break;
         }
@@ -383,7 +384,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
         vidObjLay->complexity_estimation_disable = code;
         if (!vidObjLay->complexity_estimation_disable)
         {/*  complexity estimation not supported */
-            DEB("Error: mp4_Parse_VideoObject: vidObjLay->complexity_estimation_disable, not supp\n");
+            ETRACE("Error: mp4_Parse_VideoObject: vidObjLay->complexity_estimation_disable, not supp\n");
             ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
             break;
         }
@@ -406,7 +407,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
             vidObjLay->newpred_enable = code;
             if (vidObjLay->newpred_enable)
             {
-                DEB("Error: NEWPRED mode is not supported\n");
+                ETRACE("Error: NEWPRED mode is not supported\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
@@ -420,7 +421,7 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
         vidObjLay->scalability = code;
         if (vidObjLay->scalability)
         {
-            DEB("Error: VOL scalability is not supported\n");
+            ETRACE("Error: VOL scalability is not supported\n");
             ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
             break;
         }
@@ -440,7 +441,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
     mp4_Status_t            ret = MP4_STATUS_PARSE_ERROR;
     int32_t                 getbits=0;
 
-//DEB("entering mp4_Parse_VideoObjectLayer: bs_err: %d, ret: %d\n", parser->bitstream_error, ret);
+//VTRACE("entering mp4_Parse_VideoObjectLayer: bs_err: %d, ret: %d\n", parser->bitstream_error, ret);
 
     // Trying to parse more header data as it is more important than frame data
     if (parser->bitstream_error > MP4_HDR_ERROR_MASK)
@@ -459,14 +460,14 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
 
         if (!mp4_pvt_valid_object_type_indication(vidObjLay->video_object_type_indication))
         {        /* Streams with "unknown" type mismatch with ref */
-            DEB("Warning: video_object_type_indication = %d, forcing to 1\n",
+            WTRACE("Warning: video_object_type_indication = %d, forcing to 1\n",
                 vidObjLay->video_object_type_indication);
             vidObjLay->video_object_type_indication = 1;
         }
 
         if (vidObjLay->video_object_type_indication == MP4_VIDEO_OBJECT_TYPE_FINE_GRANULARITY_SCALABLE)
         {/* This is not a supported type by HW */
-            DEB("ERROR: mp4_Parse_VideoObject:video_object_type_indication = %.2X\n",
+            ETRACE("ERROR: mp4_Parse_VideoObject:video_object_type_indication = %.2X\n",
                 vidObjLay->video_object_type_indication);
             ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
             break;
@@ -487,7 +488,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
                 vidObjLay->video_object_layer_verid = (code >> 3) & 0xF;
                 if (!mp4_pvt_valid_object_layer_verid(vidObjLay->video_object_layer_verid))
                 {
-                    DEB("Error: mp4_Parse_VideoObject:is_identifier = %d, expected[1,5]\n",
+                    ETRACE("Error: mp4_Parse_VideoObject:is_identifier = %d, expected[1,5]\n",
                         vidObjLay->video_object_layer_verid);
                     ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                     break;
@@ -525,7 +526,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
             /* If shape is not rectangluar exit early without parsing */
             if (vidObjLay->video_object_layer_shape != MP4_SHAPE_TYPE_RECTANGULAR)
             {
-                DEB("Error: mp4_Parse_VideoObject: shape not rectangluar(%d):%d\n",
+                ETRACE("Error: mp4_Parse_VideoObject: shape not rectangluar(%d):%d\n",
                     MP4_SHAPE_TYPE_RECTANGULAR, vidObjLay->video_object_layer_shape);
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
@@ -534,7 +535,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
             if ((vidObjLay->video_object_layer_verid != 1) &&
                     (vidObjLay->video_object_layer_shape == MP4_SHAPE_TYPE_GRAYSCALE))
             {/* Grayscale not supported */
-                DEB("Error: MP4_SHAPE_TYPE_GRAYSCALE not supported\n");
+                ETRACE("Error: MP4_SHAPE_TYPE_GRAYSCALE not supported\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
@@ -547,7 +548,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
 
             if (vidObjLay->vop_time_increment_resolution == 0)
             {
-                DEB("Error: 0 value for vop_time_increment_resolution\n");
+                ETRACE("Error: 0 value for vop_time_increment_resolution\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
@@ -572,7 +573,7 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
             }
             else
             {
-                DEB("Error: MP4_SHAPE_TYPE_BINARYONLY not supported\n");
+                ETRACE("Error: MP4_SHAPE_TYPE_BINARYONLY not supported\n");
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
