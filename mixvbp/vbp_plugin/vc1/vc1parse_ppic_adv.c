@@ -10,6 +10,8 @@
 //  profile bitstream.
 //
 */
+
+#include <vbp_trace.h>
 #include <vbp_common.h>
 #include "vc1parse.h"
 /*------------------------------------------------------------------------------
@@ -67,11 +69,7 @@ vc1_Status vc1_ParsePictureHeader_ProgressivePpicture_Adv(void* ctxt, vc1_Info *
         md->LUMSHIFT2 = picLayerHeader->LUMSHIFT;
     }
     else
-#ifdef VBP
         picLayerHeader->MVMODE2 = 0;
-#else
-        picLayerHeader->MVMODE2 = picLayerHeader->MVMODE;
-#endif
 
     if ((picLayerHeader->MVMODE == VC1_MVMODE_MIXED_MV) ||
             ((picLayerHeader->MVMODE == VC1_MVMODE_INTENSCOMP) &&
@@ -245,7 +243,7 @@ vc1_Status vc1_ParseFieldHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pInf
     }
 
     if ((status = vc1_MVRangeDecode(ctxt, pInfo)) != VC1_STATUS_OK) {
-        DEB("Error in vc1_MVRangeDecode \n");
+        ETRACE("Error in vc1_MVRangeDecode \n");
         return status;
     }
 
@@ -311,11 +309,7 @@ vc1_Status vc1_ParseFieldHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pInf
         }
     }
     else
-#ifdef VBP
         picLayerHeader->MVMODE2 = 0;
-#else
-        picLayerHeader->MVMODE2 = picLayerHeader->MVMODE;
-#endif
 
     VC1_GET_BITS9(3, picLayerHeader->MBMODETAB);
 
@@ -330,11 +324,7 @@ vc1_Status vc1_ParseFieldHeader_InterlacePpicture_Adv(void* ctxt, vc1_Info *pInf
 
     VC1_GET_BITS9(3, picLayerHeader->CBPTAB); /* ICBPTAB. */
 
-#ifdef VBP
     if (picLayerHeader->MVMODE == VC1_MVMODE_MIXED_MV)
-#else
-    if (picLayerHeader->MVMODE2 == VC1_MVMODE_MIXED_MV)
-#endif
     {
         VC1_GET_BITS9(2, picLayerHeader->MV4BPTAB); /* 4MVBPTAB. */
     }

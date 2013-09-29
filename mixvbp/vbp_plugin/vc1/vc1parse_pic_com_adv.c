@@ -298,9 +298,7 @@ vc1_Status vc1_ParseFieldHeader_Adv(void* ctxt, vc1_Info *pInfo)
     }
     VC1_GET_BITS9(1, md->RNDCTRL);
 
-#ifdef VBP
     picLayerHeader->RNDCTRL = md->RNDCTRL;
-#endif
 
     VC1_GET_BITS9(1, picLayerHeader->UVSAMP);
 

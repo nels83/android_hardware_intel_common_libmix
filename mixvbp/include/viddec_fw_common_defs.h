@@ -200,8 +200,6 @@ enum viddec_fw_mpeg2_error_codes
     VIDDEC_FW_MPEG2_ERR_CORRUPTED_QMAT_EXT      = (1 << 29),/* Parser detected corruption in quantization matrix extension. */
 };
 
-#ifdef VBP
-
 #ifndef NULL
 #define NULL (void*)0x0
 #endif
@@ -216,8 +214,5 @@ enum viddec_fw_mpeg2_error_codes
 typedef int bool;
 #endif
 #endif
-
-#endif
-/* end of #ifdef VBP */
 
 #endif

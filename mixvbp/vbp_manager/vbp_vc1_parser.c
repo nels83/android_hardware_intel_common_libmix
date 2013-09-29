@@ -106,19 +106,8 @@ uint32 vbp_init_parser_entries_vc1(vbp_context *pcontext)
         return VBP_LOAD;
     }
 
-    pcontext->parser_ops->is_wkld_done = dlsym(pcontext->fd_parser, "viddec_vc1_wkld_done");
-    if (NULL == pcontext->parser_ops->is_wkld_done)
-    {
-        ETRACE ("Failed to set entry point.");
-        return VBP_LOAD;
-    }
-
-    pcontext->parser_ops->is_frame_start = dlsym(pcontext->fd_parser, "viddec_vc1_is_start_frame");
-    if (NULL == pcontext->parser_ops->is_frame_start)
-    {
-        ETRACE ("Failed to set entry point.");
-        return VBP_LOAD;
-    }
+    pcontext->parser_ops->is_wkld_done = NULL;
+    pcontext->parser_ops->is_frame_start = NULL;
 
     /* entry point not needed */
     pcontext->parser_ops->flush = NULL;

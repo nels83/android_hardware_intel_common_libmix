@@ -13,29 +13,9 @@
 #ifndef _VC1_H_
 #define _VC1_H_
 
-#ifdef MFD_FIRMWARE
-typedef unsigned int size_t;
-#define LOG(...)
-#else
-
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
-#ifndef VBP
-enum {
-    NONE = 0,
-    CRITICAL,
-    WARNING,
-    INFO,
-    DEBUG,
-} ;
-
-#define vc1_log_level DEBUG
-
-#define LOG( log_lev, format, args ... ) \
-      if (vc1_log_level >= log_lev) { OS_INFO("%s[%d]:: " format "\n", __FUNCTION__ , __LINE__ ,  ## args ); }
-#endif
-#endif
 
 #include "viddec_fw_common_defs.h"
 #include "viddec_fw_frame_attr.h"
@@ -45,17 +25,6 @@ enum {
 extern "C" {
 #endif
 
-#ifndef VBP
-#define LOG_CRIT(format, args ... )  LOG( CRITICAL, format, ## args)
-#define LOG_WARN(format, args ... )  LOG( WARNING,  format, ## args)
-#define LOG_INFO(format, args ... )  LOG( INFO,     format, ## args)
-#define LOG_DEBUG(format, args ... ) LOG( DEBUG,    format, ## args)
-#else
-#define LOG_CRIT(format, args ... )
-#define LOG_WARN(format, args ... )
-#define LOG_INFO(format, args ... )
-#define LOG_DEBUG(format, args ... )
-#endif
 
 // Seems to be hardware bug: DO NOT TRY TO SWAP BITPLANE0 and BITPLANE2
 // Block Control Register at offset 222C uses Bitplane_raw_ID0 to indicate directmb/fieldtx while
@@ -190,11 +159,8 @@ enum vc1_sc_seen_flags
 
 typedef struct {
     int id;
-    uint32_t intcomp_top;
-    uint32_t intcomp_bot;
     int fcm;         /* frame coding mode */
     int type;
-    int anchor[2];   /* one per field */
     int rr_en;       /* range reduction enable flag at sequence layer */
     int rr_frm;      /* range reduction flag at picture layer */
     int tff;
@@ -202,18 +168,12 @@ typedef struct {
 
 typedef struct
 {
-    uint32_t      sc_seen_since_last_wkld;
     uint32_t      sc_seen;
-    uint32_t      is_frame_start;
-    uint32_t      is_second_start;
     uint32_t      is_reference_picture;
-    uint32_t      intcomp_last[4]; /* for B frames */
-    uint32_t      intcomp_top[2];
-    uint32_t      intcomp_bot[2];
     vc1_Info      info;
     VC1D_SPR_REGS spr;
     ref_frame_t   ref_frame[VC1_NUM_REFERENCE_FRAMES];
-#ifdef VBP
+
     /* A storage area is provided for each type of bit plane.  Only one of */
     /* each type will ever be used for a picture and never more than three */
     /* bit-planes per picture, and often only one is used.  We never clear */
@@ -229,7 +189,6 @@ typedef struct
     uint32_t      bp_directmb[4096];
     uint32_t      bp_fieldtx[4096];
     uint32_t	  start_code;
-#endif
 } vc1_viddec_parser_t;
 
 #endif  //_VC1_H_

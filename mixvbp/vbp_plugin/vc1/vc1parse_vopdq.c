@@ -57,11 +57,7 @@ vc1_Status vc1_VOPDQuant(void* ctxt, vc1_Info *pInfo)
             }
             else if (picLayerHeader->DQPROFILE == VC1_DQPROFILE_DBLEDGES)
             {
-#ifdef VBP
                 VC1_GET_BITS9(2, picLayerHeader->DQDBEDGE);
-#else
-                VC1_GET_BITS9(2, picLayerHeader->DQSBEDGE); /* DQDBEDGE. */
-#endif
             }
             else if (picLayerHeader->DQPROFILE == VC1_DQPROFILE_ALLMBLKS)
             {
@@ -78,7 +74,6 @@ vc1_Status vc1_VOPDQuant(void* ctxt, vc1_Info *pInfo)
             }
         }
     }
-#ifdef VBP
     if ((picLayerHeader->DQUANTFRM == 1 && md->DQUANT == 1) || (md->DQUANT == 2))
     {
         if (picLayerHeader->PQDIFF == 7)
@@ -90,7 +85,6 @@ vc1_Status vc1_VOPDQuant(void* ctxt, vc1_Info *pInfo)
             picLayerHeader->ALTPQUANT = picLayerHeader->PQUANT + picLayerHeader->PQDIFF + 1;
         }
     }
-#endif
     return status;
 }
 

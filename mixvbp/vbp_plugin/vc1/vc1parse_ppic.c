@@ -93,11 +93,7 @@ vc1_Status vc1_ParsePictureHeader_ProgressivePpicture(void* ctxt, vc1_Info *pInf
         VC1_GET_BITS9(6, picLayerHeader->LUMSHIFT);
     }
     else
-#ifdef VBP
         picLayerHeader->MVMODE2 = 0;
-#else
-        picLayerHeader->MVMODE2 = picLayerHeader->MVMODE;
-#endif
 
     if ((picLayerHeader->MVMODE == VC1_MVMODE_MIXED_MV) ||
             ((picLayerHeader->MVMODE == VC1_MVMODE_INTENSCOMP) &&

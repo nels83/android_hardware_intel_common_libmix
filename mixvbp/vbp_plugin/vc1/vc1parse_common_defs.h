@@ -76,13 +76,8 @@ extern "C" {
     enum
     {
         VC1_MVMODE_1MV,
-#ifdef VBP
         VC1_MVMODE_HPELBI_1MV,
         VC1_MVMODE_HPEL_1MV,
-#else
-        VC1_MVMODE_HPEL_1MV,
-        VC1_MVMODE_HPELBI_1MV,
-#endif
         VC1_MVMODE_MIXED_MV,
         VC1_MVMODE_INTENSCOMP
     };
@@ -141,26 +136,23 @@ extern "C" {
         uint32_t *databits;
     } vc1_Bitplane;
 
-#ifdef VBP
 #define VC1_MAX_HRD_NUM_LEAKY_BUCKETS   32
 
     typedef struct
     {
-        uint32_t	 HRD_RATE;				 /** Maximum bit rate in bits per second */
-        uint32_t	 HRD_BUFFER;			 /** Buffer size in bits */
-        uint32_t	 HRD_FULLNESS;			 /** Buffer fullness in complete bits */
-        uint32_t	 HRD_FULLFRACTION;		 /** Numerator of fractional bit buffer fullness count */
-        uint32_t	 HRD_FULLDENOMINATOR;	 /** Denominator of fractional bit buffer fullness count */
+        uint32_t         HRD_RATE;     /** Maximum bit rate in bits per second */
+        uint32_t         HRD_BUFFER;   /** Buffer size in bits */
+        uint32_t         HRD_FULLNESS; /** Buffer fullness in complete bits */
+        uint32_t         HRD_FULLFRACTION; /** Numerator of fractional bit buffer fullness count */
+        uint32_t         HRD_FULLDENOMINATOR; /** Denominator of fractional bit buffer fullness count */
     } vc1_leaky_bucket;
 
     typedef struct _vc1_hrd_state
     {
-        uint8_t 		 BIT_RATE_EXPONENT; 							  /** Buckets
-																			(0 if none specified) */
-        uint8_t 		 BUFFER_SIZE_EXPONENT;
-        vc1_leaky_bucket sLeakyBucket[VC1_MAX_HRD_NUM_LEAKY_BUCKETS];	/** Per-bucket information */
+        uint8_t    BIT_RATE_EXPONENT;  /** Buckets (0 if none specified) */
+        uint8_t    BUFFER_SIZE_EXPONENT;
+        vc1_leaky_bucket sLeakyBucket[VC1_MAX_HRD_NUM_LEAKY_BUCKETS]; /** Per-bucket information */
     } vc1_hrd_state, *vc1_hrd_state_ptr;
-#endif
 
     /** This structure represents all bitstream metadata needed for register programming. */
     typedef struct
@@ -227,7 +219,6 @@ extern "C" {
         uint16_t widthMB;
         uint16_t heightMB;
 
-#ifdef VBP
         uint8_t COLOR_FORMAT_FLAG;
         uint8_t MATRIX_COEF;
         uint8_t SYNCMARKER;
@@ -236,7 +227,6 @@ extern "C" {
         uint8_t ASPECT_HORIZ_SIZE;
         uint8_t ASPECT_VERT_SIZE;
         vc1_hrd_state hrd_initial_state;
-#endif
 
     } vc1_metadata_t;
 
@@ -245,7 +235,6 @@ extern "C" {
     {
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned BITRTQ_POSTPROC:5;
@@ -255,23 +244,12 @@ extern "C" {
                 unsigned PROFILE:2;
                 unsigned pad:17;
             } seq_flags;
-#else
-            struct
-            {
-                unsigned pad:17;
-                unsigned PROFILE:2;
-                unsigned LEVEL:3;
-                unsigned COLORDIFF_FORMAT:2;
-                unsigned FRMRTQ_POSTPROC:3;
-                unsigned BITRTQ_POSTPROC:5;
-            } seq_flags;
-#endif
+
             uint32_t flags;
         };
 
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned DISPLAY_EXT:1;
@@ -285,27 +263,12 @@ extern "C" {
                 unsigned MAX_CODED_WIDTH:12;
                 unsigned POSTPROCFLAG:1;
             } seq_max_size;
-#else
-            struct
-            {
-                unsigned POSTPROCFLAG:1;
-                unsigned MAX_CODED_WIDTH:12;
-                unsigned MAX_CODED_HEIGHT:12;
-                unsigned PULLDOWN:1;
-                unsigned INTERLACE:1;
-                unsigned TFCNTRFLAG:1;
-                unsigned FINTERPFLAG:1;
-                unsigned RESERVED:1;
-                unsigned PSF:1;
-                unsigned DISPLAY_EXT:1;
-            } seq_max_size;
-#endif
+
             uint32_t max_size;
         };
 
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned ASPECT_RATIO_FLAG:1;
@@ -313,15 +276,7 @@ extern "C" {
                 unsigned DISP_HORIZ_SIZE:14;
                 unsigned pad:3;
             } seq_disp_size;
-#else
-            struct
-            {
-                unsigned pad:3;
-                unsigned DISP_HORIZ_SIZE:14;
-                unsigned DISP_VERT_SIZE:14;
-                unsigned ASPECT_RATIO_FLAG:1;
-            } seq_disp_size;
-#endif
+
             uint32_t disp_size;
         };
 
@@ -329,21 +284,13 @@ extern "C" {
 
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned ASPECT_VERT_SIZE:8;
                 unsigned ASPECT_HORIZ_SIZE:8;
                 unsigned pad:16;
             } seq_aspect_size;
-#else
-            struct
-            {
-                unsigned pad:16;
-                unsigned ASPECT_HORIZ_SIZE:8;
-                unsigned ASPECT_VERT_SIZE:8;
-            } seq_aspect_size;
-#endif
+
             uint32_t aspect_size;
         };
 
@@ -352,21 +299,13 @@ extern "C" {
 
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned FRAMERATEDR:4;
                 unsigned FRAMERATENR:8;
                 unsigned pad:20;
             } seq_framerate_fraction;
-#else
-            struct
-            {
-                unsigned pad:20;
-                unsigned FRAMERATENR:8;
-                unsigned FRAMERATEDR:4;
-            } seq_framerate_fraction;
-#endif
+
             uint32_t framerate_fraction;
         };
 
@@ -375,7 +314,6 @@ extern "C" {
 
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned MATRIX_COEF:8;
@@ -383,15 +321,7 @@ extern "C" {
                 unsigned COLOR_PRIM:8;
                 unsigned pad:8;
             } seq_color_format;
-#else
-            struct
-            {
-                unsigned pad:8;
-                unsigned COLOR_PRIM:8;
-                unsigned TRANSFER_CHAR:8;
-                unsigned MATRIX_COEF:8;
-            } seq_color_format;
-#endif
+
             uint32_t color_format;
         };
 
@@ -405,7 +335,6 @@ extern "C" {
     {
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned res6:1;
@@ -428,48 +357,18 @@ extern "C" {
                 unsigned FRMRTQ_POSTPROC:3;
                 unsigned PROFILE:4;
             } struct_c;
-#else
-            struct
-            {
-                unsigned PROFILE:4;
-                unsigned FRMRTQ_POSTPROC:3;
-                unsigned BITRTQ_POSTPROC:5;
-                unsigned LOOPFILTER:1;
-                unsigned res3:1;
-                unsigned MULTIRES:1;
-                unsigned res4:1;
-                unsigned FASTUVMC:1;
-                unsigned EXTENDED_MV:1;
-                unsigned DQUANT:2;
-                unsigned VSTRANSFORM:1;
-                unsigned res5:1;
-                unsigned OVERLAP:1;
-                unsigned SYNCMARKER:1;
-                unsigned RANGERED:1;
-                unsigned MAXBFRAMES:3;
-                unsigned QUANTIZER:2;
-                unsigned FINTERPFLAG:1;
-                unsigned res6:1;
-            } struct_c;
-#endif
+
             uint32_t struct_c_rcv;
         };
 
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned VERT_SIZE:16;
                 unsigned HORIZ_SIZE:16;
             } struct_a;
-#else
-            struct
-            {
-                unsigned HORIZ_SIZE:16;
-                unsigned VERT_SIZE:16;
-            } struct_a;
-#endif
+
             uint32_t struct_a_rcv;
         };
 
@@ -480,7 +379,6 @@ extern "C" {
     {
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned QUANTIZER:2;
@@ -496,23 +394,7 @@ extern "C" {
                 unsigned BROKEN_LINK:1;
                 unsigned pad1:19;
             } ep_flags;
-#else
-            struct
-            {
-                unsigned pad1:19;
-                unsigned BROKEN_LINK:1;
-                unsigned CLOSED_ENTRY:1;
-                unsigned PANSCAN_FLAG:1;
-                unsigned REFDIST_FLAG:1;
-                unsigned LOOPFILTER:1;
-                unsigned FASTUVMC:1;
-                unsigned EXTENDED_MV:1;
-                unsigned DQUANT:2;
-                unsigned VSTRANSFORM:1;
-                unsigned OVERLAP:1;
-                unsigned QUANTIZER:2;
-            } ep_flags;
-#endif
+
             uint32_t flags;
         };
 
@@ -520,21 +402,13 @@ extern "C" {
 
         union
         {
-#ifndef MFDBIGENDIAN
             struct
             {
                 unsigned CODED_HEIGHT:12;
                 unsigned CODED_WIDTH:12;
                 unsigned pad2:8;
             } ep_size;
-#else
-            struct
-            {
-                unsigned pad2:8;
-                unsigned CODED_WIDTH:12;
-                unsigned CODED_HEIGHT:12;
-            } ep_size;
-#endif
+
             uint32_t size;
         };
 
@@ -614,7 +488,6 @@ extern "C" {
         uint8_t  BottomField;
         uint32_t UniformQuant;
 
-#ifdef VBP
         uint8_t  raw_MVTYPEMB;
         uint8_t  raw_DIRECTMB;
         uint8_t  raw_SKIPMB;
@@ -631,8 +504,7 @@ extern "C" {
         vc1_Bitplane OVERFLAGS;
         vc1_Bitplane FORWARDMB;
         uint32_t  ALTPQUANT;
-        uint8_t		DQDBEDGE;
-#endif
+        uint8_t   DQDBEDGE;
 
     } vc1_PictureLayerHeader;
 

@@ -11,6 +11,7 @@
 //
 */
 
+#include <vbp_trace.h>
 #include "vc1parse.h"
 /*------------------------------------------------------------------------------
  * Parse picture layer.  This function parses progressive I or BI picture for
@@ -175,7 +176,7 @@ vc1_Status vc1_ParseFieldHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pInf
 
     VC1_GET_BITS9(5, picLayerHeader->PQINDEX);
     if ((status = vc1_CalculatePQuant(pInfo)) != VC1_STATUS_OK) {
-        DEB("Error parsing I field \n");
+        ETRACE("Error parsing I field \n");
         return status;
     }
 
@@ -198,7 +199,7 @@ vc1_Status vc1_ParseFieldHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pInf
                                      md->widthMB, (md->heightMB+1)/2, BPP_ACPRED)) !=
             VC1_STATUS_OK)
     {
-        DEB("Error parsing I field \n");
+        ETRACE("Error parsing I field \n");
         return status;
     }
 
@@ -219,7 +220,7 @@ vc1_Status vc1_ParseFieldHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pInf
                                                  (md->heightMB+1)/2, BPP_OVERFLAGS)) !=
                         VC1_STATUS_OK)
                 {
-                    DEB("Error parsing I field \n");
+                    ETRACE("Error parsing I field \n");
                     return status;
                 }
             }
@@ -246,7 +247,7 @@ vc1_Status vc1_ParseFieldHeader_InterlaceIpicture_Adv(void* ctxt, vc1_Info *pInf
 
     status = vc1_VOPDQuant(ctxt, pInfo);
     if (status != VC1_STATUS_OK) {
-        DEB("Error parsing I field \n");
+        ETRACE("Error parsing I field \n");
         return status;
     }
 

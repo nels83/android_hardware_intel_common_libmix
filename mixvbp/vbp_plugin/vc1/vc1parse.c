@@ -11,6 +11,7 @@
 //
 */
 
+#include <vbp_trace.h>
 #include "vc1parse.h"
 
 #define VC1_PIXEL_IN_LUMA 16
@@ -36,13 +37,11 @@ vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo)
     result = viddec_pm_get_bits(ctxt, &rcv.struct_a_rcv, 32);
     md->width = rcv.struct_a.HORIZ_SIZE;
     md->height = rcv.struct_a.VERT_SIZE;
-#ifdef VBP
     //The HRD rate and HRD buffer size may be encoded according to a 64 bit sequence header data structure B
     //if there is no data strcuture B metadata contained in the bitstream, we will not be able to get the
     //bitrate data, hence we set it to 0 for now
     md->HRD_NUM_LEAKY_BUCKETS = 0;
     md->hrd_initial_state.sLeakyBucket[0].HRD_RATE = 0;
-#endif
 
     result = viddec_pm_get_bits(ctxt, &rcv.struct_c_rcv, 32);
     md->PROFILE = rcv.struct_c.PROFILE >> 2;
@@ -57,9 +56,7 @@ vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo)
     md->MAXBFRAMES = rcv.struct_c.MAXBFRAMES;
     md->QUANTIZER = rcv.struct_c.QUANTIZER;
     md->FINTERPFLAG = rcv.struct_c.FINTERPFLAG;
-#ifdef VBP
     md->SYNCMARKER = rcv.struct_c.SYNCMARKER;
-#endif
 
     if ((md->PROFILE == VC1_PROFILE_SIMPLE) ||
             (md->MULTIRES && md->PROFILE == VC1_PROFILE_MAIN))
@@ -71,13 +68,13 @@ vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo)
     md->widthMB = (md->width + 15 )  / VC1_PIXEL_IN_LUMA;
     md->heightMB = (md->height + 15) / VC1_PIXEL_IN_LUMA;
 
-    DEB("rcv: beforemod: res: %dx%d\n", md->width, md->height);
+    VTRACE("rcv: beforemod: res: %dx%d\n", md->width, md->height);
 
     /* WL takes resolution in unit of 2 pel - sec. 6.2.13.1 */
     md->width = md->width/2 -1;
     md->height = md->height/2 -1;
 
-    DEB("rcv: res: %dx%d\n", md->width, md->height);
+    VTRACE("rcv: res: %dx%d\n", md->width, md->height);
 
     return status;
 }
@@ -138,12 +135,10 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
                 {
                     result = viddec_pm_get_bits(ctxt, &sh.aspect_size, 16);
                 }
-#ifdef VBP
                 md->ASPECT_RATIO_FLAG = 1;
                 md->ASPECT_RATIO = sh.ASPECT_RATIO;
                 md->ASPECT_HORIZ_SIZE = sh.seq_aspect_size.ASPECT_HORIZ_SIZE;
                 md->ASPECT_VERT_SIZE = sh.seq_aspect_size.ASPECT_VERT_SIZE;
-#endif
             }
 
             result = viddec_pm_get_bits(ctxt, &tempValue, 1);
@@ -169,10 +164,8 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
             {
                 result = viddec_pm_get_bits(ctxt, &sh.color_format, 24);
             }
-#ifdef VBP
             md->COLOR_FORMAT_FLAG = sh.COLOR_FORMAT_FLAG;
             md->MATRIX_COEF = sh.seq_color_format.MATRIX_COEF;
-#endif
         } // Successful get of display size
     } // DISPLAY_EXT is 1
 
@@ -184,9 +177,7 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
         result = viddec_pm_get_bits(ctxt, &tempValue, 5);
         sh.HRD_NUM_LEAKY_BUCKETS = tempValue;
         md->HRD_NUM_LEAKY_BUCKETS = sh.HRD_NUM_LEAKY_BUCKETS;
-#ifndef VBP
-        // Skip the rest of the parsing - hrdinfo is not required for decode or for attributes
-#else
+
         {
             uint8_t count;
             uint8_t bitRateExponent;
@@ -214,21 +205,18 @@ vc1_Status vc1_ParseSequenceLayer(void* ctxt, vc1_Info *pInfo)
                     (uint32_t)(tempValue + 1) << bufferSizeExponent;
             }
         }
-#endif
     }
     else
     {
         md->HRD_NUM_LEAKY_BUCKETS = 0;
-#ifdef VBP
         md->hrd_initial_state.sLeakyBucket[0].HRD_RATE = 0;
-#endif
     }
 
     md->widthMB = (((md->width + 1) * 2) + 15) / VC1_PIXEL_IN_LUMA;
     md->heightMB = (((md->height + 1) * 2) + 15) / VC1_PIXEL_IN_LUMA;
 
-    DEB("md: res: %dx%d\n", md->width, md->height);
-    DEB("sh: dispres: %dx%d\n", sh.seq_disp_size.DISP_HORIZ_SIZE, sh.seq_disp_size.DISP_VERT_SIZE);
+    VTRACE("md: res: %dx%d\n", md->width, md->height);
+    VTRACE("sh: dispres: %dx%d\n", sh.seq_disp_size.DISP_HORIZ_SIZE, sh.seq_disp_size.DISP_VERT_SIZE);
 
     return status;
 }
@@ -318,8 +306,8 @@ vc1_Status vc1_ParseEntryPointLayer(void* ctxt, vc1_Info *pInfo)
         }
     }
 
-    DEB("ep: res: %dx%d\n", ep.ep_size.CODED_WIDTH, ep.ep_size.CODED_HEIGHT);
-    DEB("md: after ep: res: %dx%d\n", md->width, md->height);
+    VTRACE("ep: res: %dx%d\n", ep.ep_size.CODED_WIDTH, ep.ep_size.CODED_HEIGHT);
+    VTRACE("md: after ep: res: %dx%d\n", md->width, md->height);
     return status;
 }
 

@@ -11,10 +11,7 @@
 */
 
 #include "vc1parse.h"
-
-#ifdef VBP
 #include "viddec_pm.h"
-#endif
 
 /*----------------------------------------------------------------------------*/
 
@@ -545,7 +542,6 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
 
     }
 
-#ifdef VBP
     {
         viddec_pm_cxt_t     *cxt    = (viddec_pm_cxt_t *)ctxt;
         vc1_viddec_parser_t *parser = (vc1_viddec_parser_t *)(cxt->codec_data);
@@ -693,7 +689,6 @@ vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo,
             break;
         }
     }
-#endif
 
     return status;
 }

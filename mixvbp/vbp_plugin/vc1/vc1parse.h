@@ -13,23 +13,13 @@
 #ifndef _VC1PARSE_H_
 #define _VC1PARSE_H_
 #include <vbp_common.h>
+#include <vbp_trace.h>
 #include "viddec_parser_ops.h"
 #include "vc1.h"
 
 /** @weakgroup vc1parse_defs VC-1 Parse Definitions */
 /** @ingroup vc1parse_defs */
 /*@{*/
-
-/* This macro gets the next less-than-nine bits from the bitstream.  It is
-assumed that numBits is less than ten. */
-#ifdef VC1_VERBOSE
-#include <stdio.h>
-#define AUTO_TRACE OS_INFO("trace: %s\n", __FUNCTION__)
-#define DEBUGBITS(arg1, args ...) OS_INFO( arg1, ## args)
-#else
-#define AUTO_TRACE
-#define DEBUGBITS(...)
-#endif
 
 extern void *memset(void *s, int32_t c, uint32_t n);
 
@@ -38,27 +28,21 @@ extern void *memset(void *s, int32_t c, uint32_t n);
 #define VC1_GET_BITS9(numBits, value) \
 {   uint32_t __tmp__; \
     viddec_pm_get_bits(ctxt, (uint32_t*)&__tmp__, numBits ); \
-    value = __tmp__;\
-    DEBUGBITS("BIT:%40s= 0x%x\tNo. of bits=%d\tbyte = %02x\t%s[%d]\n", #value, value, numBits, 0, __FILE__, __LINE__); \
+    value = __tmp__; \
 }
 
 #define VC1_PEEK_BITS(numBits, value) \
 {   uint32_t __tmp__; \
     viddec_pm_peek_bits(ctxt, (uint32_t*)&__tmp__, numBits ); \
-    value = __tmp__;\
-    DEBUGBITS("PEEK%40s= 0x%x\tNo. of bits=%d\tbyte = %02x\t%s[%d]\n", #value, value, numBits, 0, __FILE__, __LINE__); \
+    value = __tmp__; \
 }
 
 /* This macro asserts if the condition is not true. */
-#ifdef VC1_VERBOSE
 #define VC1_ASSERT(condition) \
 { \
     if (! (condition)) \
-        OS_INFO("Failed " #condition "!\n"); \
+        ETRACE("Failed " #condition "!\n"); \
 }
-#else
-#define VC1_ASSERT(condition)
-#endif
 
 /*@}*/
 
@@ -73,7 +57,6 @@ extern const int32_t VC1_BITPLANE_K_TBL[];
 extern const int32_t VC1_BFRACTION_TBL[];
 extern const int32_t VC1_REFDIST_TBL[];
 
-void vc1_end_frame(vc1_viddec_parser_t *parser);
 
 /* Top-level functions to parse bitstream layers for rcv format. */
 vc1_Status vc1_ParseRCVSequenceLayer (void* ctxt, vc1_Info *pInfo);
@@ -124,11 +107,6 @@ vc1_Status vc1_VOPDQuant(void* ctxt, vc1_Info *pInfo);
 vc1_Status vc1_DecodeBitplane(void* ctxt, vc1_Info *pInfo, uint32_t width, uint32_t height, vc1_bpp_type_t bptype);
 vc1_Status vc1_DecodeHuffmanOne(void* ctxt, int32_t *pDst, const int32_t *pDecodeTable);
 vc1_Status vc1_DecodeHuffmanPair(void* ctxt, const int32_t *pDecodeTable, int8_t *pFirst, int16_t *pSecond);
-
-void vc1_parse_emit_frame_start(void *parent, vc1_viddec_parser_t *parser);
-void vc1_parse_emit_second_field_start(void *parent, vc1_viddec_parser_t *parser);
-void vc1_parse_emit_current_slice(void *parent, vc1_viddec_parser_t *parser);
-
 
 /*@}*/
 
