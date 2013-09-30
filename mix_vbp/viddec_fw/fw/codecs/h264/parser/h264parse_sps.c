@@ -536,8 +536,6 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         PicWidthInMbs       = (SPS->sps_disp.pic_width_in_mbs_minus1 + 1);
         PicHeightInMapUnits = (SPS->sps_disp.pic_height_in_map_units_minus1 + 1);
         FrameHeightInMbs    = SPS->sps_disp.frame_mbs_only_flag? PicHeightInMapUnits: (PicHeightInMapUnits<<1);
-        if ((PicWidthInMbs < 2) || (PicWidthInMbs > 128) || (FrameHeightInMbs < 2) || (FrameHeightInMbs>128))
-            break;
 
         if (!SPS->sps_disp.frame_mbs_only_flag)
         {
