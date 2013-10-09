@@ -14,34 +14,15 @@
 #ifndef _H264_H_
 #define _H264_H_
 
-#ifdef HOST_ONLY
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#endif
 
 #include "stdint.h"
 
 #include "viddec_fw_common_defs.h"
 #include "h264parse_sei.h"
 
-#ifdef VBP
-//#define SW_ERROR_CONCEALEMNT
-#endif
-
-#ifdef WIN32
-#define mfd_printf OS_INFO
-#endif
-
-#ifdef H264_VERBOSE
-#define PRINTF(format, args...) OS_INFO("%s:  %s[%d]:: " format, __FILE__, __FUNCTION__ , __LINE__ ,  ## args )
-#else
-//#define PRINTF(args...)
-#endif
-
-//#pragma warning(disable : 4710) // function not inlined
-//#pragma warning(disable : 4514) // unreferenced inline function has been removed CL
-//#pragma warning(disable : 4100) // unreferenced formal parameter CL
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,7 +68,7 @@ extern "C" {
 #define MPD_DPB_FS_NULL_IDC			31            // May need to be changed if we alter gaps_in_frame_num to use 
 
 #define MFD_H264_MAX_FRAME_BUFFERS  17
-#define NUM_DPB_FRAME_STORES        (MFD_H264_MAX_FRAME_BUFFERS + 1)  // 1 extra for storign non-existent pictures.
+#define NUM_DPB_FRAME_STORES        (MFD_H264_MAX_FRAME_BUFFERS + 1)  // 1 extra for storing non-existent pictures.
 
 //Scalling Matrix Type
 #define PPS_QM                  0
@@ -108,8 +89,6 @@ extern "C" {
 #define FRAME_TYPE_BOTTOM_OFFSET    0
 #define FRAME_TYPE_STRUCTRUE_OFFSET 6
 
-//// Error handling
-#define FIELD_ERR_OFFSET		17			//offset for Field error flag ----refer to the structure definition viddec_fw_workload_error_codes in viddec_fw_common_defs.h
 
 ////Bits Handling
 #define h264_bitfields_extract(x_32, start, mask)     (((x_32) >> (start)) & (mask) )
@@ -505,11 +484,10 @@ extern "C" {
         uint8_t   aspect_ratio_idc;                                // u(8)
         uint8_t   video_signal_type_present_flag;                  // u(1)
         uint8_t   video_format;                                    // u(3)
-#ifdef VBP
+
         uint8_t   video_full_range_flag;                           // u(1)
         uint8_t   matrix_coefficients;                              // u(8)
         uint32_t  bit_rate_value;
-#endif
 
         uint8_t   colour_description_present_flag;                 // u(1)
         uint8_t   colour_primaries;                                // u(8)
@@ -684,7 +662,6 @@ extern "C" {
         uint8_t		status;
     } OldSliceParams;
 
-#ifdef VBP
     typedef struct _h264__pred_weight_table
     {
         uint8_t luma_log2_weight_denom;
@@ -703,7 +680,6 @@ extern "C" {
         int16_t chroma_weight_l1[32][2];
         int8_t chroma_offset_l1[32][2];
     } h264_pred_weight_table;
-#endif
 
     typedef struct _h264_Slice_Header
     {
@@ -723,9 +699,7 @@ extern "C" {
         int32_t		slice_beta_offset_div2;								//SE
         int32_t		slice_group_change_cycle;							//UV
 
-#ifdef VBP
         h264_pred_weight_table  sh_predwttbl;
-#endif
 
         ///// Flags or IDs
         //h264_ptype_t	slice_type;											//UE
@@ -789,9 +763,7 @@ extern "C" {
         uint8_t mb_adaptive_frame_field_flag;
         uint8_t direct_8x8_inference_flag;
         uint8_t frame_cropping_flag;
-#ifdef VBP
         uint8_t separate_colour_plane_flag;
-#endif
 
         uint16_t vui_parameters_present_flag;
         uint16_t chroma_format_idc;
@@ -1010,15 +982,6 @@ extern "C" {
         uint8_t			last_I_frame_idc;
         uint8_t			sei_b_state_ready;
         uint8_t			gop_err_flag;
-
-
-        uint32_t		wl_err_curr;
-        uint32_t		wl_err_next;
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-        uint32_t                sw_bail;
-#endif
-#endif
     } h264_Info;
 
 
@@ -1090,17 +1053,12 @@ typedef struct _slice_header_t {
 } slice_header_t;
 
 
-
-
 typedef struct _vbp_h264_sliceheader {
     slice_header_t          slice_header;
     dec_ref_pic_marking_t   ref_pic_marking;
 } vbp_h264_sliceheader;
 
 #endif
-
-
-
 #endif  //_H264_H_
 
 

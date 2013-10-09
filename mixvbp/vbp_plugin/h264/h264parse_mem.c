@@ -45,7 +45,6 @@ void* h264_memcpy( void* dest, void* src, uint32_t num )
 }
 
 
-#ifndef USER_MODE
 
 //h264_Parse_Copy_Sps_To_DDR () copy local sps to ddr mem
 void h264_Parse_Copy_Pps_To_DDR(h264_Info* pInfo, pic_param_set_ptr PPS, uint32_t nPPSId)
@@ -191,8 +190,5 @@ void h264_Parse_Clear_Sps_Updated_Flag(h264_Info* pInfo, uint32_t nSPSId)
 
 }
 //end of h264_Parse_Clear_Sps_Updated_Flag
-
-
-#endif
 
 

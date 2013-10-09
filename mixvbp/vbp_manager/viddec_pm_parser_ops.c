@@ -4,6 +4,7 @@
 #include "viddec_parser_ops.h"
 #include "viddec_pm_utils_bstream.h"
 #include "viddec_fw_common_defs.h"
+#include <vbp_trace.h>
 
 int32_t viddec_pm_get_bits(void *parent, uint32_t *data, uint32_t num_bits)
 {
@@ -14,7 +15,7 @@ int32_t viddec_pm_get_bits(void *parent, uint32_t *data, uint32_t num_bits)
     ret = viddec_pm_utils_bstream_peekbits(&(cxt->getbits), data, num_bits, 1);
     if (ret == -1)
     {
-        DEB("FAILURE!!!! getbits returned %d\n", ret);
+        VTRACE("FAILURE? getbits returned %d", ret);
     }
 
     return ret;

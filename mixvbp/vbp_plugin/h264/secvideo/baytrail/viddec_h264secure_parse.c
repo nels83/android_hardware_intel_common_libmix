@@ -1,12 +1,13 @@
 #include "viddec_parser_ops.h"
 
-#include "viddec_fw_workload.h"
 #include "viddec_pm.h"
 
 #include "h264.h"
 #include "h264parse.h"
 
 #include "h264parse_dpb.h"
+#include <vbp_trace.h>
+
 
 /* Init function which can be called to intialized local context on open and flush and preserve*/
 void viddec_h264secure_init(void *ctxt, uint32_t *persist_mem, uint32_t preserve)
@@ -22,9 +23,6 @@ void viddec_h264secure_init(void *ctxt, uint32_t *persist_mem, uint32_t preserve
     }
     /* picture level info which will always be initialized */
     h264_init_Info_under_sps_pps_level(pInfo);
-#ifdef SW_ERROR_CONCEALEMNT
-   pInfo->sw_bail = 0;
-#endif
     return;
 }
 
@@ -92,16 +90,6 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
         pInfo->primary_pic_type_plus_one = 0;
 
 
-
-#ifndef VBP
-        if (pInfo->img.recovery_point_found == 0) {
-            pInfo->img.structure = FRAME;
-            pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
-            pInfo->wl_err_curr |= (FRAME << FIELD_ERR_OFFSET);
-            break;
-        }
-#endif
-
         ////////////////////////////////////////////////////////////////////////////
         // Step 2: Parsing slice header
         ////////////////////////////////////////////////////////////////////////////
@@ -120,24 +108,11 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
 
         pInfo->sei_information.recovery_point = 0;
 
-        if (next_SliceHeader.sh_error & 3) {
-            pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
-
-            // Error type definition, refer to viddec_fw_common_defs.h
-            //		if error in top field, VIDDEC_FW_WORKLOAD_ERR_TOPFIELD			= (1 << 17)
-            //		if error in bottom field, VIDDEC_FW_WORKLOAD_ERR_BOTTOMFIELD	   = (1 << 18)
-            //		if this is frame based, both 2 bits should be set
-            pInfo->wl_err_curr |= (FRAME << FIELD_ERR_OFFSET);
-
+        if (next_SliceHeader.sh_error & 3)
+        {
             break;
         }
         pInfo->img.current_slice_num++;
-
-
-#ifdef DUMP_HEADER_INFO
-        dump_slice_header(pInfo, &next_SliceHeader);
-////h264_print_decoder_values(pInfo);
-#endif
 
 
         ////////////////////////////////////////////////////////////////////////////
@@ -187,10 +162,6 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
                 {
                     h264_dpb_gaps_in_frame_num_mem_management(pInfo);
                 }
-
-#ifdef DUMP_HEADER_INFO
-                dump_new_picture_attr(pInfo, pInfo->SliceHeader.frame_num);
-#endif
             }
             //
             /// Decoding POC
@@ -239,17 +210,6 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
 
         h264_dpb_update_ref_lists( pInfo);
 
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-        if ((pInfo->dpb.ltref_frames_in_buffer + pInfo->dpb.ref_frames_in_buffer ) > pInfo->active_SPS.num_ref_frames)
-        {
-            pInfo->sw_bail = 1;
-        }
-#endif
-#endif
-#ifdef DUMP_HEADER_INFO
-        dump_ref_list(pInfo);
-#endif
         /// Emit out the current "good" slice
         h264_parse_emit_current_slice(parent, pInfo);
 
@@ -260,8 +220,7 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
     case h264_NAL_UNIT_TYPE_DPA:
     case h264_NAL_UNIT_TYPE_DPB:
     case h264_NAL_UNIT_TYPE_DPC:
-        //OS_INFO("***********************DP feature, not supported currently*******************\n");
-        pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
+        ETRACE("Data Partition is not supported currently\n");
         status = H264_STATUS_NOTSUPPORT;
         break;
 
@@ -301,11 +260,6 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
             if (1==pInfo->active_SPS.pic_order_cnt_type) {
                 h264_Parse_Copy_Offset_Ref_Frames_To_DDR(pInfo,(int32_t *)pInfo->TMP_OFFSET_REFFRM_PADDR_GL,pInfo->active_SPS.seq_parameter_set_id);
             }
-
-#ifdef DUMP_HEADER_INFO
-            dump_sps(&(pInfo->active_SPS));
-#endif
-
         }
         ///// Restore the active SPS if new arrival's id changed
         if (old_sps_id>=MAX_NUM_SPS) {
@@ -358,9 +312,6 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
             {
                 h264_Parse_Copy_Sps_From_DDR(pInfo, &(pInfo->active_SPS), old_sps_id);
             }
-#ifdef DUMP_HEADER_INFO
-            dump_pps(&(pInfo->active_PPS));
-#endif
         } else {
             if (old_sps_id<MAX_NUM_SPS)
                 h264_Parse_Copy_Sps_From_DDR(pInfo, &(pInfo->active_SPS), old_sps_id);
@@ -392,7 +343,6 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
         break;
 
     case h264_NAL_UNIT_TYPE_Acc_unit_delimiter:
-#if 1
         ///// primary_pic_type
         {
             uint32_t code = 0xff;
@@ -410,7 +360,6 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
             pInfo->number_of_first_au_info_nal_before_first_slice++;
             break;
         }
-#endif
 
     case h264_NAL_UNIT_TYPE_Reserved1:
     case h264_NAL_UNIT_TYPE_Reserved2:

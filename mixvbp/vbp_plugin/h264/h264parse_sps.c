@@ -3,9 +3,8 @@
 
 #include "h264.h"
 #include "h264parse.h"
-#ifdef VBP
-#include<math.h>
-#endif
+#include <math.h>
+#include <vbp_trace.h>
 
 
 /// SPS extension unit (unit_type = 13)
@@ -169,9 +168,8 @@ h264_Status h264_Parse_Vui_Parameters(void *parent, h264_Info* pInfo, seq_param_
 
             viddec_pm_get_bits(parent, &code, 1);
             pVUI_Seq_Not_Used->video_full_range_flag = (uint8_t)code;
-#ifdef VBP
+
             SPS->sps_disp.vui_seq_parameters.video_full_range_flag = (uint8_t)code;
-#endif
 
             viddec_pm_get_bits(parent, &code, 1);
             SPS->sps_disp.vui_seq_parameters.colour_description_present_flag = (uint8_t)code;
@@ -186,9 +184,8 @@ h264_Status h264_Parse_Vui_Parameters(void *parent, h264_Info* pInfo, seq_param_
 
                 viddec_pm_get_bits(parent, &code, 8);
                 pVUI_Seq_Not_Used->matrix_coefficients = (uint8_t)code;
-#ifdef VBP
+
                 SPS->sps_disp.vui_seq_parameters.matrix_coefficients = (uint8_t)code;
-#endif
             }
         }
 
@@ -294,42 +291,16 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
     case h264_ProfileHigh:
         break;
     default:
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-        pInfo->sw_bail = 1;
-#endif
-#endif
         return H264_SPS_INVALID_PROFILE;
         break;
     }
 
-    //SPS->constraint_set0_flag = h264_GetBits(pInfo, 1, "constraint_set0_flag");
-    //SPS->constraint_set1_flag = h264_GetBits(pInfo, 1, "constraint_set1_flag");		//should be 1
-    //SPS->constraint_set2_flag = h264_GetBits(pInfo, 1, "constraint_set2_flag");
-    //SPS->constraint_set3_flag = h264_GetBits(pInfo, 1, "constraint_set3_flag");
-
-#ifdef VBP
     viddec_pm_get_bits(parent, &code, 5);	 //constraint flag set0...set4 (h.264 Spec v2009)
     SPS->constraint_set_flags = (uint8_t)code;
 
     //// reserved_zero_3bits
     viddec_pm_get_bits(parent, (uint32_t *)&code, 3); //3bits zero reserved (h.264 Spec v2009)
-#else
 
-    viddec_pm_get_bits(parent, &code, 4);
-    SPS->constraint_set_flags = (uint8_t)code;
-
-    //// reserved_zero_4bits
-    viddec_pm_get_bits(parent, (uint32_t *)&code, 4);
-#endif
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-    if (code != 0)
-    {
-        pInfo->sw_bail = 1;
-    }
-#endif
-#endif
     viddec_pm_get_bits(parent, &code, 8);
     SPS->level_idc = (uint8_t)code;
 
@@ -353,11 +324,6 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
     case h264_Level51:
         break;
     default:
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-        pInfo->sw_bail = 1;
-#endif
-#endif
         return H264_SPS_INVALID_LEVEL;
     }
 
@@ -367,45 +333,43 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         //// seq_parameter_set_id ---[0,31]
         if (SPS->seq_parameter_set_id > MAX_NUM_SPS -1)
         {
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-            pInfo->sw_bail = 1;
-#endif
-#endif
+            ETRACE("SPS id is out of range: %d", SPS->seq_parameter_set_id);
             break;
         }
-#ifdef VBP
         SPS->sps_disp.separate_colour_plane_flag = 0;
-#endif
 
         if ((SPS->profile_idc == h264_ProfileHigh) || (SPS->profile_idc == h264_ProfileHigh10) ||
-                (SPS->profile_idc == h264_ProfileHigh422) || (SPS->profile_idc == h264_ProfileHigh444)   )
+                (SPS->profile_idc == h264_ProfileHigh422) || (SPS->profile_idc == h264_ProfileHigh444))
         {
             //// chroma_format_idc ---[0,3], currently we don't support 444, so [0,2]
             data = h264_GetVLCElement(parent, pInfo, false);
             if ( data > H264_CHROMA_422)
                 break;
             SPS->sps_disp.chroma_format_idc = (uint8_t)data;
-            //if(SPS->sps_disp.chroma_format_idc == H264_CHROMA_444) {}
 
-#ifdef VBP
-            if(SPS->sps_disp.chroma_format_idc == H264_CHROMA_444) {
+            if(SPS->sps_disp.chroma_format_idc == H264_CHROMA_444)
+            {
                 viddec_pm_get_bits(parent, &code, 1);
                 SPS->sps_disp.separate_colour_plane_flag = (uint8_t)data;
             }
-#endif
+
             //// bit_depth_luma_minus8 ---[0,4], -----only support 8-bit pixel
             data = h264_GetVLCElement(parent, pInfo, false);
-            if ( data)
+            if (data)
+            {
+                ETRACE("A High Profile bitstream must have bit_depth_luma_minus8 equal to 0");
                 break;
+            }
             SPS->bit_depth_luma_minus8 = (uint8_t)data;
 
             //// bit_depth_chroma_minus8 ---[0,4]
             data = h264_GetVLCElement(parent, pInfo, false);
-            if ( data )
+            if (data)
+            {
+                ETRACE("A High Profile bitstream must have bit_depth_chroma_minus8 equal to 0");
                 break;
+            }
             SPS->bit_depth_chroma_minus8 = (uint8_t)data;
-
 
             viddec_pm_get_bits(parent, &code, 1);
             SPS->lossless_qpprime_y_zero_flag = (uint8_t)code;
@@ -418,14 +382,14 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
                 //int n_ScalingList = (SPS->sps_disp.chroma_format_idc != H264_CHROMA_444) ? 8 : 12;
                 int n_ScalingList = 8;				/// We do not support 444 currrently
 
-                for (i=0; i<n_ScalingList; i++)
+                for (i = 0; i < n_ScalingList; i++)
                 {
                     viddec_pm_get_bits(parent, &code, 1);
                     SPS->seq_scaling_list_present_flag[i] = (uint8_t)code;
 
                     if (SPS->seq_scaling_list_present_flag[i])
                     {
-                        if (i<6)
+                        if (i < 6)
                             h264_Scaling_List(parent, SPS->ScalingList4x4[i], 16, &SPS->UseDefaultScalingMatrix4x4Flag[i], pInfo);
                         else
                             h264_Scaling_List(parent, SPS->ScalingList8x8[i-6], 64, &SPS->UseDefaultScalingMatrix8x8Flag[i-6], pInfo);
@@ -447,33 +411,28 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         data = (h264_GetVLCElement(parent, pInfo, false));
         if ( data > 12)
         {
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-            pInfo->sw_bail = 1;
-#endif
-#endif
+            ETRACE("log2_max_frame_num_minus4 is over 12");
             break;
         }
         SPS->log2_max_frame_num_minus4 = (uint8_t)data;
 
         //// pic_order_cnt_type ---- [0,2]
         data = h264_GetVLCElement(parent, pInfo, false);
-        if ( data > 2)
+        if (data > 2)
         {
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-            pInfo->sw_bail = 1;
-#endif
-#endif
+            ETRACE("pic_order_cnt_type is over 2");
             break;
         }
         SPS->pic_order_cnt_type = (uint8_t)data;
 
 
         SPS->expectedDeltaPerPOCCycle = 0;
-        if (SPS->pic_order_cnt_type == 0)	{
+        if (SPS->pic_order_cnt_type == 0)
+        {
             SPS->log2_max_pic_order_cnt_lsb_minus4 = h264_GetVLCElement(parent, pInfo, false);
-        } else if (SPS->pic_order_cnt_type == 1) {
+        }
+        else if (SPS->pic_order_cnt_type == 1)
+        {
             viddec_pm_get_bits(parent, &code, 1);
             SPS->delta_pic_order_always_zero_flag = (uint8_t)code;
 
@@ -484,29 +443,18 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
             data = h264_GetVLCElement(parent, pInfo, false);
             if ( data > 255)
             {
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-                pInfo->sw_bail = 1;
-#endif
-#endif
+                ETRACE("num_ref_frames_in_pic_order_cnt_cycle is out of range: %d", data);
                 break;
             }
             SPS->num_ref_frames_in_pic_order_cnt_cycle = (uint8_t)data;
 
-
             //Alloc memory for frame offset -- FIXME
-            for (i=0; i< SPS->num_ref_frames_in_pic_order_cnt_cycle; i++)
+            for (i = 0; i < SPS->num_ref_frames_in_pic_order_cnt_cycle; i++)
             {
                 /////SPS->offset_for_ref_frame[i] could be removed from SPS
-#ifndef USER_MODE
                 tmp = h264_GetVLCElement(parent, pInfo, true);
-                pOffset_ref_frame[i]=tmp;
+                pOffset_ref_frame[i] = tmp;
                 SPS->expectedDeltaPerPOCCycle += tmp;
-#else
-                tmp = h264_GetVLCElement(parent, pInfo, true);
-                SPS->offset_for_ref_frame[i]=tmp;
-                SPS->expectedDeltaPerPOCCycle += tmp;
-#endif
             }
         }
 
@@ -514,11 +462,7 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         data = h264_GetVLCElement(parent, pInfo, false);
         if ( data > 16)
         {
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-            pInfo->sw_bail = 1;
-#endif
-#endif
+            ETRACE("The number of reference frame should not be over 16, actuall: %d", data);
             break;
         }
         SPS->num_ref_frames = (uint8_t)data;
@@ -535,18 +479,13 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         /// err check for size
         PicWidthInMbs       = (SPS->sps_disp.pic_width_in_mbs_minus1 + 1);
         PicHeightInMapUnits = (SPS->sps_disp.pic_height_in_map_units_minus1 + 1);
-        FrameHeightInMbs    = SPS->sps_disp.frame_mbs_only_flag? PicHeightInMapUnits: (PicHeightInMapUnits<<1);
-        if ((PicWidthInMbs < 2) || (PicWidthInMbs > 128) || (FrameHeightInMbs < 2) || (FrameHeightInMbs>128))
-            break;
+        FrameHeightInMbs    = SPS->sps_disp.frame_mbs_only_flag ? PicHeightInMapUnits : (PicHeightInMapUnits << 1);
 
         if (!SPS->sps_disp.frame_mbs_only_flag)
         {
             viddec_pm_get_bits(parent, &code, 1);
             SPS->sps_disp.mb_adaptive_frame_field_flag = (uint8_t)code;
         }
-
-        //SPS->frame_height_in_mbs = (2-SPS->sps_disp.frame_mbs_only_flag)*(SPS->sps_disp.pic_height_in_map_units_minus1+1);
-        //SPS->pic_size_in_map_units = (SPS->sps_disp.pic_width_in_mbs_minus1+1)*SPS->sps_disp.frame_height_in_mbs;
 
         viddec_pm_get_bits(parent, &code, 1);
         SPS->sps_disp.direct_8x8_inference_flag = (uint8_t)code;
@@ -563,21 +502,20 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
         }
 
         //// when frame_mbs_only_flag is equal to 0, direct_8x8_inference_flag shall be equal to 1
-        if (SPS->sps_disp.frame_mbs_only_flag == 0 && SPS->sps_disp.direct_8x8_inference_flag == 0) {
+        if (SPS->sps_disp.frame_mbs_only_flag == 0 && SPS->sps_disp.direct_8x8_inference_flag == 0) 
+        {
+            ETRACE("frame_mbs_only_flag is equal to 0 but direct_8x8_inference_flag is not equal to 1");
             break;
         }
 
         ////// vui_parameters
-        if (viddec_pm_get_bits(parent, &code, 1) == -1)
-            break;
+        viddec_pm_get_bits(parent, &code, 1);
         SPS->sps_disp.vui_parameters_present_flag = (uint8_t)code;
         ret = H264_STATUS_OK;
 
         if (SPS->sps_disp.vui_parameters_present_flag)
         {
-#ifndef VBP
-            ret = h264_Parse_Vui_Parameters(parent, pInfo, SPS, pVUI_Seq_Not_Used);
-#else
+
             // Ignore VUI parsing result
             h264_Parse_Vui_Parameters(parent, pInfo, SPS, pVUI_Seq_Not_Used);
             if (SPS->sps_disp.vui_seq_parameters.nal_hrd_parameters_present_flag)
@@ -598,10 +536,9 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
                 SPS->sps_disp.vui_seq_parameters.bit_rate_value = bit_rate_value;
              }*/
 
-#endif
         }
     } while (0);
-#ifdef VBP
+
     if (SPS->sps_disp.vui_seq_parameters.bit_rate_value == 0)
     {
         int maxBR = 0;
@@ -680,7 +617,6 @@ h264_Status h264_Parse_SeqParameterSet(void *parent,h264_Info * pInfo, seq_param
 
         SPS->sps_disp.vui_seq_parameters.bit_rate_value = maxBR *  cpbBrVclFactor;
     }
-#endif
 
     //h264_Parse_rbsp_trailing_bits(pInfo);
 

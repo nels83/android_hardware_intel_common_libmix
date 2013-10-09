@@ -14,6 +14,8 @@
 #include "h264.h"
 #include "h264parse.h"
 #include "h264parse_dpb.h"
+#include <vbp_trace.h>
+
 
 
 /* ------------------------------------------------------------------------------------------ */
@@ -38,22 +40,22 @@ h264_Status h264_Scaling_List(void *parent, uint8_t *scalingList, int32_t sizeOf
            58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63
         };
 
-    lastScale      = 8;
-    nextScale      = 8;
+    lastScale   = 8;
+    nextScale   = 8;
     scanj = 0;
 
-    for (j=0; j<sizeOfScalingList; j++)
+    for (j = 0; j < sizeOfScalingList; j++)
     {
-        scanj = (sizeOfScalingList==16)?ZZ_SCAN[j]:ZZ_SCAN8[j];
+        scanj = (sizeOfScalingList == 16) ? ZZ_SCAN[j] : ZZ_SCAN8[j];
 
-        if (nextScale!=0)
+        if (nextScale != 0)
         {
             delta_scale = h264_GetVLCElement(parent, pInfo, true);
             nextScale = (lastScale + delta_scale + 256) % 256;
-            *UseDefaultScalingMatrix = (uint8_t) (scanj==0 && nextScale==0);
+            *UseDefaultScalingMatrix = (uint8_t)(scanj == 0 && nextScale == 0);
         }
 
-        scalingList[scanj] = (nextScale==0) ? lastScale:nextScale;
+        scalingList[scanj] = (nextScale == 0) ? lastScale : nextScale;
         lastScale = scalingList[scanj];
     }
 
@@ -75,54 +77,47 @@ h264_Status h264_active_par_set(h264_Info*pInfo,h264_Slice_Header_t* SliceHeader
     ///////////////////////////////////////////////////
     if ((SliceHeader->first_mb_in_slice == 0) || (SliceHeader->pic_parameter_id != pInfo->active_PPS.pic_parameter_set_id))
     {
-#ifndef WIN32
         h264_Parse_Copy_Pps_From_DDR(pInfo, &pInfo->active_PPS, SliceHeader->pic_parameter_id);
 
         if (pInfo->active_PPS.seq_parameter_set_id >= MAX_NUM_SPS)
         {
-            return H264_PPS_INVALID_PIC_ID;			/// Invalid PPS detected
+            WTRACE("Invalid PPS detected");
+            return H264_PPS_INVALID_PIC_ID;
         }
 
         if (pInfo->active_PPS.seq_parameter_set_id != pInfo->active_SPS.seq_parameter_set_id)
+        {
+            pInfo->Is_SPS_updated = 1;
+            h264_Parse_Copy_Sps_From_DDR(pInfo, &pInfo->active_SPS, pInfo->active_PPS.seq_parameter_set_id);
+            h264_Parse_Clear_Sps_Updated_Flag(pInfo, pInfo->active_PPS.seq_parameter_set_id);
+        }
+        else if (h264_Parse_Check_Sps_Updated_Flag(pInfo, pInfo->active_PPS.seq_parameter_set_id))
         {
             pInfo->Is_SPS_updated =1;
             h264_Parse_Copy_Sps_From_DDR(pInfo, &pInfo->active_SPS, pInfo->active_PPS.seq_parameter_set_id);
             h264_Parse_Clear_Sps_Updated_Flag(pInfo, pInfo->active_PPS.seq_parameter_set_id);
         }
-        else
-        {
-            if (h264_Parse_Check_Sps_Updated_Flag(pInfo, pInfo->active_PPS.seq_parameter_set_id))
-            {
-                pInfo->Is_SPS_updated =1;
-                h264_Parse_Copy_Sps_From_DDR(pInfo, &pInfo->active_SPS, pInfo->active_PPS.seq_parameter_set_id);
-                h264_Parse_Clear_Sps_Updated_Flag(pInfo, pInfo->active_PPS.seq_parameter_set_id);
-            }
-        }
-
-#else
-        pInfo->active_PPS = PPS_GL[SliceHeader->pic_parameter_id];
-        pInfo->active_SPS = SPS_GL[pInfo->active_PPS.seq_parameter_set_id];
-#endif
 
         if (pInfo->active_SPS.seq_parameter_set_id >= MAX_NUM_SPS)
         {
-            return H264_PPS_INVALID_PIC_ID;			//// Invalid SPS detected
+            WTRACE("Invalid SPS detected");
+            return H264_PPS_INVALID_PIC_ID;
         }
     }
-    else {
-        if ((pInfo->active_PPS.seq_parameter_set_id >= MAX_NUM_SPS)  || (pInfo->active_SPS.seq_parameter_set_id >= MAX_NUM_SPS))
+    else
+    {
+        if ((pInfo->active_PPS.seq_parameter_set_id >= MAX_NUM_SPS)
+            || (pInfo->active_SPS.seq_parameter_set_id >= MAX_NUM_SPS))
         {
-            return H264_PPS_INVALID_PIC_ID;			/// Invalid PPS detected
+            WTRACE("Invalid SPS detected");
+            return H264_PPS_INVALID_PIC_ID;
         }
     }
-
 
     pInfo->img.PicWidthInMbs    = (pInfo->active_SPS.sps_disp.pic_width_in_mbs_minus1 + 1);
-    //pInfo->img.PicHeightInMapUnits = (pInfo->active_SPS.sps_disp.pic_height_in_map_units_minus1 + 1);
     pInfo->img.FrameHeightInMbs = pInfo->active_SPS.sps_disp.frame_mbs_only_flag?				\
-                                  (pInfo->active_SPS.sps_disp.pic_height_in_map_units_minus1 + 1):	\
-                                  ((pInfo->active_SPS.sps_disp.pic_height_in_map_units_minus1 + 1)<<1);
-
+                                  (pInfo->active_SPS.sps_disp.pic_height_in_map_units_minus1 + 1) :	\
+                                  ((pInfo->active_SPS.sps_disp.pic_height_in_map_units_minus1 + 1) << 1);
 
     return H264_STATUS_OK;
 };   //// End of h264_active_par_set
@@ -144,8 +139,6 @@ h264_Status h264_Parse_Slice_Layer_Without_Partitioning_RBSP(void *parent, h264_
     //// Part2/3: depend on the active parset
     //////////////////////////////////////////////////
 
-    //retStatus = h264_Parse_Slice_Header_1(pInfo);
-
     SliceHeader->sh_error = 0;
 
     if (h264_Parse_Slice_Header_1(parent, pInfo, SliceHeader) == H264_STATUS_OK)
@@ -156,25 +149,26 @@ h264_Status h264_Parse_Slice_Layer_Without_Partitioning_RBSP(void *parent, h264_
         retStatus = h264_active_par_set(pInfo, SliceHeader);
     }
 
-    if (retStatus == H264_STATUS_OK) {
+    if (retStatus == H264_STATUS_OK)
+    {
         switch (pInfo->active_SPS.profile_idc)
         {
         case h264_ProfileBaseline:
         case h264_ProfileMain:
         case h264_ProfileExtended:
-            pInfo->active_PPS.transform_8x8_mode_flag=0;
-            pInfo->active_PPS.pic_scaling_matrix_present_flag =0;
+            pInfo->active_PPS.transform_8x8_mode_flag = 0;
+            pInfo->active_PPS.pic_scaling_matrix_present_flag = 0;
             pInfo->active_PPS.second_chroma_qp_index_offset = pInfo->active_PPS.chroma_qp_index_offset;
 
         default:
             break;
         }
 
-        if ( h264_Parse_Slice_Header_2(parent, pInfo, SliceHeader) != H264_STATUS_OK)
+        if (h264_Parse_Slice_Header_2(parent, pInfo, SliceHeader) != H264_STATUS_OK)
         {
             SliceHeader->sh_error |= 2;
         }
-        else	if ( h264_Parse_Slice_Header_3(parent, pInfo, SliceHeader) != H264_STATUS_OK)
+        else if (h264_Parse_Slice_Header_3(parent, pInfo, SliceHeader) != H264_STATUS_OK)
         {
             SliceHeader->sh_error |= 4;
         }
@@ -214,30 +208,13 @@ h264_Status h264_Parse_NAL_Unit(void *parent, h264_Info* pInfo, uint8_t *nal_ref
 {
     h264_Status ret = H264_STATUS_ERROR;
 
-    //h264_NAL_Unit_t* NAL = &pInfo->NAL;
     uint32_t code;
-#if 0
-    viddec_pm_get_bits(void * parent,uint32_t * data,uint32_t num_bits)(parent, &code, 24);
-    viddec_pm_get_bits(parent, &code, 1);   //forbidden_zero_bit
-
-    viddec_pm_get_bits(parent, &code, 2);
-    SliceHeader->nal_ref_idc = (uint8_t)code;
-
-    viddec_pm_get_bits(parent, &code, 5);
-    pInfo->nal_unit_type = (uint8_t)code;
-#else
-#ifdef VBP
-    if ( viddec_pm_get_bits(parent, &code, 8) != -1)
-#else
-    //// 24bit SC, 1 bit: forbidden_zero_bit, 2 bitrs: nal_ref_idc, 5 bits: nal_unit_type
-    if ( viddec_pm_get_bits(parent, &code, 32) != -1)
-#endif
+    if (viddec_pm_get_bits(parent, &code, 8) != -1)
     {
-        *nal_ref_idc = (uint8_t)((code>>5)&0x3);
-        pInfo->nal_unit_type = (uint8_t)((code>>0)&0x1f);
+        *nal_ref_idc = (uint8_t)((code >> 5) & 0x3);
+        pInfo->nal_unit_type = (uint8_t)((code >> 0) & 0x1f);
         ret = H264_STATUS_OK;
     }
-#endif
 
     return ret;
 }
@@ -348,7 +325,7 @@ void h264_init_Info_under_sps_pps_level(h264_Info* pInfo)
     pInfo->h264_pwt_end_bit_offset = 0;
     pInfo->h264_pwt_enabled = 0;
 
-    for (i=0; i<32; i++)
+    for (i = 0; i < 32; i++)
     {
         pInfo->slice_ref_list0[i] = 0;
         pInfo->slice_ref_list1[i] = 0;
@@ -370,8 +347,6 @@ void h264_init_Info_under_sps_pps_level(h264_Info* pInfo)
 
     pInfo->sei_rp_received = 0;
     pInfo->last_I_frame_idc = 255;
-    pInfo->wl_err_curr = 0;
-    pInfo->wl_err_next = 0;
 
     pInfo->primary_pic_type_plus_one = 0;
     pInfo->sei_b_state_ready = 0;
@@ -424,33 +399,26 @@ int32_t h264_is_second_field(h264_Info * pInfo)
 
     if (cur_slice.structure != FRAME)
     {
-        if ( ( MPD_DPB_FS_NULL_IDC != pInfo->dpb.fs_dec_idc)&&(3 != viddec_h264_get_is_used(&(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc])) )
-                &&(0 != viddec_h264_get_is_used(&(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc])) ))
+        if (( MPD_DPB_FS_NULL_IDC != pInfo->dpb.fs_dec_idc)
+            && (3 != viddec_h264_get_is_used(&(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc])))
+            && (0 != viddec_h264_get_is_used(&(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc]))))
         {
-            if ((cur_slice.frame_num == old_slice.frame_num)||(cur_slice.idr_flag))
+            if ((cur_slice.frame_num == old_slice.frame_num) || cur_slice.idr_flag)
             {
-
                 if (old_slice.structure != cur_slice.structure)
                 {
-
-                    if (((cur_slice.structure == TOP_FIELD &&old_slice.structure == BOTTOM_FIELD) || // Condition 1:
-                            (old_slice.structure == TOP_FIELD && cur_slice.structure == BOTTOM_FIELD)) &&    \
-                            ((old_slice.nal_ref_idc ==0 && cur_slice.nal_ref_idc == 0)              || // Condition 2:
-                             (old_slice.nal_ref_idc !=0 &&cur_slice.nal_ref_idc != 0)))
+                    if (((cur_slice.structure == TOP_FIELD && old_slice.structure == BOTTOM_FIELD) || // Condition 1:
+                         (old_slice.structure == TOP_FIELD && cur_slice.structure == BOTTOM_FIELD)) &&    \
+                            ((old_slice.nal_ref_idc == 0 && cur_slice.nal_ref_idc == 0)              || // Condition 2:
+                             (old_slice.nal_ref_idc != 0 && cur_slice.nal_ref_idc != 0)))
                     {
                         //pInfo->img.second_field = 1;
                         result = 1;
                     }
                 }
             }
-
-
         }
-
-
     }
-
-
 
     return result;
 
@@ -471,8 +439,6 @@ int32_t h264_is_new_picture_start(h264_Info * pInfo, h264_Slice_Header_t cur_sli
         pInfo->number_of_first_au_info_nal_before_first_slice = 0;
         return 1;
     }
-
-
 
     result |= (old_slice.pic_parameter_id != cur_slice.pic_parameter_id);
     result |= (old_slice.frame_num != cur_slice.frame_num);
@@ -511,9 +477,9 @@ int32_t h264_check_previous_frame_end(h264_Info * pInfo)
 {
     int result = 0;
 
-    if ( (h264_NAL_UNIT_TYPE_SLICE==pInfo->old_nal_unit_type)||(h264_NAL_UNIT_TYPE_IDR==pInfo->old_nal_unit_type) )
+    if ((h264_NAL_UNIT_TYPE_SLICE == pInfo->old_nal_unit_type)
+        || (h264_NAL_UNIT_TYPE_IDR == pInfo->old_nal_unit_type))
     {
-
         switch ( pInfo->nal_unit_type )
         {
         case h264_NAL_UNIT_TYPE_Acc_unit_delimiter:
@@ -527,28 +493,21 @@ int32_t h264_check_previous_frame_end(h264_Info * pInfo)
         case h264_NAL_UNIT_TYPE_Reserved3:
         case h264_NAL_UNIT_TYPE_Reserved4:
         case h264_NAL_UNIT_TYPE_Reserved5:
-        {
             pInfo->img.current_slice_num = 0;
 
-            if ((pInfo->img.structure == FRAME) || (pInfo->img.second_field)) {
+            if ((pInfo->img.structure == FRAME) || (pInfo->img.second_field))
+            {
                 pInfo->is_frame_boundary_detected_by_non_slice_nal =1;
                 pInfo->is_current_workload_done=1;
                 result=1;
             }
             break;
-        }
         default:
             break;
         }
-
     }
-
     return result;
-
 }
-
-
-
 
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
@@ -570,7 +529,7 @@ void h264_update_old_slice(h264_Info * pInfo,h264_Slice_Header_t next_SliceHeade
         pInfo->old_slice.bottom_field_flag = pInfo->SliceHeader.bottom_field_flag;
     }
 
-    pInfo->old_slice.nal_ref_idc   = pInfo->SliceHeader.nal_ref_idc;
+    pInfo->old_slice.nal_ref_idc = pInfo->SliceHeader.nal_ref_idc;
 
     pInfo->old_slice.structure = pInfo->SliceHeader.structure;
 
@@ -618,7 +577,8 @@ void h264_update_img_info(h264_Info * pInfo )
     pInfo->img.MbaffFrameFlag  = pInfo->active_SPS.sps_disp.mb_adaptive_frame_field_flag & (!(pInfo->SliceHeader.field_pic_flag));
     pInfo->img.pic_order_cnt_type = pInfo->active_SPS.pic_order_cnt_type;
 
-    if (pInfo->img.pic_order_cnt_type == 1) {
+    if (pInfo->img.pic_order_cnt_type == 1)
+    {
         pInfo->img.num_ref_frames_in_pic_order_cnt_cycle = pInfo->active_SPS.num_ref_frames_in_pic_order_cnt_cycle;
         pInfo->img.delta_pic_order_always_zero_flag = pInfo->active_SPS.delta_pic_order_always_zero_flag;
         pInfo->img.offset_for_non_ref_pic = pInfo->active_SPS.offset_for_non_ref_pic;
@@ -646,27 +606,24 @@ void h264_update_img_info(h264_Info * pInfo )
         pInfo->sei_information.recovery_frame_num = pInfo->img.frame_num;
 
 
-
     /////////////////////////////////////////////////Resolution Change
     pInfo->img.curr_has_mmco_5 = 0;
 
-    if ( (pInfo->img.PicWidthInMbs != p_dpb->PicWidthInMbs)||
-            (pInfo->img.FrameHeightInMbs != p_dpb->FrameHeightInMbs) )
+    if ((pInfo->img.PicWidthInMbs != p_dpb->PicWidthInMbs)||
+        (pInfo->img.FrameHeightInMbs != p_dpb->FrameHeightInMbs))
     {
-        int32_t no_output_old_pics = (pInfo->SliceHeader.idr_flag)? pInfo->img.no_output_of_prior_pics_flag : 0;
+        int32_t no_output_old_pics = (pInfo->SliceHeader.idr_flag) ? pInfo->img.no_output_of_prior_pics_flag : 0;
 
         // If resolution changed, reset the soft DPB here
         h264_dpb_reset_dpb(pInfo, pInfo->img.PicWidthInMbs, pInfo->img.FrameHeightInMbs, 1, no_output_old_pics);
     }
 
     return;
-
 } ///// End of init new frame
 
 
 void h264_update_frame_type(h264_Info * pInfo )
 {
-
 //update frame type
     if (pInfo->img.structure == FRAME)
     {
@@ -682,7 +639,6 @@ void h264_update_frame_type(h264_Info * pInfo )
         }
         else
         {
-#if 1
             switch (pInfo->SliceHeader.slice_type)
             {
             case h264_PtypeB:
@@ -706,10 +662,7 @@ void h264_update_frame_type(h264_Info * pInfo )
                 break;
 
             }
-#endif
-
         }
-
     }
     else if (pInfo->img.structure == TOP_FIELD)
     {
@@ -726,12 +679,12 @@ void h264_update_frame_type(h264_Info * pInfo )
                 break;
             case h264_PtypeSP:
             case h264_PtypeP:
-                if ( ((pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type) & (0x7 << FRAME_TYPE_TOP_OFFSET))>>FRAME_TYPE_TOP_OFFSET != FRAME_TYPE_B)
-                    pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_P << FRAME_TYPE_TOP_OFFSET)|(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_BOTTOM_OFFSET));
+                if (((pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type) & (0x7 << FRAME_TYPE_TOP_OFFSET)) >> FRAME_TYPE_TOP_OFFSET != FRAME_TYPE_B)
+                    pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_P << FRAME_TYPE_TOP_OFFSET) | (pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_BOTTOM_OFFSET));
                 break;
             case h264_PtypeI:
             case h264_PtypeSI:
-                if ( ((pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type) & (0x7 << FRAME_TYPE_TOP_OFFSET))>>FRAME_TYPE_TOP_OFFSET == FRAME_TYPE_INVALID)
+                if (((pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type) & (0x7 << FRAME_TYPE_TOP_OFFSET)) >> FRAME_TYPE_TOP_OFFSET == FRAME_TYPE_INVALID)
                 {
                     pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_I << FRAME_TYPE_TOP_OFFSET)|(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_BOTTOM_OFFSET));
                 }
@@ -752,25 +705,25 @@ void h264_update_frame_type(h264_Info * pInfo )
     {
         if (pInfo->nal_unit_type == h264_NAL_UNIT_TYPE_IDR)
         {
-            pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_IDR << FRAME_TYPE_BOTTOM_OFFSET)|(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));;
+            pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_IDR << FRAME_TYPE_BOTTOM_OFFSET) | (pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));;
         }
         else
         {
             switch (pInfo->SliceHeader.slice_type)
             {
             case h264_PtypeB:
-                pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_B << FRAME_TYPE_BOTTOM_OFFSET)|(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));
+                pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_B << FRAME_TYPE_BOTTOM_OFFSET) | (pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));
                 break;
             case h264_PtypeSP:
             case h264_PtypeP:
-                if ( ((pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type) & (0x7 << FRAME_TYPE_BOTTOM_OFFSET))>>FRAME_TYPE_BOTTOM_OFFSET != FRAME_TYPE_B)
-                    pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_P << FRAME_TYPE_BOTTOM_OFFSET)|(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));
+                if ( ((pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type) & (0x7 << FRAME_TYPE_BOTTOM_OFFSET)) >> FRAME_TYPE_BOTTOM_OFFSET != FRAME_TYPE_B)
+                    pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_P << FRAME_TYPE_BOTTOM_OFFSET) | (pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));
                 break;
             case h264_PtypeI:
             case h264_PtypeSI:
-                if ( ((pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type) & (0x7 << FRAME_TYPE_BOTTOM_OFFSET))>>FRAME_TYPE_BOTTOM_OFFSET == FRAME_TYPE_INVALID)
+                if ( ((pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type) & (0x7 << FRAME_TYPE_BOTTOM_OFFSET)) >> FRAME_TYPE_BOTTOM_OFFSET == FRAME_TYPE_INVALID)
                 {
-                    pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_I << FRAME_TYPE_BOTTOM_OFFSET)|(pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));
+                    pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type = (FRAME_TYPE_I << FRAME_TYPE_BOTTOM_OFFSET) | (pInfo->dpb.fs[pInfo->dpb.fs_dec_idc].pic_type & (0x7 << FRAME_TYPE_TOP_OFFSET));
                 }
                 if (pInfo->sei_rp_received)
                     pInfo->last_I_frame_idc = pInfo->dpb.fs_dec_idc + PUT_LIST_INDEX_FIELD_BIT(1);
@@ -782,7 +735,6 @@ void h264_update_frame_type(h264_Info * pInfo )
                 break;
 
             }
-
         }
 
     }

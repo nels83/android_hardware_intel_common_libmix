@@ -177,16 +177,6 @@ uint32 vbp_init_parser_entries_h264(vbp_context *pcontext)
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
     }
-#ifdef VBP
-    pcontext->parser_ops->is_wkld_done = NULL;
-#else
-    pcontext->parser_ops->is_wkld_done = dlsym(pcontext->fd_parser, "viddec_h264_wkld_done");
-    if (NULL == pcontext->parser_ops->is_wkld_done)
-    {
-        ETRACE ("Failed to set entry point." );
-        return VBP_LOAD;
-    }
-#endif
 
     pcontext->parser_ops->flush = dlsym(pcontext->fd_parser, "viddec_h264_flush");;
     if (NULL == pcontext->parser_ops->flush)
@@ -884,27 +874,37 @@ static void vbp_set_codec_data_h264(
     codec_data->crop_right = 0;
     codec_data->crop_top = 0;
     codec_data->crop_bottom = 0;
-    if(parser->info.active_SPS.sps_disp.frame_cropping_flag) {
+    if(parser->info.active_SPS.sps_disp.frame_cropping_flag)
+    {
         int CropUnitX = 0, CropUnitY = 0, SubWidthC = 0, SubHeightC = 0;
         int ChromaArrayType = 0;
-        if(parser->info.active_SPS.sps_disp.separate_colour_plane_flag == 0) {
-            if(parser->info.active_SPS.sps_disp.chroma_format_idc == 1) {
+        if(parser->info.active_SPS.sps_disp.separate_colour_plane_flag == 0)
+        {
+            if(parser->info.active_SPS.sps_disp.chroma_format_idc == 1)
+            {
                 SubWidthC = 2;
                 SubHeightC = 2;
-            } else if( parser->info.active_SPS.sps_disp.chroma_format_idc == 2) {
+            }
+            else if( parser->info.active_SPS.sps_disp.chroma_format_idc == 2)
+            {
                 SubWidthC = 2;
                 SubHeightC = 1;
-            } else if( parser->info.active_SPS.sps_disp.chroma_format_idc == 3) {
+            }
+            else if( parser->info.active_SPS.sps_disp.chroma_format_idc == 3)
+            {
                 SubWidthC = 1;
                 SubHeightC = 1;
             }
             ChromaArrayType = parser->info.active_SPS.sps_disp.chroma_format_idc;
         }
 
-        if(ChromaArrayType == 0) {
+        if(ChromaArrayType == 0)
+        {
             CropUnitX = 1;
             CropUnitY = 2 - parser->info.active_SPS.sps_disp.frame_mbs_only_flag;
-        } else {
+        }
+        else
+        {
             CropUnitX = SubWidthC;
             CropUnitY = SubHeightC * ( 2 - parser->info.active_SPS.sps_disp.frame_mbs_only_flag);
         }
@@ -1226,10 +1226,8 @@ static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
 
     slc_parms->num_ref_idx_l0_active_minus1 = 0;
     slc_parms->num_ref_idx_l1_active_minus1 = 0;
-    if (slice_header->slice_type == h264_PtypeI)
-    {
-    }
-    else if (slice_header->slice_type == h264_PtypeP)
+
+    if (slice_header->slice_type == h264_PtypeP)
     {
         slc_parms->num_ref_idx_l0_active_minus1 = slice_header->num_ref_idx_l0_active - 1;
     }
@@ -1238,7 +1236,7 @@ static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
         slc_parms->num_ref_idx_l0_active_minus1 = slice_header->num_ref_idx_l0_active - 1;
         slc_parms->num_ref_idx_l1_active_minus1 = slice_header->num_ref_idx_l1_active - 1;
     }
-    else
+    else if (slice_header->slice_type != h264_PtypeI)
     {
         WTRACE("slice type %d is not supported.", slice_header->slice_type);
     }
@@ -1249,24 +1247,17 @@ static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
     slc_parms->slice_alpha_c0_offset_div2 = slice_header->slice_alpha_c0_offset_div2;
     slc_parms->slice_beta_offset_div2 = slice_header->slice_beta_offset_div2;
 
-
     vbp_set_pre_weight_table_h264(h264_parser, slc_parms);
     vbp_set_slice_ref_list_h264(h264_parser, slc_parms);
 
-
     pic_data->num_slices++;
 
-    //vbp_update_reference_frames_h264_methodB(pic_data);
     if (pic_data->num_slices > MAX_NUM_SLICES)
     {
         ETRACE("number of slices per picture exceeds the limit (%d).", MAX_NUM_SLICES);
         return VBP_DATA;
     }
 
-    /*if (pic_data->num_slices > 1)
-    {
-        ITRACE("number of slices per picture is %d.", pic_data->num_slices);
-    }*/
     return VBP_OK;
 }
 
@@ -1395,7 +1386,7 @@ uint32 vbp_parse_init_data_h264(vbp_context* pcontext)
     num_of_picture_parameter_sets = *cur_data++;
     if (num_of_picture_parameter_sets > 1)
     {
-        /* g_warning("num_of_picture_parameter_sets is %d.", num_of_picture_parameter_sets); */
+        VTRACE("num_of_picture_parameter_sets is %d.", num_of_picture_parameter_sets);
     }
 
     for (i = 0; i < num_of_picture_parameter_sets; i++)
@@ -1460,7 +1451,7 @@ static inline uint32_t vbp_get_NAL_length_h264(uint8_t* p, int *NAL_length_size)
         return *p;
 
     default:
-        WTRACE("invalid NAL_length_size: %d.", NAL_length_size);
+        WTRACE("invalid NAL_length_size: %d.", *NAL_length_size);
         /* default to 4 bytes for length */
         *NAL_length_size = 4;
         return vbp_utils_ntohl(p);
@@ -1514,7 +1505,7 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
             NAL_length = vbp_get_NAL_length_h264(cubby->buf + size_parsed, &parser_private->NAL_length_size);
             if (NAL_length <= 0 || NAL_length > size_left - parser_private->NAL_length_size)
             {
-                ETRACE("Invalid NAL_length parsed.");
+                ETRACE("Invalid NAL_length parsed: 0x%x", NAL_length);
                 break;
             }
 
@@ -1564,7 +1555,6 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
             }
         }
     }
-
 
     if (parser_private->bitstream_pattern == H264_BS_SC_PREFIXED)
     {
@@ -1629,7 +1619,6 @@ uint32 vbp_parse_start_code_h264(vbp_context *pcontext)
         cxt->list.data[0].edpos = cxt->parse_cubby.size;
     }
 
-
     return VBP_OK;
 }
 
@@ -1653,7 +1642,7 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
     switch (parser->info.nal_unit_type)
     {
     case h264_NAL_UNIT_TYPE_SLICE:
-        //ITRACE("slice header is parsed.");
+        VTRACE("slice header is parsed.");
         error = vbp_add_pic_data_h264(pcontext, i);
         if (VBP_OK == error)
         {
@@ -1662,7 +1651,7 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
         break;
 
     case  h264_NAL_UNIT_TYPE_IDR:
-        //ITRACE("IDR header is parsed.");
+        VTRACE("IDR header is parsed.");
         error = vbp_add_pic_data_h264(pcontext, i);
         if (VBP_OK == error)
         {
@@ -1670,7 +1659,7 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
         }
         break;
     case h264_NAL_UNIT_TYPE_SEI:
-        //ITRACE("SEI header is parsed.");
+        VTRACE("SEI header is parsed.");
         break;
 
     case h264_NAL_UNIT_TYPE_SPS:
@@ -1682,7 +1671,7 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
         break;
 
     case h264_NAL_UNIT_TYPE_Acc_unit_delimiter:
-        //ITRACE("ACC unit delimiter is parsed.");
+        VTRACE("ACC unit delimiter is parsed.");
         break;
 
     case h264_NAL_UNIT_TYPE_EOSeq:

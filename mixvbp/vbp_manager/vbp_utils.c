@@ -387,18 +387,16 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
         error = ops->parse_syntax((void *)cxt, (void *)&(cxt->codec_data[0]));
 
         /* can't return error for now. Neet further investigation */
-#if 0
         if (0 != error)
         {
-            ETRACE("failed to parse the syntax: %d!", error);
-            return error;
+            WTRACE("failed to parse the syntax: %d!", error);
         }
-#endif
 
         /* process parsing result */
         error = pcontext->func_process_parsing_result(pcontext, i);
 
         if (VBP_MULTI == error) {
+            ITRACE("Multiple frames are found in one bufffer.");
             return VBP_OK;
         }
         else if (0 != error)

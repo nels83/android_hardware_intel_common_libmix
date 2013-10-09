@@ -7,6 +7,7 @@
 #include "h264parse_dpb.h"
 
 #include "viddec_parser_ops.h"
+#include <vbp_trace.h>
 
 //////////////////////////////////////////////////////////////////////////////
 // avc_sei_stream_initialise ()
@@ -50,7 +51,10 @@ h264_Status h264_sei_buffering_period(void *parent,h264_Info* pInfo)
 
         sei_msg_ptr->seq_param_set_id = h264_GetVLCElement(parent, pInfo, false);
         if (sei_msg_ptr->seq_param_set_id >= NUM_SPS)
+        {
+            ETRACE("SEI parsing: SPS id is out of range: %d", sei_msg_ptr->seq_param_set_id);
             break;
+        }
 
         //check if this id is same as the id of the current SPS  //fix
 
@@ -133,18 +137,26 @@ h264_Status h264_sei_pic_timing(void *parent,h264_Info* pInfo)
         sei_msg_ptr->pic_struct = (uint8_t)code;
 
 
-        if ((sei_msg_ptr->pic_struct == 0) || (sei_msg_ptr->pic_struct == 7) || (sei_msg_ptr->pic_struct == 8)) {
+        if ((sei_msg_ptr->pic_struct == 0) || (sei_msg_ptr->pic_struct == 7) || (sei_msg_ptr->pic_struct == 8))
+        {
             pInfo->sei_information.scan_format = SEI_SCAN_FORMAT_PROGRESSIVE;
-        } else {
+        }
+        else
+        {
             pInfo->sei_information.scan_format = SEI_SCAN_FORMAT_INTERLACED;
         }
 
 
-        if (sei_msg_ptr->pic_struct < 3) {
+        if (sei_msg_ptr->pic_struct < 3)
+        {
             NumClockTS = 1;
-        } else if ((sei_msg_ptr->pic_struct < 5) || (sei_msg_ptr->pic_struct == 7)) {
+        }
+        else if ((sei_msg_ptr->pic_struct < 5) || (sei_msg_ptr->pic_struct == 7))
+        {
             NumClockTS = 2;
-        } else {
+        }
+        else
+        {
             NumClockTS = 3;
         }
 
@@ -389,7 +401,8 @@ h264_Status h264_sei_recovery_point(void *parent, h264_Info* pInfo)
     pInfo->sei_information.capture_fn         = 1;
     pInfo->sei_information.broken_link_pic    = sei_msg_ptr->broken_link_flag;
 
-    if (pInfo->got_start)	{
+    if (pInfo->got_start)
+    {
         pInfo->img.recovery_point_found |= 2;
 
         //// Enable the RP recovery if no IDR ---Cisco

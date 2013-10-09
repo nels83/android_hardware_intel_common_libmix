@@ -9,18 +9,14 @@
 
 #include "viddec_pm.h"
 
-
-//#include <limits.h>
 #include "h264parse.h"
 #include "h264parse_dpb.h"
-//#include "h264_debug.h"
+#include <vbp_trace.h>
 
 #ifndef NULL
 #define NULL 0
 #endif
-//#ifndef USER_MODE
-//#define NULL 0
-//#endif
+
 
 ///////////////////////// DPB init //////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -37,7 +33,7 @@ void h264_init_dpb(h264_DecodedPictureBuffer * p_dpb)
     //h264_memset(p_dpb, 0x0, sizeof(h264_DecodedPictureBuffer) );
 
 
-    for (i=0; i<NUM_DPB_FRAME_STORES; i++)
+    for (i = 0; i < NUM_DPB_FRAME_STORES; i++)
     {
         p_dpb->fs[i].fs_idc = MPD_DPB_FS_NULL_IDC;
         p_dpb->fs_dpb_idc[i] = MPD_DPB_FS_NULL_IDC;
@@ -108,18 +104,22 @@ void h264_dpb_insert_ref_lists(h264_DecodedPictureBuffer * p_dpb, int32_t NonExi
             else
             {
                 uint32_t found_in_list = 0, i = 0;
-                for (i = 0; (i < p_dpb->ltref_frames_in_buffer) && (found_in_list == 0); i++) {
+                for (i = 0; (i < p_dpb->ltref_frames_in_buffer) && (found_in_list == 0); i++)
+                {
                     if (p_dpb->fs_ltref_idc[i] == p_dpb->active_fs->fs_idc) found_in_list = 1;
                 }
 
-                if (found_in_list == 0) h264_dpb_add_ltref_list(p_dpb, p_dpb->active_fs->fs_idc);
+                if (found_in_list == 0)
+                    h264_dpb_add_ltref_list(p_dpb, p_dpb->active_fs->fs_idc);
             }
         }
         else
         {
-            if (viddec_h264_get_dec_structure(p_dpb->active_fs) == FRAME) {
+            if (viddec_h264_get_dec_structure(p_dpb->active_fs) == FRAME)
+            {
                 h264_dpb_add_ref_list(p_dpb, p_dpb->active_fs->fs_idc);
-            } else
+            }
+            else
             {
                 uint32_t found_in_list = 0, i = 0;
 
@@ -162,7 +162,7 @@ void h264_list_sort(uint8_t *list, int32_t *sort_indices, int32_t size, int32_t 
     // Dodgy looking for embedded code here...
     if (size > 1)
     {
-        for (j = 0; j < size-1; j = j + 1) {
+        for (j = 0; j < size - 1; j = j + 1) {
             for (k = j + 1; k < size; k = k + 1) {
                 if ((desc & (sort_indices[j] < sort_indices[k]))|
                         (~desc & (sort_indices[j] > sort_indices[k])) )
@@ -232,23 +232,23 @@ int32_t h264_dpb_gen_pic_list_from_frame_list(h264_DecodedPictureBuffer *p_dpb, 
     int32_t lterm;
 
     list_idx = 0;
-    lterm = (long_term)? 1:0;
+    lterm = (long_term)? 1 : 0;
 
-    if (list_size) {
-
-
+    if (list_size)
+    {
         top_idx = 0;
         bot_idx = 0;
 
-        if (currPicStructure == TOP_FIELD) {
-            while ((top_idx < list_size)||(bot_idx < list_size))
+        if (currPicStructure == TOP_FIELD)
+        {
+            while ((top_idx < list_size) || (bot_idx < list_size))
             {
                 /////////////////////////////////////////// ref Top Field
                 got_pic = 0;
                 while ((top_idx < list_size) & ~got_pic)
                 {
                     h264_dpb_set_active_fs(p_dpb, frame_list[top_idx]);
-                    if ((viddec_h264_get_is_used(p_dpb->active_fs))&0x1)
+                    if ((viddec_h264_get_is_used(p_dpb->active_fs)) & 0x1)
                     {
                         if (h264_dpb_pic_is_top_field_ref(p_dpb, long_term))
                         {
@@ -265,7 +265,7 @@ int32_t h264_dpb_gen_pic_list_from_frame_list(h264_DecodedPictureBuffer *p_dpb, 
                 while ((bot_idx < list_size) & ~got_pic)
                 {
                     h264_dpb_set_active_fs(p_dpb, frame_list[bot_idx]);
-                    if ((viddec_h264_get_is_used(p_dpb->active_fs))&0x2)
+                    if ((viddec_h264_get_is_used(p_dpb->active_fs)) & 0x2)
                     {
                         if (h264_dpb_pic_is_bottom_field_ref(p_dpb, long_term))
                         {
@@ -281,14 +281,14 @@ int32_t h264_dpb_gen_pic_list_from_frame_list(h264_DecodedPictureBuffer *p_dpb, 
 
         /////////////////////////////////////////////// current Bottom Field
         if (currPicStructure == BOTTOM_FIELD)	{
-            while ((top_idx < list_size)||(bot_idx < list_size))
+            while ((top_idx < list_size) || (bot_idx < list_size))
             {
                 /////////////////////////////////////////// ref Top Field
                 got_pic = 0;
                 while ((bot_idx < list_size) && (!(got_pic)))
                 {
                     h264_dpb_set_active_fs(p_dpb, frame_list[bot_idx]);
-                    if ((viddec_h264_get_is_used(p_dpb->active_fs))&0x2) {
+                    if ((viddec_h264_get_is_used(p_dpb->active_fs)) & 0x2) {
                         if (h264_dpb_pic_is_bottom_field_ref(p_dpb, long_term)) {
                             // short term ref pic
                             pic_list[list_idx] = PUT_LIST_LONG_TERM_BITS(lterm) + frame_list[bot_idx] + PUT_LIST_INDEX_FIELD_BIT(1);  // bottom_field
@@ -304,7 +304,7 @@ int32_t h264_dpb_gen_pic_list_from_frame_list(h264_DecodedPictureBuffer *p_dpb, 
                 while ((top_idx < list_size) && (!(got_pic)))
                 {
                     h264_dpb_set_active_fs(p_dpb, frame_list[top_idx]);
-                    if ((viddec_h264_get_is_used(p_dpb->active_fs))&0x1) {
+                    if ((viddec_h264_get_is_used(p_dpb->active_fs)) & 0x1) {
                         if (h264_dpb_pic_is_top_field_ref(p_dpb, long_term)) {
                             // short term ref pic
                             pic_list[list_idx] = PUT_LIST_LONG_TERM_BITS(lterm) + frame_list[top_idx] + PUT_LIST_INDEX_FIELD_BIT(0);  // top_field
@@ -489,7 +489,8 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
         if (pInfo->SliceHeader.slice_type == h264_PtypeP)
         {
             h264_list_sort(sort_fs_idc, list_sort_number, list0idx-p_dpb->listXsize[0], 0);
-            for (idx = p_dpb->listXsize[0]; idx < list0idx; idx++) {
+            for (idx = p_dpb->listXsize[0]; idx < list0idx; idx++)
+            {
                 p_dpb->listX_0[idx] = (1<<6) + sort_fs_idc[idx-p_dpb->listXsize[0]];
             }
             p_dpb->listXsize[0] = list0idx;
@@ -514,21 +515,27 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
             h264_dpb_set_active_fs(p_dpb, p_dpb->fs_ref_idc[idx]);
             if (p_dpb->active_fs->frame.used_for_reference)
             {
-                if (p_dpb->active_fs->frame_num > pInfo->SliceHeader.frame_num) {
+                if (p_dpb->active_fs->frame_num > pInfo->SliceHeader.frame_num)
+                {
                     p_dpb->active_fs->frame_num_wrap = p_dpb->active_fs->frame_num - MaxFrameNum;
-                } else {
+                }
+                else
+                {
                     p_dpb->active_fs->frame_num_wrap = p_dpb->active_fs->frame_num;
                 }
 
-                if ((p_dpb->active_fs->frame.used_for_reference)&0x1) {
+                if ((p_dpb->active_fs->frame.used_for_reference) & 0x1)
+                {
                     p_dpb->active_fs->top_field.pic_num    = (p_dpb->active_fs->frame_num_wrap << 1) + add_top;
                 }
 
-                if ((p_dpb->active_fs->frame.used_for_reference)&0x2) {
+                if ((p_dpb->active_fs->frame.used_for_reference) & 0x2)
+                {
                     p_dpb->active_fs->bottom_field.pic_num = (p_dpb->active_fs->frame_num_wrap << 1) + add_bottom;
                 }
 
-                if (pInfo->SliceHeader.slice_type == h264_PtypeP) {
+                if (pInfo->SliceHeader.slice_type == h264_PtypeP)
+                {
                     sort_fs_idc[list0idx]      = p_dpb->fs_ref_idc[idx];
                     list_sort_number[list0idx] = p_dpb->active_fs->frame_num_wrap;
                     list0idx++;
@@ -539,7 +546,8 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
         if (pInfo->SliceHeader.slice_type == h264_PtypeP)
         {
             h264_list_sort(sort_fs_idc, list_sort_number, list0idx, 1);
-            for (idx = 0; idx < list0idx; idx++) {
+            for (idx = 0; idx < list0idx; idx++)
+            {
                 gen_pic_fs_list0[idx] = sort_fs_idc[idx];
             }
 
@@ -557,11 +565,13 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
         {
             h264_dpb_set_active_fs(p_dpb, p_dpb->fs_ltref_idc[idx]);
 
-            if (viddec_h264_get_is_long_term(p_dpb->active_fs)&0x1) {
+            if (viddec_h264_get_is_long_term(p_dpb->active_fs) & 0x1)
+            {
                 p_dpb->active_fs->top_field.long_term_pic_num    = (p_dpb->active_fs->top_field.long_term_frame_idx << 1) + add_top;
             }
 
-            if (viddec_h264_get_is_long_term(p_dpb->active_fs)&0x2) {
+            if (viddec_h264_get_is_long_term(p_dpb->active_fs) & 0x2)
+            {
                 p_dpb->active_fs->bottom_field.long_term_pic_num = (p_dpb->active_fs->bottom_field.long_term_frame_idx << 1) + add_bottom;
             }
 
@@ -576,18 +586,19 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
         if (pInfo->SliceHeader.slice_type == h264_PtypeP)
         {
             h264_list_sort(sort_fs_idc, list_sort_number, listltidx, 0);
-            for (idx = 0; idx < listltidx; idx++) {
+            for (idx = 0; idx < listltidx; idx++) 
+            {
                 gen_pic_fs_listlt[idx] = sort_fs_idc[idx];
             }
             list0idx_1 = h264_dpb_gen_pic_list_from_frame_list(p_dpb, gen_pic_pic_list, gen_pic_fs_listlt, pInfo->img.structure, listltidx, 1);
 
-            for (idx = 0; idx < list0idx_1; idx++) {
+            for (idx = 0; idx < list0idx_1; idx++)
+            {
                 p_dpb->listX_0[p_dpb->listXsize[0]+idx] = gen_pic_pic_list[idx];
             }
             p_dpb->listXsize[0] += list0idx_1;
         }
     }
-
 
     if (pInfo->SliceHeader.slice_type == h264_PtypeI)
     {
@@ -631,7 +642,7 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
 
                     if (skip_picture == 0)
                     {
-                        if ((p_dpb->active_fs->frame.used_for_reference==3) && (!(p_dpb->active_fs->frame.is_long_term)))
+                        if ((p_dpb->active_fs->frame.used_for_reference == 3) && (!(p_dpb->active_fs->frame.is_long_term)))
                         {
                             if (pInfo->img.framepoc >= p_dpb->active_fs->frame.poc)
                             {
@@ -645,7 +656,8 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
             }
 
             h264_list_sort(sort_fs_idc, list_sort_number, list0idx, 1);
-            for (idx = 0; idx < list0idx; idx++) {
+            for (idx = 0; idx < list0idx; idx++)
+            {
                 p_dpb->listX_0[idx] = sort_fs_idc[idx];
             }
 
@@ -680,17 +692,14 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
             }
 
             h264_list_sort(sort_fs_idc, list_sort_number, list0idx-list0idx_1, 0);
-            for (idx = list0idx_1; idx < list0idx; idx++) {
+            for (idx = list0idx_1; idx < list0idx; idx++)
                 p_dpb->listX_0[idx] = sort_fs_idc[idx-list0idx_1];
-            }
 
-            for (idx = 0; idx < list0idx_1; idx++) {
+            for (idx = 0; idx < list0idx_1; idx++)
                 p_dpb->listX_1[list0idx-list0idx_1+idx] = p_dpb->listX_0[idx];
-            }
 
-            for (idx = list0idx_1; idx < list0idx; idx++) {
+            for (idx = list0idx_1; idx < list0idx; idx++)
                 p_dpb->listX_1[idx-list0idx_1] = p_dpb->listX_0[idx];
-            }
 
             p_dpb->listXsize[0] = list0idx;
             p_dpb->listXsize[1] = list0idx;
@@ -715,8 +724,8 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
             h264_list_sort(sort_fs_idc, list_sort_number, list0idx, 0);
             for (idx = p_dpb->listXsize[0]; idx < (p_dpb->listXsize[0]+list0idx); idx = idx + 1)
             {
-                p_dpb->listX_0[idx] = (1<<6) + sort_fs_idc[idx-p_dpb->listXsize[0]];
-                p_dpb->listX_1[idx] = (1<<6) + sort_fs_idc[idx-p_dpb->listXsize[0]];
+                p_dpb->listX_0[idx] = (1 << 6) + sort_fs_idc[idx-p_dpb->listXsize[0]];
+                p_dpb->listX_1[idx] = (1 << 6) + sort_fs_idc[idx-p_dpb->listXsize[0]];
             }
 
             p_dpb->listXsize[0] += list0idx;
@@ -728,16 +737,20 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
             {
                 h264_dpb_set_active_fs(p_dpb, p_dpb->fs_ref_idc[idx]);
 
-                if (viddec_h264_get_is_used(p_dpb->active_fs))	{
-                    if (check_non_existing) {
+                if (viddec_h264_get_is_used(p_dpb->active_fs))
+                {
+                    if (check_non_existing)
+                    {
                         if (viddec_h264_get_is_non_existent(p_dpb->active_fs))
                             skip_picture = 1;
                         else
                             skip_picture = 0;
                     }
 
-                    if (skip_picture == 0)  {
-                        if (pInfo->img.ThisPOC >= p_dpb->active_fs->frame.poc) {
+                    if (skip_picture == 0)
+                    {
+                        if (pInfo->img.ThisPOC >= p_dpb->active_fs->frame.poc)
+                        {
                             sort_fs_idc[list0idx]      = p_dpb->fs_ref_idc[idx];
                             list_sort_number[list0idx] = p_dpb->active_fs->frame.poc;
                             list0idx++;
@@ -747,7 +760,8 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
             }
 
             h264_list_sort(sort_fs_idc, list_sort_number, list0idx, 1);
-            for (idx = 0; idx < list0idx; idx = idx + 1) {
+            for (idx = 0; idx < list0idx; idx = idx + 1)
+            {
                 gen_pic_fs_list0[idx] = sort_fs_idc[idx];
             }
 
@@ -759,15 +773,18 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
                 h264_dpb_set_active_fs(p_dpb, p_dpb->fs_ref_idc[idx]);
                 if (viddec_h264_get_is_used(p_dpb->active_fs))
                 {
-                    if (check_non_existing) {
+                    if (check_non_existing)
+                    {
                         if (viddec_h264_get_is_non_existent(p_dpb->active_fs))
                             skip_picture = 1;
                         else
                             skip_picture = 0;
                     }
 
-                    if (skip_picture == 0) {
-                        if (pInfo->img.ThisPOC < p_dpb->active_fs->frame.poc) {
+                    if (skip_picture == 0)
+                    {
+                        if (pInfo->img.ThisPOC < p_dpb->active_fs->frame.poc)
+                        {
                             sort_fs_idc[list0idx-list0idx_1]      = p_dpb->fs_ref_idc[idx];
                             list_sort_number[list0idx-list0idx_1] = p_dpb->active_fs->frame.poc;
                             list0idx++;
@@ -863,11 +880,7 @@ void h264_dpb_update_ref_lists(h264_Info * pInfo)
             p_dpb->listXsize[1] = pInfo->SliceHeader.num_ref_idx_l1_active;
         }
 
-
-
     }
-
-
 
     /// DPB reorder list
     h264_dpb_reorder_lists(pInfo);
@@ -905,7 +918,7 @@ static frame_param_ptr h264_dpb_get_short_term_pic(h264_Info * pInfo,int32_t pic
         }
         else // current picture is a field
         {
-            if (temp_fs->frame.used_for_reference&0x1)
+            if (temp_fs->frame.used_for_reference & 0x1)
                 if (!(temp_fs->top_field.is_long_term))
                     if (temp_fs->top_field.pic_num == pic_num)
                     {
@@ -952,12 +965,12 @@ static frame_param_ptr h264_dpb_get_long_term_pic(h264_Info * pInfo,int32_t long
         }
         else
         {
-            if (temp_fs->frame.used_for_reference&0x1)
+            if (temp_fs->frame.used_for_reference & 0x1)
                 if (temp_fs->top_field.is_long_term)
                     if (temp_fs->top_field.long_term_pic_num == long_term_pic_num)
                         return temp_fs;
 
-            if (temp_fs->frame.used_for_reference&0x2)
+            if (temp_fs->frame.used_for_reference & 0x2)
                 if (temp_fs->bottom_field.is_long_term)
                     if (temp_fs->bottom_field.long_term_pic_num == long_term_pic_num)
                     {
@@ -1247,9 +1260,9 @@ void h264_dpb_RP_check_list (h264_Info * pInfo)
     // If the decoding start from RP and without exact point, all B frames belong to previous GOP should be throw away!
     //
 
-    if ((pInfo->SliceHeader.slice_type == h264_PtypeB)&&(pInfo->sei_b_state_ready ==0) && pInfo->sei_rp_received) {
-        pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
-        pInfo->wl_err_curr |= (FRAME << FIELD_ERR_OFFSET);
+    if ((pInfo->SliceHeader.slice_type == h264_PtypeB) && (pInfo->sei_b_state_ready ==0) && pInfo->sei_rp_received)
+    {
+        WTRACE("Error happens in %s, further clarification is needed...");
     }
 
 
@@ -1261,8 +1274,8 @@ void h264_dpb_RP_check_list (h264_Info * pInfo)
 
         int32_t idx, rp_found = 0;
 
-        if ( ((pInfo->SliceHeader.num_ref_idx_l0_active == 1)&&(pInfo->SliceHeader.structure == FRAME)) ||
-                ((pInfo->SliceHeader.num_ref_idx_l0_active == 2)&&(pInfo->SliceHeader.structure != FRAME)) )
+        if (((pInfo->SliceHeader.num_ref_idx_l0_active == 1) && (pInfo->SliceHeader.structure == FRAME)) ||
+                ((pInfo->SliceHeader.num_ref_idx_l0_active == 2) && (pInfo->SliceHeader.structure != FRAME)))
         {
             if (pInfo->SliceHeader.sh_refpic_l0.ref_pic_list_reordering_flag)
             {
@@ -1368,7 +1381,7 @@ void h264_dpb_reorder_lists(h264_Info * pInfo)
         {
 
         }
-        pInfo->dpb.listXsize[0]=pInfo->SliceHeader.num_ref_idx_l0_active;
+        pInfo->dpb.listXsize[0] = pInfo->SliceHeader.num_ref_idx_l0_active;
     } else if (currSliceType == h264_PtypeB)
     {
         /////////////////////////////////////////////// Reordering reference list for B slice
@@ -1388,7 +1401,7 @@ void h264_dpb_reorder_lists(h264_Info * pInfo)
         {
 
         }
-        pInfo->dpb.listXsize[1]=pInfo->SliceHeader.num_ref_idx_l1_active;
+        pInfo->dpb.listXsize[1] = pInfo->SliceHeader.num_ref_idx_l1_active;
     }
 
     //// Check if need recover reference list with previous recovery point
@@ -1396,7 +1409,6 @@ void h264_dpb_reorder_lists(h264_Info * pInfo)
     {
         h264_dpb_RP_check_list(pInfo);
     }
-
 
     return;
 }
@@ -1446,11 +1458,14 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
     int32_t first_field_non_ref = 0;
     int32_t idr_flag;
 
-    if (NonExisting) {
+    if (NonExisting)
+    {
         if (p_dpb->fs_non_exist_idc == MPD_DPB_FS_NULL_IDC)
             return;
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_non_exist_idc);
-    } else {
+    }
+    else
+    {
         if (p_dpb->fs_dec_idc == MPD_DPB_FS_NULL_IDC)
             return;
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dec_idc);
@@ -1467,24 +1482,21 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
 
         switch (viddec_h264_get_dec_structure(p_dpb->active_fs))
         {
-        case(TOP_FIELD)   : {
+        case(TOP_FIELD):
             p_dpb->active_fs->top_field.used_for_reference = used_for_reference;
             viddec_h264_set_is_top_used(p_dpb->active_fs, 1);
             //p_dpb->active_fs->crc_field_coded     = 1;
-        }
         break;
-        case(BOTTOM_FIELD): {
+        case(BOTTOM_FIELD):
             p_dpb->active_fs->bottom_field.used_for_reference = used_for_reference << 1;
             viddec_h264_set_is_bottom_used(p_dpb->active_fs, 1);
             //p_dpb->active_fs->crc_field_coded     = 1;
-        }
         break;
-        default: {
-            p_dpb->active_fs->frame.used_for_reference = used_for_reference?3:0;
+        default:
+            p_dpb->active_fs->frame.used_for_reference = used_for_reference ? 3 : 0;
             viddec_h264_set_is_frame_used(p_dpb->active_fs, 3);
             //if(pInfo->img.MbaffFrameFlag) p_dpb->active_fs->crc_field_coded  = 1;
 
-        }
         break;
         }
 
@@ -1492,18 +1504,22 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
         //if (freeze_assert)  sei_information.disp_frozen = 1;
 
         idr_flag = use_old ? pInfo->old_slice.idr_flag : pInfo->SliceHeader.idr_flag;
-        if (idr_flag) {
+        if (idr_flag)
+        {
             h264_dpb_idr_memory_management (pInfo, &pInfo->active_SPS, pInfo->img.no_output_of_prior_pics_flag);
-        } else {
+        }
+        else
+        {
             // adaptive memory management
-            if (used_for_reference & pInfo->SliceHeader.sh_dec_refpic.adaptive_ref_pic_marking_mode_flag) {
+            if (used_for_reference & pInfo->SliceHeader.sh_dec_refpic.adaptive_ref_pic_marking_mode_flag)
+            {
                 h264_dpb_adaptive_memory_management(pInfo);
             }
         }
         // Reset the active frame store - could have changed in mem management ftns
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dec_idc);
 
-        if ((viddec_h264_get_dec_structure(p_dpb->active_fs) == TOP_FIELD)||(viddec_h264_get_dec_structure(p_dpb->active_fs) == BOTTOM_FIELD))
+        if ((viddec_h264_get_dec_structure(p_dpb->active_fs) == TOP_FIELD) || (viddec_h264_get_dec_structure(p_dpb->active_fs) == BOTTOM_FIELD))
         {
             // check for frame store with same pic_number -- always true in my case, YH
             // when we allocate frame store for the second field, we make sure the frame store for the second
@@ -1526,7 +1542,7 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
     { // Set up locals for non-existing frames
         used_for_reference = 1;
 
-        p_dpb->active_fs->frame.used_for_reference = used_for_reference?3:0;
+        p_dpb->active_fs->frame.used_for_reference = used_for_reference ? 3 : 0;
         viddec_h264_set_is_frame_used(p_dpb->active_fs, 3);
         viddec_h264_set_dec_structure(p_dpb->active_fs, FRAME);
         pInfo->img.structure = FRAME;
@@ -1552,12 +1568,18 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
         }
     }
 
-    if (NonExisting) {
+    if (NonExisting)
+    {
         h264_dpb_sliding_window_memory_management(p_dpb, NonExisting, pInfo->active_SPS.num_ref_frames);
-    } else if (pInfo->SliceHeader.idr_flag == 0) {
-        if (used_for_reference) {
-            if (pInfo->img.second_field == 0) {
-                if (pInfo->SliceHeader.sh_dec_refpic.adaptive_ref_pic_marking_mode_flag == 0) {
+    }
+    else if (pInfo->SliceHeader.idr_flag == 0)
+    {
+        if (used_for_reference)
+        {
+            if (pInfo->img.second_field == 0)
+            {
+                if (pInfo->SliceHeader.sh_dec_refpic.adaptive_ref_pic_marking_mode_flag == 0)
+                {
                     h264_dpb_sliding_window_memory_management(p_dpb, NonExisting, pInfo->active_SPS.num_ref_frames);
                 }
             }
@@ -1577,7 +1599,8 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
         // p_dpb->ref_frames_in_buffer + p_dpb->ltref_frames_in_buffer > p_dpb->BumpLevel,
         // which in itself is an error, but this means first_field_non_ref will
         // not get set and causes problems for h264_dpb_queue_update()
-        if ((pInfo->img.structure != FRAME) && (pInfo->img.second_field == 0)) {
+        if ((pInfo->img.structure != FRAME) && (pInfo->img.second_field == 0))
+        {
             if (used_for_reference ==	0)
                 if (p_dpb->ref_frames_in_buffer + p_dpb->ltref_frames_in_buffer == p_dpb->BumpLevel)
                     first_field_non_ref = 1;
@@ -1620,7 +1643,8 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
                 else
                     p_dpb->OutputCtrl = 0;
             }
-            else {
+            else 
+            {
                 p_dpb->OutputCtrl = 0;
             }
         }
@@ -1637,7 +1661,8 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
     // Do not output "direct output" pictures until the sempahore has been set that the pic is
     // decoded!!
     //
-    if (is_direct_output) {
+    if (is_direct_output)
+    {
         h264_dpb_queue_update(pInfo, 1, 1, 0,pInfo->active_SPS.num_ref_frames);
         //h264_dpb_remove_unused_frame_from_dpb(p_dpb, &flag);
     }
@@ -1645,12 +1670,12 @@ void h264_dpb_store_previous_picture_in_dpb(h264_Info * pInfo,int32_t NonExistin
     //
     // Add reference pictures into Reference list
     //
-    if (used_for_reference) {
+    if (used_for_reference)
+    {
         h264_dpb_insert_ref_lists(&pInfo->dpb, NonExisting);
     }
 
     h264_dpb_remove_unused_frame_from_dpb(p_dpb, &flag);
-
 
     return;
 } ////////////// End of DPB store pic
@@ -1678,16 +1703,19 @@ void h264_dpb_insert_picture_in_dpb(h264_Info * pInfo,int32_t used_for_reference
 {
     h264_DecodedPictureBuffer *p_dpb = &pInfo->dpb;
 
-    if (NonExisting == 0) {
+    if (NonExisting == 0)
+    {
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dec_idc);
         p_dpb->active_fs->frame_num = (use_old) ? pInfo->old_slice.frame_num : pInfo->SliceHeader.frame_num;
     }
-    else {
+    else
+    {
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_non_exist_idc);
         p_dpb->active_fs->frame_num = p_dpb->active_fs->frame.pic_num;
     }
 
-    if (add2dpb) {
+    if (add2dpb)
+    {
         p_dpb->fs_dpb_idc[p_dpb->used_size] = p_dpb->active_fs->fs_idc;
         p_dpb->used_size++;
     }
@@ -1695,9 +1723,10 @@ void h264_dpb_insert_picture_in_dpb(h264_Info * pInfo,int32_t used_for_reference
 
     switch (viddec_h264_get_dec_structure(p_dpb->active_fs))
     {
-    case FRAME : {
+    case FRAME :
+    {
         viddec_h264_set_is_frame_used(p_dpb->active_fs, 3);
-        p_dpb->active_fs->frame.used_for_reference = used_for_reference?3:0;
+        p_dpb->active_fs->frame.used_for_reference = used_for_reference ? 3 : 0;
         if (used_for_reference)
         {
             p_dpb->active_fs->frame.used_for_reference = 3;
@@ -1709,7 +1738,8 @@ void h264_dpb_insert_picture_in_dpb(h264_Info * pInfo,int32_t used_for_reference
 
     }
     break;
-    case TOP_FIELD : {
+    case TOP_FIELD :
+    {
         viddec_h264_set_is_top_used(p_dpb->active_fs, 1);
 
         p_dpb->active_fs->top_field.used_for_reference = used_for_reference;
@@ -1727,15 +1757,16 @@ void h264_dpb_insert_picture_in_dpb(h264_Info * pInfo,int32_t used_for_reference
         }
         else
         {
-            p_dpb->active_fs->frame.poc      = p_dpb->active_fs->top_field.poc;
+            p_dpb->active_fs->frame.poc = p_dpb->active_fs->top_field.poc;
         }
 
     }
     break;
-    case BOTTOM_FIELD : {
+    case BOTTOM_FIELD :
+    {
         viddec_h264_set_is_bottom_used(p_dpb->active_fs, 1);
 
-        p_dpb->active_fs->bottom_field.used_for_reference = (used_for_reference<<1);
+        p_dpb->active_fs->bottom_field.used_for_reference = (used_for_reference << 1);
         if (used_for_reference)
         {
             p_dpb->active_fs->frame.used_for_reference |= 0x2;
@@ -1745,7 +1776,8 @@ void h264_dpb_insert_picture_in_dpb(h264_Info * pInfo,int32_t used_for_reference
                 p_dpb->active_fs->long_term_frame_idx = p_dpb->active_fs->bottom_field.long_term_frame_idx;
             }
         }
-        if (viddec_h264_get_is_used(p_dpb->active_fs) == 3) {
+        if (viddec_h264_get_is_used(p_dpb->active_fs) == 3)
+        {
             h264_dpb_combine_field(p_dpb, use_old); // generate frame view
         }
         else
@@ -1794,7 +1826,7 @@ void h264_dpb_mm_unmark_short_term_for_reference(h264_Info * pInfo, int32_t diff
 
     unmark_done = 0;
 
-    for (idx =0; (idx < p_dpb->ref_frames_in_buffer) && (!(unmark_done)); idx++)
+    for (idx = 0; (idx < p_dpb->ref_frames_in_buffer) && (!(unmark_done)); idx++)
     {
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_ref_idc[idx]);
 
@@ -1825,7 +1857,7 @@ void h264_dpb_mm_unmark_short_term_for_reference(h264_Info * pInfo, int32_t diff
                How will this affect the reference list update ftn coming after??
 
             */
-            if ((p_dpb->active_fs->frame.used_for_reference&0x1) && (!(viddec_h264_get_is_long_term(p_dpb->active_fs)&0x01))&&
+            if ((p_dpb->active_fs->frame.used_for_reference & 0x1) && (!(viddec_h264_get_is_long_term(p_dpb->active_fs) & 0x01))&&
                     (p_dpb->active_fs->top_field.pic_num == picNumX) )
             {
                 p_dpb->active_fs->top_field.used_for_reference = 0;
@@ -1837,7 +1869,7 @@ void h264_dpb_mm_unmark_short_term_for_reference(h264_Info * pInfo, int32_t diff
                 if (p_dpb->active_fs->bottom_field.used_for_reference == 0)
                     h264_dpb_remove_ref_list(p_dpb, p_dpb->fs_ref_idc[idx]);
             }
-            if ((p_dpb->active_fs->frame.used_for_reference&0x2) && (!(viddec_h264_get_is_long_term(p_dpb->active_fs)&0x2)) &&
+            if ((p_dpb->active_fs->frame.used_for_reference & 0x2) && (!(viddec_h264_get_is_long_term(p_dpb->active_fs) & 0x2)) &&
                     (p_dpb->active_fs->bottom_field.pic_num == picNumX) )
             {
                 p_dpb->active_fs->bottom_field.used_for_reference = 0;
@@ -1886,7 +1918,7 @@ void h264_dpb_mm_unmark_long_term_for_reference (h264_Info * pInfo, int32_t long
 
         if (pInfo->img.structure == FRAME)
         {
-            if ((p_dpb->active_fs->frame.used_for_reference==3) && (viddec_h264_get_is_long_term(p_dpb->active_fs)==3) &&
+            if ((p_dpb->active_fs->frame.used_for_reference == 3) && (viddec_h264_get_is_long_term(p_dpb->active_fs) == 3) &&
                     (p_dpb->active_fs->frame.long_term_pic_num == long_term_pic_num))
             {
                 h264_dpb_unmark_for_long_term_reference(p_dpb, p_dpb->fs_ltref_idc[idx]);
@@ -1897,7 +1929,7 @@ void h264_dpb_mm_unmark_long_term_for_reference (h264_Info * pInfo, int32_t long
         else
         {
             /// Check top field
-            if ((p_dpb->active_fs->frame.used_for_reference&0x1) && (viddec_h264_get_is_long_term(p_dpb->active_fs)&0x1) &&
+            if ((p_dpb->active_fs->frame.used_for_reference & 0x1) && (viddec_h264_get_is_long_term(p_dpb->active_fs) & 0x1) &&
                     (p_dpb->active_fs->top_field.long_term_pic_num == long_term_pic_num) )
             {
                 p_dpb->active_fs->top_field.used_for_reference = 0;
@@ -1913,7 +1945,7 @@ void h264_dpb_mm_unmark_long_term_for_reference (h264_Info * pInfo, int32_t long
             }
 
             /// Check Bottom field
-            if ((p_dpb->active_fs->frame.used_for_reference&0x2) && (viddec_h264_get_is_long_term(p_dpb->active_fs)&0x2) &&
+            if ((p_dpb->active_fs->frame.used_for_reference & 0x2) && (viddec_h264_get_is_long_term(p_dpb->active_fs) & 0x2) &&
                     (p_dpb->active_fs->bottom_field.long_term_pic_num == long_term_pic_num) )
             {
                 p_dpb->active_fs->bottom_field.used_for_reference = 0;
@@ -1949,18 +1981,18 @@ int32_t h264_dpb_get_pic_struct_by_pic_num(h264_DecodedPictureBuffer *p_dpb, int
     int32_t pic_struct = INVALID;
     int32_t found = 0;
 
-    for (idx =0; (idx < p_dpb->ref_frames_in_buffer) && (!(found)); idx++)
+    for (idx = 0; (idx < p_dpb->ref_frames_in_buffer) && (!(found)); idx++)
     {
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_ref_idc[idx]);
 
-        if ((p_dpb->active_fs->frame.used_for_reference&0x1) && (!(viddec_h264_get_is_long_term(p_dpb->active_fs)&0x01))&&
+        if ((p_dpb->active_fs->frame.used_for_reference & 0x1) && (!(viddec_h264_get_is_long_term(p_dpb->active_fs) & 0x01))&&
                 (p_dpb->active_fs->top_field.pic_num == picNumX) )
         {
             found = 1;
             pic_struct = TOP_FIELD;
 
         }
-        if ((p_dpb->active_fs->frame.used_for_reference&0x2) && (!(viddec_h264_get_is_long_term(p_dpb->active_fs)&0x2)) &&
+        if ((p_dpb->active_fs->frame.used_for_reference & 0x2) && (!(viddec_h264_get_is_long_term(p_dpb->active_fs) & 0x2)) &&
                 (p_dpb->active_fs->bottom_field.pic_num == picNumX) )
         {
             found = 1;
@@ -1988,18 +2020,24 @@ void h264_dpb_mm_assign_long_term_frame_idx(h264_Info * pInfo, int32_t differenc
     int32_t currPicNum;
     int32_t polarity = 0;
 
-    if (pInfo->img.structure == FRAME) {
+    if (pInfo->img.structure == FRAME)
+    {
         currPicNum = pInfo->img.frame_num;
-    } else {
+    }
+    else
+    {
         currPicNum = (pInfo->img.frame_num << 1) + 1;
     }
 
     picNumX = currPicNum - (difference_of_pic_nums_minus1 + 1);
 
     // remove frames / fields with same long_term_frame_idx
-    if (pInfo->img.structure == FRAME) {
+    if (pInfo->img.structure == FRAME)
+    {
         h264_dpb_unmark_long_term_frame_for_reference_by_frame_idx(p_dpb, long_term_frame_idx);
-    } else {
+    }
+    else
+    {
         polarity = h264_dpb_get_pic_struct_by_pic_num(p_dpb, picNumX);
 
         if (polarity != INVALID)
@@ -2182,7 +2220,8 @@ void h264_dpb_unmark_long_term_field_for_reference_by_frame_idx(h264_DecodedPict
         }
     }
 
-    if (found) {
+    if (found)
+    {
         if (is_complement == 0)
         {
             h264_dpb_unmark_for_long_term_reference(p_dpb, p_dpb->fs_ltref_idc[idx-1]);
@@ -2332,40 +2371,40 @@ void h264_dpb_adaptive_memory_management (h264_Info * pInfo)
     {
         switch (pInfo->SliceHeader.sh_dec_refpic.memory_management_control_operation[idx])
         {
-        case   1: {	//Mark a short-term reference picture as	�unused for reference?
+        case   1: 
+            //Mark a short-term reference picture as unused for reference?
             h264_dpb_mm_unmark_short_term_for_reference(pInfo,
                     pInfo->SliceHeader.sh_dec_refpic.difference_of_pic_num_minus1[idx]);
-        }
         break;
-        case   2: {	//Mark a long-term reference picture as 	�unused for reference?
+        case   2: 
+            //Mark a long-term reference picture as unused for reference?
             h264_dpb_mm_unmark_long_term_for_reference(pInfo,
                     pInfo->SliceHeader.sh_dec_refpic.long_term_pic_num[idx]);
-        }
         break;
-        case  3: {		//Mark a short-term reference picture as	"used for long-term reference" and assign a long-term frame index to it
+        case  3:
+            //Mark a short-term reference picture as    "used for long-term reference" and assign a long-term frame index to it
             h264_dpb_mm_assign_long_term_frame_idx(pInfo,
                                                    pInfo->SliceHeader.sh_dec_refpic.difference_of_pic_num_minus1[idx],
                                                    pInfo->SliceHeader.sh_dec_refpic.long_term_frame_idx[idx]);
-        }
         break;
-        case  4: {	//Specify the maximum long-term frame index and
+        case  4:
+            //Specify the maximum long-term frame index and
             //mark all long-term reference pictureshaving long-term frame indices greater than
             //the maximum value as "unused for reference"
             h264_dpb_mm_update_max_long_term_frame_idx (&pInfo->dpb,
                     pInfo->SliceHeader.sh_dec_refpic.max_long_term_frame_idx_plus1[idx]);
-        }
         break;
-        case  5: {		//Mark all reference pictures as	"unused for reference" and set the MaxLongTermFrameIdx variable to
+        case  5:
+            //Mark all reference pictures as    "unused for reference" and set the MaxLongTermFrameIdx variable to
             // "no long-term frame indices"
             h264_dpb_mm_unmark_all_short_term_for_reference(&pInfo->dpb);
             h264_dpb_mm_update_max_long_term_frame_idx(&pInfo->dpb, 0);
             pInfo->img.last_has_mmco_5 = 1;
-        }
         break;
-        case   6: {	//Mark the current picture as	"used for long-term reference" and assign a long-term frame index to it
+        case   6:
+            //Mark the current picture as   "used for long-term reference" and assign a long-term frame index to it
             h264_dpb_mm_mark_current_picture_long_term(&pInfo->dpb,
                     pInfo->SliceHeader.sh_dec_refpic.long_term_frame_idx[idx]);
-        }
         break;
         }
         idx++;
@@ -2375,7 +2414,7 @@ void h264_dpb_adaptive_memory_management (h264_Info * pInfo)
     if (pInfo->img.last_has_mmco_5)
     {
         pInfo->img.frame_num = 0;
-        pInfo->SliceHeader.frame_num=0;
+        pInfo->SliceHeader.frame_num = 0;
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dec_idc);
 
         if (viddec_h264_get_dec_structure(p_dpb->active_fs) == FRAME)
@@ -2436,12 +2475,12 @@ void h264_dpb_gaps_in_frame_num_mem_management(h264_Info * pInfo)
         // If the previous picture was an unpaired field, mark it as a dangler
         if (p_dpb->used_size)
         {
-            idx = p_dpb->used_size-1;
+            idx = p_dpb->used_size - 1;
             prev_idc = p_dpb->fs_dpb_idc[idx];
             if (prev_idc != MPD_DPB_FS_NULL_IDC)
             {
                 h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dpb_idc[idx]);
-                p_dpb->active_fs->frame_num =0;
+                p_dpb->active_fs->frame_num = 0;
             }
         }
         pInfo->img.PreviousFrameNumOffset = 0;
@@ -2451,7 +2490,8 @@ void h264_dpb_gaps_in_frame_num_mem_management(h264_Info * pInfo)
     }
 
     // Check for gaps in frame_num
-    if (pInfo->SliceHeader.idr_flag) {
+    if (pInfo->SliceHeader.idr_flag)
+    {
         pInfo->img.PreviousFrameNum = pInfo->img.frame_num;
     }
     // Have we re-started following a recovery point message?
@@ -2464,9 +2504,12 @@ void h264_dpb_gaps_in_frame_num_mem_management(h264_Info * pInfo)
     */
     else if (pInfo->img.frame_num != pInfo->img.PreviousFrameNum)
     {
-        if (MaxFrameNum) {
+        if (MaxFrameNum)
+        {
             ldiv_mod_u((uint32_t)(pInfo->img.PreviousFrameNum + 1), (uint32_t)MaxFrameNum, &temp);
-        } else {
+        }
+        else
+        {
             temp = (uint32_t)pInfo->img.PreviousFrameNum + 1;
         }
         prev_frame_num_plus1_wrap = temp;
@@ -2479,16 +2522,13 @@ void h264_dpb_gaps_in_frame_num_mem_management(h264_Info * pInfo)
 
 
     //if(active_sps->gaps_in_frame_num_value_allowed_flag == 0) {
-    if (pInfo->img.gaps_in_frame_num && (active_sps->gaps_in_frame_num_value_allowed_flag == 0)) {
+    if (pInfo->img.gaps_in_frame_num && (active_sps->gaps_in_frame_num_value_allowed_flag == 0))
+    {
         // infer an unintentional loss of pictures
         // only invoke following process for a conforming bitstream
         // when gaps_in_frame_num_value_allowed_flag is equal to 1
         pInfo->img.gaps_in_frame_num = 0;
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-        pInfo->sw_bail = 1;
-#endif
-#endif
+
         //mfd_printf("ERROR STREAM??\n");
         ////// Error handling here----
     }
@@ -2503,12 +2543,13 @@ void h264_dpb_gaps_in_frame_num_mem_management(h264_Info * pInfo)
     // If the previous picture was an unpaired field, mark it as a dangler
     if (p_dpb->used_size)
     {
-        idx = p_dpb->used_size-1;
+        idx = p_dpb->used_size - 1;
         prev_idc = p_dpb->fs_dpb_idc[idx];
         if (prev_idc != MPD_DPB_FS_NULL_IDC)
         {
             h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dpb_idc[idx]);
-            if (viddec_h264_get_is_used(p_dpb->active_fs) != 3) {
+            if (viddec_h264_get_is_used(p_dpb->active_fs) != 3)
+            {
                 h264_dpb_mark_dangling_field(p_dpb, p_dpb->active_fs->fs_idc);  //, DANGLING_TYPE_GAP_IN_FRAME
             }
         }
@@ -2563,8 +2604,8 @@ void h264_dpb_unmark_for_reference(h264_DecodedPictureBuffer *p_dpb, int32_t fs_
 {
     h264_dpb_set_active_fs(p_dpb, fs_idc);
 
-    if (viddec_h264_get_is_used(p_dpb->active_fs)&0x1)  p_dpb->active_fs->top_field.used_for_reference = 0;
-    if (viddec_h264_get_is_used(p_dpb->active_fs)&0x2)  p_dpb->active_fs->bottom_field.used_for_reference = 0;
+    if (viddec_h264_get_is_used(p_dpb->active_fs) & 0x1)  p_dpb->active_fs->top_field.used_for_reference = 0;
+    if (viddec_h264_get_is_used(p_dpb->active_fs) & 0x2)  p_dpb->active_fs->bottom_field.used_for_reference = 0;
     if (viddec_h264_get_is_used(p_dpb->active_fs) == 3) p_dpb->active_fs->frame.used_for_reference = 0;
 
     p_dpb->active_fs->frame.used_for_reference = 0;
@@ -2586,13 +2627,13 @@ void h264_dpb_unmark_for_long_term_reference(h264_DecodedPictureBuffer *p_dpb, i
 {
     h264_dpb_set_active_fs(p_dpb, fs_idc);
 
-    if (viddec_h264_get_is_used(p_dpb->active_fs)&0x1)
+    if (viddec_h264_get_is_used(p_dpb->active_fs) & 0x1)
     {
         p_dpb->active_fs->top_field.used_for_reference = 0;
         p_dpb->active_fs->top_field.is_long_term = 0;
     }
 
-    if (viddec_h264_get_is_used(p_dpb->active_fs)&0x2)
+    if (viddec_h264_get_is_used(p_dpb->active_fs) & 0x2)
     {
         p_dpb->active_fs->bottom_field.used_for_reference = 0;
         p_dpb->active_fs->bottom_field.is_long_term = 0;
@@ -2674,13 +2715,13 @@ void h264_dpb_is_used_for_reference(h264_DecodedPictureBuffer *p_dpb, int32_t * 
     *flag = 0;
     if (p_dpb->active_fs->frame.used_for_reference)
         *flag = 1;
-    else if (viddec_h264_get_is_used(p_dpb->active_fs) ==3) // frame
+    else if (viddec_h264_get_is_used(p_dpb->active_fs) == 3) // frame
         *flag = p_dpb->active_fs->frame.used_for_reference;
     else
     {
-        if (viddec_h264_get_is_used(p_dpb->active_fs)&0x1) // top field
+        if (viddec_h264_get_is_used(p_dpb->active_fs) & 0x1) // top field
             *flag = p_dpb->active_fs->top_field.used_for_reference;
-        if (viddec_h264_get_is_used(p_dpb->active_fs)&0x2) // bottom field
+        if (viddec_h264_get_is_used(p_dpb->active_fs) & 0x2) // bottom field
             *flag = *flag ||  p_dpb->active_fs->bottom_field.used_for_reference;
     }
 }
@@ -2752,7 +2793,8 @@ void h264_dpb_idr_memory_management (h264_Info * pInfo,seq_param_set_used_ptr ac
             p_dpb->fs_ltref_idc[i] = MPD_DPB_FS_NULL_IDC;
 
         ////////////////////////////////////////// Reset DPB and dpb list
-        for (i = 0; i < p_dpb->used_size; i++) {
+        for (i = 0; i < p_dpb->used_size; i++)
+        {
             p_dpb->fs[p_dpb->fs_dpb_idc[i]].fs_idc = MPD_DPB_FS_NULL_IDC;
             p_dpb->fs_dpb_idc[i] = MPD_DPB_FS_NULL_IDC;
         }
@@ -2962,10 +3004,10 @@ void h264_dpb_remove_frame_from_dpb(h264_DecodedPictureBuffer *p_dpb, int32_t id
 
     /////Remove unused frame from dpb-list
     i = idx;
-    while ( (i + 1)< p_dpb->used_size)
+    while ((i + 1)< p_dpb->used_size)
     {
         p_dpb->fs_dpb_idc[i] = p_dpb->fs_dpb_idc[i + 1];
-        i ++;
+        i++;
     }
     p_dpb->fs_dpb_idc[i] = MPD_DPB_FS_NULL_IDC;
 
@@ -3147,9 +3189,9 @@ void h264_dpb_combine_field(h264_DecodedPictureBuffer *p_dpb, int32_t use_old)
     //p_dpb->active_fs->frame.poc = p_dpb->active_fs->poc;
 
 
-    p_dpb->active_fs->frame.used_for_reference = p_dpb->active_fs->top_field.used_for_reference |(p_dpb->active_fs->bottom_field.used_for_reference);
+    p_dpb->active_fs->frame.used_for_reference = p_dpb->active_fs->top_field.used_for_reference | (p_dpb->active_fs->bottom_field.used_for_reference);
 
-    p_dpb->active_fs->frame.is_long_term = p_dpb->active_fs->top_field.is_long_term |(p_dpb->active_fs->bottom_field.is_long_term <<1);
+    p_dpb->active_fs->frame.is_long_term = p_dpb->active_fs->top_field.is_long_term | (p_dpb->active_fs->bottom_field.is_long_term << 1);
 
     if (p_dpb->active_fs->frame.is_long_term)
         p_dpb->active_fs->frame.long_term_frame_idx = p_dpb->active_fs->long_term_frame_idx;
@@ -3389,7 +3431,7 @@ int32_t h264_dpb_output_one_frame_from_dpb(h264_Info* pInfo,int32_t direct, int3
                     // It should only happen in errored streams, and can happen if this picture had an MMCO,
                     // thus disabling h264_dpb_sliding_window_memory_management(), which would normally have
                     // unmarked the oldest reference frame.
-                    h264_dpb_sliding_window_memory_management(p_dpb, 0,num_ref_frames);
+                    h264_dpb_sliding_window_memory_management(p_dpb, 0, num_ref_frames);
                     h264_dpb_remove_unused_frame_from_dpb(p_dpb, &flag);
 
                     if (flag == 0) {
@@ -3493,14 +3535,17 @@ void h264_dpb_flush_dpb (h264_Info* pInfo,int32_t output_all, int32_t keep_compl
     }
 
     // output frames in POC order
-    if (output_all) {
-        while ((p_dpb->used_size > 0) && (p_dpb->used_size - keep_complement)) {
+    if (output_all)
+    {
+        while ((p_dpb->used_size > 0) && (p_dpb->used_size - keep_complement))
+        {
             h264_dpb_queue_update(pInfo, 1, 0, 0,num_ref_frames);
         }
     }
 
     flag = 1;
-    while (flag) {
+    while (flag)
+    {
         h264_dpb_remove_unused_frame_from_dpb(p_dpb, &flag);
     }
 
@@ -3543,7 +3588,8 @@ void h264_dpb_reset_dpb(h264_Info * pInfo,int32_t PicWidthInMbs, int32_t FrameHe
     }
 
     // initialize software DPB
-    if (p_dpb->active_fs) {
+    if (p_dpb->active_fs)
+    {
         viddec_h264_set_dec_structure(p_dpb->active_fs, INVALID);
     }
     h264_dpb_idr_memory_management(pInfo, &pInfo->active_SPS, no_output_of_prior_pics_flag);  // implied no_output_of_prior_pics_flag==1
@@ -3629,7 +3675,8 @@ int32_t h264_dpb_assign_frame_store(h264_Info * pInfo, int32_t NonExisting)
     h264_DecodedPictureBuffer *p_dpb = &pInfo->dpb;
 
 
-    while ( dpb_setup_free_fb(p_dpb, &idc, &pip_setting)  != 0 ) {
+    while ( dpb_setup_free_fb(p_dpb, &idc, &pip_setting)  != 0 )
+    {
         ///
         /// Generally this is triggered a error case, no more frame buffer avaliable for next
         /// What we do here is just remove one with min-POC before get more info
@@ -3649,9 +3696,12 @@ int32_t h264_dpb_assign_frame_store(h264_Info * pInfo, int32_t NonExisting)
     }
 
 
-    if (NonExisting) {
+    if (NonExisting)
+    {
         p_dpb->fs_non_exist_idc = idc;
-    } else {
+    }
+    else
+    {
         p_dpb->fs_dec_idc = idc;
     }
 
@@ -3670,7 +3720,7 @@ int32_t h264_dpb_assign_frame_store(h264_Info * pInfo, int32_t NonExisting)
     viddec_h264_set_is_non_existent(p_dpb->active_fs, NonExisting);
     viddec_h264_set_is_output(p_dpb->active_fs, (NonExisting?1:0));
 
-    p_dpb->active_fs->pic_type = ((FRAME_TYPE_INVALID<<FRAME_TYPE_TOP_OFFSET)|(FRAME_TYPE_INVALID<<FRAME_TYPE_BOTTOM_OFFSET));			//----
+    p_dpb->active_fs->pic_type = ((FRAME_TYPE_INVALID << FRAME_TYPE_TOP_OFFSET) | (FRAME_TYPE_INVALID << FRAME_TYPE_BOTTOM_OFFSET));
 
     // Only put members in here which will not be reset somewhere else
     // and which could be used before they are overwritten again with
@@ -3705,7 +3755,7 @@ void h264_dpb_update_queue_dangling_field(h264_Info * pInfo)
     {
         if (dpb_ptr->fs_dpb_idc[dpb_ptr->used_size-1] != MPD_DPB_FS_NULL_IDC)
         {
-            h264_dpb_set_active_fs(dpb_ptr, dpb_ptr->fs_dpb_idc[dpb_ptr->used_size-1]);
+            h264_dpb_set_active_fs(dpb_ptr, dpb_ptr->fs_dpb_idc[dpb_ptr->used_size - 1]);
             if (viddec_h264_get_is_used(dpb_ptr->active_fs) != 3)
             {
                 prev_pic_unpaired_field = 1;
@@ -3720,13 +3770,15 @@ void h264_dpb_update_queue_dangling_field(h264_Info * pInfo)
             {
                 // If we establish the previous pic was an unpaired field and this picture is not
                 // its complement, the previous picture was a dangling field
-                if (pInfo->img.second_field == 0) {
+                if (pInfo->img.second_field == 0)
+                {
                     while (dpb_ptr->used_size > dpb_ptr->BumpLevel)
                         h264_dpb_queue_update(pInfo, 1, 0, 0,pInfo->active_SPS.num_ref_frames); // flush a frame
                 }
             }
         }
-        else if (prev_pic_unpaired_field) {
+        else if (prev_pic_unpaired_field)
+        {
             while (dpb_ptr->used_size > dpb_ptr->BumpLevel)
                 h264_dpb_queue_update(pInfo, 1, 0, 0,pInfo->active_SPS.num_ref_frames); // flush a frame
         }
@@ -3758,13 +3810,13 @@ void h264_dpb_init_frame_store(h264_Info * pInfo)
 
     if (dpb_ptr->used_size)
     {
-        idx = dpb_ptr->used_size-1;
+        idx = dpb_ptr->used_size - 1;
         prev_idc = dpb_ptr->fs_dpb_idc[idx];
     }
 
     if (prev_idc != MPD_DPB_FS_NULL_IDC)
     {
-        h264_dpb_set_active_fs(dpb_ptr, dpb_ptr->fs_dpb_idc[dpb_ptr->used_size-1]);
+        h264_dpb_set_active_fs(dpb_ptr, dpb_ptr->fs_dpb_idc[dpb_ptr->used_size - 1]);
         if (viddec_h264_get_is_used(dpb_ptr->active_fs) != 3)
         {
             //PRINTF(MFD_NONE, " FN: %d p_dpb->active_fs->is_used = %d \n", (h264_frame_number+1), p_dpb->active_fs->is_used);
@@ -3787,7 +3839,8 @@ void h264_dpb_init_frame_store(h264_Info * pInfo)
                 h264_dpb_mark_dangling_field(dpb_ptr, dpb_ptr->active_fs->fs_idc);  //, DANGLING_TYPE_FIELD
         }
     }
-    else if (prev_pic_unpaired_field) {
+    else if (prev_pic_unpaired_field)
+    {
         h264_dpb_mark_dangling_field(dpb_ptr, dpb_ptr->active_fs->fs_idc);		//, DANGLING_TYPE_FRAME
     }
 
@@ -3806,7 +3859,8 @@ void h264_dpb_init_frame_store(h264_Info * pInfo)
 
     ////////////// TODO: THe following init
 #if 1
-    if ( pInfo->img.second_field) {
+    if ( pInfo->img.second_field)
+    {
         //p_dpb->active_fs->second_dsn = pInfo->img.dsn;
         //p_dpb->active_fs->prev_dsn = pInfo->img.prev_dsn;
         if (dpb_ptr->active_fs->pic_type == FRAME_TYPE_IDR ||
@@ -3904,15 +3958,15 @@ void h264_dpb_init_frame_store(h264_Info * pInfo)
 
 void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame_num)
 {
-    int32_t MaxPicOrderCntLsb = (1<<(pInfo->active_SPS.log2_max_pic_order_cnt_lsb_minus4+4));
+    int32_t MaxPicOrderCntLsb = (1<<(pInfo->active_SPS.log2_max_pic_order_cnt_lsb_minus4 + 4));
     int32_t delta_pic_order_count[2];
     int32_t MaxFrameNum = 1 << (pInfo->active_SPS.log2_max_frame_num_minus4 + 4);
 
     int32_t AbsFrameNum =0;
-    int32_t ExpectedDeltaPerPicOrderCntCycle =0;
+    int32_t ExpectedDeltaPerPicOrderCntCycle = 0;
     int32_t PicOrderCntCycleCnt = 0;
-    int32_t FrameNumInPicOrderCntCycle =0;
-    int32_t ExpectedPicOrderCnt =0;
+    int32_t FrameNumInPicOrderCntCycle = 0;
+    int32_t ExpectedPicOrderCnt = 0;
 
     int32_t actual_frame_num =0;
 
@@ -3947,26 +4001,28 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
 
         // Calculate the MSBs of current picture
         if ((pInfo->img.pic_order_cnt_lsb < pInfo->img.PrevPicOrderCntLsb)  &&
-                ((pInfo->img.PrevPicOrderCntLsb - pInfo->img.pic_order_cnt_lsb )>=(MaxPicOrderCntLsb>>1)) )
+                ((pInfo->img.PrevPicOrderCntLsb - pInfo->img.pic_order_cnt_lsb ) >= (MaxPicOrderCntLsb >> 1)))
         {
             pInfo->img.CurrPicOrderCntMsb = pInfo->img.PicOrderCntMsb + MaxPicOrderCntLsb;
-        } else if ((pInfo->img.pic_order_cnt_lsb  >  pInfo->img.PrevPicOrderCntLsb)  &&
+        }
+        else if ((pInfo->img.pic_order_cnt_lsb  >  pInfo->img.PrevPicOrderCntLsb)  &&
                    ((pInfo->img.pic_order_cnt_lsb - pInfo->img.PrevPicOrderCntLsb ) > (MaxPicOrderCntLsb>>1)) )
         {
             pInfo->img.CurrPicOrderCntMsb = pInfo->img.PicOrderCntMsb - MaxPicOrderCntLsb;
-        } else
+        } 
+        else
         {
             pInfo->img.CurrPicOrderCntMsb = pInfo->img.PicOrderCntMsb;
         }
 
         // 2nd
 
-        if (pInfo->img.field_pic_flag==0)
+        if (pInfo->img.field_pic_flag == 0)
         {
             //frame pix
             pInfo->img.toppoc = pInfo->img.CurrPicOrderCntMsb + pInfo->img.pic_order_cnt_lsb;
             pInfo->img.bottompoc = pInfo->img.toppoc + pInfo->img.delta_pic_order_cnt_bottom;
-            pInfo->img.ThisPOC = pInfo->img.framepoc = (pInfo->img.toppoc < pInfo->img.bottompoc)? pInfo->img.toppoc : pInfo->img.bottompoc; // POC200301
+            pInfo->img.ThisPOC = pInfo->img.framepoc = (pInfo->img.toppoc < pInfo->img.bottompoc) ? pInfo->img.toppoc : pInfo->img.bottompoc; // POC200301
         }
         else if (pInfo->img.bottom_field_flag==0)
         {  //top field
@@ -3988,7 +4044,7 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
         }
 
         break;
-    case 1: {
+    case 1:
         if (NonExisting)
         {
             delta_pic_order_count[0] = 0;
@@ -4007,14 +4063,6 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
         if (pInfo->SliceHeader.idr_flag)
         {
             pInfo->img.FrameNumOffset         = 0;
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-            if (pInfo->img.frame_num)
-            {
-                pInfo->sw_bail = 1;
-            }
-#endif
-#endif
         }
         else
         {
@@ -4060,16 +4108,12 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
             FrameNumInPicOrderCntCycle = temp;
 
             //ExpectedPicOrderCnt +=pInfo->active_SPS.expectedDeltaPerPOCCycle;
-#ifndef USER_MODE
             h264_Parse_Copy_Offset_Ref_Frames_From_DDR(pInfo, offset_for_ref_frame, pInfo->active_SPS.seq_parameter_set_id);
             for (i = 0; i <= FrameNumInPicOrderCntCycle; i++)
                 ExpectedPicOrderCnt += offset_for_ref_frame[i];
-#else
-            for (i = 0; i <= FrameNumInPicOrderCntCycle; i++)
-                ExpectedPicOrderCnt += pInfo->active_SPS.offset_for_ref_frame[i];
-#endif
         }
-        else {
+        else
+        {
             ExpectedPicOrderCnt = 0;
         }
 
@@ -4105,9 +4149,9 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
         pInfo->img.PreviousFrameNum=pInfo->img.frame_num;
         pInfo->img.PreviousFrameNumOffset=pInfo->img.FrameNumOffset;
 
-    }
     break;
-    case 2: {     // POC MODE 2
+    case 2:
+        // POC MODE 2
         if (pInfo->SliceHeader.idr_flag)
         {
             pInfo->img.FrameNumOffset = 0;
@@ -4115,14 +4159,6 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
             pInfo->img.toppoc = 0;
             pInfo->img.bottompoc = 0;
             pInfo->img.ThisPOC = 0;
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-            if (pInfo->img.frame_num)
-            {
-                pInfo->sw_bail = 1;
-            }
-#endif
-#endif
         }
         else
         {
@@ -4137,8 +4173,8 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
                 pInfo->img.FrameNumOffset = pInfo->img.PreviousFrameNumOffset;
 
             AbsFrameNum = pInfo->img.FrameNumOffset + actual_frame_num;
-            if (pInfo->SliceHeader.nal_ref_idc == 0) pInfo->img.ThisPOC = (AbsFrameNum<<1) - 1;
-            else                     pInfo->img.ThisPOC = (AbsFrameNum<<1);
+            if (pInfo->SliceHeader.nal_ref_idc == 0) pInfo->img.ThisPOC = (AbsFrameNum << 1) - 1;
+            else                     pInfo->img.ThisPOC = (AbsFrameNum << 1);
 
             if (!(pInfo->img.field_pic_flag))
             {
@@ -4161,7 +4197,6 @@ void h264_hdr_decoding_poc (h264_Info * pInfo,int32_t NonExisting, int32_t frame
         //CONFORMANCE_ISSUE
         pInfo->img.PreviousFrameNum = pInfo->img.frame_num;
         pInfo->img.PreviousFrameNumOffset = pInfo->img.FrameNumOffset;
-    }
     break;
     default:
         break;
@@ -4189,7 +4224,7 @@ void h264_hdr_post_poc(h264_Info* pInfo, int32_t NonExisting, int32_t frame_num,
 
     switch (pInfo->img.pic_order_cnt_type)
     {
-    case  0: {
+    case  0:
         pInfo->img.PreviousFrameNum   = actual_frame_num;
         if ((disposable_flag == 0) && (NonExisting == 0))
         {
@@ -4197,22 +4232,18 @@ void h264_hdr_post_poc(h264_Info* pInfo, int32_t NonExisting, int32_t frame_num,
                                             pInfo->SliceHeader.pic_order_cnt_lsb;
             pInfo->img.PicOrderCntMsb     = pInfo->img.CurrPicOrderCntMsb;
         }
-    }
     break;
-    case  1: {
+    case  1:
         pInfo->img.PreviousFrameNum       = actual_frame_num;
         pInfo->img.PreviousFrameNumOffset = pInfo->img.FrameNumOffset;
-    }
     break;
-    case  2: {
+    case  2:
         pInfo->img.PreviousFrameNum       = actual_frame_num;
         pInfo->img.PreviousFrameNumOffset = pInfo->img.FrameNumOffset;
-
-    }
     break;
 
-    default: {
-    } break;
+    default:
+    break;
     }
 
     return;

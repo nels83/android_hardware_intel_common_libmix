@@ -28,11 +28,8 @@ typedef struct
     uint8_t late_frame_detect;
     uint8_t frame_start_found;
     uint32_t next_workload_error_eos;
-#ifdef VBP
+
     uint32_t codec_data[MAX_CODEC_CXT_SIZE<<3];
-#else
-    uint32_t codec_data[MAX_CODEC_CXT_SIZE>>2];
-#endif
 } viddec_pm_cxt_t;
 
 

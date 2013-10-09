@@ -60,20 +60,19 @@ uint32_t h264_get_codeNum(void *parent, h264_Info* pInfo)
 
 
             temp = (temp << bits_offset);
-            if (temp!=0)
+            if (temp != 0)
             {
                 bits_need_add_in_first_byte = bits_offset;
             }
-            is_first_byte =0;
+            is_first_byte = 0;
         }
         else
         {
             noOfBits = 8;/* always 8 bits as we read a byte at a time */
             bits_operation_result = viddec_pm_peek_bits(parent, &temp, 8);
-
         }
 
-        if (-1==bits_operation_result)
+        if (-1 == bits_operation_result)
         {
             return MAX_INT32_VALUE;
         }
@@ -81,7 +80,7 @@ uint32_t h264_get_codeNum(void *parent, h264_Info* pInfo)
         if (temp != 0)
         {
             // if byte!=0 we have at least one bit with value 1.
-            count=1;
+            count = 1;
             while (((temp & 0x80) != 0x80) && (count <= noOfBits))
             {
                 count++;
@@ -122,7 +121,7 @@ uint32_t h264_get_codeNum(void *parent, h264_Info* pInfo)
         count = ((count + bits_need_add_in_first_byte)& 0x7);
 
         leadingZeroBits --;
-        length =  leadingZeroBits;
+        length = leadingZeroBits;
         codeNum = 0;
         noOfBits = 8 - count;
 
@@ -174,8 +173,8 @@ int32_t h264_GetVLCElement(void *parent, h264_Info* pInfo, uint8_t bIsSigned)
 
     if (bIsSigned) //get signed integer golomb code else the value is unsigned
     {
-        sign = (sval & 0x1)?1:-1;
-        sval = (sval +1) >> 1;
+        sign = (sval & 0x1) ? 1 : -1;
+        sval = (sval + 1) >> 1;
         sval = sval * sign;
     }
 
@@ -189,11 +188,11 @@ uint8_t h264_More_RBSP_Data(void *parent, h264_Info * pInfo)
 {
     uint8_t cnt = 0;
 
-    uint8_t  is_emul =0;
-    uint8_t 	cur_byte = 0;
-    int32_t  shift_bits =0;
+    uint8_t is_emul =0;
+    uint8_t cur_byte = 0;
+    int32_t shift_bits = 0;
     uint32_t ctr_bit = 0;
-    uint32_t bits_offset =0, byte_offset =0;
+    uint32_t bits_offset = 0, byte_offset =0;
 
     //remove warning
     pInfo = pInfo;
@@ -203,20 +202,20 @@ uint8_t h264_More_RBSP_Data(void *parent, h264_Info * pInfo)
 
     viddec_pm_get_au_pos(parent, &bits_offset, &byte_offset, &is_emul);
 
-    shift_bits = 7-bits_offset;
+    shift_bits = 7 - bits_offset;
 
     // read one byte
     viddec_pm_get_cur_byte(parent, &cur_byte);
 
-    ctr_bit = ((cur_byte)>> (shift_bits--)) & 0x01;
+    ctr_bit = (cur_byte >> (shift_bits--)) & 0x01;
 
     // a stop bit has to be one
-    if (ctr_bit==0)
+    if (ctr_bit == 0)
         return 1;
 
-    while (shift_bits>=0 && !cnt)
+    while (shift_bits >= 0 && !cnt)
     {
-        cnt |= (((cur_byte)>> (shift_bits--)) & 0x01);   // set up control bit
+        cnt |= (((cur_byte) >> (shift_bits--)) & 0x01);   // set up control bit
     }
 
     return (cnt);

@@ -6,13 +6,10 @@
 #include "h264parse.h"
 
 #include "h264parse_dpb.h"
+#include <vbp_trace.h>
 
 /* Init function which can be called to intialized local context on open and flush and preserve*/
-#ifdef VBP
 void viddec_h264_init(void *ctxt, uint32_t *persist_mem, uint32_t preserve)
-#else
-static void viddec_h264_init(void *ctxt, uint32_t *persist_mem, uint32_t preserve)
-#endif
 {
     struct h264_viddec_parser* parser = ctxt;
     h264_Info * pInfo = &(parser->info);
@@ -20,16 +17,13 @@ static void viddec_h264_init(void *ctxt, uint32_t *persist_mem, uint32_t preserv
     if (!preserve)
     {
         /* we don't initialize this data if we want to preserve
-           sequence and gop information */
+                 sequence and gop information.
+              */
         h264_init_sps_pps(parser,persist_mem);
     }
     /* picture level info which will always be initialized */
     h264_init_Info_under_sps_pps_level(pInfo);
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-   pInfo->sw_bail = 0;
-#endif
-#endif
+
     return;
 }
 
@@ -37,18 +31,13 @@ static void viddec_h264_init(void *ctxt, uint32_t *persist_mem, uint32_t preserv
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
-#ifdef VBP
 uint32_t viddec_h264_parse(void *parent, void *ctxt)
-#else
-static uint32_t viddec_h264_parse(void *parent, void *ctxt)
-#endif
 {
     struct h264_viddec_parser* parser = ctxt;
 
     h264_Info * pInfo = &(parser->info);
 
     h264_Status status = H264_STATUS_ERROR;
-
 
     uint8_t nal_ref_idc = 0;
 
@@ -59,25 +48,17 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
     pInfo->nal_unit_type = 0;
 
     h264_Parse_NAL_Unit(parent, pInfo, &nal_ref_idc);
+    VTRACE("Start parsing NAL unit, type = %d", pInfo->nal_unit_type);
 
     ///// Check frame bounday for non-vcl elimitter
     h264_check_previous_frame_end(pInfo);
 
-    //OS_INFO("========================nal_type: %d=================\n", pInfo->nal_unit_type);
-    //DEBUG_WRITE(pInfo->nal_unit_type, pInfo->got_start, pInfo->wl_err_flag, pInfo->is_current_workload_done, 0, 0);
-#if 0
-    devh_SVEN_WriteModuleEvent( NULL,
-                                SVEN_MODULE_EVENT_GV_FW_PARSER_DEBUG_P0,
-                                pInfo->got_start,pInfo->nal_unit_type,  pInfo->wl_err_curr, pInfo->is_current_workload_done, 0, pInfo->img.frame_num);
-#endif
-
     //////// Parse valid NAL unit
-    switch ( pInfo->nal_unit_type )
+    switch (pInfo->nal_unit_type)
     {
     case h264_NAL_UNIT_TYPE_IDR:
-        if (pInfo->got_start)	{
+        if (pInfo->got_start)
             pInfo->img.recovery_point_found |= 1;
-        }
 
         pInfo->sei_rp_received = 0;
 
@@ -102,32 +83,22 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
         h264_memset(&next_SliceHeader, 0x0, sizeof(h264_Slice_Header_t));
         next_SliceHeader.nal_ref_idc = nal_ref_idc;
 
-        if ( (1==pInfo->primary_pic_type_plus_one)&&(pInfo->got_start))
+        if ((1 == pInfo->primary_pic_type_plus_one) && (pInfo->got_start))
         {
-            pInfo->img.recovery_point_found |=4;
+            pInfo->img.recovery_point_found |= 4;
         }
         pInfo->primary_pic_type_plus_one = 0;
 
-
-
-#ifndef VBP
-        if (pInfo->img.recovery_point_found == 0) {
-            pInfo->img.structure = FRAME;
-            pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
-            pInfo->wl_err_curr |= (FRAME << FIELD_ERR_OFFSET);
-            break;
-        }
-#endif
 
         ////////////////////////////////////////////////////////////////////////////
         // Step 2: Parsing slice header
         ////////////////////////////////////////////////////////////////////////////
         /// PWT
-        pInfo->h264_pwt_start_byte_offset=0;
-        pInfo->h264_pwt_start_bit_offset=0;
-        pInfo->h264_pwt_end_byte_offset=0;
-        pInfo->h264_pwt_end_bit_offset=0;
-        pInfo->h264_pwt_enabled =0;
+        pInfo->h264_pwt_start_byte_offset = 0;
+        pInfo->h264_pwt_start_bit_offset = 0;
+        pInfo->h264_pwt_end_byte_offset = 0;
+        pInfo->h264_pwt_end_bit_offset = 0;
+        pInfo->h264_pwt_enabled = 0;
         /// IDR flag
         next_SliceHeader.idr_flag = (pInfo->nal_unit_type == h264_NAL_UNIT_TYPE_IDR);
 
@@ -137,24 +108,12 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
 
         pInfo->sei_information.recovery_point = 0;
 
-        if (next_SliceHeader.sh_error & 3) {
-            pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
-
-            // Error type definition, refer to viddec_fw_common_defs.h
-            //		if error in top field, VIDDEC_FW_WORKLOAD_ERR_TOPFIELD			= (1 << 17)
-            //		if error in bottom field, VIDDEC_FW_WORKLOAD_ERR_BOTTOMFIELD	   = (1 << 18)
-            //		if this is frame based, both 2 bits should be set
-            pInfo->wl_err_curr |= (FRAME << FIELD_ERR_OFFSET);
-
+        if (next_SliceHeader.sh_error & 3)
+        {
+            ETRACE("Slice Header parsing error.\n");
             break;
         }
         pInfo->img.current_slice_num++;
-
-
-#ifdef DUMP_HEADER_INFO
-        dump_slice_header(pInfo, &next_SliceHeader);
-////h264_print_decoder_values(pInfo);
-#endif
 
 
         ////////////////////////////////////////////////////////////////////////////
@@ -204,10 +163,6 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
                 {
                     h264_dpb_gaps_in_frame_num_mem_management(pInfo);
                 }
-
-#ifdef DUMP_HEADER_INFO
-                dump_new_picture_attr(pInfo, pInfo->SliceHeader.frame_num);
-#endif
             }
             //
             /// Decoding POC
@@ -224,7 +179,6 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
                 pInfo->SliceHeader.sh_error |= (pInfo->SliceHeader.structure << 17);
             }
 
-            //
             /// Emit out the New Frame
             if (pInfo->img.g_new_frame)
             {
@@ -256,17 +210,6 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
 
         h264_dpb_update_ref_lists( pInfo);
 
-#ifdef VBP
-#ifdef SW_ERROR_CONCEALEMNT
-        if ((pInfo->dpb.ltref_frames_in_buffer + pInfo->dpb.ref_frames_in_buffer ) > pInfo->active_SPS.num_ref_frames)
-        {
-            pInfo->sw_bail = 1;
-        }
-#endif
-#endif
-#ifdef DUMP_HEADER_INFO
-        dump_ref_list(pInfo);
-#endif
         /// Emit out the current "good" slice
         h264_parse_emit_current_slice(parent, pInfo);
 
@@ -277,8 +220,7 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
     case h264_NAL_UNIT_TYPE_DPA:
     case h264_NAL_UNIT_TYPE_DPB:
     case h264_NAL_UNIT_TYPE_DPC:
-        //OS_INFO("***********************DP feature, not supported currently*******************\n");
-        pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
+        ETRACE("Data Partition is not supported currently\n");
         status = H264_STATUS_NOTSUPPORT;
         break;
 
@@ -287,7 +229,8 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
         status = H264_STATUS_OK;
 
         //OS_INFO("*****************************SEI**************************************\n");
-        if (pInfo->sps_valid) {
+        if (pInfo->sps_valid)
+        {
             //h264_user_data_t user_data; /// Replace with tmp buffer while porting to FW
             pInfo->number_of_first_au_info_nal_before_first_slice++;
             /// parsing the SEI info
@@ -311,26 +254,23 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
 
 
         status = h264_Parse_SeqParameterSet(parent, pInfo, &(pInfo->active_SPS), &vui_seq_not_used, (int32_t *)pInfo->TMP_OFFSET_REFFRM_PADDR_GL);
-        if (status == H264_STATUS_OK) {
+        if (status == H264_STATUS_OK)
+        {
             h264_Parse_Copy_Sps_To_DDR(pInfo, &(pInfo->active_SPS), pInfo->active_SPS.seq_parameter_set_id);
             pInfo->sps_valid = 1;
 
-            if (1==pInfo->active_SPS.pic_order_cnt_type) {
+            if (1 == pInfo->active_SPS.pic_order_cnt_type)
+            {
                 h264_Parse_Copy_Offset_Ref_Frames_To_DDR(pInfo,(int32_t *)pInfo->TMP_OFFSET_REFFRM_PADDR_GL,pInfo->active_SPS.seq_parameter_set_id);
             }
-
-#ifdef DUMP_HEADER_INFO
-            dump_sps(&(pInfo->active_SPS));
-#endif
-
         }
         ///// Restore the active SPS if new arrival's id changed
-        if (old_sps_id>=MAX_NUM_SPS) {
+        if (old_sps_id >= MAX_NUM_SPS) {
             h264_memset(&(pInfo->active_SPS), 0x0, sizeof(seq_param_set_used));
             pInfo->active_SPS.seq_parameter_set_id = 0xff;
         }
         else {
-            if (old_sps_id!=pInfo->active_SPS.seq_parameter_set_id)  {
+            if (old_sps_id != pInfo->active_SPS.seq_parameter_set_id)  {
                 h264_Parse_Copy_Sps_From_DDR(pInfo, &(pInfo->active_SPS), old_sps_id);
             }
             else  {
@@ -375,13 +315,12 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
             {
                 h264_Parse_Copy_Sps_From_DDR(pInfo, &(pInfo->active_SPS), old_sps_id);
             }
-#ifdef DUMP_HEADER_INFO
-            dump_pps(&(pInfo->active_PPS));
-#endif
-        } else {
-            if (old_sps_id<MAX_NUM_SPS)
+        }
+        else
+        {
+            if (old_sps_id < MAX_NUM_SPS)
                 h264_Parse_Copy_Sps_From_DDR(pInfo, &(pInfo->active_SPS), old_sps_id);
-            if (old_pps_id<MAX_NUM_PPS)
+            if (old_pps_id < MAX_NUM_PPS)
                 h264_Parse_Copy_Pps_From_DDR(pInfo, &(pInfo->active_PPS), old_pps_id);
         }
 
@@ -409,7 +348,6 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
         break;
 
     case h264_NAL_UNIT_TYPE_Acc_unit_delimiter:
-#if 1
         ///// primary_pic_type
         {
             uint32_t code = 0xff;
@@ -427,7 +365,6 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
             pInfo->number_of_first_au_info_nal_before_first_slice++;
             break;
         }
-#endif
 
     case h264_NAL_UNIT_TYPE_Reserved1:
     case h264_NAL_UNIT_TYPE_Reserved2:
@@ -481,75 +418,7 @@ static uint32_t viddec_h264_parse(void *parent, void *ctxt)
     return status;
 }
 
-
-
-
-/* ------------------------------------------------------------------------------------------ */
-/* ------------------------------------------------------------------------------------------ */
-/* ------------------------------------------------------------------------------------------ */
-#ifndef VBP
-static uint32_t viddec_h264_is_frame_start(void *ctxt)
-{
-    struct h264_viddec_parser* parser = ctxt;
-    uint32_t ret = 0;
-
-    h264_Info * pInfo = &(parser->info);
-
-    if (pInfo->img.g_new_frame) {
-        ret = 1;
-    }
-
-    return ret;
-}
-#endif
-
-#ifndef VBP
-uint32_t viddec_h264_wkld_done(void *parent, void *ctxt, unsigned int next_sc,
-                               uint32_t *codec_specific_errors)
-{
-    struct h264_viddec_parser* parser = ctxt;
-    uint32_t ret = VIDDEC_PARSE_SUCESS;
-    h264_Info * pInfo = &(parser->info);
-    uint8_t is_stream_forced_to_complete=false;
-
-    is_stream_forced_to_complete = (VIDDEC_PARSE_EOS == next_sc) || (VIDDEC_PARSE_DISCONTINUITY == next_sc);
-
-    if (is_stream_forced_to_complete || (pInfo->is_current_workload_done))
-    {
-        viddec_workload_t 		 *wl;
-        viddec_frame_attributes_t *attrs;
-
-        wl = viddec_pm_get_header( parent );
-        attrs = &wl->attrs;
-
-        if ((attrs->cont_size.width < 32) || (attrs->cont_size.width > 2048) || (attrs->cont_size.height < 32) || (attrs->cont_size.height>2048))
-        {
-            attrs->cont_size.width = 32;
-            attrs->cont_size.height = 32;
-            pInfo->wl_err_curr |= VIDDEC_FW_WORKLOAD_ERR_NOTDECODABLE;
-            pInfo->wl_err_curr |= (FRAME << FIELD_ERR_OFFSET);
-        }
-
-        *codec_specific_errors = pInfo->wl_err_curr;
-        pInfo->wl_err_curr = pInfo->wl_err_next;
-        pInfo->wl_err_next = 0;
-
-        if (is_stream_forced_to_complete)
-        {
-            h264_parse_emit_eos(parent, pInfo);
-        }
-        ret = VIDDEC_PARSE_FRMDONE;
-    }
-
-    return ret;
-}
-#endif
-
-#ifdef VBP
 void viddec_h264_get_context_size(viddec_parser_memory_sizes_t *size)
-#else
-static void viddec_h264_get_context_size(viddec_parser_memory_sizes_t *size)
-#endif
 {
     /* Should return size of my structure */
     size->context_size = sizeof(struct h264_viddec_parser);
@@ -562,11 +431,7 @@ static void viddec_h264_get_context_size(viddec_parser_memory_sizes_t *size)
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------------------ */
-#ifdef VBP
 void viddec_h264_flush(void *parent, void *ctxt)
-#else
-static void viddec_h264_flush(void *parent, void *ctxt)
-#endif
 {
     int i;
     struct h264_viddec_parser* parser = ctxt;
@@ -590,17 +455,4 @@ static void viddec_h264_flush(void *parent, void *ctxt)
     return;
 }
 
-#ifndef VBP
-void viddec_h264_get_ops(viddec_parser_ops_t *ops)
-{
-    ops->init = viddec_h264_init;
-
-    ops->parse_syntax = viddec_h264_parse;
-    ops->get_cxt_size = viddec_h264_get_context_size;
-    ops->is_wkld_done = viddec_h264_wkld_done;
-    ops->is_frame_start = viddec_h264_is_frame_start;
-    ops->flush = viddec_h264_flush;
-    return;
-}
-#endif
 

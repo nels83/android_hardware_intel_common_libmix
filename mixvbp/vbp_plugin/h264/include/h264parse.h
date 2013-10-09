@@ -3,10 +3,8 @@
 
 #include "h264.h"
 
-#ifndef MFD_FIRMWARE
 #define true 1
 #define false 0
-#endif
 
 ////////////////////////////////////////////////////////////////////
 // The following part is only for Parser Debug

@@ -9,11 +9,7 @@
 
 typedef struct
 {
-#ifdef VBP
     uint8_t *buf;
-#else
-    uint8_t buf[CUBBY_SIZE + 8 + MIN_DATA];/* extra 8 bytes for alignmet, extra 8 bytes for old data */
-#endif
     uint32_t buf_st; /* start pos in buf */
     uint32_t buf_end; /* first invalid byte in buf */
     uint32_t buf_index; /* current index in buf */
@@ -30,10 +26,8 @@ typedef struct
 
 typedef struct
 {
-#ifdef VBP
     /* counter of emulation prevention byte */
     uint32_t emulation_byte_counter;
-#endif
     /* After First pass of scan we figure out how many bytes are in the current access unit(N bytes). We store
        the bstream buffer's first valid byte index wrt to accessunit in this variable */
     uint32_t au_pos;
@@ -72,17 +66,17 @@ void viddec_pm_utils_skip_if_current_is_emulation(viddec_pm_utils_bstream_cxt_t 
  */
 static inline void viddec_pm_utils_bstream_get_au_offsets(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t *bit, uint32_t *byte, uint8_t *is_emul)
 {
-    uint32_t phase=cxt->phase;
+    uint32_t phase = cxt->phase;
 
     *bit = cxt->bstrm_buf.buf_bitoff;
     *byte = cxt->au_pos + (cxt->bstrm_buf.buf_index - cxt->bstrm_buf.buf_st);
     if (cxt->phase > 0)
     {
-        phase = phase - ((cxt->bstrm_buf.buf_bitoff != 0)? 1: 0 );
+        phase = phase - ((cxt->bstrm_buf.buf_bitoff != 0) ? 1 : 0);
     }
     /* Assumption: we will never be parked on 0x3 byte of emulation prevention sequence */
     *is_emul = (cxt->is_emul_reqd) && (phase > 0) &&
                (cxt->bstrm_buf.buf[cxt->bstrm_buf.buf_index] == 0) &&
-               (cxt->bstrm_buf.buf[cxt->bstrm_buf.buf_index+1] == 0x3);
+               (cxt->bstrm_buf.buf[cxt->bstrm_buf.buf_index + 1] == 0x3);
 }
 #endif
