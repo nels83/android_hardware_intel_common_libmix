@@ -31,7 +31,7 @@
 #ifndef JPEGDEC_H
 #define JPEGDEC_H
 
-#include "../videovpp/VideoVPPBase.h"
+#include <VideoVPPBase.h>
 #include <utils/KeyedVector.h>
 #include <utils/threads.h>
 #include "JPEGCommon.h"

@@ -10,7 +10,8 @@ LOCAL_SRC_FILES += \
 
 LOCAL_C_INCLUDES += \
     $(LOCAL_PATH) \
-    $(TARGET_OUT_HEADERS)/libva
+    $(TARGET_OUT_HEADERS)/libva \
+    $(TARGET_OUT_HEADERS)/libmix_videovpp
 
 LOCAL_COPY_HEADERS_TO  := libjpegdec
 
@@ -51,7 +52,8 @@ LOCAL_SRC_FILES += \
 
 LOCAL_C_INCLUDES += \
     $(LOCAL_PATH) \
-    $(TARGET_OUT_HEADERS)/libva
+    $(TARGET_OUT_HEADERS)/libva \
+    $(TARGET_OUT_HEADERS)/libmix_videovpp
 
 LOCAL_SHARED_LIBRARIES += \
     libcutils \
@@ -80,7 +82,8 @@ LOCAL_C_INCLUDES += \
     $(LOCAL_PATH) \
     $(TOP)/external/jpeg \
     $(TARGET_OUT_HEADERS)/libva \
-    $(TARGET_OUT_HEADERS)/libjpegdec
+    $(TARGET_OUT_HEADERS)/libjpegdec \
+    $(TARGET_OUT_HEADERS)/libmix_videovpp
 
 LOCAL_COPY_HEADERS_TO  := libjpeg_hw
 
