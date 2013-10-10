@@ -178,8 +178,16 @@ Encode_Status VideoEncoderBase::start() {
         height_aligned = ((mComParams.resolution.height + 15) / 16 ) * 16;
     }else{
            // this alignment is used for AVC. For vp8 encode, driver will handle the alignment
-           stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;  //on Merr, stride must be 64 aligned.
-           height_aligned = ((mComParams.resolution.height + 31) / 32 ) * 32;
+           if(mComParams.profile == VAProfileVP8Version0_3)
+           {
+                stride_aligned = mComParams.resolution.width;
+                height_aligned = mComParams.resolution.height;
+           }
+           else
+           {
+                stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;  //on Merr, stride must be 64 aligned.
+                height_aligned = ((mComParams.resolution.height + 31) / 32 ) * 32;
+           }
     }
 
     ValueInfo vinfo;
@@ -1707,7 +1715,7 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
     LOG_I("Surface ID created from Malloc = 0x%08x\n", map->value);
 
     //Merrifield limitation, should use mAutoReference to check if on Merr
-    if ((mComParams.profile == VAProfileVP8Version0_3)||((mAutoReference == false) || (map->vinfo.lumaStride % 64 == 0)))
+    if ((mAutoReference == false) || (map->vinfo.lumaStride % 64 == 0))
         map->surface = surface;
     else {
         map->surface_backup = surface;
@@ -1715,7 +1723,10 @@ Encode_Status VideoEncoderBase::surfaceMappingForMalloc(SurfaceMap *map) {
         //TODO: need optimization for both width/height not aligned case
         VASurfaceID surfaceId;
         unsigned int stride_aligned;
-        stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;
+        if(mComParams.profile == VAProfileVP8Version0_3)
+            stride_aligned = mComParams.resolution.width;
+        else
+            stride_aligned = ((mComParams.resolution.width + 63) / 64 ) * 64;
         vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420,
                     stride_aligned, map->vinfo.height, &surfaceId, 1, NULL, 0);
 
