@@ -30,6 +30,7 @@ VideoDecoderMPEG4::VideoDecoderMPEG4(const char *mimeType)
     : VideoDecoderBase(mimeType, VBP_MPEG4),
       mLastVOPTimeIncrement(0),
       mExpectingNVOP(false),
+      mIsShortHeader(false),
       mSendIQMatrixBuf(false),
       mLastVOPCodingType(MP4_VOP_TYPE_I) {
 }
@@ -522,6 +523,8 @@ Decode_Status VideoDecoderMPEG4::startVA(vbp_data_mp42 *data) {
         vaProfile = VAProfileMPEG4Simple;
     }
 
+    mIsShortHeader = data->codec_data.short_video_header;
+
     return VideoDecoderBase::setupVA(MP4_SURFACE_NUMBER, vaProfile);
 }
 
@@ -572,4 +575,26 @@ void VideoDecoderMPEG4::updateFormatInfo(vbp_data_mp42 *data) {
     mVideoFormatInfo.aspectY = data->codec_data.par_height;
     //mVideoFormatInfo.bitrate = data->codec_data.bit_rate;
     mVideoFormatInfo.valid = true;
+}
+
+Decode_Status VideoDecoderMPEG4::isHardwareSupported(VAProfile profile) {
+    if (!mIsShortHeader) {
+        // TODO: add support for MPEG4 in the future;
+        return DECODE_SUCCESS;
+    }
+
+    VAStatus vaStatus;
+    VAConfigAttrib cfgAttribs[2];
+    cfgAttribs[0].type = VAConfigAttribMaxPictureWidth;
+    cfgAttribs[1].type = VAConfigAttribMaxPictureHeight;
+    vaStatus = vaGetConfigAttributes(mVADisplay, VAProfileH263Baseline,
+            VAEntrypointVLD, cfgAttribs, 2);
+    CHECK_VA_STATUS("vaGetConfigAttributes");
+    if (cfgAttribs[0].value * cfgAttribs[1].value < (uint32_t)mVideoFormatInfo.width * (uint32_t)mVideoFormatInfo.height) {
+        ETRACE("hardware supports resolution %d * %d smaller than the clip resolution %d * %d",
+                cfgAttribs[0].value, cfgAttribs[1].value, mVideoFormatInfo.width, mVideoFormatInfo.height);
+        return DECODE_DRIVER_FAIL;
+    }
+
+    return DECODE_SUCCESS;
 }

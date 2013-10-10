@@ -38,6 +38,9 @@ public:
     virtual void flush(void);
     virtual Decode_Status decode(VideoDecodeBuffer *buffer);
 
+protected:
+    virtual Decode_Status isHardwareSupported(VAProfile profile);
+
 private:
     Decode_Status decodeFrame(VideoDecodeBuffer *buffer, vbp_data_mp42 *data);
     Decode_Status beginDecodingFrame(vbp_data_mp42 *data);
@@ -65,6 +68,7 @@ private:
     bool mSendIQMatrixBuf; // indicate if iq_matrix_buffer is sent to driver
     int32_t mLastVOPCodingType;
     bool mIsSyncFrame; // indicate if it is SyncFrame in container
+    bool mIsShortHeader; // indicate if it is short header format
     VideoExtensionBuffer mExtensionBuffer;
     PackedFrameData mPackedFrame;
 };

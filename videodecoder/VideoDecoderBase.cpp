@@ -769,6 +769,10 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
     CHECK_VA_STATUS("vaInitialize");
 
     if ((int32_t)profile != VAProfileSoftwareDecoding) {
+
+        status = isHardwareSupported(profile);
+        CHECK_STATUS("isHardwareSupported");
+
 #ifdef USE_AVC_SHORT_FORMAT
         status = getCodecSpecificConfigs(profile, &mVAConfig);
         CHECK_STATUS("getCodecSpecificAttributes");
@@ -1307,4 +1311,7 @@ Decode_Status VideoDecoderBase::getCodecSpecificConfigs(
     return DECODE_SUCCESS;
 }
 #endif
+Decode_Status VideoDecoderBase::isHardwareSupported(VAProfile profile) {
+    return DECODE_SUCCESS;
+}
 
