@@ -819,7 +819,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
             return DECODE_MEMORY_FAIL;
         }
         mVASurfaceAttrib->num_buffers = mNumSurfaces;
-        mVASurfaceAttrib->pixel_format = mConfigBuffer.graphicBufferColorFormat;
+        mVASurfaceAttrib->pixel_format = VA_FOURCC_NV12;
         mVASurfaceAttrib->width = mVideoFormatInfo.width;
         mVASurfaceAttrib->height = mVideoFormatInfo.height;
         mVASurfaceAttrib->data_size = mConfigBuffer.graphicBufferStride * mVideoFormatInfo.height * 1.5;
@@ -833,7 +833,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         mVASurfaceAttrib->offsets[2] = 0;
         mVASurfaceAttrib->offsets[3] = 0;
         mVASurfaceAttrib->private_data = (void *)mConfigBuffer.nativeWindow;
-        mVASurfaceAttrib->flags = 0;
+        mVASurfaceAttrib->flags = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
 
         for (int i = 0; i < mNumSurfaces; i++) {
             mVASurfaceAttrib->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
