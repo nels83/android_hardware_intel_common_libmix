@@ -1,10 +1,13 @@
+//#define LOG_NDEBUG 0
+#define LOG_TAG "VideoVPPBase"
+
 #include "VideoVPPBase.h"
 
 #define NATIVE_DISPLAY  0x18c34078
 
 #define CHECK_VA_STATUS(FUNC) \
     if (vret != VA_STATUS_SUCCESS) {\
-        printf("[%d] " FUNC" failed with 0x%x\n", __LINE__, vret);\
+        LOGE("[%d] " FUNC" failed with 0x%x\n", __LINE__, vret);\
         return vret;\
     }
 
@@ -245,9 +248,9 @@ VAStatus VideoVPPBase::stop() {
             vret = vaDestroySurfaces(va_display, &SrcSurf, 1);
             CHECK_VA_STATUS("vaDestroySurfaces");
         }
-        printf("remove src surf %x\n", SrcSurf);
-        SrcSurfHandleMap.removeItemsAt(i);
+        LOGV("remove src surf %x\n", SrcSurf);
     }
+    SrcSurfHandleMap.clear();
 
     c = DstSurfHandleMap.size();
     for (int i = 0; i < c; i++) {
@@ -256,9 +259,9 @@ VAStatus VideoVPPBase::stop() {
             vret = vaDestroySurfaces(va_display, &DstSurf, 1);
             CHECK_VA_STATUS("vaDestroySurfaces");
         }
-        printf("remove dst surf %x\n", DstSurf);
-        DstSurfHandleMap.removeItemsAt(i);
+        LOGV("remove dst surf %x\n", DstSurf);
     }
+    DstSurfHandleMap.clear();
 
     if (vpp_pipeline_buf != VA_INVALID_ID) {
         vret = vaDestroyBuffer(va_display, vpp_pipeline_buf);
@@ -378,7 +381,7 @@ VAStatus VideoVPPBase::perform(RenderTarget Src, RenderTarget Dst, VPParameters 
         vret = _CreateSurfaceFromGrallocHandle(Src, &SrcSurf);
         CHECK_VA_STATUS("_CreateSurfaceFromGrallocHandle");
         SrcSurfHandleMap.add(Src.handle, SrcSurf);
-        printf("add src surface %x\n", SrcSurf);
+        LOGV("add src surface %x\n", SrcSurf);
     }
 
     i = DstSurfHandleMap.indexOfKey(Dst.handle);
@@ -388,7 +391,7 @@ VAStatus VideoVPPBase::perform(RenderTarget Src, RenderTarget Dst, VPParameters 
         vret = _CreateSurfaceFromGrallocHandle(Dst, &DstSurf);
         CHECK_VA_STATUS("_CreateSurfaceFromGrallocHandle");
         DstSurfHandleMap.add(Dst.handle, DstSurf);
-        printf("add dst surface %x\n", DstSurf);
+        LOGV("add dst surface %x\n", DstSurf);
     }
 
     if (vpp != NULL && (vpp->num_filter_bufs > 0 && vpp->num_filter_bufs < VAProcFilterCount)) {
