@@ -25,6 +25,7 @@
 
 #include "vp8_tables.h"
 #include "vp8parse.h"
+#include <vbp_trace.h>
 
 static const uint8_t kVp8SyncCodeByte[] = {0x9d, 0x01, 0x2a};
 
@@ -115,7 +116,7 @@ void vp8_parse_segmentation_adjustments_data(vp8_Info *pi)
     /* Is segmentation enabled */
     pi->Segmentation.Enabled = (uint8_t)vp8_decode_bool(bc, 128); //chapter 9.2 - macroblock uses segments ?  1: 0
 
-    if(pi->Segmentation.Enabled )
+    if(pi->Segmentation.Enabled)
     {
         /* Signal whether or not the segmentation map is being explicitly updated this frame */
         pi->Segmentation.UpdateMap = (uint8_t)vp8_decode_bool(bc, 128);
@@ -465,29 +466,40 @@ void vp8_parse_remaining_frame_header_data(vp8_Info *pi)
 
 }
 
-#if 0
-vp8_Status vp8_translate_parse_status(vp8_Status status)
+
+void vp8_translate_parse_status(vp8_Status status)
 {
     switch (status)
     {
     case VP8_UNSUPPORTED_VERSION:
-        LOGE("Parser returned VP8_UNSUPPORTED_VERSION");
-       return VP8_UNSUPPORTED_VERSION;
+        ETRACE("Parser returns VP8_UNSUPPORTED_VERSION");
+        break;
     case VP8_UNSUPPORTED_BITSTREAM:
-        LOGE("Parser returned VP8_UNSUPPORTED_BITSTREAM");
-        return VP8_UNSUPPORTED_BITSTREAM;
+        ETRACE("Parser returns VP8_UNSUPPORTED_BITSTREAM");
+        break;
     case VP8_INVALID_FRAME_SYNC_CODE:
-        LOGE("Parser returned VP8_INVALID_FRAME_SYNC_CODE");
-        return VP8_INVALID_FRAME_SYNC_CODE;
+        ETRACE("Parser returns VP8_INVALID_FRAME_SYNC_CODE");
+        break;
     case VP8_UNEXPECTED_END_OF_BITSTREAM:
-        LOGE("Parser returned VP8_UNEXPECTED_END_OF_BITSTREAM");
-        return VP8_UNEXPECTED_END_OF_BITSTREAM;
-    default:
-        LOGE("Parser returned VP8_UNKNOWN_ERROR");
-        return VP8_UNKNOWN_ERROR;
+        ETRACE("Parser returns VP8_UNEXPECTED_END_OF_BITSTREAM");
+        break;
+    case VP8_CORRUPT_FRAME:
+        ETRACE("Parser returns VP8_CORRUPT_FRAME");
+        break;
+    case VP8_MEMORY_ERROR:
+        ETRACE("Parser returns MEMORY_ERROR");
+        break;
+    case VP8_NO_INITIALIZATION:
+        ETRACE("Parser returns VP8_NO_INITIALIZATION");
+        break;
+    case VP8_UNKNOWN_ERROR:
+        ETRACE("Parser returns VP8_UNKNOWN_ERROR");
+        break;
     }
+
+    return;
 }
-#endif
+
 
 /* Parse VP8 frame header */
 int32_t vp8_parse_frame_header(vp8_viddec_parser *parser)
@@ -508,6 +520,7 @@ int32_t vp8_parse_frame_header(vp8_viddec_parser *parser)
     ret = vp8_parse_frame_tag(&(pi->frame_tag), data, data_sz);
     if (ret != VP8_NO_ERROR)
     {
+        vp8_translate_parse_status(ret);
         return ret;
     }
 
@@ -523,7 +536,9 @@ int32_t vp8_parse_frame_header(vp8_viddec_parser *parser)
         /* Check sync code containg 3 bytes*/
         if ((data[0] != kVp8SyncCodeByte[0]) || (data[1] != kVp8SyncCodeByte[1]) || (data[2] != kVp8SyncCodeByte[2]))
         {
-            return VP8_INVALID_FRAME_SYNC_CODE;
+            ret = VP8_INVALID_FRAME_SYNC_CODE;
+            vp8_translate_parse_status(ret);
+            return ret;
         }
 
         pi->width = (data[3] | (data[4] << 8)) & 0x3fff;
@@ -538,7 +553,9 @@ int32_t vp8_parse_frame_header(vp8_viddec_parser *parser)
 
     if (0 == pi->width || 0 == pi->height)
     {
-        return VP8_UNSUPPORTED_BITSTREAM;
+        ret = VP8_UNSUPPORTED_BITSTREAM;
+        vp8_translate_parse_status(ret);
+        return ret;
     }
 
     /* Initialize frame parameters*/

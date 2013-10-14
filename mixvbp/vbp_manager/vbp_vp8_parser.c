@@ -205,6 +205,7 @@ uint32 vbp_parse_start_code_vp8(vbp_context *pcontext)
     uint32 length = cxt->parse_cubby.size;
     if (length < 3)
     {
+        ETRACE("failure: invalid len %d in parse start code", length);
         return VBP_DATA;
     }
 
@@ -216,6 +217,7 @@ uint32 vbp_parse_start_code_vp8(vbp_context *pcontext)
         // check start code
         if ((c[0] != 0x9d) || (c[1] != 0x01) || (c[2] != 0x2a))
         {
+            ETRACE("failure: check start code failure");
             return VBP_PARM;
         }
     }
@@ -484,7 +486,8 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
     }
 
     pic_data->num_slices++;
-    if (pic_data->num_slices > VP8_MAX_NUM_SLICES) {
+    if (pic_data->num_slices > VP8_MAX_NUM_SLICES)
+    {
         ETRACE("Number of slices (%d) per picture exceeds the limit (%d).", pic_data->num_slices, VP8_MAX_NUM_SLICES);
         return VBP_DATA;
     }
@@ -517,7 +520,10 @@ uint32 vbp_populate_query_data_vp8(vbp_context *pcontext)
     {
         error = vbp_add_slice_data_vp8(parser, query_data);
         if (error != VBP_OK)
+        {
+            ETRACE("add slice data error %d", error);
             return error;
+        }
     }
 
     /* Populate codec data */

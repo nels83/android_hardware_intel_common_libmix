@@ -61,7 +61,12 @@ uint32_t viddec_vp8_parse(void *parent, void *ctxt)
     vp8_Status status = VP8_NO_ERROR;
 
     vp8_viddec_parser *parser = (vp8_viddec_parser*)ctxt;
-    if (1 != parser->got_start) return VP8_NO_INITIALIZATION;
+    if (1 != parser->got_start)
+    {
+        status = VP8_NO_INITIALIZATION;
+        vp8_translate_parse_status(status);
+        return status;
+    }
 
     vp8_Info *pi = &(parser->info);
     viddec_pm_cxt_t *pm_cxt = (viddec_pm_cxt_t *)parent;
@@ -70,7 +75,7 @@ uint32_t viddec_vp8_parse(void *parent, void *ctxt)
 
     if (pi->source_sz < 0)
     {
-        return VP8_UNEXPECTED_END_OF_BITSTREAM;
+        status = VP8_UNEXPECTED_END_OF_BITSTREAM;
     }
     else if (pi->source_sz == 0)
     {
@@ -82,13 +87,12 @@ uint32_t viddec_vp8_parse(void *parent, void *ctxt)
         status = vp8_parse_frame_header(parser);
     }
 
-    return status;
-}
+    if (status != VP8_NO_ERROR)
+    {
+        vp8_translate_parse_status(status);
+    }
 
-uint32_t viddec_vp8_wkld_done(void *parent, void *ctxt, unsigned int next_sc,
-                              uint32_t *codec_specific_errors)
-{
-    return 0;
+    return status;
 }
 
 void viddec_vp8_get_context_size(viddec_parser_memory_sizes_t *size)
@@ -99,20 +103,3 @@ void viddec_vp8_get_context_size(viddec_parser_memory_sizes_t *size)
     return;
 }
 
-uint32_t viddec_vp8_is_frame_start(void *ctxt)
-{
-    vp8_viddec_parser* parser = ctxt;
-
-    return parser->got_start;
-}
-
-void viddec_vp8_get_ops(viddec_parser_ops_t *ops)
-{
-    ops->init = viddec_vp8_init;
-
-    ops->parse_syntax = viddec_vp8_parse;
-    ops->get_cxt_size = viddec_vp8_get_context_size;
-    ops->is_wkld_done = viddec_vp8_wkld_done;
-    ops->is_frame_start = viddec_vp8_is_frame_start;
-    return;
-}

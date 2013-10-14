@@ -34,7 +34,7 @@ extern "C" {
 
 int32_t vp8_parse_frame_tag(FrameTagHeader *frame_tag, uint8_t *data, uint32_t data_sz);
 
-//vp8_Status vp8_translate_parse_status(vp8_Status status);
+void vp8_translate_parse_status(vp8_Status status);
 
 void vp8_init_Info(vp8_Info *pi);
 
