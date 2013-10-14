@@ -1,7 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-#VIDEO_ENC_LOG_ENABLE := true
 #NO_BUFFER_SHARE := true
 
 ifeq ($(ENABLE_IMG_GRAPHICS),)

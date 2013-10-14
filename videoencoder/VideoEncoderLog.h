@@ -10,32 +10,14 @@
 #define __VIDEO_ENCODER_LOG_H__
 
 // Components
-#define VIDEO_ENC_COMP 		"VideoEncoder"
+#include <cutils/log.h>
 
-#include <utils/Log.h>
-
-#define VIDEO_ENC_LOG_LEVEL_ERROR     ANDROID_LOG_ERROR
-#define VIDEO_ENC_LOG_LEVEL_WARNING   ANDROID_LOG_WARN
-#define VIDEO_ENC_LOG_LEVEL_INFO	ANDROID_LOG_INFO
-#define VIDEO_ENC_LOG_LEVEL_VERBOSE   ANDROID_LOG_VERBOSE
-
-#define mix_log(comp, level, format, ...) \
-    __android_log_print(level, comp, "%s():%d: "format, \
-    __FUNCTION__, __LINE__, ##__VA_ARGS__)
-
-//#define VIDEO_ENC_LOG_ENABLE
-#if  1
-#ifdef VIDEO_ENC_LOG_ENABLE
-#define LOG_V(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_VERBOSE, format, ##__VA_ARGS__)
-#define LOG_I(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_INFO, format, ##__VA_ARGS__)
-#define LOG_W(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_WARNING, format, ##__VA_ARGS__)
-#else
-#define LOG_V(format, ...)
-#define LOG_I(format, ...)
-#define LOG_W(format, ...)
-#endif
-
-#define LOG_E(format, ...) mix_log(VIDEO_ENC_COMP, VIDEO_ENC_LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
+#define LOG_TAG "VideoEncoder"
+#if 1
+#define LOG_V(...) LOGV_IF(gLogLevel, __VA_ARGS__)
+#define LOG_I(...) LOGI_IF(gLogLevel, __VA_ARGS__)
+#define LOG_W(...) LOGW_IF(gLogLevel, __VA_ARGS__)
+#define LOG_E(...) LOGE_IF(gLogLevel, __VA_ARGS__)
 #else
 #define LOG_V printf
 #define LOG_I printf
@@ -43,6 +25,7 @@
 #define LOG_E printf
 #endif
 
+extern int32_t gLogLevel;
 #define CHECK_VA_STATUS_RETURN(FUNC)\
     if (vaStatus != VA_STATUS_SUCCESS) {\
         LOG_E(FUNC" failed. vaStatus = %d\n", vaStatus);\

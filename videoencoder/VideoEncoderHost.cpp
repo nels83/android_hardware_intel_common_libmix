@@ -14,13 +14,23 @@
 #include "PVSoftMPEG4Encoder.h"
 #endif
 #include "VideoEncoderHost.h"
-#include "VideoEncoderLog.h"
 #include <string.h>
+#include <cutils/properties.h>
+#include <cutils/log.h>
+
+int32_t gLogLevel = 0;
 
 IVideoEncoder *createVideoEncoder(const char *mimeType) {
 
+    char logLevelProp[PROPERTY_VALUE_MAX];
+
+    if (property_get("libmix.debug", logLevelProp, NULL)) {
+        gLogLevel = atoi(logLevelProp);
+        LOGD("Debug level is %d", gLogLevel);
+    }
+
     if (mimeType == NULL) {
-        LOG_E("NULL mime type");
+        LOGE("NULL mime type");
         return NULL;
     }
 
@@ -47,7 +57,7 @@ IVideoEncoder *createVideoEncoder(const char *mimeType) {
         VideoEncoderVP8 *p = new VideoEncoderVP8();
         return (IVideoEncoder *)p;
     } else {
-        LOG_E ("Unknown mime type: %s", mimeType);
+        LOGE ("Unknown mime type: %s", mimeType);
     }
     return NULL;
 }
