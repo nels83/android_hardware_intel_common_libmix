@@ -70,119 +70,128 @@ uint32_t viddec_mp4_parse(void *parent, void *ctxt)
 
     cxt = (viddec_mp4_parser_t *)ctxt;
     is_svh = (cxt->cur_sc_prefix) ? false: true;
-    if ((getbits = viddec_pm_peek_bits(parent, &sc, 32)) == -1)
-    {
-        ETRACE("Start code not found\n");
-        return VIDDEC_PARSE_ERROR;
-    }
 
     if (!is_svh)
     {
-        viddec_pm_get_bits(parent, &sc, 32);
-        sc = sc & 0xFF;
-        cxt->current_sc = sc;
-        cxt->current_sc |= 0x100;
-        VTRACE("current_sc=0x%.8X, prev_sc=0x%x\n", sc, cxt->prev_sc);
+        if (viddec_pm_get_bits(parent, &sc, 32) != -1)
+        {
+            sc = sc & 0xFF;
+            cxt->current_sc = sc;
+            cxt->current_sc |= 0x100;
+            VTRACE("current_sc=0x%.8X, prev_sc=0x%x\n", sc, cxt->prev_sc);
 
-        switch (sc)
-        {
-        case MP4_SC_VISUAL_OBJECT_SEQUENCE:
-        {
-            status = mp4_Parse_VisualSequence(parent, cxt);
-            cxt->prev_sc = MP4_SC_VISUAL_OBJECT_SEQUENCE;
-            VTRACE("MP4_VISUAL_OBJECT_SEQUENCE_SC: \n");
-            break;
-        }
-        case MP4_SC_VISUAL_OBJECT_SEQUENCE_EC:
-        {/* Not required to do anything */
-            VTRACE("MP4_SC_VISUAL_OBJECT_SEQUENCE_EC");
-            break;
-        }
-        case MP4_SC_USER_DATA:
-        {   /* Copy userdata to user-visible buffer (EMIT) */
-            VTRACE("MP4_USER_DATA_SC: \n");
-            break;
-        }
-        case MP4_SC_GROUP_OF_VOP:
-        {
-            status = mp4_Parse_GroupOfVideoObjectPlane(parent, cxt);
-            cxt->prev_sc = MP4_SC_GROUP_OF_VOP;
-            VTRACE("MP4_GROUP_OF_VOP_SC:0x%.8X\n", status);
-            break;
-        }
-        case MP4_SC_VIDEO_SESSION_ERROR:
-        {/* Not required to do anything?? */
-            VTRACE("MP4_SC_VIDEO_SESSION_ERROR");
-            break;
-        }
-        case MP4_SC_VISUAL_OBJECT:
-        {
-            status = mp4_Parse_VisualObject(parent, cxt);
-            cxt->prev_sc = MP4_SC_VISUAL_OBJECT;
-            VTRACE("MP4_VISUAL_OBJECT_SC: status=%.8X\n", status);
-            break;
-        }
-        case MP4_SC_VIDEO_OBJECT_PLANE:
-        {
-            /* We must decode the VOP Header information, it does not end  on a byte boundary, so we need to emit
-               a starting bit offset after parsing the header. */
-            status = mp4_Parse_VideoObjectPlane(parent, cxt);
-            status = viddec_mp4_decodevop_and_emitwkld(parent, cxt);
-            // TODO: Fix this for interlaced
-            cxt->is_frame_start = true;
-            cxt->sc_seen |= MP4_SC_SEEN_VOP;
-
-            VTRACE("MP4_VIDEO_OBJECT_PLANE_SC: status=0x%.8X\n", status);
-            break;
-        }
-        case MP4_SC_STUFFING:
-        {
-            VTRACE("MP4_SC_STUFFING");
-            break;
-        }
-        default:
-        {
-            if ( (sc >=  MP4_SC_VIDEO_OBJECT_LAYER_MIN) && (sc <=  MP4_SC_VIDEO_OBJECT_LAYER_MAX) )
+            switch (sc)
             {
-                status = mp4_Parse_VideoObjectLayer(parent, cxt);
-                cxt->sc_seen = MP4_SC_SEEN_VOL;
-                cxt->prev_sc = MP4_SC_VIDEO_OBJECT_LAYER_MIN;
-                VTRACE("MP4_VIDEO_OBJECT_LAYER_MIN_SC:status=0x%.8X\n", status);
-                sc = MP4_SC_VIDEO_OBJECT_LAYER_MIN;
+            case MP4_SC_VISUAL_OBJECT_SEQUENCE:
+            {
+                status = mp4_Parse_VisualSequence(parent, cxt);
+                cxt->prev_sc = MP4_SC_VISUAL_OBJECT_SEQUENCE;
+                VTRACE("MP4_VISUAL_OBJECT_SEQUENCE_SC: \n");
+                break;
             }
-            // sc is unsigned and will be >= 0, so no check needed for sc >= MP4_SC_VIDEO_OBJECT_MIN
-            else if (sc <= MP4_SC_VIDEO_OBJECT_MAX)
+            case MP4_SC_VISUAL_OBJECT_SEQUENCE_EC:
+            {/* Not required to do anything */
+                VTRACE("MP4_SC_VISUAL_OBJECT_SEQUENCE_EC");
+                break;
+            }
+            case MP4_SC_USER_DATA:
+            {   /* Copy userdata to user-visible buffer (EMIT) */
+                VTRACE("MP4_USER_DATA_SC: \n");
+                break;
+            }
+            case MP4_SC_GROUP_OF_VOP:
             {
-                // If there is more data, it is short video header, else the next start code is expected to be VideoObjectLayer
-                getbits = viddec_pm_get_bits(parent, &sc, 22);
-                if (getbits != -1)
+                status = mp4_Parse_GroupOfVideoObjectPlane(parent, cxt);
+                cxt->prev_sc = MP4_SC_GROUP_OF_VOP;
+                VTRACE("MP4_GROUP_OF_VOP_SC:0x%.8X\n", status);
+                break;
+            }
+            case MP4_SC_VIDEO_SESSION_ERROR:
+            {/* Not required to do anything?? */
+                VTRACE("MP4_SC_VIDEO_SESSION_ERROR");
+                break;
+            }
+            case MP4_SC_VISUAL_OBJECT:
+            {
+                status = mp4_Parse_VisualObject(parent, cxt);
+                cxt->prev_sc = MP4_SC_VISUAL_OBJECT;
+                VTRACE("MP4_VISUAL_OBJECT_SC: status=%.8X\n", status);
+                break;
+            }
+            case MP4_SC_VIDEO_OBJECT_PLANE:
+            {
+                /* We must decode the VOP Header information, it does not end  on a byte boundary, so we need to emit
+                   a starting bit offset after parsing the header. */
+                status = mp4_Parse_VideoObjectPlane(parent, cxt);
+                status = viddec_mp4_decodevop_and_emitwkld(parent, cxt);
+                // TODO: Fix this for interlaced
+                cxt->is_frame_start = true;
+                cxt->sc_seen |= MP4_SC_SEEN_VOP;
+
+                VTRACE("MP4_VIDEO_OBJECT_PLANE_SC: status=0x%.8X\n", status);
+                break;
+            }
+            case MP4_SC_STUFFING:
+            {
+                VTRACE("MP4_SC_STUFFING");
+                break;
+            }
+            default:
+            {
+                if ( (sc >=  MP4_SC_VIDEO_OBJECT_LAYER_MIN) && (sc <=  MP4_SC_VIDEO_OBJECT_LAYER_MAX) )
                 {
-                    cxt->current_sc = sc;
-                    status = mp4_Parse_VideoObject_svh(parent, cxt);
-                    status = viddec_mp4_decodevop_and_emitwkld(parent, cxt);
-                    cxt->sc_seen = MP4_SC_SEEN_SVH;
-                    cxt->is_frame_start = true;
-                    VTRACE("MP4_SCS_SVH: status=0x%.8X 0x%.8X %.8X\n", status, cxt->current_sc, sc);
+                    status = mp4_Parse_VideoObjectLayer(parent, cxt);
+                    cxt->sc_seen = MP4_SC_SEEN_VOL;
+                    cxt->prev_sc = MP4_SC_VIDEO_OBJECT_LAYER_MIN;
+                    VTRACE("MP4_VIDEO_OBJECT_LAYER_MIN_SC:status=0x%.8X\n", status);
+                    sc = MP4_SC_VIDEO_OBJECT_LAYER_MIN;
+                }
+                // sc is unsigned and will be >= 0, so no check needed for sc >= MP4_SC_VIDEO_OBJECT_MIN
+                else if (sc <= MP4_SC_VIDEO_OBJECT_MAX)
+                {
+                    // If there is more data, it is short video header, else the next start code is expected to be VideoObjectLayer
+                    getbits = viddec_pm_get_bits(parent, &sc, 22);
+                    if (getbits != -1)
+                    {
+                        cxt->current_sc = sc;
+                        status = mp4_Parse_VideoObject_svh(parent, cxt);
+                        status = viddec_mp4_decodevop_and_emitwkld(parent, cxt);
+                        cxt->sc_seen = MP4_SC_SEEN_SVH;
+                        cxt->is_frame_start = true;
+                        VTRACE("MP4_SCS_SVH: status=0x%.8X 0x%.8X %.8X\n", status, cxt->current_sc, sc);
+                    }
+                }
+                else
+                {
+                    ETRACE("UNKWON Cod:0x%08X\n", sc);
                 }
             }
-            else
-            {
-                ETRACE("UNKWON Cod:0x%08X\n", sc);
+            break;
             }
         }
-        break;
+        else
+        {
+            ETRACE("Start code not found\n");
+            return VIDDEC_PARSE_ERROR;
         }
     }
     else
     {
-        viddec_pm_get_bits(parent, &sc, 22);
-        cxt->current_sc = sc;
-        VTRACE("current_sc=0x%.8X, prev_sc=0x%x\n", sc, cxt->prev_sc);
-        status = mp4_Parse_VideoObject_svh(parent, cxt);
-        status = viddec_mp4_decodevop_and_emitwkld(parent, cxt);
-        cxt->sc_seen = MP4_SC_SEEN_SVH;
-        cxt->is_frame_start = true;
-        VTRACE("SVH: MP4_SCS_SVH: status=0x%.8X 0x%.8X %.8X\n", status, cxt->current_sc, sc);
+        if (viddec_pm_get_bits(parent, &sc, 22) != -1)
+        {
+            cxt->current_sc = sc;
+            VTRACE("current_sc=0x%.8X, prev_sc=0x%x\n", sc, cxt->prev_sc);
+            status = mp4_Parse_VideoObject_svh(parent, cxt);
+            status = viddec_mp4_decodevop_and_emitwkld(parent, cxt);
+            cxt->sc_seen = MP4_SC_SEEN_SVH;
+            cxt->is_frame_start = true;
+            VTRACE("SVH: MP4_SCS_SVH: status=0x%.8X 0x%.8X %.8X\n", status, cxt->current_sc, sc);
+        }
+        else
+        {
+            ETRACE("Start code not found\n");
+            return VIDDEC_PARSE_ERROR;
+        }
     }
 
     // Current sc becomes the previous sc
