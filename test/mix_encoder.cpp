@@ -370,7 +370,7 @@ void MallocExternalMemoryWithExtraValues()
     {
         gUsrptr[i] = (uint8_t*)malloc(size);
 
-        gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
+        gIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
 
         gIMB[i]->SetValueInfo(vinfo);
     }
@@ -399,7 +399,7 @@ void MallocExternalMemory()
         gMallocPtr[i] = (uint8_t*)malloc(size + 4095);
         gUsrptr[i] = (uint8_t*)((((uint32_t )gMallocPtr[i] + 4095) / 4096 ) * 4096);
 
-        gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
+        gIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
 
         gIMB[i]->SetValueInfo(vinfo);
     }
@@ -431,7 +431,7 @@ void GetAllUsrptr()
         gUsrptr[i] = paramsUsrptrBuffer.usrPtr;
         gSrcStride = paramsUsrptrBuffer.stride;
 
-        gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeEncoder, (int32_t)gUsrptr[i]);
+        gIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeEncoder, (int32_t)gUsrptr[i]);
     }
 
 }
@@ -552,9 +552,9 @@ void CreateUserSurfaces(int mode)
         vaDestroyImage(gVADisplay, surface_image.image_id);
 
         if (mode == 0)
-            gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeUser, gSurface[i]);
+            gIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeUser, gSurface[i]);
         else
-            gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeUser, gkBufHandle[i]);
+            gIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeUser, gkBufHandle[i]);
     }
 }
 
@@ -577,7 +577,7 @@ void CreateSurfaceMappingForCI()
     {
         gUsrptr[i] = (uint8_t*)malloc(size);
 
-        gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
+        gIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeCameraSource, (int32_t)gUsrptr[i]);
 
         gIMB[i]->SetValueInfo(vinfo);
     }
@@ -603,7 +603,7 @@ void CreateGfxhandle(int color)
 
         gGraphicBuffer[i] = graphicBuffer;
         graphicBuffer->lock(usage | GraphicBuffer::USAGE_SW_WRITE_OFTEN, (void**)(&gUsrptr[i]));
-        gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)gGraphicBuffer[i]->handle);
+        gIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeGrallocSource, (int32_t)gGraphicBuffer[i]->handle);
         graphicBuffer->unlock();
 
         IMG_native_handle_t* h = (IMG_native_handle_t*) gGraphicBuffer[i]->handle;
@@ -627,7 +627,7 @@ void CreateGralloc(int color)
     {
         gfx_alloc(gSrcWidth, gSrcHeight, format, usage, &handle, (int32_t*)&gSrcStride);
         gfx_lock(handle, usage | GRALLOC_USAGE_SW_WRITE_OFTEN, 0, 0, gSrcWidth, gSrcHeight, (void**)(&gUsrptr[i]));
-        gIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)handle);
+        gIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeGrallocSource, (int32_t)handle);
         gfx_unlock(handle);
         IMG_native_handle_t* h = (IMG_native_handle_t*) handle;
         gSrcHeight = h->iHeight;

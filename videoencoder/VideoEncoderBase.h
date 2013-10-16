@@ -18,6 +18,15 @@
 #include <utils/threads.h>
 #include "VideoEncoderUtils.h"
 
+struct SurfaceMap {
+    VASurfaceID surface;
+    VASurfaceID surface_backup;
+    IntelMetadataBufferType type;
+    int32_t value;
+    ValueInfo vinfo;
+    bool added;
+};
+
 struct EncodeTask {
     VASurfaceID enc_surface;
     VASurfaceID ref_surface;

@@ -387,7 +387,7 @@ public:
 
             //keep address 4K aligned
             mUsrptr[i] = (uint8_t*)((((uint32_t )mMallocPtr[i] + 4095) / 4096 ) * 4096);
-            mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeCameraSource, (int32_t) mUsrptr[i]);
+            mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeCameraSource, (int32_t) mUsrptr[i]);
             mIMB[i]->SetValueInfo(&vinfo);
 //            LOG("Malloc address=%x\n", mUsrptr[i]);
         }
@@ -440,7 +440,7 @@ public:
             mUsrptr[i] = (uint8_t*) ((int) (mBuffers[i]->pointer() + 0x0FFF) & ~0x0FFF);
 
             mIMB[i] = new IntelMetadataBuffer();
-            mIMB[i]->SetType(MetadataBufferTypeCameraSource);
+            mIMB[i]->SetType(IntelMetadataBufferTypeCameraSource);
 #ifdef INTEL_VIDEO_XPROC_SHARING
             mIMB[i]->SetSessionFlag(mSessionFlag);
             mIMB[i]->ShareValue(mBuffers[i]);
@@ -591,9 +591,9 @@ public:
 
 
             if (mMode == 0)
-                mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeUser, mSurfaces[i]);
+                mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeUser, mSurfaces[i]);
             else {
-                mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeUser, mKBufHandle[i]);
+                mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeUser, mKBufHandle[i]);
                 vinfo.mode = MEM_MODE_KBUFHANDLE;
                 vinfo.handle = 0;
             }
@@ -724,8 +724,7 @@ public:
             if (gfx_alloc(mWidth, mHeight, mColorFormat, usage, &mHandle[i], (int32_t*)&mStride) != 0)
                 return UNKNOWN_ERROR;
 
-            mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)mHandle[i]);
-
+            mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeGrallocSource, (int32_t)mHandle[i]);
             IMG_native_handle_t* h = (IMG_native_handle_t*) mHandle[i];
             mStride = h->iWidth;
             mHeight = h->iHeight;

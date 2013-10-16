@@ -76,24 +76,26 @@ typedef struct {
 }ValueInfo;
 
 typedef enum {
-    MetadataBufferTypeCameraSource = 0,   //for CameraSource
-    MetadataBufferTypeGrallocSource = 1,  //for SurfaceMediaSource
-    MetadataBufferTypeEncoder = 2,        //for WiDi clone mode
-    MetadataBufferTypeUser = 3,           //for WiDi user mode
-    MetadataBufferTypeLast = 4,           //type number
-}MetadataBufferType;
+    IntelMetadataBufferTypeCameraSource = 0,   //same with kMetadataBufferTypeCameraSource in framework
+    IntelMetadataBufferTypeGrallocSource = 1,  //same with kMetadataBufferTypeGrallocSource in framework
+
+    IntelMetadataBufferTypeExtension = 0xFF,   //intel extended type
+    IntelMetadataBufferTypeEncoder = IntelMetadataBufferTypeExtension,        //for WiDi clone mode
+    IntelMetadataBufferTypeUser = IntelMetadataBufferTypeExtension + 1,       //for WiDi user mode
+    IntelMetadataBufferTypeLast = IntelMetadataBufferTypeExtension + 2,       //type number
+}IntelMetadataBufferType;
 
 class IntelMetadataBuffer {
 public:
     IntelMetadataBuffer();                                          //for generator
-    IntelMetadataBuffer(MetadataBufferType type, int32_t value);    //for quick generator
+    IntelMetadataBuffer(IntelMetadataBufferType type, int32_t value);    //for quick generator
     ~IntelMetadataBuffer();
 
     IntelMetadataBuffer(const IntelMetadataBuffer& imb);
     const IntelMetadataBuffer& operator=(const IntelMetadataBuffer& imb);
 
-    IMB_Result GetType(MetadataBufferType &type);
-    IMB_Result SetType(MetadataBufferType type);
+    IMB_Result GetType(IntelMetadataBufferType &type);
+    IMB_Result SetType(IntelMetadataBufferType type);
     IMB_Result GetValue(int32_t &value);
     IMB_Result SetValue(int32_t value);
     IMB_Result GetValueInfo(ValueInfo* &info);
@@ -109,7 +111,7 @@ public:
     static uint32_t GetMaxBufferSize();
 
 private:
-    MetadataBufferType mType;
+    IntelMetadataBufferType mType;
     int32_t mValue;
     ValueInfo* mInfo;
 

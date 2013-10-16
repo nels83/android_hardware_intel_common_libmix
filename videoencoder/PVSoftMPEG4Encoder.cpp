@@ -435,7 +435,7 @@ Encode_Status PVSoftMPEG4Encoder::encode(VideoEncRawBuffer *inBuffer, uint32_t t
         ValueInfo vinfo;
         ValueInfo *pvinfo = &vinfo;
         CHECK(IMB_SUCCESS == imb.UnSerialize(inBuffer->data, inBuffer->size));
-        imb.GetType((::MetadataBufferType&)type);
+        imb.GetType((::IntelMetadataBufferType&)type);
         imb.GetValue(value);
         imb.GetValueInfo(pvinfo);
         if(pvinfo == NULL) {

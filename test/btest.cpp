@@ -13,8 +13,8 @@ int main(int argc, char* argv[])
     uint32_t size;
     IMB_Result ret;
 
-    MetadataBufferType t1 = MetadataBufferTypeCameraSource;
-    MetadataBufferType t2;
+    IntelMetadataBufferType t1 = IntelMetadataBufferTypeCameraSource;
+    IntelMetadataBufferType t2;
     int32_t v1 = 0x00000010;
     int32_t v2 = 0;
     ValueInfo vi1, *vi2 = NULL;
@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     unsigned int count;
 
     if (argc > 1)
-        t1 = (MetadataBufferType) atoi(argv[1]);
+        t1 = (IntelMetadataBufferType) atoi(argv[1]);
 
     if (argc > 2)
         v1 = atoi(argv[2]);
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     ret = mb1->SetType(t1);
     ret = mb1->SetValue(v1);
     mb1->GetMaxBufferSize();
-    if (t1 != MetadataBufferTypeGrallocSource) {
+    if (t1 != IntelMetadataBufferTypeGrallocSource) {
         ret = mb1->SetValueInfo(&vi1);
         ret = mb1->SetExtraValues(ev1, 10);
         ret = mb1->SetExtraValues(ev1, 10);

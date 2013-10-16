@@ -1505,7 +1505,7 @@ Encode_Status VideoEncoderBase::setUpstreamBuffer(VideoParamsUpstreamBuffer *upS
 Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VASurfaceID *sid) {
 
     Encode_Status ret = ENCODE_SUCCESS;
-    MetadataBufferType type;
+    IntelMetadataBufferType type;
     int32_t value;
     ValueInfo vinfo;
     ValueInfo *pvinfo = &vinfo;
@@ -1532,7 +1532,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
             return ENCODE_NULL_PTR;
         }
 
-        type = MetadataBufferTypeUser;
+        type = IntelMetadataBufferTypeUser;
         value = (int32_t)inBuffer->data;
     }
 
@@ -1556,8 +1556,8 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
 
     if (mStoreMetaDataInBuffers.isEnabled) {
 
-        //if type is MetadataBufferTypeGrallocSource, use default parameters since no ValueInfo
-        if (type == MetadataBufferTypeGrallocSource) {
+        //if type is IntelMetadataBufferTypeGrallocSource, use default parameters since no ValueInfo
+        if (type == IntelMetadataBufferTypeGrallocSource) {
             vinfo.mode = MEM_MODE_GFXHANDLE;
             vinfo.handle = 0;
             vinfo.size = 0;

@@ -333,7 +333,7 @@ status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data
 
 IntelMetadataBuffer::IntelMetadataBuffer()
 {
-    mType = MetadataBufferTypeCameraSource;
+    mType = IntelMetadataBufferTypeCameraSource;
     mValue = 0;
     mInfo = NULL;
     mExtraValues = NULL;
@@ -345,7 +345,7 @@ IntelMetadataBuffer::IntelMetadataBuffer()
 #endif
 }
 
-IntelMetadataBuffer::IntelMetadataBuffer(MetadataBufferType type, int32_t value)
+IntelMetadataBuffer::IntelMetadataBuffer(IntelMetadataBufferType type, int32_t value)
 {
     mType = type;
     mValue = value;
@@ -426,16 +426,16 @@ const IntelMetadataBuffer& IntelMetadataBuffer::operator=(const IntelMetadataBuf
     return *this;
 }
 
-IMB_Result IntelMetadataBuffer::GetType(MetadataBufferType& type)
+IMB_Result IntelMetadataBuffer::GetType(IntelMetadataBufferType& type)
 {
     type = mType;
 
     return IMB_SUCCESS;
 }
 
-IMB_Result IntelMetadataBuffer::SetType(MetadataBufferType type)
+IMB_Result IntelMetadataBuffer::SetType(IntelMetadataBufferType type)
 {
-    if (type < MetadataBufferTypeLast)
+    if (type < IntelMetadataBufferTypeLast)
         mType = type;
     else
         return IMB_INVAL_PARAM;
@@ -554,7 +554,7 @@ IMB_Result IntelMetadataBuffer::UnSerialize(uint8_t* data, uint32_t size)
     if (!data || size == 0)
         return IMB_INVAL_PARAM;
 
-    MetadataBufferType type;
+    IntelMetadataBufferType type;
     int32_t value;
     uint32_t extrasize = size - 8;
     ValueInfo* info = NULL;
@@ -568,9 +568,9 @@ IMB_Result IntelMetadataBuffer::UnSerialize(uint8_t* data, uint32_t size)
 
     switch (type)
     {
-        case MetadataBufferTypeCameraSource:
-        case MetadataBufferTypeEncoder:
-        case MetadataBufferTypeUser:
+        case IntelMetadataBufferTypeCameraSource:
+        case IntelMetadataBufferTypeEncoder:
+        case IntelMetadataBufferTypeUser:
         {
             if (extrasize >0 && extrasize < sizeof(ValueInfo))
                 return IMB_INVAL_BUFFER;
@@ -597,7 +597,7 @@ IMB_Result IntelMetadataBuffer::UnSerialize(uint8_t* data, uint32_t size)
 
             break;
         }
-        case MetadataBufferTypeGrallocSource:
+        case IntelMetadataBufferTypeGrallocSource:
             if (extrasize > 0)
                 return IMB_INVAL_BUFFER;
 
@@ -627,7 +627,7 @@ IMB_Result IntelMetadataBuffer::Serialize(uint8_t* &data, uint32_t& size)
 {
     if (mBytes == NULL)
     {
-        if (mType == MetadataBufferTypeGrallocSource && mInfo)
+        if (mType == IntelMetadataBufferTypeGrallocSource && mInfo)
             return IMB_INVAL_PARAM;
 
         //assemble bytes according members
