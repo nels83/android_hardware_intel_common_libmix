@@ -589,6 +589,7 @@ Decode_Status VideoDecoderBase::outputSurfaceBuffer(void) {
         status = getRawDataFromSurface();
         CHECK_STATUS();
     }
+
     // frame is successfly decoded to the current surface,  it is ready for output
     if (mShowFrame) {
         mAcquiredBuffer->renderBuffer.renderDone = false;
@@ -693,7 +694,6 @@ Decode_Status VideoDecoderBase::endDecodingFrame(bool dropFrame) {
         releaseSurfaceBuffer();
         goto exit;
     }
-
     status = outputSurfaceBuffer();
     // fall through
 exit:
@@ -1068,91 +1068,81 @@ Decode_Status VideoDecoderBase::mapSurface(void){
     return DECODE_SUCCESS;
 }
 
-Decode_Status VideoDecoderBase::getRawDataFromSurface(void) {
-    if (mAcquiredBuffer == NULL) {
-        return DECODE_FAIL;
+Decode_Status VideoDecoderBase::getRawDataFromSurface(VideoRenderBuffer *renderBuffer, uint8_t *pRawData, uint32_t *pSize, bool internal) {
+    if (internal) {
+        if (mAcquiredBuffer == NULL) {
+            return DECODE_FAIL;
+        }
+        renderBuffer = &(mAcquiredBuffer->renderBuffer);
     }
 
     VAStatus vaStatus;
     VAImageFormat imageFormat;
     VAImage vaImage;
-    vaStatus = vaSyncSurface(mVADisplay, mAcquiredBuffer->renderBuffer.surface);
+    vaStatus = vaSyncSurface(renderBuffer->display, renderBuffer->surface);
     CHECK_VA_STATUS("vaSyncSurface");
 
-    vaImage.image_id = VA_INVALID_ID;
-    // driver currently only supports NV12 and IYUV format.
-    // byte_order information is from driver  and hard-coded here
-    imageFormat.fourcc = VA_FOURCC_NV12;
-    imageFormat.byte_order = VA_LSB_FIRST;
-    imageFormat.bits_per_pixel = 16;
-
-    vaStatus = vaCreateImage(
-        mVADisplay,
-        &imageFormat,
-        mVideoFormatInfo.width,
-        mVideoFormatInfo.height,
-        &vaImage);
-    CHECK_VA_STATUS("vaCreateImage");
-
-    vaStatus = vaGetImage(
-        mVADisplay,
-        mAcquiredBuffer->renderBuffer.surface,
-        0,
-        0,
-        vaImage.width,
-        vaImage.height,
-        vaImage.image_id);
-    CHECK_VA_STATUS("vaGetImage");
+    vaStatus = vaDeriveImage(renderBuffer->display, renderBuffer->surface, &vaImage);
+    CHECK_VA_STATUS("vaDeriveImage");
 
     void *pBuf = NULL;
-    vaStatus = vaMapBuffer(mVADisplay, vaImage.buf, &pBuf);
+    vaStatus = vaMapBuffer(renderBuffer->display, vaImage.buf, &pBuf);
     CHECK_VA_STATUS("vaMapBuffer");
 
-    VideoFrameRawData *rawData = NULL;
-    if (mAcquiredBuffer->renderBuffer.rawData == NULL) {
-        rawData = new VideoFrameRawData;
-        if (rawData == NULL) {
-            return DECODE_MEMORY_FAIL;
-        }
-        memset(rawData, 0, sizeof(VideoFrameRawData));
-        mAcquiredBuffer->renderBuffer.rawData = rawData;
-    } else {
-        rawData = mAcquiredBuffer->renderBuffer.rawData;
-    }
 
     // size in NV12 format
     uint32_t cropWidth = mVideoFormatInfo.width - (mVideoFormatInfo.cropLeft + mVideoFormatInfo.cropRight);
     uint32_t cropHeight = mVideoFormatInfo.height - (mVideoFormatInfo.cropBottom + mVideoFormatInfo.cropTop);
     int32_t size = cropWidth  * cropHeight * 3 / 2;
 
-    if (rawData->data != NULL && rawData->size != size) {
-        delete [] rawData->data;
-        rawData->data = NULL;
-        rawData->size = 0;
-    }
-    if (rawData->data == NULL) {
-        rawData->data = new uint8_t [size];
-        if (rawData->data == NULL) {
-            return DECODE_MEMORY_FAIL;
+    if (internal) {
+        VideoFrameRawData *rawData = NULL;
+        if (renderBuffer->rawData == NULL) {
+            rawData = new VideoFrameRawData;
+            if (rawData == NULL) {
+                return DECODE_MEMORY_FAIL;
+            }
+            memset(rawData, 0, sizeof(VideoFrameRawData));
+            renderBuffer->rawData = rawData;
+        } else {
+            rawData = renderBuffer->rawData;
         }
+
+        if (rawData->data != NULL && rawData->size != size) {
+            delete [] rawData->data;
+            rawData->data = NULL;
+            rawData->size = 0;
+        }
+        if (rawData->data == NULL) {
+            rawData->data = new uint8_t [size];
+            if (rawData->data == NULL) {
+                return DECODE_MEMORY_FAIL;
+            }
+        }
+
+        rawData->own = true; // allocated by this library
+        rawData->width = cropWidth;
+        rawData->height = cropHeight;
+        rawData->pitch[0] = cropWidth;
+        rawData->pitch[1] = cropWidth;
+        rawData->pitch[2] = 0;  // interleaved U/V, two planes
+        rawData->offset[0] = 0;
+        rawData->offset[1] = cropWidth * cropHeight;
+        rawData->offset[2] = cropWidth * cropHeight * 3 / 2;
+        rawData->size = size;
+        rawData->fourcc = 'NV12';
+
+        pRawData = rawData->data;
+    } else {
+        *pSize = size;
     }
-    rawData->own = true; // allocated by this library
-    rawData->width = cropWidth;
-    rawData->height = cropHeight;
-    rawData->pitch[0] = cropWidth;
-    rawData->pitch[1] = cropWidth;
-    rawData->pitch[2] = 0;  // interleaved U/V, two planes
-    rawData->offset[0] = 0;
-    rawData->offset[1] = cropWidth * cropHeight;
-    rawData->offset[2] = cropWidth * cropHeight * 3 / 2;
-    rawData->size = size;
-    rawData->fourcc = 'NV12';
+
     if (size == (int32_t)vaImage.data_size) {
-        memcpy(rawData->data, pBuf, size);
+        memcpy(pRawData, pBuf, size);
     } else {
         // copy Y data
         uint8_t *src = (uint8_t*)pBuf;
-        uint8_t *dst = rawData->data;
+        uint8_t *dst = pRawData;
         int32_t row = 0;
         for (row = 0; row < cropHeight; row++) {
             memcpy(dst, src, cropWidth);
@@ -1167,10 +1157,13 @@ Decode_Status VideoDecoderBase::getRawDataFromSurface(void) {
             src += vaImage.pitches[1];
         }
     }
-    // TODO: image may not get destroyed if error happens.
-    if (vaImage.image_id != VA_INVALID_ID) {
-        vaDestroyImage(mVADisplay, vaImage.image_id);
-    }
+
+    vaStatus = vaUnmapBuffer(renderBuffer->display, vaImage.buf);
+    CHECK_VA_STATUS("vaUnmapBuffer");
+
+    vaStatus = vaDestroyImage(renderBuffer->display, vaImage.image_id);
+    CHECK_VA_STATUS("vaDestroyImage");
+
     return DECODE_SUCCESS;
 }
 

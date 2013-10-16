@@ -87,6 +87,8 @@ protected:
          return ((a + 15) & (~15));
     }
 
+    virtual Decode_Status getRawDataFromSurface(VideoRenderBuffer *renderBuffer = NULL, uint8_t *pRawData = NULL, uint32_t *pSize = NULL, bool internal = true);
+
 #ifdef USE_AVC_SHORT_FORMAT
     Decode_Status updateBuffer(uint8_t *buffer, int32_t size, void** vbpData);
     Decode_Status setParserType(_vbp_parser_type type);
@@ -95,7 +97,6 @@ protected:
     virtual Decode_Status isHardwareSupported(VAProfile profile);
 private:
     Decode_Status mapSurface(void);
-    Decode_Status getRawDataFromSurface(void);
     void initSurfaceBuffer(bool reset);
 
     bool mInitialized;
