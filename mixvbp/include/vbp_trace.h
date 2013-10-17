@@ -37,7 +37,7 @@ vbp_trace_util(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 
 // For Android OS
 
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 
 #define LOG_TAG "MixVBP"
 
