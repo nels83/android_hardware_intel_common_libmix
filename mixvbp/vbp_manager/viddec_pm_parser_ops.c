@@ -12,10 +12,10 @@ int32_t viddec_pm_get_bits(void *parent, uint32_t *data, uint32_t num_bits)
     viddec_pm_cxt_t *cxt;
 
     cxt = (viddec_pm_cxt_t *)parent;
-    ret = viddec_pm_utils_bstream_peekbits(&(cxt->getbits), data, num_bits, 1);
+    ret = viddec_pm_utils_bstream_getbits(&(cxt->getbits), data, num_bits);
     if (ret == -1)
     {
-        VTRACE("FAILURE? getbits returned %d", ret);
+        VTRACE("FAILURE: getbits returned %d", ret);
     }
 
     return ret;
@@ -27,7 +27,11 @@ int32_t viddec_pm_peek_bits(void *parent, uint32_t *data, uint32_t num_bits)
     viddec_pm_cxt_t *cxt;
 
     cxt = (viddec_pm_cxt_t *)parent;
-    ret = viddec_pm_utils_bstream_peekbits(&(cxt->getbits), data, num_bits, 0);
+    ret = viddec_pm_utils_bstream_peekbits(&(cxt->getbits), data, num_bits);
+    if (ret == -1)
+    {
+        VTRACE("FAILURE: peekbits returned %d", ret);
+    }
     return ret;
 }
 

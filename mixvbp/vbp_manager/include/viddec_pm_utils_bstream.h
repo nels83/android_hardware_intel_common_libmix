@@ -49,7 +49,8 @@ void viddec_pm_utils_bstream_init(viddec_pm_utils_bstream_cxt_t *cxt, viddec_pm_
 
 int32_t viddec_pm_utils_bstream_skipbits(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t num_bits);
 
-int32_t viddec_pm_utils_bstream_peekbits(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t *out, uint32_t num_bits, uint8_t skip);
+int32_t viddec_pm_utils_bstream_peekbits(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t *out, uint32_t num_bits);
+int32_t viddec_pm_utils_bstream_getbits(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t *out, uint32_t num_bits);
 
 int32_t viddec_pm_utils_bstream_get_current_byte(viddec_pm_utils_bstream_cxt_t *cxt, uint8_t *byte);
 
