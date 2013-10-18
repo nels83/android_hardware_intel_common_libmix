@@ -545,6 +545,7 @@ static inline void vbp_set_reference_frames_h264(
         {
             pic_parms->ReferenceFrames[frame_idx].frame_idx = store->frame_num;
             pic_parms->ReferenceFrames[frame_idx].flags = VA_PICTURE_H264_SHORT_TERM_REFERENCE;
+
             if (FRAME == parser->info.img.structure)
             {
                 pic_parms->ReferenceFrames[frame_idx].TopFieldOrderCnt = store->top_field.poc;
@@ -587,6 +588,11 @@ static inline void vbp_set_reference_frames_h264(
         if (viddec_h264_get_is_used(store))
         {
             pic_parms->ReferenceFrames[frame_idx].flags = VA_PICTURE_H264_LONG_TERM_REFERENCE;
+
+#ifdef USE_AVC_SHORT_FORMAT
+            pic_parms->ReferenceFrames[frame_idx].frame_idx = store->long_term_frame_idx;
+#endif
+
             if (FRAME == parser->info.img.structure)
             {
                 pic_parms->ReferenceFrames[frame_idx].TopFieldOrderCnt = store->frame.poc;
@@ -1149,6 +1155,13 @@ static uint32_t vbp_add_pic_data_h264(vbp_context *pcontext, int list_index)
         /* actual num_ref_frames is set in vbp_set_reference_frames_h264 */
     }
 
+#ifdef USE_AVC_SHORT_FORMAT
+    {
+        pic_parms->num_ref_idx_l0_default_active_minus1 = parser->info.active_PPS.num_ref_idx_l0_active - 1;
+        pic_parms->num_ref_idx_l1_default_active_minus1 = parser->info.active_PPS.num_ref_idx_l1_active - 1;
+    }
+#endif
+
     return VBP_OK;
 }
 
@@ -1197,6 +1210,11 @@ static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
     /* whole slice is in this buffer */
     slc_parms->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
 
+    slice_header = &(h264_parser->info.SliceHeader);
+    slc_parms->first_mb_in_slice = slice_header->first_mb_in_slice;
+    slc_parms->slice_type = slice_header->slice_type;
+
+#ifndef USE_AVC_SHORT_FORMAT
     /* bit offset from NAL start code to the beginning of slice data */
     slc_parms->slice_data_bit_offset = bit + byte * 8;
 
@@ -1249,6 +1267,7 @@ static uint32_t vbp_add_slice_data_h264(vbp_context *pcontext, int index)
 
     vbp_set_pre_weight_table_h264(h264_parser, slc_parms);
     vbp_set_slice_ref_list_h264(h264_parser, slc_parms);
+#endif
 
     pic_data->num_slices++;
 

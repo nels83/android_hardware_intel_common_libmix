@@ -207,9 +207,9 @@ uint32_t viddec_h264_parse(void *parent, void *ctxt)
         //////////////////////////////////////////////// Update frame Type--- IDR/I/P/B for frame or field
         h264_update_frame_type(pInfo);
 
-
-        h264_dpb_update_ref_lists( pInfo);
-
+#ifndef USE_AVC_SHORT_FORMAT
+        h264_dpb_update_ref_lists(pInfo);
+#endif
         /// Emit out the current "good" slice
         h264_parse_emit_current_slice(parent, pInfo);
 
@@ -285,7 +285,7 @@ uint32_t viddec_h264_parse(void *parent, void *ctxt)
     case h264_NAL_UNIT_TYPE_PPS:
     {
         //OS_INFO("*****************************PPS**************************************\n");
-
+        status = H264_STATUS_OK;
         uint32_t old_sps_id = pInfo->active_SPS.seq_parameter_set_id;
         uint32_t old_pps_id = pInfo->active_PPS.pic_parameter_set_id;
 

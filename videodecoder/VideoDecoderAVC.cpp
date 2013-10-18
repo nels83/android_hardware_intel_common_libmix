@@ -295,10 +295,11 @@ Decode_Status VideoDecoderAVC::decodeSlice(vbp_data_h264 *data, uint32_t picInde
         status = updateDPB(picParam);
         CHECK_STATUS("updateDPB");
 
+#ifndef USE_AVC_SHORT_FORMAT
         //We have to provide a hacked DPB rather than complete DPB for libva as workaround
         status = updateReferenceFrames(picData);
         CHECK_STATUS("updateReferenceFrames");
-
+#endif
         vaStatus = vaBeginPicture(mVADisplay, mVAContext, mAcquiredBuffer->renderBuffer.surface);
         CHECK_VA_STATUS("vaBeginPicture");
 
@@ -328,6 +329,8 @@ Decode_Status VideoDecoderAVC::decodeSlice(vbp_data_h264 *data, uint32_t picInde
         bufferIDCount++;
     }
 
+#ifndef USE_AVC_SHORT_FORMAT
+
     status = setReference(sliceParam);
     CHECK_STATUS("setReference");
 
@@ -339,6 +342,16 @@ Decode_Status VideoDecoderAVC::decodeSlice(vbp_data_h264 *data, uint32_t picInde
         1,
         sliceParam,
         &bufferIDs[bufferIDCount]);
+#else
+    vaStatus = vaCreateBuffer(
+        mVADisplay,
+        mVAContext,
+        VASliceParameterBufferType,
+        sizeof(VASliceParameterBufferH264Base),
+        1,
+        sliceParam,
+        &bufferIDs[bufferIDCount]);
+#endif
     CHECK_VA_STATUS("vaCreateSliceParameterBuffer");
     bufferIDCount++;
 
@@ -835,3 +848,46 @@ int32_t VideoDecoderAVC::getDPBSize(vbp_data_h264 *data) {
     return maxDPBSize;
 }
 
+#ifdef USE_AVC_SHORT_FORMAT
+Decode_Status VideoDecoderAVC::getCodecSpecificConfigs(
+    VAProfile profile, VAConfigID *config)
+{
+    VAStatus vaStatus;
+    VAConfigAttrib attrib[2];
+
+    if (config == NULL) {
+        ETRACE("Invalid parameter!");
+        return DECODE_FAIL;
+    }
+
+    attrib[0].type = VAConfigAttribRTFormat;
+    attrib[0].value = VA_RT_FORMAT_YUV420;
+    attrib[1].type = VAConfigAttribDecSliceMode;
+    attrib[1].value = VA_DEC_SLICE_MODE_NORMAL;
+
+    vaStatus = vaGetConfigAttributes(mVADisplay,profile,VAEntrypointVLD, &attrib[1], 1);
+
+    if (attrib[1].value & VA_DEC_SLICE_MODE_BASE)
+    {
+        ITRACE("AVC short format used");
+        attrib[1].value = VA_DEC_SLICE_MODE_BASE;
+    } else if (attrib[1].value & VA_DEC_SLICE_MODE_NORMAL) {
+        ITRACE("AVC long format used");
+        attrib[1].value = VA_DEC_SLICE_MODE_NORMAL;
+    } else {
+        ETRACE("Unsupported Decode Slice Mode!");
+        return DECODE_FAIL;
+    }
+
+    vaStatus = vaCreateConfig(
+            mVADisplay,
+            profile,
+            VAEntrypointVLD,
+            &attrib[0],
+            2,
+            config);
+    CHECK_VA_STATUS("vaCreateConfig");
+
+    return DECODE_SUCCESS;
+}
+#endif

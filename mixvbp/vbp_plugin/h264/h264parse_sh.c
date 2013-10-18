@@ -224,6 +224,16 @@ h264_Status h264_Parse_Slice_Header_3(void *parent, h264_Info* pInfo, h264_Slice
             break;
         }
 
+#ifdef USE_AVC_SHORT_FORMAT
+        bool keepParsing = false;
+        keepParsing = h264_is_new_picture_start(pInfo, *SliceHeader, pInfo->SliceHeader) && (SliceHeader->nal_ref_idc != 0);
+        if (!keepParsing)
+        {
+            ITRACE("short format parsing: no need to go on!");
+            ret = H264_STATUS_OK;
+            break;
+        }
+#endif
         if (h264_Parse_Ref_Pic_List_Reordering(parent, pInfo, SliceHeader) != H264_STATUS_OK)
         {
             WTRACE("ref list reordering failed during slice header parsing.");
