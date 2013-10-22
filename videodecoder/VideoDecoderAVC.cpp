@@ -26,6 +26,11 @@
 #include "VideoDecoderTrace.h"
 #include <string.h>
 
+// Macros for actual buffer needed calculation
+#define WIDI_CONSUMED   6
+#define HDMI_CONSUMED   2
+#define NW_CONSUMED     2
+
 VideoDecoderAVC::VideoDecoderAVC(const char *mimeType)
     : VideoDecoderBase(mimeType, VBP_H264),
       mToggleDPB(0),
@@ -721,9 +726,12 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         // outputQueue + nativewindow_owned + (diff > 0 ? diff : 1) + widi_need_max + 1(available buffer)
         // while outputQueue = DPB < 8? DPB :8
         // and diff = Reference + 1 - ouputQueue
-        mVideoFormatInfo.actualBufferNeeded = mOutputWindowSize + 4 /* Owned by native window */
+        mVideoFormatInfo.actualBufferNeeded = mOutputWindowSize + NW_CONSUMED /* Owned by native window */
                                               + (diff > 0 ? diff : 1)
-                                              + 6 /* WiDi maximum needs */
+#ifndef USE_GEN_HW
+                                              + HDMI_CONSUMED /* Two extra buffers are needed for native window buffer cycling */
+                                              + WIDI_CONSUMED /* WiDi maximum needs */
+#endif
                                               + 1;
     }
 

@@ -37,7 +37,7 @@ extern "C" {
 }
 
 #ifndef Display
-#ifdef LOAD_PVR_DRIVER
+#ifdef USE_GEN_HW
 typedef char Display;
 #else
 typedef unsigned int Display;
