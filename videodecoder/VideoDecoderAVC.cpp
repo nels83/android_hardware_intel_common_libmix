@@ -848,46 +848,20 @@ int32_t VideoDecoderAVC::getDPBSize(vbp_data_h264 *data) {
     return maxDPBSize;
 }
 
-#ifdef USE_AVC_SHORT_FORMAT
-Decode_Status VideoDecoderAVC::getCodecSpecificConfigs(
-    VAProfile profile, VAConfigID *config)
-{
+Decode_Status VideoDecoderAVC::checkHardwareCapability(VAProfile profile) {
+#ifndef USE_GEN_HW
     VAStatus vaStatus;
-    VAConfigAttrib attrib[2];
-
-    if (config == NULL) {
-        ETRACE("Invalid parameter!");
-        return DECODE_FAIL;
+    VAConfigAttrib cfgAttribs[2];
+    cfgAttribs[0].type = VAConfigAttribMaxPictureWidth;
+    cfgAttribs[1].type = VAConfigAttribMaxPictureHeight;
+    vaStatus = vaGetConfigAttributes(mVADisplay, VAProfileH264High,
+            VAEntrypointVLD, cfgAttribs, 2);
+    CHECK_VA_STATUS("vaGetConfigAttributes");
+    if (cfgAttribs[0].value * cfgAttribs[1].value < (uint32_t)mVideoFormatInfo.width * (uint32_t)mVideoFormatInfo.height) {
+        ETRACE("hardware supports resolution %d * %d smaller than the clip resolution %d * %d",
+                cfgAttribs[0].value, cfgAttribs[1].value, mVideoFormatInfo.width, mVideoFormatInfo.height);
+        return DECODE_DRIVER_FAIL;
     }
-
-    attrib[0].type = VAConfigAttribRTFormat;
-    attrib[0].value = VA_RT_FORMAT_YUV420;
-    attrib[1].type = VAConfigAttribDecSliceMode;
-    attrib[1].value = VA_DEC_SLICE_MODE_NORMAL;
-
-    vaStatus = vaGetConfigAttributes(mVADisplay,profile,VAEntrypointVLD, &attrib[1], 1);
-
-    if (attrib[1].value & VA_DEC_SLICE_MODE_BASE)
-    {
-        ITRACE("AVC short format used");
-        attrib[1].value = VA_DEC_SLICE_MODE_BASE;
-    } else if (attrib[1].value & VA_DEC_SLICE_MODE_NORMAL) {
-        ITRACE("AVC long format used");
-        attrib[1].value = VA_DEC_SLICE_MODE_NORMAL;
-    } else {
-        ETRACE("Unsupported Decode Slice Mode!");
-        return DECODE_FAIL;
-    }
-
-    vaStatus = vaCreateConfig(
-            mVADisplay,
-            profile,
-            VAEntrypointVLD,
-            &attrib[0],
-            2,
-            config);
-    CHECK_VA_STATUS("vaCreateConfig");
-
+#endif
     return DECODE_SUCCESS;
 }
-#endif

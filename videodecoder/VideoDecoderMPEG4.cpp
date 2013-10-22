@@ -577,17 +577,13 @@ void VideoDecoderMPEG4::updateFormatInfo(vbp_data_mp42 *data) {
     mVideoFormatInfo.valid = true;
 }
 
-Decode_Status VideoDecoderMPEG4::isHardwareSupported(VAProfile profile) {
-    if (!mIsShortHeader) {
-        // TODO: add support for MPEG4 in the future;
-        return DECODE_SUCCESS;
-    }
-
+Decode_Status VideoDecoderMPEG4::checkHardwareCapability(VAProfile profile) {
     VAStatus vaStatus;
     VAConfigAttrib cfgAttribs[2];
     cfgAttribs[0].type = VAConfigAttribMaxPictureWidth;
     cfgAttribs[1].type = VAConfigAttribMaxPictureHeight;
-    vaStatus = vaGetConfigAttributes(mVADisplay, VAProfileH263Baseline,
+    vaStatus = vaGetConfigAttributes(mVADisplay,
+            mIsShortHeader ? VAProfileH263Baseline : VAProfileMPEG4AdvancedSimple,
             VAEntrypointVLD, cfgAttribs, 2);
     CHECK_VA_STATUS("vaGetConfigAttributes");
     if (cfgAttribs[0].value * cfgAttribs[1].value < (uint32_t)mVideoFormatInfo.width * (uint32_t)mVideoFormatInfo.height) {

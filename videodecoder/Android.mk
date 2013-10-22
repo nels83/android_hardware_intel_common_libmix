@@ -7,7 +7,6 @@ LOCAL_SRC_FILES := \
     VideoDecoderWMV.cpp \
     VideoDecoderMPEG4.cpp \
     VideoDecoderAVC.cpp \
-    VideoDecoderPAVC.cpp \
     VideoDecoderTrace.cpp
 
 # LOCAL_CFLAGS :=

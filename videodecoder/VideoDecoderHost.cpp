@@ -25,7 +25,6 @@
 #include "VideoDecoderWMV.h"
 #include "VideoDecoderMPEG4.h"
 #include "VideoDecoderAVC.h"
-#include "VideoDecoderPAVC.h"
 #ifdef USE_INTEL_SECURE_AVC
 #include "VideoDecoderAVCSecure.h"
 #endif

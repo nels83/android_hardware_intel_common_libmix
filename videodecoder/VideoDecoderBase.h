@@ -94,7 +94,7 @@ protected:
     Decode_Status setParserType(_vbp_parser_type type);
     virtual Decode_Status getCodecSpecificConfigs(VAProfile profile, VAConfigID *config);
 #endif
-    virtual Decode_Status isHardwareSupported(VAProfile profile);
+    virtual Decode_Status checkHardwareCapability(VAProfile profile);
 private:
     Decode_Status mapSurface(void);
     void initSurfaceBuffer(bool reset);

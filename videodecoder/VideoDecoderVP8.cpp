@@ -415,3 +415,21 @@ void VideoDecoderVP8::refreshAltReference(vbp_data_vp8 *data) {
     }
 }
 
+
+Decode_Status VideoDecoderVP8::checkHardwareCapability(VAProfile profile) {
+    VAStatus vaStatus;
+    VAConfigAttrib cfgAttribs[2];
+    cfgAttribs[0].type = VAConfigAttribMaxPictureWidth;
+    cfgAttribs[1].type = VAConfigAttribMaxPictureHeight;
+    vaStatus = vaGetConfigAttributes(mVADisplay, VAProfileVP8Version0_3,
+            VAEntrypointVLD, cfgAttribs, 2);
+    CHECK_VA_STATUS("vaGetConfigAttributes");
+    if (cfgAttribs[0].value * cfgAttribs[1].value < (uint32_t)mVideoFormatInfo.width * (uint32_t)mVideoFormatInfo.height) {
+        ETRACE("hardware supports resolution %d * %d smaller than the clip resolution %d * %d",
+                cfgAttribs[0].value, cfgAttribs[1].value, mVideoFormatInfo.width, mVideoFormatInfo.height);
+        return DECODE_DRIVER_FAIL;
+    }
+
+    return DECODE_SUCCESS;
+}
+

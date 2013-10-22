@@ -38,6 +38,9 @@ public:
     virtual void flush(void);
     virtual Decode_Status decode(VideoDecodeBuffer *buffer);
 
+protected:
+    virtual Decode_Status checkHardwareCapability(VAProfile profile);
+
 private:
     Decode_Status decodeFrame(VideoDecodeBuffer* buffer, vbp_data_vp8 *data);
     Decode_Status decodePicture(vbp_data_vp8 *data, int32_t picIndex);

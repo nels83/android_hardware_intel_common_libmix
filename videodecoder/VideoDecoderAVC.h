@@ -58,9 +58,8 @@ protected:
     Decode_Status handleNewSequence(vbp_data_h264 *data);
     bool isNewFrame(vbp_data_h264 *data, bool equalPTS);
     int32_t getDPBSize(vbp_data_h264 *data);
-#ifdef USE_AVC_SHORT_FORMAT
-    virtual Decode_Status getCodecSpecificConfigs(VAProfile profile, VAConfigID*config);
-#endif
+    virtual Decode_Status checkHardwareCapability(VAProfile profile);
+
 private:
     struct DecodedPictureBuffer {
         VideoSurfaceBuffer *surfaceBuffer;

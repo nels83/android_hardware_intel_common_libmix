@@ -522,3 +522,21 @@ Decode_Status VideoDecoderWMV::parseBuffer(uint8_t *data, int32_t size, vbp_data
 }
 
 
+Decode_Status VideoDecoderWMV::checkHardwareCapability(VAProfile profile) {
+    VAStatus vaStatus;
+    VAConfigAttrib cfgAttribs[2];
+    cfgAttribs[0].type = VAConfigAttribMaxPictureWidth;
+    cfgAttribs[1].type = VAConfigAttribMaxPictureHeight;
+    vaStatus = vaGetConfigAttributes(mVADisplay, VAProfileVC1Advanced,
+            VAEntrypointVLD, cfgAttribs, 2);
+    CHECK_VA_STATUS("vaGetConfigAttributes");
+    if (cfgAttribs[0].value * cfgAttribs[1].value < (uint32_t)mVideoFormatInfo.width * (uint32_t)mVideoFormatInfo.height) {
+        ETRACE("hardware supports resolution %d * %d smaller than the clip resolution %d * %d",
+                cfgAttribs[0].value, cfgAttribs[1].value, mVideoFormatInfo.width, mVideoFormatInfo.height);
+        return DECODE_DRIVER_FAIL;
+    }
+
+    return DECODE_SUCCESS;
+}
+
+

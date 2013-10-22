@@ -39,7 +39,7 @@ public:
     virtual Decode_Status decode(VideoDecodeBuffer *buffer);
 
 protected:
-    virtual Decode_Status isHardwareSupported(VAProfile profile);
+    virtual Decode_Status checkHardwareCapability(VAProfile profile);
 
 private:
     Decode_Status decodeFrame(VideoDecodeBuffer *buffer, vbp_data_mp42 *data);
