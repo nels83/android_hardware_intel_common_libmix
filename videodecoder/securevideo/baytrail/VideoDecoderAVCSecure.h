@@ -46,6 +46,7 @@ private:
     uint8_t *mNaluHeaderBuffer;
     uint8_t *mSliceHeaderBuffer;
     uint32_t mIsEncryptData;
+    uint32_t mFrameSize;
 };
 
 #endif /* VIDEO_DECODER_AVC_SECURE_H_ */

@@ -92,6 +92,7 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
     uint8_t naluType;
     frame_info_t* pFrameInfo;
 
+    mFrameSize = 0;
     if (buffer->flag & IS_SECURE_DATA) {
         VTRACE("Decoding protected video ...");
         mIsEncryptData = 1;
@@ -106,6 +107,9 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
         return DECODE_INVALID_DATA;
     }
     pFrameInfo = (frame_info_t*) buffer->data;
+
+    mFrameSize = pFrameInfo->length;
+    VTRACE("mFrameSize = %d", mFrameSize);
 
     memcpy(&mEncParam, pFrameInfo->pavp, sizeof(pavp_info_t));
     for (int32_t i = 0; i < pFrameInfo->num_nalus; i++) {
@@ -277,7 +281,19 @@ Decode_Status VideoDecoderAVCSecure::decodeSlice(vbp_data_h264 *data, uint32_t p
             bufferIDCount++;
         }
 
+        vaStatus = vaCreateBuffer(
+            mVADisplay,
+            mVAContext,
+            VASliceDataBufferType,
+            mFrameSize, //size
+            1,        //num_elements
+            sliceData->buffer_addr + sliceData->slice_offset,
+            &bufferIDs[bufferIDCount]);
+        CHECK_VA_STATUS("vaCreateSliceDataBuffer");
+        bufferIDCount++;
+
     }
+
     vaStatus = vaCreateBuffer(
         mVADisplay,
         mVAContext,
@@ -288,29 +304,6 @@ Decode_Status VideoDecoderAVCSecure::decodeSlice(vbp_data_h264 *data, uint32_t p
         &bufferIDs[bufferIDCount]);
 
     CHECK_VA_STATUS("vaCreateSliceParameterBuffer");
-    bufferIDCount++;
-
-    if (mIsEncryptData) {
-        vaStatus = vaCreateBuffer(
-            mVADisplay,
-            mVAContext,
-            VASliceDataBufferType,
-            sliceData->slice_size, //size
-            1,        //num_elements
-            sliceData->buffer_addr + sliceData->slice_offset,
-            &bufferIDs[bufferIDCount]);
-    } else {
-        // This is for clear video playback
-        vaStatus = vaCreateBuffer(
-            mVADisplay,
-            mVAContext,
-            VASliceDataBufferType,
-            sliceData->slice_size, //size
-            1,        //num_elements
-            sliceData->buffer_addr + sliceData->slice_offset,
-            &bufferIDs[bufferIDCount]);
-    }
-    CHECK_VA_STATUS("vaCreateSliceDataBuffer");
     bufferIDCount++;
 
     vaStatus = vaRenderPicture(
