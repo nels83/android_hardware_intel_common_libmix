@@ -105,7 +105,19 @@ typedef enum {
     // indicate it's the last output frame of the sequence
     IS_EOS = 0x10000,
 
+    // indicate whether error reporting is needed
+    WANT_ERROR_REPORT = 0x20000,
+
 } VIDEO_BUFFER_FLAG;
+
+typedef enum
+{
+        DecodeSliceMissing  = 0,
+        DecodeMBError       = 1,
+        DecodeRefMissing    = 2,
+} VideoDecodeErrorType;
+
+#define MAX_ERR_NUM 10
 
 struct VideoDecodeBuffer {
     uint8_t *data;
@@ -140,6 +152,19 @@ struct VideoConfigBuffer {
 #endif
 };
 
+struct VideoErrorInfo {
+    VideoDecodeErrorType type;
+    union {
+        typedef struct {uint32_t start_mb; uint32_t end_mb;} mb_pos;
+    } error_data;
+};
+
+struct VideoErrorBuffer {
+    uint32_t errorNumber;   // Error number should be no more than MAX_ERR_NUM
+	int64_t timeStamp;      // presentation time stamp
+    VideoErrorInfo errorArray[MAX_ERR_NUM];
+};
+
 struct VideoRenderBuffer {
     VASurfaceID surface;
     VADisplay display;
@@ -152,8 +177,9 @@ struct VideoRenderBuffer {
     uint32_t flag;
     mutable volatile bool driverRenderDone;
     VideoFrameRawData *rawData;
-};
 
+    VideoErrorBuffer errBuf;
+};
 
 struct VideoSurfaceBuffer {
     VideoRenderBuffer renderBuffer;

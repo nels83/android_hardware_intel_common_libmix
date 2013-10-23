@@ -401,6 +401,10 @@ Decode_Status VideoDecoderAVC::setReference(VASliceParameterBufferH264 *slicePar
             if (!(ref->flags & VA_PICTURE_H264_INVALID)) {
                 ref->picture_id = findSurface(ref);
                 if (ref->picture_id == VA_INVALID_SURFACE) {
+                    // Error DecodeRefMissing is counted once even there're multiple
+                    mAcquiredBuffer->renderBuffer.errBuf.errorNumber = 1;
+                    mAcquiredBuffer->renderBuffer.errBuf.errorArray[0].type = DecodeRefMissing;
+
                     if (mLastReference) {
                         WTRACE("Reference frame %d is missing. Use last reference", getPOC(ref));
                         ref->picture_id = mLastReference->renderBuffer.surface;

@@ -60,7 +60,7 @@ public:
     virtual void stop(void);
     //virtual Decode_Status decode(VideoDecodeBuffer *buffer);
     virtual void flush(void);
-    virtual const VideoRenderBuffer* getOutput(bool draining = false);
+    virtual const VideoRenderBuffer* getOutput(bool draining = false, VideoErrorBuffer *output_buf = NULL);
     virtual Decode_Status signalRenderDone(void * graphichandler);
     virtual const VideoFormatInfo* getFormatInfo(void);
     virtual bool checkBufferAvail();
@@ -98,10 +98,11 @@ protected:
 private:
     Decode_Status mapSurface(void);
     void initSurfaceBuffer(bool reset);
+    void drainDecodingErrors(VideoErrorBuffer *outErrBuf, VideoRenderBuffer *CurrentSurface);
+    void fillDecodingErrors(VideoRenderBuffer *CurrentSurface);
 
     bool mInitialized;
     pthread_mutex_t mLock;
-
 
 protected:
     VideoFormatInfo mVideoFormatInfo;
@@ -124,6 +125,8 @@ protected:
     bool mShowFrame; // indicate whether the decoded frame is for display
 
     int32_t mOutputWindowSize; // indicate limit of number of outstanding frames for output
+
+    bool mErrReportEnabled;
 
     enum {
         // TODO: move this to vbp_loader.h

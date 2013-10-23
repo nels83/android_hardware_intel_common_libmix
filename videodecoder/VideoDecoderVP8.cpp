@@ -311,6 +311,8 @@ Decode_Status VideoDecoderVP8::setReference(VAPictureParameterBufferVP8 *picPara
         if (mRFBs[0][VP8_LAST_REF_PIC].surfaceBuffer   == NULL ||
                 mRFBs[0][VP8_ALT_REF_PIC].surfaceBuffer    == NULL ||
                 mRFBs[0][VP8_GOLDEN_REF_PIC].surfaceBuffer == NULL) {
+            mAcquiredBuffer->renderBuffer.errBuf.errorNumber = 1;
+            mAcquiredBuffer->renderBuffer.errBuf.errorArray[0].type = DecodeRefMissing;
             return DECODE_NO_REFERENCE;
         }
         //mRFBs[0][VP8_LAST_REF_PIC].surfaceBuffer = mLastReference;
