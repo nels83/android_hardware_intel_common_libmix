@@ -852,8 +852,8 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         vaStatus = vaCreateSurfaces(
             mVADisplay,
             format,
-            mVideoFormatInfo.width,
-            mVideoFormatInfo.height,
+            mVideoFormatInfo.surfaceWidth,
+            mVideoFormatInfo.surfaceHeight,
             mSurfaces,
             mNumSurfaces,
             attribs,
