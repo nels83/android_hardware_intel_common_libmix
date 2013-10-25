@@ -146,11 +146,7 @@ Decode_Status VideoDecoderVP8::decode(VideoDecodeBuffer *buffer) {
     }
 
     status = decodeFrame(buffer, data);
-    CHECK_STATUS("decodeFrame");
-    if (mSizeChanged) {
-        mSizeChanged = false;
-        return DECODE_FORMAT_CHANGE;
-    }
+
     return status;
 }
 
@@ -162,11 +158,16 @@ Decode_Status VideoDecoderVP8::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
         return DECODE_SUCCESS;
     }
 
-    if (VP8_KEY_FRAME == data->codec_data->frame_type && !mSizeChanged) {
-        updateFormatInfo(data);
-        if (mSizeChanged == true) {
+    if (VP8_KEY_FRAME == data->codec_data->frame_type) {
+        if (mSizeChanged) {
             mSizeChanged = false;
             return DECODE_FORMAT_CHANGE;
+        } else {
+            updateFormatInfo(data);
+            if (mSizeChanged == true) {
+                mSizeChanged = false;
+                return DECODE_FORMAT_CHANGE;
+            }
         }
     }
 
