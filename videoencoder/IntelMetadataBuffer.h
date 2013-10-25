@@ -135,7 +135,7 @@ public:
     static const uint16_t WEBRTC_BASE =    0x2000;
     static const uint16_t VIDEOEDIT_BASE = 0x3000;
 
-    static uint32_t MakeSessionFlag(uint16_t sindex, bool romoteProvider, bool remoteConsumer);
+   static uint32_t MakeSessionFlag(bool romoteProvider, bool remoteConsumer, uint16_t sindex);
 
 private:
     uint32_t mSessionFlag;

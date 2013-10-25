@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     uint32_t tokenPC = 0xC0000000;
     uint32_t token;
 #ifdef INTEL_VIDEO_XPROC_SHARING
-    token = IntelMetadataBuffer::MakeSessionFlag(IntelMetadataBuffer::WEBRTC_BASE, true, false);
+    token = IntelMetadataBuffer::MakeSessionFlag(true, false, IntelMetadataBuffer::WEBRTC_BASE);
 #endif
     int memmode = 0;
     int clearcontext = 1;

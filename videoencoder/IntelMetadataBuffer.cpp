@@ -820,7 +820,7 @@ IMB_Result IntelMetadataBuffer::ClearContext(uint32_t sessionflag, bool isProvid
     return IMB_SUCCESS;
 }
 
-uint32_t IntelMetadataBuffer::MakeSessionFlag(uint16_t sindex, bool romoteProvider, bool remoteConsumer)
+uint32_t IntelMetadataBuffer::MakeSessionFlag(bool romoteProvider, bool remoteConsumer, uint16_t sindex)
 {
     uint32_t sessionflag = 0;
 
@@ -828,7 +828,7 @@ uint32_t IntelMetadataBuffer::MakeSessionFlag(uint16_t sindex, bool romoteProvid
         sessionflag |= REMOTE_PROVIDER;
 
     if (remoteConsumer)
-        sessionflag |= REMOTE_PROVIDER;
+        sessionflag |= REMOTE_CONSUMER;
 
     return sessionflag + sindex;
 }
