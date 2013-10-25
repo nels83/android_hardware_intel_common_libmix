@@ -32,10 +32,6 @@
 #include <ufo/graphics.h>
 #include <ufo/gralloc.h>
 #include "JPEGCommon.h"
-// temp workaround
-#define HAL_PIXEL_FORMAT_YCbCr_422_H_INTEL HAL_PIXEL_FORMAT_YCrCb_422_H_INTEL // 422H (YU16)
-#define HAL_PIXEL_FORMAT_IMC3 0x103 // IMC3
-#define HAL_PIXEL_FORMAT_444P 0x104 // 444P
 
 #endif
 

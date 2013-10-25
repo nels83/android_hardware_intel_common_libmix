@@ -50,10 +50,6 @@ int fourcc2PixelFormat(uint32_t fourcc)
         return HAL_PIXEL_FORMAT_NV12_TILED_INTEL;
     case VA_FOURCC_RGBA:
         return HAL_PIXEL_FORMAT_RGBA_8888;
-    case VA_FOURCC_IMC3:
-        return HAL_PIXEL_FORMAT_IMC3;
-    case VA_FOURCC_444P:
-        return HAL_PIXEL_FORMAT_444P;
     case VA_FOURCC_422V:
     case VA_FOURCC_411P:
     default:
@@ -73,10 +69,6 @@ uint32_t pixelFormat2Fourcc(int pixel_format)
         return VA_FOURCC_NV12;
     case HAL_PIXEL_FORMAT_RGBA_8888:
         return VA_FOURCC_RGBA;
-    case HAL_PIXEL_FORMAT_444P:
-        return VA_FOURCC_444P;
-    case HAL_PIXEL_FORMAT_IMC3:
-        return VA_FOURCC_IMC3;
     default:
         return 0;
     }
@@ -149,27 +141,6 @@ JpegDecodeStatus JpegDecoder::createSurfaceGralloc(int width, int height, int pi
 
     uint32_t fourcc = pixelFormat2Fourcc(pixel_format);
     VTRACE("enter %s, pixel_format 0x%x, fourcc %s", __FUNCTION__, pixel_format, fourcc2str(NULL, fourcc));
-    if ((fourcc != VA_FOURCC_422H) ||
-        (fourcc != VA_FOURCC_YUY2) ||
-        (fourcc != VA_FOURCC_RGBA)){
-        VASurfaceAttrib attrib;
-        attrib.type = VASurfaceAttribPixelFormat;
-        attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
-        attrib.value.type = VAGenericValueTypeInteger;
-        attrib.value.value.i = fourcc;
-        VAStatus va_status = vaCreateSurfaces(mDisplay,
-                                    fourcc2VaFormat(fourcc),
-                                    width,
-                                    height,
-                                    surf_id,
-                                    1,
-                                    &attrib,
-                                    1);
-        VTRACE("%s createSurface for %s", __FUNCTION__, fourcc2str(NULL, fourcc));
-        if (va_status != VA_STATUS_SUCCESS)
-            return JD_RESOURCE_FAILURE;
-        return JD_SUCCESS;
-    }
 
     int err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module);
     if (err) {

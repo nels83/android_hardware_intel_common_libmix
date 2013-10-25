@@ -29,7 +29,7 @@
 #ifndef JPEG_BLITTER_H
 #define JPEG_BLITTER_H
 
-#include "../videovpp/VideoVPPBase.h"
+#include <VideoVPPBase.h>
 #include "JPEGCommon.h"
 #include <utils/threads.h>
 
