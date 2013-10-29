@@ -3060,6 +3060,9 @@ void h264_dpb_get_smallest_poc(h264_DecodedPictureBuffer *p_dpb, int32_t *poc, i
 
     for (idx = 0; idx < p_dpb->used_size; idx++)
     {
+        if (idx >= (NUM_DPB_FRAME_STORES + 2)) {
+            break;
+        }
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dpb_idc[idx]);
 
         if (viddec_h264_get_is_output(p_dpb->active_fs) == 0)
