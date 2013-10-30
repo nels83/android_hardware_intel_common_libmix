@@ -125,6 +125,7 @@ protected:
     bool mShowFrame; // indicate whether the decoded frame is for display
 
     int32_t mOutputWindowSize; // indicate limit of number of outstanding frames for output
+    int32_t mRotationDegrees;
 
     bool mErrReportEnabled;
 
@@ -170,6 +171,7 @@ protected:
     void setOutputWindowSize(int32_t size) {mOutputWindowSize = (size < OUTPUT_WINDOW_SIZE) ? size : OUTPUT_WINDOW_SIZE;}
     void querySurfaceRenderStatus(VideoSurfaceBuffer* surface);
     void enableLowDelayMode(bool enable) {mLowDelay = enable;}
+    void setRotationDegrees(VideoDecodeBuffer *buffer);
 };
 
 

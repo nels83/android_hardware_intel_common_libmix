@@ -124,6 +124,7 @@ struct VideoDecodeBuffer {
     int32_t size;
     int64_t timeStamp;
     uint32_t flag;
+    uint32_t rotationDegrees;
     VideoExtensionBuffer *ext;
 };
 

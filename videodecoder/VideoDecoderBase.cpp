@@ -55,6 +55,7 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
       mManageReference(true),
       mOutputMethod(OUTPUT_BY_PCT),
       mOutputWindowSize(OUTPUT_WINDOW_SIZE),
+      mRotationDegrees(0),
       mNumSurfaces(0),
       mSurfaceBuffers(NULL),
       mOutputHead(NULL),
@@ -1371,3 +1372,25 @@ void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *CurrentSurface) {
         }
     }
 }
+
+void VideoDecoderBase::setRotationDegrees(VideoDecodeBuffer *buffer) {
+
+    if (mRotationDegrees != buffer->rotationDegrees) {
+        ITRACE("set new mRotationDegrees = %d", mRotationDegrees);
+        VADisplayAttribute rotate;
+        rotate.type = VADisplayAttribRotation;
+        rotate.value = VA_ROTATION_NONE;
+        if (buffer->rotationDegrees == 0)
+            rotate.value = VA_ROTATION_NONE;
+        else if (buffer->rotationDegrees == 90)
+            rotate.value = VA_ROTATION_90;
+        else if (buffer->rotationDegrees == 180)
+            rotate.value = VA_ROTATION_180;
+        else if (buffer->rotationDegrees == 270)
+            rotate.value = VA_ROTATION_270;
+
+        vaSetDisplayAttributes(mVADisplay, &rotate, 1);
+        mRotationDegrees = buffer->rotationDegrees;
+   }
+}
+

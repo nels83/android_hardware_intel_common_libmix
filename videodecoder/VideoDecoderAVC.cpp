@@ -117,6 +117,8 @@ Decode_Status VideoDecoderAVC::decode(VideoDecodeBuffer *buffer) {
         }
     }
 
+    VideoDecoderBase::setRotationDegrees(buffer);
+
     status = decodeFrame(buffer, data);
     if (status == DECODE_MULTIPLE_FRAME) {
         buffer->ext = &mExtensionBuffer;

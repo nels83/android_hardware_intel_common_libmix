@@ -145,6 +145,8 @@ Decode_Status VideoDecoderVP8::decode(VideoDecodeBuffer *buffer) {
         CHECK_STATUS("startVA");
     }
 
+    VideoDecoderBase::setRotationDegrees(buffer);
+
     status = decodeFrame(buffer, data);
 
     return status;
