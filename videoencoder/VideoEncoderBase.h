@@ -16,15 +16,7 @@
 #include "IntelMetadataBuffer.h"
 #include <utils/List.h>
 #include <utils/threads.h>
-
-struct SurfaceMap {
-    VASurfaceID surface;
-    VASurfaceID surface_backup;
-    MetadataBufferType type;
-    int32_t value;
-    ValueInfo vinfo;
-    bool added;
-};
+#include "VideoEncoderUtils.h"
 
 struct EncodeTask {
     VASurfaceID enc_surface;
@@ -84,12 +76,7 @@ private:
     Encode_Status setUpstreamBuffer(VideoParamsUpstreamBuffer *upStreamBuffer);
     Encode_Status getNewUsrptrFromSurface(uint32_t width, uint32_t height, uint32_t format,
             uint32_t expectedSize, uint32_t *outsize, uint32_t *stride, uint8_t **usrptr);
-    Encode_Status surfaceMappingForSurface(SurfaceMap *map);
-    Encode_Status surfaceMappingForGfxHandle(SurfaceMap *map);
-    Encode_Status surfaceMappingForKbufHandle(SurfaceMap *map);
-    Encode_Status surfaceMappingForMalloc(SurfaceMap *map);
-    Encode_Status surfaceMapping(SurfaceMap *map);
-    SurfaceMap *findSurfaceMapByValue(int32_t value);
+    VASurfaceMap* findSurfaceMapByValue(int32_t value);
     Encode_Status manageSrcSurface(VideoEncRawBuffer *inBuffer, VASurfaceID *sid);
     void PrepareFrameInfo(EncodeTask* task);
 
@@ -131,7 +118,7 @@ protected:
     VABufferID mSliceParamBuf;
     VASurfaceID* mAutoRefSurfaces;
 
-    android::List <SurfaceMap *> mSrcSurfaceMapList;  //all mapped surface info list from input buffer
+    android::List <VASurfaceMap *> mSrcSurfaceMapList;  //all mapped surface info list from input buffer
     android::List <EncodeTask *> mEncodeTaskList;  //all encode tasks list
     android::List <VABufferID> mVACodedBufferList;  //all available codedbuffer list
 
@@ -163,6 +150,9 @@ protected:
 
     //supported surface memory types
     int mSupportedSurfaceMemType;
+
+    //VASurface mapping extra action
+    int mVASurfaceMappingAction;
 
 #ifdef INTEL_VIDEO_XPROC_SHARING
     uint32_t mSessionFlag;

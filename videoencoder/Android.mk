@@ -17,6 +17,7 @@ LOCAL_SRC_FILES :=              \
     VideoEncoderH263.cpp        \
     VideoEncoderMP4.cpp         \
     VideoEncoderVP8.cpp         \
+    VideoEncoderUtils.cpp       \
     VideoEncoderHost.cpp
 
 ifeq ($(ENABLE_IMG_GRAPHICS),)
@@ -51,6 +52,7 @@ LOCAL_SHARED_LIBRARIES :=       \
         libva-tpi		\
         libui \
         libutils \
+        libhardware \
 	libintelmetadatabuffer
 
 #LOCAL_CFLAGS += -DANDROID
@@ -76,6 +78,10 @@ endif
 
 ifeq ($(ENABLE_IMG_GRAPHICS),true)
     LOCAL_CFLAGS += -DIMG_GFX
+
+    ifeq ($(ENABLE_MRFL_GRAPHICS),true)
+        LOCAL_CFLAGS += -DMRFLD_GFX
+    endif
 endif
 
 LOCAL_MODULE_TAGS := optional

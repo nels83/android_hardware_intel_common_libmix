@@ -132,6 +132,9 @@ PVSoftMPEG4Encoder::PVSoftMPEG4Encoder(const char *name)
     }
 
     setDefaultParams();
+#if NO_BUFFER_SHARE
+    mVASurfaceMappingAction |= MAPACT_COPY;
+#endif
 
     LOG_I("Construct PVSoftMPEG4Encoder");
 

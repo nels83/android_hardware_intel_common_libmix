@@ -183,7 +183,7 @@ public:
         gNumFramesOutput = 0;
         createResource ();
 
-#if 1
+#if 0
         {
             int size= mStride * mHeight * 1.5;
             void* tmp = malloc(size);
@@ -211,7 +211,14 @@ public:
             //upload src data
             LOG("Fill src pictures width=%d, Height=%d\n", mStride, mHeight);
             for(int i=0; i<PRELOAD_FRAME_NUM; i++) {
-                YUV_generator_planar(mStride, mHeight, mUsrptr[i], mStride, mUsrptr[i] + mStride*mHeight, mStride, 0, 0, 1);
+                preSourceWriting(i);
+                if (mColorFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
+                    int color = 0xFF0000FF;
+                    for(int j=0; j<mStride*mHeight; j++)
+                        memcpy(mUsrptr[i]+ j*4, &color, 4);
+                }else
+                    YUV_generator_planar(mStride, mHeight, mUsrptr[i], mStride, mUsrptr[i] + mStride*mHeight, mStride, 0, 0, 1);
+                postSourceWriting(i);
             }
             LOG("Fill src pictures end\n");
         }else{
@@ -239,13 +246,23 @@ public:
             return err;
         }
 
+        preSourceWriting(gNumFramesOutput % PRELOAD_FRAME_NUM);
+
         if (mYuvhandle) {
             //load from yuv file
-            size_t readsize = mStride*mHeight*3/2;
+            size_t readsize = 0;
+            if (mColorFormat == HAL_PIXEL_FORMAT_RGBA_8888)
+                readsize = mStride * mHeight * 4;
+            else
+                readsize = mStride * mHeight * 3 / 2;
+
             size_t ret = 0;
 
             while (readsize > 0) {
-                ret = fread(mUsrptr[gNumFramesOutput % PRELOAD_FRAME_NUM] + mStride*mHeight*3/2 - readsize,  1, readsize, mYuvhandle);
+                if (mColorFormat == HAL_PIXEL_FORMAT_RGBA_8888)
+                    ret = fread(mUsrptr[gNumFramesOutput % PRELOAD_FRAME_NUM] + mStride*mHeight*4 - readsize,  1, readsize, mYuvhandle);
+                else
+                    ret = fread(mUsrptr[gNumFramesOutput % PRELOAD_FRAME_NUM] + mStride*mHeight*3/2 - readsize,  1, readsize, mYuvhandle);
 
                 if (ret <= 0) {
                     (*buffer)->release();
@@ -283,6 +300,8 @@ public:
         (*buffer)->meta_data()->setInt64(
                 kKeyTime, (gNumFramesOutput * 1000000) / mFrameRate);
 
+        postSourceWriting(gNumFramesOutput % PRELOAD_FRAME_NUM);
+
         ++gNumFramesOutput;
         if (gNumFramesOutput % 10 ==0)
             fprintf(stderr, ".");
@@ -293,6 +312,8 @@ public:
         return OK;
     }
 
+    virtual void preSourceWriting(int i) {}
+    virtual void postSourceWriting(int i) {}
 protected:
     virtual ~DummySource() {
         for(int i = 0; i < PRELOAD_FRAME_NUM; i ++)
@@ -642,11 +663,6 @@ public:
             }
             mGraphicBuffer[i] = graphicBuffer;
 
-            void* vaddr[3];
-            if (graphicBuffer->lock(usage, &vaddr[0]) != OK)
-                return UNKNOWN_ERROR;
-
-            mUsrptr[i] = (uint8_t*)vaddr[0];
             mIMB[i] = new IntelMetadataBuffer();
             mIMB[i]->SetType(MetadataBufferTypeCameraSource);
 #ifdef INTEL_VIDEO_XPROC_SHARING
@@ -656,10 +672,7 @@ public:
             mIMB[i]->SetValue((int32_t)mGraphicBuffer[i]->handle);
 #endif
             mIMB[i]->SetValueInfo(&vinfo);
-            graphicBuffer->unlock();
 
-            mUsrptr[i] = (uint8_t*)vaddr[0];
-			
             IMG_native_handle_t* h = (IMG_native_handle_t*) mGraphicBuffer[i]->handle;
             mStride = h->iWidth;
             mHeight = h->iHeight;
@@ -668,6 +681,17 @@ public:
         }
 
         return OK;
+    }
+
+    void preSourceWriting(int i) {
+        uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_SW_WRITE_OFTEN;// | GraphicBuffer::USAGE_HW_COMPOSER;
+        void* vaddr[3];
+        if (mGraphicBuffer[i]->lock(usage, &vaddr[0]) != OK)
+            printf("GfxSource lock failed\n");
+        mUsrptr[i] = (uint8_t*)vaddr[0];
+    }
+    void postSourceWriting(int i) {
+        mGraphicBuffer[i]->unlock();
     }
 
 private:
@@ -699,18 +723,25 @@ public:
         {
             if (gfx_alloc(mWidth, mHeight, mColorFormat, usage, &mHandle[i], (int32_t*)&mStride) != 0)
                 return UNKNOWN_ERROR;
-            void* vaddr[3];
 
-            if (gfx_lock(mHandle[i], usage, 0, 0, mWidth, mHeight, &vaddr[0]) != 0)
-                return UNKNOWN_ERROR;
             mIMB[i] = new IntelMetadataBuffer(MetadataBufferTypeGrallocSource, (int32_t)mHandle[i]);
-            gfx_unlock(mHandle[i]);
-            mUsrptr[i] = (uint8_t*)vaddr[0];
+
             IMG_native_handle_t* h = (IMG_native_handle_t*) mHandle[i];
             mStride = h->iWidth;
             mHeight = h->iHeight;
         }
         return OK;
+    }
+
+    void preSourceWriting(int i) {
+        int usage = GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_WRITE_OFTEN;
+        void* vaddr[3];
+        if (gfx_lock(mHandle[i], usage, 0, 0, mWidth, mHeight, &vaddr[0]) != 0)
+            printf("GrallocSource lock failed\n");
+        mUsrptr[i] = (uint8_t*)vaddr[0];
+    }
+    void postSourceWriting(int i) {
+        gfx_unlock(mHandle[i]);
     }
 
 private:
@@ -939,6 +970,9 @@ public:
         success = meta->findInt32('sync', &mSyncMode);
         CHECK(success);
 
+        success = meta->findInt32('rawc', &mRawColor);
+        CHECK(success);
+
 //    const char *RCMODE[] = {"VBR", "CBR", "VCM", "NO_RC", NULL};
         VideoRateControl RC_MODES[] = {RATE_CONTROL_VBR,
         							RATE_CONTROL_CBR,
@@ -1154,6 +1188,10 @@ private:
         mEncoderParams.frameRate.frameRateDenom = 1;
         mEncoderParams.frameRate.frameRateNum = mFPS;
         mEncoderParams.rcMode = mRCMode;
+        if (mRawColor == 2)
+            mEncoderParams.rawFormat = RAW_FORMAT_OPAQUE;
+        else
+            mEncoderParams.rawFormat = RAW_FORMAT_NV12;
 
         if (strcmp(mMixCodec, MPEG4_MIME_TYPE) == 0) {
             mEncoderParams.profile = (VAProfile)VAProfileMPEG4Simple;
@@ -1213,6 +1251,7 @@ private:
     int mIdrInt;
     int mDisableFrameSkip;
     int mSyncMode;
+    int mRawColor;
 
     bool mFirstFrame;
     bool mSrcEOS;
@@ -1459,25 +1498,26 @@ public:
 void usage() {
     printf("2nd generation Mix_encoder\n");
     printf("Usage: mix_encoder2 [options]\n\n");
-    printf(" -a/--initQP <qp>					set initQP, default 0\n");
+    printf(" -a/--initQP <qp>				set initQP, default 0\n");
     printf(" -b/--bitrate <Bitrate>				set bitrate bps, default 10M\n");
     printf(" -c/--codec <Codec>				select codec, like H264(default), MPEG4, H263, VP8\n");
     printf(" -d/--intraPeriod <period>			set IntraPeriod, default 30\n");
     printf(" -e/--encoder	 <encoder>			select encoder, like MIX(default), OMXCODEC\n");
     printf(" -f <output file>				set output file name\n");
     printf(" -i/--yuv <yuvfile>				select yuv generate method, AUTO(default) or from yuv file\n");
-    printf(" -j/--winSize						set window size, default 1000\n");
+    printf(" -j/--winSize					set window size, default 1000\n");
     printf(" -k/--encWidth <Width> -g/--encHeight <Hight>	set encoder width/height, default 1280*720\n");
-    printf(" -l/--idrInterval					set IdrInterval, default 1\n");
+    printf(" -l/--idrInterval				set IdrInterval, default 1\n");
     printf(" -m/--disableMetadata				disable Metadata Mode(default enabled)\n");
     printf(" -n/--count <number>				set source frame number, default 30\n");
     printf(" -o/--outputformat <format>			set output file format, like MP4(default), RAW, IVF(only for VP8)\n");
     printf(" -p/--fps <Bitrate>				set frame rate, default 30\n");
-    printf(" -q/--minQP <qp>					set minQP, default 0\n");
+    printf(" -q/--minQP <qp>				set minQP, default 0\n");
     printf(" -r/--rcMode <Mode>				set rc mode, like VBR(default), CBR, VCM, NO_RC\n");
     printf(" -s/--src <source>				select source, like MALLOC(default), VASURFACE, KBUFHANDLE, GFX, GRALLOC, MEMHEAP, SURFACEMEDIASOURCE (CAMERASOURCE, not support yet) \n");
-    printf(" -t/--sessionFlag	<sessionflag>	            set sessionflag, default is 0\n");
+    printf(" -t/--sessionFlag	<sessionflag>	       	set sessionflag, default is 0\n");
     printf(" -u/--disableFrameSkip				disable frame skip, default is false\n");
+    printf(" -v/--gfxColor					set gfx color, default is 0(HAL_PIXEL_FORMAT_NV12), 1(OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar), 2(HAL_PIXEL_FORMAT_RGBA_8888)\n");
     printf(" -w <Width> -h <Height>				set source width /height, default 1280*720\n");
 
     printf("\n");
@@ -1506,6 +1546,7 @@ int main(int argc, char* argv[])
     int IdrInt = 1;
     int IntraPeriod = 30;
     int DisableFrameSkip = 0;
+    int GfxColor = 0;
     int OutFormat = 0;
     int SyncMode = 0;
     char* OutFileName = "out.264";
@@ -1539,6 +1580,7 @@ int main(int argc, char* argv[])
 						{"idrInt", required_argument, NULL, 'l'},
 						{"disableFrameSkip", no_argument, NULL, 'u'},
 						{"sessionFlag", required_argument, NULL, 't'},
+						{"gfxColor", required_argument, NULL, 'v'},
 						{0, 0, 0, 0}
     };
 
@@ -1676,6 +1718,10 @@ int main(int argc, char* argv[])
                     DisableFrameSkip = 1;
                     break;
 
+                case 'v':
+                    GfxColor = atoi(optarg);
+                    break;
+
                 case 'w':
                     SrcWidth = atoi(optarg);
                     SrcStride = SrcWidth;
@@ -1689,6 +1735,10 @@ int main(int argc, char* argv[])
         }
     }
 
+    //RGB is only valid in gfx/gralloc source mode
+    if ( GfxColor > 2 && (SrcType != 3 || SrcType != 4) )
+        GfxColor = 0;
+
     //export encoding parameters summary
     printf("=========================================\n");
     printf("Source:\n");
@@ -1699,7 +1749,7 @@ int main(int argc, char* argv[])
     printf("Type: %s, Codec: %s, Width: %d, Height: %d\n", ENCTYPE[EncType], CODEC[EncCodec], EncWidth, EncHeight);
     printf("RC: %s, Bitrate: %d bps, initQP: %d, minQP: %d\n", RCMODE[EncRCMode], EncBitrate, InitQP, MinQP);
     printf("winSize: %d, IdrInterval: %d, IntraPeriod: %d, FPS: %d \n", WinSize, IdrInt, IntraPeriod, SrcFps);
-    printf("Frameskip: %d\n", !DisableFrameSkip);
+    printf("Frameskip: %d, GfxColor: %s\n", !DisableFrameSkip, GfxColor > 0 ? (GfxColor > 1? "HAL_PIXEL_FORMAT_RGBA_8888":"OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar"):"HAL_PIXEL_FORMAT_NV12");
 
     printf("\nOut:\n");
     printf("Type: %s, File: %s\n", OUTFORMAT[OutFormat], OutFileName);
@@ -1715,7 +1765,12 @@ int main(int argc, char* argv[])
     src_meta->setInt32(kKeyHeight, SrcHeight);
     src_meta->setInt32(kKeyStride, SrcStride);
     src_meta->setInt32(kKeyFrameRate, SrcFps);
-    src_meta->setInt32(kKeyColorFormat, OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar); //HAL_PIXEL_FORMAT_NV12     OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar =  0x7FA00E00,
+    if (GfxColor == 1)
+        src_meta->setInt32(kKeyColorFormat, 0x7FA00E00); //OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
+    else if (GfxColor == 2)
+        src_meta->setInt32(kKeyColorFormat, HAL_PIXEL_FORMAT_RGBA_8888);
+    else
+        src_meta->setInt32(kKeyColorFormat, HAL_PIXEL_FORMAT_NV12);
 
     src_meta->setCString('yuvf', Yuvfile);
     src_meta->setInt32('fnum', SrcFrameNum);
@@ -1777,9 +1832,10 @@ int main(int argc, char* argv[])
     enc_meta->setInt32('mnqp', MinQP);
     enc_meta->setInt32('iapd', IntraPeriod);
     enc_meta->setInt32('wsiz', WinSize);
-    enc_meta->setInt32('idri', WinSize);
+    enc_meta->setInt32('idri', IdrInt);
     enc_meta->setInt32('difs', DisableFrameSkip);
     enc_meta->setInt32('sync', SyncMode);
+    enc_meta->setInt32('rawc', GfxColor);
 
     uint32_t encoder_flags = 0;
     if (MetadataMode)

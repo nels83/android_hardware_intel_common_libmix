@@ -9,10 +9,11 @@
 #ifndef __VIDEO_ENCODER_LOG_H__
 #define __VIDEO_ENCODER_LOG_H__
 
+#define LOG_TAG "VideoEncoder"
+
 // Components
 #include <cutils/log.h>
 
-#define LOG_TAG "VideoEncoder"
 #if 1
 #define LOG_V(...) LOGV_IF(gLogLevel, __VA_ARGS__)
 #define LOG_I(...) LOGI_IF(gLogLevel, __VA_ARGS__)
