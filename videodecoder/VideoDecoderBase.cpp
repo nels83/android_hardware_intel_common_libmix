@@ -233,9 +233,8 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining, VideoErrorBu
         }
         vaStatus = vaSetTimestampForSurface(mVADisplay, outputByPos->renderBuffer.surface, outputByPos->renderBuffer.timeStamp);
         if (useGraphicBuffer) {
-            if (vaSyncSurface(mVADisplay, outputByPos->renderBuffer.surface) == VA_STATUS_ERROR_DECODING_ERROR) {
-                fillDecodingErrors(&(outputByPos->renderBuffer));
-            }
+            vaSyncSurface(mVADisplay, outputByPos->renderBuffer.surface);
+            fillDecodingErrors(&(outputByPos->renderBuffer));
         }
         if (draining && mOutputTail == NULL) {
             outputByPos->renderBuffer.flag |= IS_EOS;
@@ -290,9 +289,8 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining, VideoErrorBu
     vaStatus = vaSetTimestampForSurface(mVADisplay, output->renderBuffer.surface, output->renderBuffer.timeStamp);
 
     if (useGraphicBuffer) {
-        if (vaSyncSurface(mVADisplay, output->renderBuffer.surface) == VA_STATUS_ERROR_DECODING_ERROR) {
-            fillDecodingErrors(&(output->renderBuffer));
-        }
+        vaSyncSurface(mVADisplay, output->renderBuffer.surface);
+        fillDecodingErrors(&(output->renderBuffer));
     }
 
     if (draining && mOutputTail == NULL) {
@@ -1361,8 +1359,10 @@ void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *CurrentSurface) {
     if (mErrReportEnabled) {
         CurrentSurface->errBuf.timeStamp = CurrentSurface->timeStamp;
         // TODO: is 10 a suitable number?
-        VASurfaceDecodeMBErrors err_drv_output[MAX_ERR_NUM - 1];
+        VASurfaceDecodeMBErrors *err_drv_output;
         ret = vaQuerySurfaceError(mVADisplay, CurrentSurface->surface, VA_STATUS_ERROR_DECODING_ERROR, (void **)&err_drv_output);
+        if (ret)
+            return;
         for (int i = CurrentSurface->errBuf.errorNumber; i < MAX_ERR_NUM - 1; i++) {
             if (err_drv_output[i].status != -1) {
                 CurrentSurface->errBuf.errorNumber++;
