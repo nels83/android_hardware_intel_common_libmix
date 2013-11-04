@@ -445,6 +445,9 @@ Decode_Status VideoDecoderAVC::updateDPB(VAPictureParameterBufferH264 *picParam)
         dpb->surfaceBuffer = findRefSurfaceBuffer(ref);
         if (dpb->surfaceBuffer == NULL) {
             ETRACE("Reference frame %d is missing for current frame %d", dpb->poc, getPOC(&(picParam->CurrPic)));
+            // Error DecodeRefMissing is counted once even there're multiple
+            mAcquiredBuffer->renderBuffer.errBuf.errorNumber = 1;
+            mAcquiredBuffer->renderBuffer.errBuf.errorArray[0].type = DecodeRefMissing;
             if (dpb->poc == getPOC(&(picParam->CurrPic))) {
                 WTRACE("updateDPB: Using the current picture for missing reference.");
                 dpb->surfaceBuffer = mAcquiredBuffer;

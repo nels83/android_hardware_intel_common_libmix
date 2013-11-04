@@ -98,8 +98,8 @@ protected:
 private:
     Decode_Status mapSurface(void);
     void initSurfaceBuffer(bool reset);
-    void drainDecodingErrors(VideoErrorBuffer *outErrBuf, VideoRenderBuffer *CurrentSurface);
-    void fillDecodingErrors(VideoRenderBuffer *CurrentSurface);
+    void drainDecodingErrors(VideoErrorBuffer *outErrBuf, VideoRenderBuffer *currentSurface);
+    void fillDecodingErrors(VideoRenderBuffer *currentSurface);
 
     bool mInitialized;
     pthread_mutex_t mLock;

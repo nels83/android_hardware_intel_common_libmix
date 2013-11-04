@@ -1345,29 +1345,29 @@ Decode_Status VideoDecoderBase::checkHardwareCapability(VAProfile profile) {
     return DECODE_SUCCESS;
 }
 
-void VideoDecoderBase::drainDecodingErrors(VideoErrorBuffer *outErrBuf, VideoRenderBuffer *CurrentSurface) {
-    if (mErrReportEnabled && outErrBuf && CurrentSurface) {
-        memcpy(outErrBuf, &(CurrentSurface->errBuf), sizeof(VideoErrorBuffer));
+void VideoDecoderBase::drainDecodingErrors(VideoErrorBuffer *outErrBuf, VideoRenderBuffer *currentSurface) {
+    if (mErrReportEnabled && outErrBuf && currentSurface) {
+        memcpy(outErrBuf, &(currentSurface->errBuf), sizeof(VideoErrorBuffer));
 
-        CurrentSurface->errBuf.errorNumber = 0;
-		CurrentSurface->errBuf.timeStamp = INVALID_PTS;
+        currentSurface->errBuf.errorNumber = 0;
+        currentSurface->errBuf.timeStamp = INVALID_PTS;
     }
 }
 
-void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *CurrentSurface) {
+void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *currentSurface) {
     VAStatus ret;
 
     if (mErrReportEnabled) {
-        CurrentSurface->errBuf.timeStamp = CurrentSurface->timeStamp;
+        currentSurface->errBuf.timeStamp = currentSurface->timeStamp;
         // TODO: is 10 a suitable number?
         VASurfaceDecodeMBErrors *err_drv_output;
-        ret = vaQuerySurfaceError(mVADisplay, CurrentSurface->surface, VA_STATUS_ERROR_DECODING_ERROR, (void **)&err_drv_output);
+        ret = vaQuerySurfaceError(mVADisplay, currentSurface->surface, VA_STATUS_ERROR_DECODING_ERROR, (void **)&err_drv_output);
         if (ret)
             return;
-        for (int i = CurrentSurface->errBuf.errorNumber; i < MAX_ERR_NUM - 1; i++) {
+        for (int i = currentSurface->errBuf.errorNumber; i < MAX_ERR_NUM - 1; i++) {
             if (err_drv_output[i].status != -1) {
-                CurrentSurface->errBuf.errorNumber++;
-                CurrentSurface->errBuf.errorArray[i].type = (VideoDecodeErrorType)err_drv_output[i].decode_error_type;
+                currentSurface->errBuf.errorNumber++;
+                currentSurface->errBuf.errorArray[i].type = (VideoDecodeErrorType)err_drv_output[i].decode_error_type;
             }
         }
     }
