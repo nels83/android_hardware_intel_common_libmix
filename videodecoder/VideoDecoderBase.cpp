@@ -1348,14 +1348,18 @@ void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *currentSurface) {
     if (mErrReportEnabled) {
         currentSurface->errBuf.timeStamp = currentSurface->timeStamp;
         // TODO: is 10 a suitable number?
-        VASurfaceDecodeMBErrors *err_drv_output;
+        VASurfaceDecodeMBErrors *err_drv_output = NULL;
         ret = vaQuerySurfaceError(mVADisplay, currentSurface->surface, VA_STATUS_ERROR_DECODING_ERROR, (void **)&err_drv_output);
-        if (ret)
+        if (ret || !err_drv_output) {
+            WTRACE("vaQuerySurfaceError failed.");
             return;
-        for (int i = currentSurface->errBuf.errorNumber; i < MAX_ERR_NUM - 1; i++) {
+        }
+
+        int offset =  0x1 & currentSurface->errBuf.errorNumber;// offset is either 0 or 1
+        for (int i = 0; i < MAX_ERR_NUM - offset; i++) {
             if (err_drv_output[i].status != -1) {
                 currentSurface->errBuf.errorNumber++;
-                currentSurface->errBuf.errorArray[i].type = (VideoDecodeErrorType)err_drv_output[i].decode_error_type;
+                currentSurface->errBuf.errorArray[i + offset].type = (VideoDecodeErrorType)err_drv_output[i].decode_error_type;
             }
         }
     }
