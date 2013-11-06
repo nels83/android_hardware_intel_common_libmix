@@ -171,7 +171,7 @@ protected:
     void setOutputWindowSize(int32_t size) {mOutputWindowSize = (size < OUTPUT_WINDOW_SIZE) ? size : OUTPUT_WINDOW_SIZE;}
     void querySurfaceRenderStatus(VideoSurfaceBuffer* surface);
     void enableLowDelayMode(bool enable) {mLowDelay = enable;}
-    void setRotationDegrees(VideoDecodeBuffer *buffer);
+    void setRotationDegrees(int32_t rotationDegrees);
 };
 
 

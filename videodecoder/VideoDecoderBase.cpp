@@ -935,19 +935,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         CHECK_STATUS("mapSurface")
     }
 
-    VADisplayAttribute rotate;
-    rotate.type = VADisplayAttribRotation;
-    rotate.value = VA_ROTATION_NONE;
-    if (mConfigBuffer.rotationDegrees == 0)
-        rotate.value = VA_ROTATION_NONE;
-    else if (mConfigBuffer.rotationDegrees == 90)
-        rotate.value = VA_ROTATION_90;
-    else if (mConfigBuffer.rotationDegrees == 180)
-        rotate.value = VA_ROTATION_180;
-    else if (mConfigBuffer.rotationDegrees == 270)
-        rotate.value = VA_ROTATION_270;
-
-    vaStatus = vaSetDisplayAttributes(mVADisplay, &rotate, 1);
+    setRotationDegrees(mConfigBuffer.rotationDegrees);
 
     mVAStarted = true;
     return DECODE_SUCCESS;
@@ -1373,24 +1361,28 @@ void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *currentSurface) {
     }
 }
 
-void VideoDecoderBase::setRotationDegrees(VideoDecodeBuffer *buffer) {
+void VideoDecoderBase::setRotationDegrees(int32_t rotationDegrees) {
+    if (mRotationDegrees == rotationDegrees) {
+        return;
+    }
 
-    if (mRotationDegrees != buffer->rotationDegrees) {
-        ITRACE("set new mRotationDegrees = %d", mRotationDegrees);
-        VADisplayAttribute rotate;
-        rotate.type = VADisplayAttribRotation;
+    ITRACE("set new rotation degree: %d", rotationDegrees);
+    VADisplayAttribute rotate;
+    rotate.type = VADisplayAttribRotation;
+    rotate.value = VA_ROTATION_NONE;
+    if (rotationDegrees == 0)
         rotate.value = VA_ROTATION_NONE;
-        if (buffer->rotationDegrees == 0)
-            rotate.value = VA_ROTATION_NONE;
-        else if (buffer->rotationDegrees == 90)
-            rotate.value = VA_ROTATION_90;
-        else if (buffer->rotationDegrees == 180)
-            rotate.value = VA_ROTATION_180;
-        else if (buffer->rotationDegrees == 270)
-            rotate.value = VA_ROTATION_270;
+    else if (rotationDegrees == 90)
+        rotate.value = VA_ROTATION_90;
+    else if (rotationDegrees == 180)
+        rotate.value = VA_ROTATION_180;
+    else if (rotationDegrees == 270)
+        rotate.value = VA_ROTATION_270;
 
-        vaSetDisplayAttributes(mVADisplay, &rotate, 1);
-        mRotationDegrees = buffer->rotationDegrees;
-   }
+    VAStatus ret = vaSetDisplayAttributes(mVADisplay, &rotate, 1);
+    if (ret) {
+        ETRACE("Failed to set rotation degree.");
+    }
+    mRotationDegrees = rotationDegrees;
 }
 

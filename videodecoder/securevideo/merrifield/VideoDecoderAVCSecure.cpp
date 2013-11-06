@@ -137,7 +137,7 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
         // |...encrypted video bitstream (16 bytes aligned)...| 4 bytes of header size |...NALU headers..|
         pByteStream = buffer->data + buffer->size + 4;
         sizeLeft = *(int32_t *)(buffer->data + buffer->size);
-        ITRACE("%s sizeLeft: %d buffer->size: %#x", __func__, sizeLeft, buffer->size);
+        VTRACE("%s sizeLeft: %d buffer->size: %#x", __func__, sizeLeft, buffer->size);
         mInputBuffer = buffer->data;
     } else {
         status = parseAnnexBStream(buffer->data, buffer->size, &mByteStream);
