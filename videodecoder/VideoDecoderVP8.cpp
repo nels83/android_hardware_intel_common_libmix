@@ -105,6 +105,7 @@ Decode_Status VideoDecoderVP8::start(VideoConfigBuffer *buffer) {
     status = VideoDecoderBase::parseBuffer(buffer->data, buffer->size, true, (void**)&data);
     CHECK_STATUS("VideoDecoderBase::parseBuffer");
 
+    enableLowDelayMode(true);
     status = startVA(data);
     return status;
 }

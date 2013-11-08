@@ -164,16 +164,23 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
 
     uint64_t lastPTS = mCurrentPTS;
     mCurrentPTS = buffer->timeStamp;
-
     //if (lastPTS != mCurrentPTS) {
     if (isNewFrame(data, lastPTS == mCurrentPTS)) {
+        if (mLowDelay) {
+            // start decoding a new frame
+            status = beginDecodingFrame(data);
+            CHECK_STATUS("beginDecodingFrame");
+        }
+
         // finish decoding the last frame
         status = endDecodingFrame(false);
         CHECK_STATUS("endDecodingFrame");
 
-        // start decoding a new frame
-        status = beginDecodingFrame(data);
-        CHECK_STATUS("beginDecodingFrame");
+        if (!mLowDelay) {
+            // start decoding a new frame
+            status = beginDecodingFrame(data);
+            CHECK_STATUS("beginDecodingFrame");
+        }
     } else {
         status = continueDecodingFrame(data);
         CHECK_STATUS("continueDecodingFrame");

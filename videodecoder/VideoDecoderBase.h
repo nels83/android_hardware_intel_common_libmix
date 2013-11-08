@@ -105,6 +105,7 @@ private:
     pthread_mutex_t mLock;
 
 protected:
+    bool mLowDelay; // when true, decoded frame is immediately output for rendering
     VideoFormatInfo mVideoFormatInfo;
     Display *mDisplay;
     VADisplay mVADisplay;
@@ -146,7 +147,6 @@ protected:
      };
 
 private:
-    bool mLowDelay; // when true, decoded frame is immediately output for rendering
     bool mRawOutput; // whether to output NV12 raw data
     bool mManageReference;  // this should stay true for VC1/MP4 decoder, and stay false for AVC decoder. AVC  handles reference frame using DPB
     OUTPUT_METHOD mOutputMethod;
