@@ -924,10 +924,6 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         return DECODE_MEMORY_FAIL;
     }
 
-    if (mConfigBuffer.flag & WANT_ERROR_REPORT) {
-        mErrReportEnabled = true;
-    }
-
     initSurfaceBuffer(true);
 
     if ((int32_t)profile == VAProfileSoftwareDecoding) {

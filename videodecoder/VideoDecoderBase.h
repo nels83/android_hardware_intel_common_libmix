@@ -64,6 +64,7 @@ public:
     virtual Decode_Status signalRenderDone(void * graphichandler);
     virtual const VideoFormatInfo* getFormatInfo(void);
     virtual bool checkBufferAvail();
+    virtual void enableErrorReport(bool enabled = false) {mErrReportEnabled = enabled; };
 
 protected:
     // each acquireSurfaceBuffer must be followed by a corresponding outputSurfaceBuffer or releaseSurfaceBuffer.

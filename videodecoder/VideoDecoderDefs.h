@@ -104,10 +104,6 @@ typedef enum {
 
     // indicate it's the last output frame of the sequence
     IS_EOS = 0x10000,
-
-    // indicate whether error reporting is needed
-    WANT_ERROR_REPORT = 0x20000,
-
 } VIDEO_BUFFER_FLAG;
 
 typedef enum
