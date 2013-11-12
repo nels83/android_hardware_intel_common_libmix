@@ -78,6 +78,7 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
     }
     pthread_mutex_init(&mLock, NULL);
     mVideoFormatInfo.mimeType = strdup(mimeType);
+    mUseGEN = false;
 }
 
 VideoDecoderBase::~VideoDecoderBase() {
@@ -234,7 +235,7 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining, VideoErrorBu
             mOutputTail = NULL;
         }
         vaStatus = vaSetTimestampForSurface(mVADisplay, outputByPos->renderBuffer.surface, outputByPos->renderBuffer.timeStamp);
-        if (useGraphicBuffer) {
+        if (useGraphicBuffer && !mUseGEN) {
             vaSyncSurface(mVADisplay, outputByPos->renderBuffer.surface);
             fillDecodingErrors(&(outputByPos->renderBuffer));
         }
@@ -290,7 +291,7 @@ const VideoRenderBuffer* VideoDecoderBase::getOutput(bool draining, VideoErrorBu
     //VTRACE("Output POC %d for display (pts = %.2f)", output->pictureOrder, output->renderBuffer.timeStamp/1E6);
     vaStatus = vaSetTimestampForSurface(mVADisplay, output->renderBuffer.surface, output->renderBuffer.timeStamp);
 
-    if (useGraphicBuffer) {
+    if (useGraphicBuffer && !mUseGEN) {
         vaSyncSurface(mVADisplay, output->renderBuffer.surface);
         fillDecodingErrors(&(output->renderBuffer));
     }
@@ -769,10 +770,13 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
     if (profile >= VAProfileH264Baseline && profile <= VAProfileVC1Advanced) {
         ITRACE("Using GEN driver");
         mDisplay = "libva_driver_name=i965";
+        mUseGEN = true;
     } else {
         ITRACE("Using PVR driver");
         mDisplay = "libva_driver_name=pvr";
+        mUseGEN = false;
     }
+
 #endif
     mVADisplay = vaGetDisplay(mDisplay);
     if (mVADisplay == NULL) {

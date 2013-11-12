@@ -892,3 +892,46 @@ Decode_Status VideoDecoderAVC::checkHardwareCapability(VAProfile profile) {
 #endif
     return DECODE_SUCCESS;
 }
+
+#ifdef USE_AVC_SHORT_FORMAT
+Decode_Status VideoDecoderAVC::getCodecSpecificConfigs(
+    VAProfile profile, VAConfigID *config)
+{
+    VAStatus vaStatus;
+    VAConfigAttrib attrib[2];
+
+    if (config == NULL) {
+        ETRACE("Invalid parameter!");
+        return DECODE_FAIL;
+    }
+
+    attrib[0].type = VAConfigAttribRTFormat;
+    attrib[0].value = VA_RT_FORMAT_YUV420;
+    attrib[1].type = VAConfigAttribDecSliceMode;
+    attrib[1].value = VA_DEC_SLICE_MODE_NORMAL;
+
+    vaStatus = vaGetConfigAttributes(mVADisplay,profile,VAEntrypointVLD, &attrib[1], 1);
+
+    if (attrib[1].value & VA_DEC_SLICE_MODE_BASE) {
+        ITRACE("AVC short format used");
+        attrib[1].value = VA_DEC_SLICE_MODE_BASE;
+    } else if (attrib[1].value & VA_DEC_SLICE_MODE_NORMAL) {
+        ITRACE("AVC long format ssed");
+        attrib[1].value = VA_DEC_SLICE_MODE_NORMAL;
+    } else {
+        ETRACE("Unsupported Decode Slice Mode!");
+        return DECODE_FAIL;
+    }
+
+    vaStatus = vaCreateConfig(
+            mVADisplay,
+            profile,
+            VAEntrypointVLD,
+            &attrib[0],
+            2,
+            config);
+    CHECK_VA_STATUS("vaCreateConfig");
+
+    return DECODE_SUCCESS;
+}
+#endif

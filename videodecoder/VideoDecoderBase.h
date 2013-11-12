@@ -165,7 +165,7 @@ private:
     void *mParserHandle;
     void *mSignalBufferPre[MAX_GRAPHIC_BUFFER_NUM];
     uint32 mSignalBufferSize;
-
+    bool mUseGEN;
 protected:
     void ManageReference(bool enable) {mManageReference = enable;}
     void setOutputMethod(OUTPUT_METHOD method) {mOutputMethod = method;}
