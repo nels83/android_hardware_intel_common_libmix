@@ -68,7 +68,8 @@ VideoDecoderBase::VideoDecoderBase(const char *mimeType, _vbp_parser_type type)
       mParserType(type),
       mParserHandle(NULL),
       mInitialized(false),
-      mSignalBufferSize(0) {
+      mSignalBufferSize(0),
+      mErrReportEnabled(false){
 
     memset(&mVideoFormatInfo, 0, sizeof(VideoFormatInfo));
     memset(&mConfigBuffer, 0, sizeof(mConfigBuffer));
