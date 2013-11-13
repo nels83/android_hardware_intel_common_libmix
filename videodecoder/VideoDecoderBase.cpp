@@ -850,6 +850,8 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         mVASurfaceAttrib->offsets[3] = 0;
         mVASurfaceAttrib->private_data = (void *)mConfigBuffer.nativeWindow;
         mVASurfaceAttrib->flags = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
+        if (mConfigBuffer.flag & USE_TILING_MEMORY)
+            mVASurfaceAttrib->flags |= VA_SURFACE_EXTBUF_DESC_ENABLE_TILING;
 
         for (int i = 0; i < mNumSurfaces; i++) {
             mVASurfaceAttrib->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
