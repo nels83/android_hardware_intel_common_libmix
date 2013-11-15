@@ -212,8 +212,8 @@ public:
             LOG("Fill src pictures width=%d, Height=%d\n", mStride, mHeight);
             for(int i=0; i<PRELOAD_FRAME_NUM; i++) {
                 preSourceWriting(i);
-                if (mColorFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
-                    int color = 0xFF0000FF;
+                if (mColorFormat == HAL_PIXEL_FORMAT_BGRA_8888) {
+                    int color = 0x00FF00FF; //AA RR GG BB
                     for(int j=0; j<mStride*mHeight; j++)
                         memcpy(mUsrptr[i]+ j*4, &color, 4);
                 }else
@@ -251,7 +251,7 @@ public:
         if (mYuvhandle) {
             //load from yuv file
             size_t readsize = 0;
-            if (mColorFormat == HAL_PIXEL_FORMAT_RGBA_8888)
+            if (mColorFormat == HAL_PIXEL_FORMAT_BGRA_8888)
                 readsize = mStride * mHeight * 4;
             else
                 readsize = mStride * mHeight * 3 / 2;
@@ -259,7 +259,7 @@ public:
             size_t ret = 0;
 
             while (readsize > 0) {
-                if (mColorFormat == HAL_PIXEL_FORMAT_RGBA_8888)
+                if (mColorFormat == HAL_PIXEL_FORMAT_BGRA_8888)
                     ret = fread(mUsrptr[gNumFramesOutput % PRELOAD_FRAME_NUM] + mStride*mHeight*4 - readsize,  1, readsize, mYuvhandle);
                 else
                     ret = fread(mUsrptr[gNumFramesOutput % PRELOAD_FRAME_NUM] + mStride*mHeight*3/2 - readsize,  1, readsize, mYuvhandle);
@@ -637,7 +637,7 @@ public:
         sp<ISurfaceComposer> composer(ComposerService::getComposerService());
         mGraphicBufferAlloc = composer->createGraphicBufferAlloc();
 
-        uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_SW_WRITE_OFTEN;// | GraphicBuffer::USAGE_HW_COMPOSER;
+        uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_HW_RENDER | GraphicBuffer::USAGE_SW_WRITE_OFTEN;// | GraphicBuffer::USAGE_HW_COMPOSER;
         int32_t error;
 
         ValueInfo vinfo;
@@ -674,11 +674,11 @@ public:
             mIMB[i]->SetValueInfo(&vinfo);
 
             IMG_native_handle_t* h = (IMG_native_handle_t*) mGraphicBuffer[i]->handle;
-            mStride = h->iWidth;
+            mStride = graphicBuffer->getStride();
             mHeight = h->iHeight;
-
-//printf("mStride=%d, height=%d, format=%x", mStride, mHeight, h->iFormat);
+            printf("GfxSource handle iWidth=%d, iHeight=%d, stride=%d, color=0x%08x\n", h->iWidth, h->iHeight, mStride, h->iFormat);
         }
+        printf("GfxSource1 width=%d, height=%d, stride=%d\n", mWidth, mHeight, mStride);
 
         return OK;
     }
@@ -726,9 +726,11 @@ public:
 
             mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeGrallocSource, (int32_t)mHandle[i]);
             IMG_native_handle_t* h = (IMG_native_handle_t*) mHandle[i];
-            mStride = h->iWidth;
+//            mWidth = h->iWidth;
             mHeight = h->iHeight;
+        printf("GrallocSource iWidth=%d, iHeight=%d, stride=%d, Color=0x%08x\n", h->iWidth, h->iHeight, mStride, h->iFormat);
         }
+        printf("GrallocSource width=%d, height=%d, stride=%d\n", mWidth, mHeight, mStride);
         return OK;
     }
 
@@ -1516,7 +1518,7 @@ void usage() {
     printf(" -s/--src <source>				select source, like MALLOC(default), VASURFACE, KBUFHANDLE, GFX, GRALLOC, MEMHEAP, SURFACEMEDIASOURCE (CAMERASOURCE, not support yet) \n");
     printf(" -t/--sessionFlag	<sessionflag>	       	set sessionflag, default is 0\n");
     printf(" -u/--disableFrameSkip				disable frame skip, default is false\n");
-    printf(" -v/--gfxColor					set gfx color, default is 0(HAL_PIXEL_FORMAT_NV12), 1(OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar), 2(HAL_PIXEL_FORMAT_RGBA_8888)\n");
+    printf(" -v/--gfxColor					set gfx color, default is 0(HAL_PIXEL_FORMAT_NV12), 1(OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar), 2(HAL_PIXEL_FORMAT_BGRA_8888)\n");
     printf(" -w <Width> -h <Height>				set source width /height, default 1280*720\n");
 
     printf("\n");
@@ -1748,7 +1750,7 @@ int main(int argc, char* argv[])
     printf("Type: %s, Codec: %s, Width: %d, Height: %d\n", ENCTYPE[EncType], CODEC[EncCodec], EncWidth, EncHeight);
     printf("RC: %s, Bitrate: %d bps, initQP: %d, minQP: %d\n", RCMODE[EncRCMode], EncBitrate, InitQP, MinQP);
     printf("winSize: %d, IdrInterval: %d, IntraPeriod: %d, FPS: %d \n", WinSize, IdrInt, IntraPeriod, SrcFps);
-    printf("Frameskip: %d, GfxColor: %s\n", !DisableFrameSkip, GfxColor > 0 ? (GfxColor > 1? "HAL_PIXEL_FORMAT_RGBA_8888":"OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar"):"HAL_PIXEL_FORMAT_NV12");
+    printf("Frameskip: %d, GfxColor: %s\n", !DisableFrameSkip, GfxColor > 0 ? (GfxColor > 1? "HAL_PIXEL_FORMAT_BGRA_8888":"OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar"):"HAL_PIXEL_FORMAT_NV12");
 
     printf("\nOut:\n");
     printf("Type: %s, File: %s\n", OUTFORMAT[OutFormat], OutFileName);
@@ -1767,7 +1769,7 @@ int main(int argc, char* argv[])
     if (GfxColor == 1)
         src_meta->setInt32(kKeyColorFormat, 0x7FA00E00); //OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
     else if (GfxColor == 2)
-        src_meta->setInt32(kKeyColorFormat, HAL_PIXEL_FORMAT_RGBA_8888);
+        src_meta->setInt32(kKeyColorFormat, HAL_PIXEL_FORMAT_BGRA_8888);
     else
         src_meta->setInt32(kKeyColorFormat, HAL_PIXEL_FORMAT_NV12);
 

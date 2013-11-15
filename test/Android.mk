@@ -144,3 +144,38 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := mix_encoder2
 
 include $(BUILD_EXECUTABLE)
+
+# For gfx_test
+# =====================================================
+
+include $(CLEAR_VARS)
+
+#VIDEO_ENC_LOG_ENABLE := true
+
+LOCAL_SRC_FILES :=              \
+    gfx_test.cpp
+
+LOCAL_C_INCLUDES :=             \
+    $(TARGET_OUT_HEADERS)/pvr \
+    $(TOP)/frameworks/base/include/display \
+    $(TOP)/frameworks/av/media/libstagefright \
+    $(LOCAL_PATH)
+
+LOCAL_SHARED_LIBRARIES :=       \
+        libgui                  \
+        libui                   \
+        libutils                \
+        libcutils               \
+        libhardware             \
+        libbinder               \
+        libstagefright          \
+        libstagefright_foundation
+
+ifeq ($(ENABLE_MRFL_GRAPHICS),true)
+    LOCAL_CFLAGS += -DMRFLD_GFX
+endif
+
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := gfx_test
+
+include $(BUILD_EXECUTABLE)

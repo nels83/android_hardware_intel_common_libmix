@@ -30,14 +30,13 @@ public:
     void setAction(int32_t action) {mAction = action;}
 
 private:
-    Encode_Status doAllocation();
     Encode_Status doActionCopy();
     Encode_Status doActionColConv();
     Encode_Status MappingToVASurface();
-    Encode_Status MappingSurfaceID();
-    Encode_Status MappingGfxHandle();
-    Encode_Status MappingKbufHandle();
-    Encode_Status MappingMallocPTR();
+    Encode_Status MappingSurfaceID(int32_t value);
+    Encode_Status MappingGfxHandle(int32_t value);
+    Encode_Status MappingKbufHandle(int32_t value);
+    Encode_Status MappingMallocPTR(int32_t value);
     VASurfaceID CreateSurfaceFromExternalBuf(int32_t value, ValueInfo& vinfo);
 
     VADisplay mVADisplay;
@@ -47,6 +46,7 @@ private:
     VASurfaceID mVASurface;
     int32_t mVASurfaceWidth;
     int32_t mVASurfaceHeight;
+    int32_t mVASurfaceStride;
 
 //    MetadataBufferType mType;
 
@@ -60,7 +60,6 @@ private:
 #ifdef IMG_GFX
     //special for gfx color format converter
     buffer_handle_t mGfxHandle;
-    bool mGfxHandleAllocated;
 #endif
 };
 

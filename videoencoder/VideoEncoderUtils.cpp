@@ -5,8 +5,11 @@
 
 #ifdef IMG_GFX
 #include <hal/hal_public.h>
-//#include <ui/PixelFormat.h>
 #include <hardware/gralloc.h>
+
+//#define GFX_DUMP
+
+#define OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar 0x7FA00E00
 
 static hw_module_t const *gModule = NULL;
 static gralloc_module_t *gAllocMod = NULL; /* get by force hw_module_t */
@@ -19,7 +22,7 @@ static int gfx_init(void) {
         LOG_E("FATAL: can't find the %s module", GRALLOC_HARDWARE_MODULE_ID);
         return -1;
     } else
-        LOG_I("hw_get_module returned\n");
+        LOG_V("hw_get_module returned\n");
     gAllocMod = (gralloc_module_t *)gModule;
 
     return 0;
@@ -95,13 +98,13 @@ static int gfx_lock(buffer_handle_t handle, int usage,
 
     err = gAllocMod->lock(gAllocMod, handle, usage,
                           left, top, width, height, vaddr);
-    LOG_I("gfx_lock: handle is %x, usage is %x, vaddr is %x.\n", (unsigned int)handle, usage, (unsigned int)*vaddr);
+    LOG_V("gfx_lock: handle is %x, usage is %x, vaddr is %x.\n", (unsigned int)handle, usage, (unsigned int)*vaddr);
 
     if (err){
         LOG_E("lock(...) failed %d (%s).\n", err, strerror(-err));
         return -1;
     } else
-        LOG_I("lock returned with address %p\n", *vaddr);
+        LOG_V("lock returned with address %p\n", *vaddr);
 
     return err;
 }
@@ -122,7 +125,7 @@ static int gfx_unlock(buffer_handle_t handle) {
         LOG_E("unlock(...) failed %d (%s)", err, strerror(-err));
         return -1;
     } else
-        LOG_I("unlock returned\n");
+        LOG_V("unlock returned\n");
 
     return err;
 }
@@ -151,10 +154,65 @@ static int gfx_Blit(buffer_handle_t src, buffer_handle_t dest,
         LOG_E("Blit(...) failed %d (%s)", err, strerror(-err));
         return -1;
     } else
-        LOG_I("Blit returned\n");
+        LOG_V("Blit returned\n");
 
     return err;
 }
+
+Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
+
+    /* only support OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
+                                HAL_PIXEL_FORMAT_NV12
+                                HAL_PIXEL_FORMAT_BGRA_8888  */
+    IMG_native_handle_t* h = (IMG_native_handle_t*) handle;
+
+    vinfo.width = h->iWidth;
+    vinfo.height = h->iHeight;
+    vinfo.lumaStride = h->iWidth;
+
+    if (h->iFormat == HAL_PIXEL_FORMAT_NV12) {
+    #ifdef MRFLD_GFX
+        vinfo.lumaStride = (h->iWidth + 31) & ~31; //32 aligned
+    #else //on CTP
+        if (h->iWidth > 512)
+            vinfo.lumaStride = (h->iWidth + 63) & ~63;  //64 aligned
+        else
+            vinfo.lumaStride = 512;
+    #endif
+    } else if (h->iFormat == HAL_PIXEL_FORMAT_BGRA_8888) {
+        vinfo.lumaStride = (h->iWidth + 31) & ~31;
+    } else if (h->iFormat == OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar) {
+        //nothing to do
+    } else
+        return ENCODE_NOT_SUPPORTED;
+
+    vinfo.format = h->iFormat;
+
+    LOG_I("GetGfxBufferInfo: gfx iWidth=%d, iHeight=%d, iFormat=%x in handle structure\n", h->iWidth, h->iHeight, h->iFormat);
+    LOG_I("			Actual Width=%d, Height=%d, Stride=%d\n\n", vinfo.width, vinfo.height, vinfo.lumaStride);
+    return ENCODE_SUCCESS;
+}
+
+#ifdef GFX_DUMP
+void DumpGfx(int32_t handle, char* filename) {
+    ValueInfo vinfo;
+    void* vaddr[3];
+    FILE* fp;
+    int usage = GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_READ_OFTEN;
+
+    GetGfxBufferInfo(handle, vinfo);
+    if (gfx_lock((buffer_handle_t)handle, usage, 0, 0, vinfo.width, vinfo.height, &vaddr[0]) != 0)
+        return ENCODE_DRIVER_FAIL;
+    fp = fopen(filename, "wb");
+    fwrite(vaddr[0], 1, vinfo.lumaStride * vinfo.height * 4, fp);
+    fclose(fp);
+    LOG_I("dump %d bytes data to %s\n", vinfo.lumaStride * vinfo.height * 4, filename);
+    gfx_unlock((buffer_handle_t)handle);
+
+    return;
+}
+#endif
+
 #endif
 
 extern "C" {
@@ -186,7 +244,7 @@ VASurfaceMap::VASurfaceMap(VADisplay display, int hwcap) {
     mAction = 0;
     memset(&mVinfo, 0, sizeof(ValueInfo));
 #ifdef IMG_GFX
-    mGfxHandleAllocated = false;
+    mGfxHandle = NULL;
 #endif
 }
 
@@ -196,7 +254,7 @@ VASurfaceMap::~VASurfaceMap() {
         vaDestroySurfaces(mVADisplay, &mVASurface, 1);
 
 #ifdef IMG_GFX
-    if (mGfxHandleAllocated)
+    if (mGfxHandle)
         gfx_free(mGfxHandle);
 #endif
 }
@@ -207,54 +265,83 @@ Encode_Status VASurfaceMap::doMapping() {
 
     if (mVASurface == VA_INVALID_SURFACE) {
 
-        bool AllocSurface = false;
-        mVASurfaceWidth = mVinfo.lumaStride;
-        mVASurfaceHeight = mVinfo.height;
-
-        if (mAction & MAP_ACTION_ALIGN64 && mVASurfaceWidth % 64 != 0) {
-            //check if source is not 64 aligned, must allocate new 64 aligned vasurface(EXternalMemoryNULL)
-            mVASurfaceWidth = (mVASurfaceWidth + 63 ) & ~63;
-            mAction |= MAP_ACTION_COPY;
-        }
-
-        if (mAction & MAP_ACTION_COPY) //must allocate new vasurface(EXternalMemoryNULL)
-            AllocSurface = true;
+        int width = mVASurfaceWidth = mVinfo.width;
+        int height = mVASurfaceHeight = mVinfo.height;
+        int stride = mVASurfaceStride = mVinfo.lumaStride;
 
         if (mAction & MAP_ACTION_COLORCONVERT) {
 
-        #ifdef IMG_GFX  //only enable on IMG chip
-            /*only support gfx buffer, need allocate new gfx buffer, then map new one to vasurface */
+            //only support gfx buffer
             if (mVinfo.mode != MEM_MODE_GFXHANDLE)
                 return ENCODE_NOT_SUPPORTED;
 
-            //do not trust valueinfo, directly get from structure
-            IMG_native_handle_t* h = (IMG_native_handle_t*) mValue;
-            //only allocate new buffer if color format is not NV12
-            if (HAL_PIXEL_FORMAT_NV12 == h->iFormat || 0x7FA00E00 == h->iFormat) //OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
+        #ifdef IMG_GFX //only enable on IMG chip
+
+            //do not trust valueinfo for gfx case, directly get from structure
+            ValueInfo tmp;
+
+            ret = GetGfxBufferInfo(mValue, tmp);
+            CHECK_ENCODE_STATUS_RETURN("GetGfxBufferInfo");
+            width = tmp.width;
+            height = tmp.height;
+            stride = tmp.lumaStride;
+
+            if (HAL_PIXEL_FORMAT_NV12 == tmp.format || OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar == tmp.format)
                 mAction &= ~MAP_ACTION_COLORCONVERT;
-            else
-                AllocSurface = true;
-            LOG_I("src gfx buffer iFormat=%x, iWidth=%d, iHeight=%d in handle structure", h->iFormat, h->iWidth, h->iHeight);
+            else {
+                //allocate new gfx buffer if format is not NV12
+                int usage = GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE;
+
+                //use same size with original and HAL_PIXEL_FORMAT_NV12 format
+                if (gfx_alloc(width, height, HAL_PIXEL_FORMAT_NV12, usage, &mGfxHandle, &stride) != 0)
+                    return ENCODE_DRIVER_FAIL;
+
+                LOG_I("Create an new gfx buffer handle 0x%08x for color convert, width=%d, height=%d, stride=%d\n",
+                           (unsigned int)mGfxHandle, width, height, stride);
+            }
+
         #else
             return ENCODE_NOT_SUPPORTED;
         #endif
         }
 
-        if (AllocSurface) {
-            //allocate new buffer and map to vasurface
-            ret = doAllocation();
-            CHECK_ENCODE_STATUS_RETURN("doAllocation");
+        if (mAction & MAP_ACTION_ALIGN64 && stride % 64 != 0) {
+            //check if stride is not 64 aligned, must allocate new 64 aligned vasurface
+            stride = (stride + 63 ) & ~63;
+            mAction |= MAP_ACTION_COPY;
+        }
+
+        if (mAction & MAP_ACTION_COPY) { //must allocate new vasurface(EXternalMemoryNULL, uncached)
+            //allocate new vasurface
+            mVASurface = CreateNewVASurface(mVADisplay, stride, height);
+            if (mVASurface == VA_INVALID_SURFACE)
+                return ENCODE_DRIVER_FAIL;
+            mVASurfaceWidth = mVASurfaceStride = stride;
+            mVASurfaceHeight = height;
+            LOGI("create new vaSurface for MAP_ACTION_COPY\n");
         } else {
-            //direct map mem to vasurface
-            ret = MappingToVASurface();
-            CHECK_ENCODE_STATUS_RETURN("MappingToVASurface");
+        #ifdef IMG_GFX
+            if (mGfxHandle != NULL) {
+                //map new gfx handle to vasurface
+                ret = MappingGfxHandle((int32_t)mGfxHandle);
+                CHECK_ENCODE_STATUS_RETURN("MappingGfxHandle");
+                LOGI("map new allocated gfx handle to vaSurface\n");
+            } else
+        #endif
+            {
+                //map original value to vasurface
+                ret = MappingToVASurface();
+                CHECK_ENCODE_STATUS_RETURN("MappingToVASurface");
+            }
         }
     }
 
     if (mAction & MAP_ACTION_COLORCONVERT) {
         ret = doActionColConv();
         CHECK_ENCODE_STATUS_RETURN("doActionColConv");
-    } else if (mAction & MAP_ACTION_COPY) {
+    }
+
+    if (mAction & MAP_ACTION_COPY) {
         //keep src color format is NV12, then do copy
         ret = doActionCopy();
         CHECK_ENCODE_STATUS_RETURN("doActionCopy");
@@ -277,20 +364,20 @@ Encode_Status VASurfaceMap::MappingToVASurface() {
     switch (mVinfo.mode) {
         case MEM_MODE_SURFACE:
             mode = "SURFACE";
-            ret = MappingSurfaceID();
+            ret = MappingSurfaceID(mValue);
             break;
         case MEM_MODE_GFXHANDLE:
             mode = "GFXHANDLE";
-            ret = MappingGfxHandle();
+            ret = MappingGfxHandle(mValue);
             break;
         case MEM_MODE_KBUFHANDLE:
             mode = "KBUFHANDLE";
-            ret = MappingKbufHandle();
+            ret = MappingKbufHandle(mValue);
             break;
         case MEM_MODE_MALLOC:
         case MEM_MODE_NONECACHE_USRPTR:
             mode = "MALLOC or NONCACHE_USRPTR";
-            ret = MappingMallocPTR();
+            ret = MappingMallocPTR(mValue);
             break;
         case MEM_MODE_ION:
         case MEM_MODE_V4L2:
@@ -307,7 +394,7 @@ Encode_Status VASurfaceMap::MappingToVASurface() {
     return ret;
 }
 
-Encode_Status VASurfaceMap::MappingSurfaceID() {
+Encode_Status VASurfaceMap::MappingSurfaceID(int32_t value) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VASurfaceID surface;
@@ -323,22 +410,17 @@ Encode_Status VASurfaceMap::MappingSurfaceID() {
     uint32_t kBufHandle = 0;
 
     vaStatus = vaLockSurface(
-            (VADisplay)mVinfo.handle, (VASurfaceID)mValue,
+            (VADisplay)mVinfo.handle, (VASurfaceID)value,
             &fourCC, &lumaStride, &chromaUStride, &chromaVStride,
             &lumaOffset, &chromaUOffset, &chromaVOffset, &kBufHandle, NULL);
 
     CHECK_VA_STATUS_RETURN("vaLockSurface");
-    LOG_I("Surface incoming = 0x%08x", mValue);
-    LOG_I("lumaStride = %d", lumaStride);
-    LOG_I("chromaUStride = %d", chromaUStride);
-    LOG_I("chromaVStride = %d", chromaVStride);
-    LOG_I("lumaOffset = %d", lumaOffset);
-    LOG_I("chromaUOffset = %d", chromaUOffset);
-    LOG_I("chromaVOffset = %d", chromaVOffset);
-    LOG_I("kBufHandle = 0x%08x", kBufHandle);
-    LOG_I("fourCC = %d", fourCC);
+    LOG_I("Surface incoming = 0x%08x\n", value);
+    LOG_I("lumaStride = %d, chromaUStride = %d, chromaVStride=%d\n", lumaStride, chromaUStride, chromaVStride);
+    LOG_I("lumaOffset = %d, chromaUOffset = %d, chromaVOffset = %d\n", lumaOffset, chromaUOffset, chromaVOffset);
+    LOG_I("kBufHandle = 0x%08x, fourCC = %d\n", kBufHandle, fourCC);
 
-    vaStatus = vaUnlockSurface((VADisplay)mVinfo.handle, (VASurfaceID)mValue);
+    vaStatus = vaUnlockSurface((VADisplay)mVinfo.handle, (VASurfaceID)value);
     CHECK_VA_STATUS_RETURN("vaUnlockSurface");
 
     mVinfo.mode = MEM_MODE_KBUFHANDLE;
@@ -348,87 +430,73 @@ Encode_Status VASurfaceMap::MappingSurfaceID() {
     if (mVASurface == VA_INVALID_SURFACE)
         return ENCODE_DRIVER_FAIL;
 
+    mVASurfaceWidth = mVinfo.width;
+    mVASurfaceHeight = mVinfo.height;
+    mVASurfaceStride = mVinfo.lumaStride;
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VASurfaceMap::MappingGfxHandle() {
+Encode_Status VASurfaceMap::MappingGfxHandle(int32_t value) {
 
-    LOG_I("MappingGfxHandle %x......\n", mValue);
+    LOG_I("MappingGfxHandle %x......\n", value);
     LOG_I("format = 0x%08x, lumaStride = %d in ValueInfo\n", mVinfo.format, mVinfo.lumaStride);
 
+    //default value for all HW platforms, maybe not accurate
+    mVASurfaceWidth = mVinfo.width;
+    mVASurfaceHeight = mVinfo.height;
+    mVASurfaceStride = mVinfo.lumaStride;
+
 #ifdef IMG_GFX
-    // color format may be OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar or HAL_PIXEL_FORMAT_NV12
-    IMG_native_handle_t* h = (IMG_native_handle_t*) mValue;
-    mVinfo.lumaStride = h->iWidth;
-    mVinfo.format = h->iFormat;
-    mVinfo.width = h->iWidth;
-    mVinfo.height = h->iHeight;
-    LOG_I("Update ValueInfo with iWidth=%d, iHeight=%d, iFormat=%x in handle structure\n", h->iWidth, h->iHeight, h->iFormat);
+    Encode_Status ret;
+    ValueInfo tmp;
+
+    ret = GetGfxBufferInfo(value, tmp);
+    CHECK_ENCODE_STATUS_RETURN("GetGfxBufferInfo");
+    mVASurfaceWidth = tmp.width;
+    mVASurfaceHeight = tmp.height;
+    mVASurfaceStride = tmp.lumaStride;
 #endif
 
-    mVASurface = CreateSurfaceFromExternalBuf(mValue, mVinfo);
+    LOG_I("Mapping vasurface Width=%d, Height=%d, Stride=%d\n", mVASurfaceWidth, mVASurfaceHeight, mVASurfaceStride);
+
+    ValueInfo vinfo;
+    memset(&vinfo, 0, sizeof(ValueInfo));
+    vinfo.mode = MEM_MODE_GFXHANDLE;
+    vinfo.width = mVASurfaceWidth;
+    vinfo.height = mVASurfaceHeight;
+    vinfo.lumaStride = mVASurfaceStride;
+    mVASurface = CreateSurfaceFromExternalBuf(value, vinfo);
     if (mVASurface == VA_INVALID_SURFACE)
         return ENCODE_DRIVER_FAIL;
 
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VASurfaceMap::MappingKbufHandle() {
+Encode_Status VASurfaceMap::MappingKbufHandle(int32_t value) {
 
-    LOG_I("MappingKbufHandle value=%d\n", mValue);
+    LOG_I("MappingKbufHandle value=%d\n", value);
 
     mVinfo.size = mVinfo.lumaStride * mVinfo.height * 1.5;
-    mVASurface = CreateSurfaceFromExternalBuf(mValue, mVinfo);
+    mVASurface = CreateSurfaceFromExternalBuf(value, mVinfo);
     if (mVASurface == VA_INVALID_SURFACE)
         return ENCODE_DRIVER_FAIL;
+
+    mVASurfaceWidth = mVinfo.width;
+    mVASurfaceHeight = mVinfo.height;
+    mVASurfaceStride = mVinfo.lumaStride;
 
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VASurfaceMap::MappingMallocPTR() {
+Encode_Status VASurfaceMap::MappingMallocPTR(int32_t value) {
 
-    mVASurface = CreateSurfaceFromExternalBuf(mValue, mVinfo);
+    mVASurface = CreateSurfaceFromExternalBuf(value, mVinfo);
     if (mVASurface == VA_INVALID_SURFACE)
         return ENCODE_DRIVER_FAIL;
 
-    return ENCODE_SUCCESS;
-}
-
-Encode_Status VASurfaceMap::doAllocation() {
-
-    if (mAction & MAP_ACTION_COLORCONVERT) {
-    #ifdef IMG_GFX
-        //for gfx buffer color convert
-        int usage = GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE;
-
-        int32_t stride;
-        if (gfx_alloc(mVASurfaceWidth, mVASurfaceHeight, /*0x7FA00E00*/HAL_PIXEL_FORMAT_NV12, usage, &mGfxHandle, &stride) != 0)
-            return ENCODE_DRIVER_FAIL;
-
-        LOG_I("Create an new gfx buffer handle 0x%08x for color convert, width=%d, height=%d, stride=%d\n",
-                   (unsigned int)mGfxHandle, mVASurfaceWidth, mVASurfaceHeight, stride);
-
-        ValueInfo vinfo;
-        memset(&vinfo, 0, sizeof(ValueInfo));
-        vinfo.mode = MEM_MODE_GFXHANDLE;
-        vinfo.width = mVASurfaceWidth;
-        vinfo.height = mVASurfaceHeight;
-        vinfo.lumaStride = stride;
-        mVASurface = CreateSurfaceFromExternalBuf((int32_t)mGfxHandle, vinfo);
-        if (mVASurface == VA_INVALID_SURFACE)
-            return ENCODE_DRIVER_FAIL;
-        mGfxHandleAllocated = true;
-    #else
-        return ENCODE_NOT_SUPPORTED;
-    #endif
-
-    } else {
-        //for 64 align and uncached mem
-        LOG_I("Create an new vaSurface for Action 0x%08x\n", mAction);
-        mVASurface = CreateNewVASurface(mVADisplay, mVASurfaceWidth, mVASurfaceHeight);
-        if (mVASurface == VA_INVALID_SURFACE)
-            return ENCODE_DRIVER_FAIL;
-    }
+    mVASurfaceWidth = mVinfo.width;
+    mVASurfaceHeight = mVinfo.height;
+    mVASurfaceStride = mVinfo.lumaStride;
 
     return ENCODE_SUCCESS;
 }
@@ -440,6 +508,7 @@ Encode_Status VASurfaceMap::doActionCopy() {
 
     uint32_t width = 0, height = 0, stride = 0;
     uint8_t *pSrcBuffer, *pDestBuffer;
+    int32_t handle = 0;
 
     LOG_I("Copying Src Buffer data to VASurface\n");
 
@@ -470,16 +539,23 @@ Encode_Status VASurfaceMap::doActionCopy() {
         int usage = GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_READ_OFTEN;
 
         //do not trust valueinfo, directly get from structure
-        IMG_native_handle_t* h = (IMG_native_handle_t*) mValue;
+        Encode_Status ret;
+        ValueInfo tmp;
 
-        //only copy expected to be encoded area
-        width = mVinfo.width;
-        height = mVinfo.height;
-        stride = h->iWidth;
+        if (mGfxHandle)
+            handle = (int32_t) mGfxHandle;
+        else
+            handle = mValue;
+
+        ret = GetGfxBufferInfo(handle, tmp);
+        CHECK_ENCODE_STATUS_RETURN("GetGfxBufferInfo");
+        width = tmp.width;
+        height = tmp.height;
+        stride = tmp.lumaStride;
 
         //only support HAL_PIXEL_FORMAT_NV12 & OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
-        if (HAL_PIXEL_FORMAT_NV12 != h->iFormat && 0x7FA00E00 != h->iFormat) {
-            LOG_E("Not support gfx buffer format %x", h->iFormat);
+        if (HAL_PIXEL_FORMAT_NV12 != tmp.format && OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar != tmp.format) {
+            LOG_E("Not support gfx buffer format %x", tmp.format);
             return ENCODE_NOT_SUPPORTED;
         }
 
@@ -489,9 +565,8 @@ Encode_Status VASurfaceMap::doActionCopy() {
         srcUV_pitch = stride;
 
         //lock gfx handle with buffer real size
-        LOG_I("Width=%d,Height=%d,Format=%x in raw gfx handle\n", h->iWidth, h->iHeight, h->iFormat);
         void* vaddr[3];
-        if (gfx_lock((buffer_handle_t) mValue, usage, 0, 0, h->iWidth, h->iHeight, &vaddr[0]) != 0)
+        if (gfx_lock((buffer_handle_t) handle, usage, 0, 0, width, height, &vaddr[0]) != 0)
             return ENCODE_DRIVER_FAIL;
         pSrcBuffer = (uint8_t*)vaddr[0];
     #else
@@ -550,7 +625,7 @@ Encode_Status VASurfaceMap::doActionCopy() {
 #ifdef IMG_GFX
     if (mVinfo.mode == MEM_MODE_GFXHANDLE) {
         //unlock gfx handle
-        gfx_unlock((buffer_handle_t) mValue);
+        gfx_unlock((buffer_handle_t) handle);
     }
 #endif
     LOG_I("Copying Src Buffer data to VASurface Complete\n");
@@ -561,12 +636,23 @@ Encode_Status VASurfaceMap::doActionCopy() {
 Encode_Status VASurfaceMap::doActionColConv() {
 
 #ifdef IMG_GFX
-LOG_I("gfx_Blit width=%d, height=%d\n", mVinfo.width, mVinfo.height);
+    if (mGfxHandle == NULL) {
+        LOG_E("something wrong, why new gfxhandle is not allocated? \n");
+        return ENCODE_FAIL;
+    }
+
+    LOG_I("doActionColConv gfx_Blit width=%d, height=%d\n", mVinfo.width, mVinfo.height);
     if (gfx_Blit((buffer_handle_t)mValue, mGfxHandle,
-//            mVASurfaceWidth, mVASurfaceHeight, 0, 0) != 0)
             mVinfo.width, mVinfo.height, 0, 0) != 0)
         return ENCODE_DRIVER_FAIL;
+
+  #ifdef GFX_DUMP
+    LOG_I("dumpping gfx data.....\n");
+    DumpGfx(mValue, "/data/dump.rgb");
+    DumpGfx((int32_t)mGfxHandle, "/data/dump.yuv");
+  #endif
     return ENCODE_SUCCESS;
+
 #else
     return ENCODE_NOT_SUPPORTED;
 #endif
@@ -689,4 +775,3 @@ VASurfaceID CreateNewVASurface(VADisplay display, int32_t width, int32_t height)
 
     return surface;
 }
-
