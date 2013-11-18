@@ -1567,6 +1567,9 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
             vinfo.chromStride = mComParams.resolution.width;
             vinfo.format = VA_FOURCC_NV12;
             vinfo.s3dformat = 0xFFFFFFFF;
+#ifdef INTEL_VIDEO_XPROC_SHARING
+            vinfo.sessionFlag = 0;
+#endif
         } else {
             //get all info mapping needs
             imb.GetValueInfo(pvinfo);
