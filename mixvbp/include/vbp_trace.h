@@ -11,9 +11,9 @@
 #define VBP_TRACE_H_
 
 
-
+#ifndef VBP_TRACE
 #define VBP_TRACE
-
+#endif
 
 #ifdef VBP_TRACE /* if VBP_TRACE is defined*/
 

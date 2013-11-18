@@ -2,7 +2,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-#MIXVBP_LOG_ENABLE := true
+MIXVBP_LOG_ENABLE := true
 
 LOCAL_SRC_FILES :=			\
 	vbp_h264_parser.c		\
@@ -13,8 +13,10 @@ LOCAL_SRC_FILES :=			\
 	viddec_parse_sc.c		\
 	viddec_pm_parser_ops.c		\
 	viddec_pm_utils_bstream.c       \
+        vbp_thread.c                    \
 
 LOCAL_CFLAGS := -DVBP -DHOST_ONLY
+LOCAL_CFLAGS += -DUSE_MULTI_THREADING
 
 LOCAL_C_INCLUDES +=			\
 	$(LOCAL_PATH)/include		\
@@ -38,6 +40,8 @@ LOCAL_MODULE := libmixvbp
 LOCAL_SHARED_LIBRARIES :=		\
 	libdl				\
 	libcutils
+
+LOCAL_LDLIBS += -lpthread
 
 ifeq ($(strip $(MIXVBP_LOG_ENABLE)),true)
 LOCAL_CFLAGS += -DVBP_TRACE
@@ -67,5 +71,7 @@ LOCAL_CFLAGS += -DUSE_SLICE_HEADER_PARSING
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/secvideo/merrifield/
 LOCAL_SRC_FILES += secvideo/merrifield/vbp_h264secure_parser.c
 endif
+
+LOCAL_LDLIBS += -lpthread
 
 include $(BUILD_SHARED_LIBRARY)

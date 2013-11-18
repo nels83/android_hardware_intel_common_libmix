@@ -681,56 +681,8 @@ extern "C" {
         int8_t chroma_offset_l1[32][2];
     } h264_pred_weight_table;
 
-    typedef struct _h264_Slice_Header
-    {
-        int32_t 		first_mb_in_slice;								//UE
-        int32_t		frame_num;											//UV
-        int32_t		pic_order_cnt_lsb;								//UV
-        int32_t		delta_pic_order_cnt_bottom;					//SE
-        int32_t		delta_pic_order_cnt[2];								//SE
-        int32_t		redundant_pic_cnt;									//UE
+#define MAX_USER_DATA_SIZE 1024
 
-        uint32_t		num_ref_idx_l0_active;								//UE
-        uint32_t		num_ref_idx_l1_active;								//UE
-
-        int32_t		slice_qp_delta;										//SE
-        int32_t		slice_qs_delta;										//SE
-        int32_t		slice_alpha_c0_offset_div2;						//SE
-        int32_t		slice_beta_offset_div2;								//SE
-        int32_t		slice_group_change_cycle;							//UV
-
-        h264_pred_weight_table  sh_predwttbl;
-
-        ///// Flags or IDs
-        //h264_ptype_t	slice_type;											//UE
-        uint8_t			slice_type;
-        uint8_t 			nal_ref_idc;
-        uint8_t			structure;
-        uint8_t 			pic_parameter_id;									//UE
-
-        uint8_t			field_pic_flag;
-        uint8_t			bottom_field_flag;
-        uint8_t			idr_flag;											//UE
-        uint8_t			idr_pic_id;											//UE
-
-        uint8_t 			sh_error;
-        uint8_t			cabac_init_idc;										//UE
-        uint8_t			sp_for_switch_flag;
-        uint8_t			disable_deblocking_filter_idc;						//UE
-
-        uint8_t			direct_spatial_mv_pred_flag;
-        uint8_t			num_ref_idx_active_override_flag;
-        int16_t			current_slice_nr;
-
-        //// For Ref list reordering
-        h264_Dec_Ref_Pic_Marking_t sh_dec_refpic;
-        h264_Ref_Pic_List_Reordering_t sh_refpic_l0;
-        h264_Ref_Pic_List_Reordering_t sh_refpic_l1;
-
-    } h264_Slice_Header_t;
-
-
-#define   MAX_USER_DATA_SIZE              1024
     typedef struct _h264_user_data_t
     {
         h264_sei_payloadtype    user_data_type;
@@ -828,6 +780,71 @@ extern "C" {
 
     } seq_param_set_all, *seq_param_set_all_ptr;
 
+    typedef struct _h264_Slice_Header
+    {
+        int32_t 	first_mb_in_slice;						//UE
+        int32_t		frame_num;							//UV
+        int32_t		pic_order_cnt_lsb;						//UV
+        int32_t		delta_pic_order_cnt_bottom;					//SE
+        int32_t		delta_pic_order_cnt[2];						//SE
+        int32_t		redundant_pic_cnt;						//UE
+
+        uint32_t	num_ref_idx_l0_active;						//UE
+        uint32_t	num_ref_idx_l1_active;						//UE
+
+        int32_t		slice_qp_delta;							//SE
+        int32_t		slice_qs_delta;							//SE
+        int32_t		slice_alpha_c0_offset_div2;					//SE
+        int32_t		slice_beta_offset_div2;						//SE
+        int32_t		slice_group_change_cycle;					//UV
+
+        h264_pred_weight_table  sh_predwttbl;
+
+        ///// Flags or IDs
+        //h264_ptype_t	slice_type;							//UE
+        uint8_t			slice_type;
+        uint8_t 		nal_ref_idc;
+        uint8_t			structure;
+        uint8_t 		pic_parameter_id;					//UE
+
+        uint8_t			field_pic_flag;
+        uint8_t			bottom_field_flag;
+        uint8_t			idr_flag;						//UE
+        uint8_t			idr_pic_id;						//UE
+
+        uint8_t 		sh_error;
+        uint8_t			cabac_init_idc;						//UE
+        uint8_t			sp_for_switch_flag;
+        uint8_t			disable_deblocking_filter_idc;				//UE
+
+        uint8_t			direct_spatial_mv_pred_flag;
+        uint8_t			num_ref_idx_active_override_flag;
+        int16_t			current_slice_nr;
+
+        //// For Ref list reordering
+        h264_Dec_Ref_Pic_Marking_t sh_dec_refpic;
+        h264_Ref_Pic_List_Reordering_t sh_refpic_l0;
+        h264_Ref_Pic_List_Reordering_t sh_refpic_l1;
+
+        seq_param_set_used*     active_SPS;
+        pic_param_set*          active_PPS;
+        uint32_t                parse_done;         // flag to indicate parse done
+
+        // temp field for multithread parsing to store bitstream info
+        uint32_t                bstrm_buf_buf_index;
+        uint32_t                bstrm_buf_buf_st;
+        uint32_t                bstrm_buf_buf_end;
+        uint32_t                bstrm_buf_buf_bitoff;
+        uint32_t                au_pos;
+        uint32_t                list_off;
+        uint32_t                phase;
+        uint32_t                emulation_byte_counter;
+        uint32_t                is_emul_reqd;
+        int32_t                 list_start_offset;
+        int32_t                 list_end_offset;
+        int32_t                 list_total_bytes;
+
+    } h264_Slice_Header_t;
 
 ///// Image control parameter////////////
     typedef struct _h264_img_par
@@ -932,13 +949,14 @@ extern "C" {
         //// Structures
         //// need to gurantee active_SPS and active_PPS start from 4-bytes alignment address
         seq_param_set_used	active_SPS;
-        pic_param_set			active_PPS;
+        pic_param_set	        active_PPS;
 
 
         h264_Slice_Header_t  SliceHeader;
         OldSliceParams       old_slice;
         sei_info             sei_information;
 
+        h264_Slice_Header_t*  working_sh[150]; // working slice header for multithreading
         h264_img_par      img;
 
         uintptr_t         SPS_PADDR_GL;

@@ -7,6 +7,12 @@
 
 #include "h264parse_dpb.h"
 #include <vbp_trace.h>
+#include <assert.h>
+
+uint32_t viddec_threading_backup_ctx_info(void *parent, h264_Slice_Header_t *next_SliceHeader);
+uint32_t viddec_threading_restore_ctx_info(void *parent, h264_Slice_Header_t *next_SliceHeader);
+
+#define MAX_SLICE_HEADER 150
 
 /* Init function which can be called to intialized local context on open and flush and preserve*/
 void viddec_h264_init(void *ctxt, uint32_t *persist_mem, uint32_t preserve)
@@ -24,6 +30,26 @@ void viddec_h264_init(void *ctxt, uint32_t *persist_mem, uint32_t preserve)
     /* picture level info which will always be initialized */
     h264_init_Info_under_sps_pps_level(pInfo);
 
+    uint32_t i;
+    for(i = 0; i < MAX_SLICE_HEADER; i++) {
+        pInfo->working_sh[i] = (h264_Slice_Header_t*)malloc(sizeof(h264_Slice_Header_t));
+        assert(pInfo->working_sh[i] != NULL);
+
+        pInfo->working_sh[i]->parse_done = 0;
+        pInfo->working_sh[i]->bstrm_buf_buf_index = 0;
+        pInfo->working_sh[i]->bstrm_buf_buf_st = 0;
+        pInfo->working_sh[i]->bstrm_buf_buf_end = 0;
+        pInfo->working_sh[i]->bstrm_buf_buf_bitoff = 0;
+        pInfo->working_sh[i]->au_pos = 0;
+        pInfo->working_sh[i]->list_off = 0;
+        pInfo->working_sh[i]->phase = 0;
+        pInfo->working_sh[i]->emulation_byte_counter = 0;
+        pInfo->working_sh[i]->is_emul_reqd = 0;
+        pInfo->working_sh[i]->list_start_offset = 0;
+        pInfo->working_sh[i]->list_end_offset = 0;
+        pInfo->working_sh[i]->list_total_bytes = 0;
+        pInfo->working_sh[i]->slice_group_change_cycle = 0;
+    }
     return;
 }
 
@@ -40,6 +66,7 @@ uint32_t viddec_h264_parse(void *parent, void *ctxt)
     h264_Status status = H264_STATUS_ERROR;
 
     uint8_t nal_ref_idc = 0;
+    uint8_t nal_unit_type = 0;
 
     ///// Parse NAL Unit header
     pInfo->img.g_new_frame = 0;
@@ -47,9 +74,10 @@ uint32_t viddec_h264_parse(void *parent, void *ctxt)
     pInfo->is_current_workload_done =0;
     pInfo->nal_unit_type = 0;
 
-    h264_Parse_NAL_Unit(parent, pInfo, &nal_ref_idc);
+    h264_Parse_NAL_Unit(parent, &nal_unit_type, &nal_ref_idc);
     VTRACE("Start parsing NAL unit, type = %d", pInfo->nal_unit_type);
 
+    pInfo->nal_unit_type = nal_unit_type;
     ///// Check frame bounday for non-vcl elimitter
     h264_check_previous_frame_end(pInfo);
 
@@ -418,6 +446,64 @@ uint32_t viddec_h264_parse(void *parent, void *ctxt)
     return status;
 }
 
+
+uint32_t viddec_h264_threading_parse(void *parent, void *ctxt, uint32_t slice_index)
+{
+    struct h264_viddec_parser* parser = ctxt;
+
+    h264_Info * pInfo = &(parser->info);
+
+    h264_Status status = H264_STATUS_ERROR;
+
+    uint8_t nal_ref_idc = 0;
+    uint8_t nal_unit_type = 0;
+
+    h264_Parse_NAL_Unit(parent, &nal_unit_type, &nal_ref_idc);
+
+    pInfo->nal_unit_type = nal_unit_type;
+
+
+    //////// Parse valid NAL unit
+    if (nal_unit_type == h264_NAL_UNIT_TYPE_SLICE) {
+        h264_Slice_Header_t* next_SliceHeader = pInfo->working_sh[slice_index];
+        memset(next_SliceHeader, 0, sizeof(h264_Slice_Header_t));
+
+        next_SliceHeader->nal_ref_idc = nal_ref_idc;
+
+
+        ////////////////////////////////////////////////////////////////////////////
+        // Step 2: Parsing slice header
+        ////////////////////////////////////////////////////////////////////////////
+        /// IDR flag
+        next_SliceHeader->idr_flag = (pInfo->nal_unit_type == h264_NAL_UNIT_TYPE_IDR);
+
+
+        /// Pass slice header
+        status = h264_Parse_Slice_Layer_Without_Partitioning_RBSP_opt(parent, pInfo, next_SliceHeader);
+
+        viddec_threading_backup_ctx_info(parent, next_SliceHeader);
+
+        if (next_SliceHeader->sh_error & 3)
+        {
+            ETRACE("Slice Header parsing error.");
+            status = H264_STATUS_ERROR;
+            return status;
+        }
+
+        //h264_Post_Parsing_Slice_Header(parent, pInfo, &next_SliceHeader);
+        next_SliceHeader->parse_done  = 1;
+
+    } else {
+        ETRACE("Wrong NALU. Multi thread is supposed to just parse slice nalu type.");
+        status = H264_STATUS_ERROR;
+        return status;
+    }
+
+   return status;
+}
+
+
+
 void viddec_h264_get_context_size(viddec_parser_memory_sizes_t *size)
 {
     /* Should return size of my structure */
@@ -452,7 +538,104 @@ void viddec_h264_flush(void *parent, void *ctxt)
     p_dpb->fs_dec_idc = MPD_DPB_FS_NULL_IDC;
     p_dpb->fs_non_exist_idc = MPD_DPB_FS_NULL_IDC;
 
+    for(i = 0; i < MAX_SLICE_HEADER; i++) {
+        free(pInfo->working_sh[i]);
+        pInfo->working_sh[i] = NULL;
+    }
     return;
 }
 
+uint32_t viddec_h264_payload_start(void *parent)
+{
+
+    uint32_t code;
+    uint8_t nal_unit_type = 0;
+    if ( viddec_pm_peek_bits(parent, &code, 8) != -1)
+    {
+        nal_unit_type = (uint8_t)((code >> 0) & 0x1f);
+    }
+    //check that whether slice data starts
+    if (nal_unit_type == h264_NAL_UNIT_TYPE_SLICE)
+    {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+uint32_t viddec_h264_post_parse(void *parent, void *ctxt, uint32_t slice_index)
+{
+    struct h264_viddec_parser* parser = ctxt;
+    h264_Info * pInfo = &(parser->info);
+    h264_Status status = H264_STATUS_ERROR;
+
+    h264_Slice_Header_t* next_SliceHeader = pInfo->working_sh[slice_index];
+
+    while (next_SliceHeader->parse_done != 1) {
+        sleep(0);
+        //WTRACE("slice header[%d] parse not finish, block to wait.", slice_index);
+    }
+
+    viddec_threading_restore_ctx_info(parent, next_SliceHeader);
+    status = h264_Post_Parsing_Slice_Header(parent, pInfo, next_SliceHeader);
+
+    next_SliceHeader->parse_done = 0;
+
+    return status;
+}
+
+
+uint32_t viddec_h264_query_thread_parsing_cap(void)
+{
+    // current implementation of h.264 is capable to enable multi-thread parsing
+    return 1;
+}
+
+uint32_t viddec_threading_backup_ctx_info(void *parent, h264_Slice_Header_t *next_SliceHeader)
+{
+    h264_Status retStatus = H264_STATUS_OK;
+
+    viddec_pm_cxt_t* pm_cxt = (viddec_pm_cxt_t*) parent;
+
+    next_SliceHeader->bstrm_buf_buf_index = pm_cxt->getbits.bstrm_buf.buf_index;
+    next_SliceHeader->bstrm_buf_buf_st = pm_cxt->getbits.bstrm_buf.buf_st;
+    next_SliceHeader->bstrm_buf_buf_end = pm_cxt->getbits.bstrm_buf.buf_end;
+    next_SliceHeader->bstrm_buf_buf_bitoff = pm_cxt->getbits.bstrm_buf.buf_bitoff;
+
+    next_SliceHeader->au_pos = pm_cxt->getbits.au_pos;
+    next_SliceHeader->list_off = pm_cxt->getbits.list_off;
+    next_SliceHeader->phase = pm_cxt->getbits.phase;
+    next_SliceHeader->emulation_byte_counter = pm_cxt->getbits.emulation_byte_counter;
+    next_SliceHeader->is_emul_reqd = pm_cxt->getbits.is_emul_reqd;
+
+    next_SliceHeader->list_start_offset = pm_cxt->list.start_offset;
+    next_SliceHeader->list_end_offset = pm_cxt->list.end_offset;
+    next_SliceHeader->list_total_bytes = pm_cxt->list.total_bytes;
+
+    return retStatus;
+}
+
+uint32_t viddec_threading_restore_ctx_info(void *parent, h264_Slice_Header_t *next_SliceHeader)
+{
+    h264_Status retStatus = H264_STATUS_OK;
+
+    viddec_pm_cxt_t* pm_cxt = (viddec_pm_cxt_t*) parent;
+
+    pm_cxt->getbits.bstrm_buf.buf_index = next_SliceHeader->bstrm_buf_buf_index;
+    pm_cxt->getbits.bstrm_buf.buf_st = next_SliceHeader->bstrm_buf_buf_st;
+    pm_cxt->getbits.bstrm_buf.buf_end = next_SliceHeader->bstrm_buf_buf_end;
+    pm_cxt->getbits.bstrm_buf.buf_bitoff = next_SliceHeader->bstrm_buf_buf_bitoff;
+
+    pm_cxt->getbits.au_pos = next_SliceHeader->au_pos;
+    pm_cxt->getbits.list_off = next_SliceHeader->list_off;
+    pm_cxt->getbits.phase = next_SliceHeader->phase;
+    pm_cxt->getbits.emulation_byte_counter = next_SliceHeader->emulation_byte_counter;
+    pm_cxt->getbits.is_emul_reqd = next_SliceHeader->is_emul_reqd;
+
+    pm_cxt->list.start_offset = next_SliceHeader->list_start_offset;
+    pm_cxt->list.end_offset = next_SliceHeader->list_end_offset;
+    pm_cxt->list.total_bytes = next_SliceHeader->list_total_bytes;
+
+    return retStatus;
+}
 

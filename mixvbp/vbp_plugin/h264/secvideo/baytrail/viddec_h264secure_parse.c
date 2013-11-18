@@ -40,14 +40,15 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
 
 
     uint8_t nal_ref_idc = 0;
+    uint8_t nal_unit_type = 0;
 
     ///// Parse NAL Unit header
     pInfo->img.g_new_frame = 0;
     pInfo->push_to_cur = 1;
     pInfo->is_current_workload_done =0;
-    pInfo->nal_unit_type = 0;
 
-    h264_Parse_NAL_Unit(parent, pInfo, &nal_ref_idc);
+    h264_Parse_NAL_Unit(parent, &nal_unit_type, &nal_ref_idc);
+    pInfo->nal_unit_type = nal_unit_type;
 
     ///// Check frame bounday for non-vcl elimitter
     h264_check_previous_frame_end(pInfo);
