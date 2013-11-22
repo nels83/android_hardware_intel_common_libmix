@@ -220,6 +220,20 @@ Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
     }
 
+    if (mRenderBitRate){
+        ret = renderRCParams();
+        CHECK_ENCODE_STATUS_RETURN("renderRCParams");
+
+        mRenderBitRate = false;
+    }
+
+    if (mRenderFrameRate) {
+        ret = renderFrameRateParams();
+        CHECK_ENCODE_STATUS_RETURN("renderFrameRateParams");
+
+        mRenderFrameRate = false;
+    }
+
     ret = renderPictureParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
 

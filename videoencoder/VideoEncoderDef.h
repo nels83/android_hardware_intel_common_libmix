@@ -537,11 +537,11 @@ struct VideoConfigNALSize : VideoParamConfigSet {
     uint32_t maxSliceSize;
 };
 
-struct VideoConfigResoltuion : VideoParamConfigSet {
+struct VideoConfigResolution : VideoParamConfigSet {
 
-    VideoConfigResoltuion() {
+    VideoConfigResolution() {
         type = VideoConfigTypeResolution;
-        size = sizeof(VideoConfigResoltuion);
+        size = sizeof(VideoConfigResolution);
     }
 
     VideoResolution resolution;
