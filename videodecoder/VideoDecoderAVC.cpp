@@ -169,7 +169,14 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
         if (mLowDelay) {
             // start decoding a new frame
             status = beginDecodingFrame(data);
-            CHECK_STATUS("beginDecodingFrame");
+            if (status != DECODE_SUCCESS) {
+                Decode_Status st = status;
+                // finish decoding the last frame if
+                // encounter error when decode the new frame
+                status = endDecodingFrame(false);
+                CHECK_STATUS("endDecodingFrame");
+                return st;
+            }
         }
 
         // finish decoding the last frame
