@@ -1363,7 +1363,7 @@ void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *currentSurface) {
             if (err_drv_output[i].status != -1) {
                 currentSurface->errBuf.errorNumber++;
                 currentSurface->errBuf.errorArray[i + offset].type = (VideoDecodeErrorType)err_drv_output[i].decode_error_type;
-            }
+            } else break;
         }
     }
 }
