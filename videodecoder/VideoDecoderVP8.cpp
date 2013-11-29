@@ -84,6 +84,8 @@ Decode_Status VideoDecoderVP8::startVA(vbp_data_vp8 *data) {
         return DECODE_PARSER_FAIL;
     }
 
+    enableLowDelayMode(true);
+
     return VideoDecoderBase::setupVA(VP8_SURFACE_NUMBER + VP8_REF_SIZE, vaProfile);
 }
 
@@ -105,7 +107,6 @@ Decode_Status VideoDecoderVP8::start(VideoConfigBuffer *buffer) {
     status = VideoDecoderBase::parseBuffer(buffer->data, buffer->size, true, (void**)&data);
     CHECK_STATUS("VideoDecoderBase::parseBuffer");
 
-    enableLowDelayMode(true);
     status = startVA(data);
     return status;
 }
