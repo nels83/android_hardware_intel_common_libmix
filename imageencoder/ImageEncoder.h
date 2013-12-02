@@ -24,17 +24,83 @@ class IntelImageEncoder {
 public:
 	IntelImageEncoder(void);
 	~IntelImageEncoder(void) {};
+
+	/*
+	 * initializeEncoder initializes Intel JPEG HW encoder,
+	 * only needs to be called once at booting unless errors happen.
+	 * Return zero for success and non-zero for failure.
+	 */
 	int initializeEncoder(void);
+
+	/*
+	 * createSourceSurface creates a surface for encoding.
+	 * based on the input buffer taking source image data.
+	 * This can be called after the encoder is initialized.
+	 * Parameters:
+	 * source_type: the type of source buffer:
+	 *              SURFACE_TYPE_USER_PTR for malloced buffer;
+	 *              SURFACE_TYPE_GRALLOC for gralloced buffer.
+	 * source_buffer: the input source buffer address, which
+	 *                must be aligned to page-size
+	 * width: the width of source image data
+	 * height: the height of source image data
+	 * stride: the stride of source image data
+	 * fourcc: the fourcc value of source, VA_RT_FORMAT_YUV420
+	 *         and VA_RT_FORMAT_YUV422 are supported.
+	 * image_seqp: the pointer to a returned image sequential
+	 *             number to identity an image and its surface.
+	 * Return zero for success and non-zero for failure.
+	 */
 	int createSourceSurface(int source_type, void *source_buffer,
 				unsigned int width,unsigned int height,
 				unsigned int stride, unsigned int fourcc,
 				int *image_seqp);
+
+	/*
+	 * createContext creates the encoding context,
+	 * based on the parameters of a existing surface.
+	 * This can be called after the encoder is initialized
+	 * and at least one surface is created.
+	 * Parameters:
+	 * first_image_seq: the sequential number of image/surface
+	 *                  to be based to create context,
+	 *                  the created context will be set to its
+	 *                  parameters: width, height, stride & fourcc.
+	 * max_coded_sizep: the returned pointer to the max coded buffer.
+	 *                  size for references, given the current context.
+	 * Return zero for success and non-zero for failure.
+	 */
 	int createContext(int first_image_seq, unsigned int *max_coded_sizep);
 	int createContext(unsigned int *max_coded_sizep)
 	{
 		return this->createContext(0, max_coded_sizep);
 	}
+
+	/*
+	 * setQuality changes the current quality value,
+	 * whose default value is 90.
+	 * This can be called after the encoder is initialized.
+	 * Parameters:
+	 * new_quality: the new quality value to be set.
+	 * Return zero for success and non-zero for failure.
+	 */
 	int setQuality(unsigned int new_quality);
+
+	/*
+	 * encode triggers an image/surface's JPEG encoding.
+	 * This can be called after the encoder is initialize
+	 * and context is created.
+	 * Parameters:
+	 * image_seq: the sequential number of an image/surface
+	 *            to be encoded. This has not to be the same
+	 *            as the one used to create context, but it
+	 *            has to be of the same parameters.
+	 *            If a surface with different paras needs to
+	 *            be encoded, another context based on its
+	 *            parameters is needed.
+	 * new_quality: the new quality value to be set.
+	 * Return zero for success and non-zero for failure.
+	 */
 	int encode(int image_seq, unsigned int new_quality);
 	int encode(int image_seq)
 	{
@@ -44,9 +110,28 @@ public:
 	{
 		return this->encode(0, quality);
 	}
+
+	/*
+	 * getCoded waits for the current encoding task's completion.
+	 * Only one encoding task can be triggered under an instance
+	 * of IntelImageEncoder at any minute.
+	 * This has not be called right after encode is called,
+	 * instead, this can be called any minutes after the encoding
+	 * is triggered to support both synced/asynced encoding usage.
+	 * Parameters:
+	 * user_coded_buf: the input buffer to take coded data.
+	 *                 After getCoded is returned with no errors,
+	 *                 this buffer will have the coded JPEG in it.
+	 * user_coded_buf_size: the size of input buffer.
+	 *                      If too small, an error'll be returned.
+	 * coded_data_sizep: the returned pointer to the actual size
+	 *                   value of coded JPEG.
+	 * Return zero for success and non-zero for failure.
+	 */
 	int getCoded(void *user_coded_buf,
 			unsigned int user_coded_buf_size,
 			unsigned int *coded_data_sizep);
+
 	int destroySourceSurface(int image_seq);
 	int destroyContext(void);
 	int deinitializeEncoder(void);

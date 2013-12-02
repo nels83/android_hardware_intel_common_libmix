@@ -474,8 +474,7 @@ int IntelImageEncoder::destroySourceSurface(int image_seq)
 {
 	VAStatus va_status;
 
-	if ((image_seq < 0) || ((unsigned int)image_seq >= images_count) ||
-		(0 == va_surfaceid[image_seq])) {
+	if ((image_seq < 0) || (images_count < 1) || (0 == va_surfaceid[image_seq])) {
 		LOGE("destroySourceSurface: invalid image sequential number!\n");
 		return VA_STATUS_ERROR_INVALID_PARAMETER;
 	} else if (image_seq == reserved_image_seq) {
