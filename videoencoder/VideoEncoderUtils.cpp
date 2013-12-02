@@ -163,12 +163,15 @@ Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
 
     /* only support OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
                                 HAL_PIXEL_FORMAT_NV12
-                                HAL_PIXEL_FORMAT_BGRA_8888  */
+                                HAL_PIXEL_FORMAT_BGRA_8888
+                                HAL_PIXEL_FORMAT_BGRX_8888 */
     IMG_native_handle_t* h = (IMG_native_handle_t*) handle;
 
     vinfo.width = h->iWidth;
     vinfo.height = h->iHeight;
     vinfo.lumaStride = h->iWidth;
+
+    LOG_I("GetGfxBufferInfo: gfx iWidth=%d, iHeight=%d, iFormat=%x in handle structure\n", h->iWidth, h->iHeight, h->iFormat);
 
     if (h->iFormat == HAL_PIXEL_FORMAT_NV12) {
     #ifdef MRFLD_GFX
@@ -179,7 +182,8 @@ Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
         else
             vinfo.lumaStride = 512;
     #endif
-    } else if (h->iFormat == HAL_PIXEL_FORMAT_BGRA_8888) {
+    } else if ((h->iFormat == HAL_PIXEL_FORMAT_BGRA_8888)||
+              ((h->iFormat == HAL_PIXEL_FORMAT_BGRX_8888))) {
         vinfo.lumaStride = (h->iWidth + 31) & ~31;
     } else if (h->iFormat == OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar) {
         //nothing to do
@@ -188,7 +192,6 @@ Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
 
     vinfo.format = h->iFormat;
 
-    LOG_I("GetGfxBufferInfo: gfx iWidth=%d, iHeight=%d, iFormat=%x in handle structure\n", h->iWidth, h->iHeight, h->iFormat);
     LOG_I("			Actual Width=%d, Height=%d, Stride=%d\n\n", vinfo.width, vinfo.height, vinfo.lumaStride);
     return ENCODE_SUCCESS;
 }

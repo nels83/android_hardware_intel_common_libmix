@@ -664,7 +664,7 @@ public:
             mGraphicBuffer[i] = graphicBuffer;
 
             mIMB[i] = new IntelMetadataBuffer();
-            mIMB[i]->SetType(MetadataBufferTypeCameraSource);
+            mIMB[i]->SetType(IntelMetadataBufferTypeCameraSource);
 #ifdef INTEL_VIDEO_XPROC_SHARING
             mIMB[i]->SetSessionFlag(mSessionFlag);
             mIMB[i]->ShareValue(mGraphicBuffer[i]);
@@ -932,7 +932,7 @@ public:
             mMixCodec = (char*) MPEG4_MIME_TYPE;
         } else if (strcmp(mime, MEDIA_MIMETYPE_VIDEO_H263) == 0) {
             mMixCodec = (char*) H263_MIME_TYPE;
-        } else if (strcmp(mime, MEDIA_MIMETYPE_VIDEO_VPX) == 0) {
+        } else if (strcmp(mime, MEDIA_MIMETYPE_VIDEO_VP8) == 0) {
             mMixCodec = (char*) VP8_MIME_TYPE;
         } else {
             mMixCodec = (char*) AVC_MIME_TYPE;
@@ -1812,7 +1812,7 @@ int main(int argc, char* argv[])
             enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_H263);
             break;
 		case 3: 
-			enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VPX);
+			enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VP8);
 			break;
         default:
             enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_AVC);

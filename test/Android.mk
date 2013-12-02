@@ -11,7 +11,6 @@ LOCAL_SRC_FILES :=              \
     btest.cpp
 
 LOCAL_C_INCLUDES :=             \
-    $(LOCAL_PATH)               \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
 
 LOCAL_SHARED_LIBRARIES :=       \
@@ -33,7 +32,6 @@ LOCAL_SRC_FILES :=              \
     BSServer.cpp
 
 LOCAL_C_INCLUDES :=             \
-    $(LOCAL_PATH)               \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
 
 LOCAL_SHARED_LIBRARIES :=       \
@@ -55,7 +53,6 @@ LOCAL_SRC_FILES :=              \
     BSClient.cpp
 
 LOCAL_C_INCLUDES :=             \
-    $(LOCAL_PATH)               \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
 
 LOCAL_SHARED_LIBRARIES :=       \
@@ -85,8 +82,6 @@ LOCAL_C_INCLUDES :=             \
     $(TARGET_OUT_HEADERS)/libva \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
     $(TARGET_OUT_HEADERS)/pvr \
-    $(TOP)/frameworks/base/include/display \
-    $(LOCAL_PATH)
 
 LOCAL_SHARED_LIBRARIES := 	\
 	libintelmetadatabuffer	\
@@ -119,10 +114,8 @@ LOCAL_C_INCLUDES :=             \
     $(TARGET_OUT_HEADERS)/libva \
     $(TARGET_OUT_HEADERS)/libmix_videoencoder \
     $(TARGET_OUT_HEADERS)/pvr \
-    $(TOP)/frameworks/base/include/display \
-    $(TOP)/frameworks/av/media/libstagefright \
-    $(TOP)/frameworks/native/include/media/openmax \
-    $(LOCAL_PATH)
+    $(call include-path-for, libstagefright) \
+    $(call include-path-for, frameworks-openmax) \
 
 LOCAL_SHARED_LIBRARIES :=       \
         libintelmetadatabuffer  \
@@ -157,9 +150,7 @@ LOCAL_SRC_FILES :=              \
 
 LOCAL_C_INCLUDES :=             \
     $(TARGET_OUT_HEADERS)/pvr \
-    $(TOP)/frameworks/base/include/display \
-    $(TOP)/frameworks/av/media/libstagefright \
-    $(LOCAL_PATH)
+    $(call include-path-for, libstagefright) \
 
 LOCAL_SHARED_LIBRARIES :=       \
         libgui                  \

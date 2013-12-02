@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
             memset(Buffer1->pointer(), 0xAA, 1000);
 
             mb1 = new IntelMetadataBuffer();
-            ret = mb1->SetType(MetadataBufferTypeCameraSource);
+            ret = mb1->SetType(IntelMetadataBufferTypeCameraSource);
 #ifdef INTEL_VIDEO_XPROC_SHARING
             mb1->SetSessionFlag(token);
             if ((ret = mb1->ShareValue(Buffer1)) != IMB_SUCCESS) {
@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
             graphicBuffer->unlock();
 
             mb1 = new IntelMetadataBuffer();
-            ret = mb1->SetType(MetadataBufferTypeCameraSource);
+            ret = mb1->SetType(IntelMetadataBufferTypeCameraSource);
 
 #ifdef INTEL_VIDEO_XPROC_SHARING
             mb1->SetSessionFlag(token);
