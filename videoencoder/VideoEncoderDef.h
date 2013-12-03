@@ -45,6 +45,7 @@ typedef enum {
     OUTPUT_ONE_NAL_WITHOUT_STARTCODE = 8,
     OUTPUT_LENGTH_PREFIXED = 16,
     OUTPUT_CODEDBUFFER = 32,
+    OUTPUT_NALULENGTHS_PREFIXED = 64,
     OUTPUT_BUFFER_LAST
 } VideoOutputFormat;
 
@@ -138,7 +139,8 @@ typedef enum {
 typedef struct {
     uint8_t *data;
     uint32_t bufferSize; //buffer size
-    uint32_t dataSize; //actuall size
+    uint32_t dataSize; //actual size
+    uint32_t offset; //buffer offset
     uint32_t remainingSize;
     int flag; //Key frame, Codec Data etc
     VideoOutputFormat format; //output format

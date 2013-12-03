@@ -37,6 +37,7 @@ private:
     Encode_Status outputCodecData(VideoEncOutputBuffer *outBuffer);
     Encode_Status outputOneNALU(VideoEncOutputBuffer *outBuffer, bool startCode);
     Encode_Status outputLengthPrefixed(VideoEncOutputBuffer *outBuffer);
+    Encode_Status outputNaluLengthsPrefixed(VideoEncOutputBuffer *outBuffer);
 
     Encode_Status renderMaxSliceSize();
     Encode_Status renderAIR();

@@ -489,6 +489,7 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
     CHECK_ENCODE_STATUS_CLEANUP("prepareForOutput");
 
     //copy all flags to outBuffer
+    outBuffer->offset = 0;
     outBuffer->flag = mCurOutputTask->flag;
     outBuffer->type = mCurOutputTask->type;
     outBuffer->timeStamp = mCurOutputTask->timestamp;

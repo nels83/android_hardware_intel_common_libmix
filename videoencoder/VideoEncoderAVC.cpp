@@ -326,6 +326,13 @@ Encode_Status VideoEncoderAVC::getExtFormatOutput(VideoEncOutputBuffer *outBuffe
             break;
         }
 
+        case OUTPUT_NALULENGTHS_PREFIXED: {
+            // Output nalu lengths ahead of bitstream
+            ret = outputNaluLengthsPrefixed(outBuffer);
+            CHECK_ENCODE_STATUS_CLEANUP("outputNaluLengthsPrefixed");
+            break;
+        }
+
         default:
             LOG_E("Invalid buffer mode\n");
             ret = ENCODE_FAIL;
@@ -496,8 +503,8 @@ Encode_Status VideoEncoderAVC::outputCodecData(
 
     if (headerSize <= outBuffer->bufferSize) {
         memcpy(outBuffer->data, (uint8_t *)mCurSegment->buf + mOffsetInSeg, headerSize);
-//        mTotalSizeCopied += headerSize;
-//        mOffsetInSeg += headerSize;
+        mTotalSizeCopied += headerSize;
+        mOffsetInSeg += headerSize;
         outBuffer->dataSize = headerSize;
         outBuffer->remainingSize = 0;
         outBuffer->flag |= ENCODE_BUFFERFLAG_ENDOFFRAME;
@@ -638,6 +645,84 @@ Encode_Status VideoEncoderAVC::outputLengthPrefixed(VideoEncOutputBuffer *outBuf
             }
         }
     }
+
+    return ENCODE_SUCCESS;
+}
+
+Encode_Status VideoEncoderAVC::outputNaluLengthsPrefixed(VideoEncOutputBuffer *outBuffer) {
+
+    Encode_Status ret = ENCODE_SUCCESS;
+    uint32_t nalType = 0;
+    uint32_t nalSize = 0;
+    uint32_t nalOffset = 0;
+    uint32_t sizeCopiedHere = 0;
+    const uint32_t NALUINFO_OFFSET = 256;
+    uint32_t nalNum = 0;
+
+    CHECK_NULL_RETURN_IFFAIL(mCurSegment->buf);
+	LOG_I("outputNaluLengthsPrefixed\n");
+
+    while (1) {
+
+        if (mCurSegment->size < mOffsetInSeg || outBuffer->bufferSize < sizeCopiedHere) {
+            LOG_E("mCurSegment->size < mOffsetInSeg  || outBuffer->bufferSize < sizeCopiedHere\n");
+            return ENCODE_FAIL;
+        }
+
+        // we need to handle the whole bitstream NAL by NAL
+        ret = getOneNALUnit(
+                (uint8_t *)mCurSegment->buf + mOffsetInSeg,
+                mCurSegment->size - mOffsetInSeg, &nalSize, &nalType, &nalOffset, mCurSegment->status);
+        CHECK_ENCODE_STATUS_RETURN("getOneNALUnit");
+
+        if (nalSize + 4 <= outBuffer->bufferSize - NALUINFO_OFFSET - sizeCopiedHere) {
+			LOG_I("zhaoliang nalSize=%d, nalOffset=%d\n", nalSize, nalOffset);
+
+            memcpy(outBuffer->data + NALUINFO_OFFSET + sizeCopiedHere,
+                   (uint8_t *)mCurSegment->buf + mOffsetInSeg, nalSize + nalOffset);
+
+            sizeCopiedHere += nalSize + nalOffset;
+            mTotalSizeCopied += nalSize + nalOffset;
+            mOffsetInSeg += (nalSize + nalOffset);
+
+        } else {
+            outBuffer->dataSize = sizeCopiedHere;
+            // In case the start code is 3-byte length but we use 4-byte for length prefixed
+            // so the remainingSize size may larger than the remaining data size
+            outBuffer->remainingSize = mTotalSize - mTotalSizeCopied + 100;
+            outBuffer->flag |= ENCODE_BUFFERFLAG_PARTIALFRAME;
+            LOG_E("Buffer size too small\n");
+            return ENCODE_BUFFER_TOO_SMALL;
+        }
+
+        nalNum ++;
+        uint32_t *nalLength = (uint32_t *) (outBuffer->data + (nalNum+1) * 4);
+
+        *nalLength = nalSize + nalOffset;
+
+		LOG_I("nalLength=%d\n", nalSize + nalOffset);
+
+        // check if all data in current segment has been copied out
+        if (mCurSegment->size == mOffsetInSeg) {
+            if (mCurSegment->next != NULL) {
+                mCurSegment = (VACodedBufferSegment *)mCurSegment->next;
+                mOffsetInSeg = 0;
+            } else {
+                LOG_V("End of stream\n");
+                outBuffer->dataSize = sizeCopiedHere;
+                outBuffer->remainingSize = 0;
+                outBuffer->flag |= ENCODE_BUFFERFLAG_ENDOFFRAME;
+                mCurSegment = NULL;
+                break;
+            }
+        }
+    }
+
+    outBuffer->offset = NALUINFO_OFFSET;
+    uint32_t *nalHead = (uint32_t *) outBuffer->data;
+    LOG_I("zhaoliang nalHead =%x\n", nalHead);
+    *nalHead = 0x4E414C4C; //'nall'
+    *(++nalHead) = nalNum;
 
     return ENCODE_SUCCESS;
 }
