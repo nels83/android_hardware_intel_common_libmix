@@ -24,6 +24,7 @@ VideoEncoderBase::VideoEncoderBase()
     ,mRenderMaxSliceSize(false)
     ,mRenderQP (false)
     ,mRenderAIR(false)
+    ,mRenderCIR(false)
     ,mRenderFrameRate(false)
     ,mRenderBitRate(false)
     ,mRenderHrd(false)
@@ -1178,6 +1179,18 @@ Encode_Status VideoEncoderBase::setConfig(VideoParamConfigSet *videoEncConfig) {
             mRenderAIR = true;
             break;
         }
+        case VideoConfigTypeCIR: {
+
+            VideoConfigCIR *configCIR = reinterpret_cast <VideoConfigCIR *> (videoEncConfig);
+
+            if (configCIR->size != sizeof (VideoConfigCIR)) {
+                return ENCODE_INVALID_PARAMS;
+            }
+
+            mComParams.cirParams = configCIR->cirParams;
+            mRenderCIR = true;
+            break;
+        }
         case VideoConfigTypeAVCIntraPeriod:
         case VideoConfigTypeNALSize:
         case VideoConfigTypeIDRRequest:
@@ -1262,6 +1275,17 @@ Encode_Status VideoEncoderBase::getConfig(VideoParamConfigSet *videoEncConfig) {
             }
 
             configAIR->airParams = mComParams.airParams;
+            break;
+        }
+        case VideoConfigTypeCIR: {
+
+            VideoConfigCIR *configCIR = reinterpret_cast <VideoConfigCIR *> (videoEncConfig);
+
+            if (configCIR->size != sizeof (VideoConfigCIR)) {
+                return ENCODE_INVALID_PARAMS;
+            }
+
+            configCIR->cirParams = mComParams.cirParams;
             break;
         }
         case VideoConfigTypeAVCIntraPeriod:

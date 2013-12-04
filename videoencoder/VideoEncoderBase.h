@@ -116,6 +116,7 @@ protected:
     bool mRenderMaxSliceSize; //Max Slice Size
     bool mRenderQP;
     bool mRenderAIR;
+    bool mRenderCIR;
     bool mRenderFrameRate;
     bool mRenderBitRate;
     bool mRenderHrd;

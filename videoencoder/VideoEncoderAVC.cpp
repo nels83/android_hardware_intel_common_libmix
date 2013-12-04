@@ -770,6 +770,16 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
 
         mRenderAIR = false;
     }
+    
+    if (mRenderCIR &&
+        (mComParams.refreshType == VIDEO_ENC_CIR ||
+        mComParams.refreshType == VIDEO_ENC_BOTH)) {
+
+        ret = renderCIR();
+        CHECK_ENCODE_STATUS_RETURN("renderCIR");
+
+        mRenderCIR = false;
+    }
 
     if (mRenderFrameRate) {
 
@@ -838,16 +848,42 @@ Encode_Status VideoEncoderAVC::renderMaxSliceSize() {
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VideoEncoderAVC::renderAIR() {
+Encode_Status VideoEncoderAVC::renderCIR(){
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    LOG_I( "%s Begin\n", __FUNCTION__);
 
+    VABufferID miscParamBufferCIRid;
+    VAEncMiscParameterBuffer *misc_param;
+    VAEncMiscParameterCIR *misc_cir_param;
+
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+            VAEncMiscParameterBufferType,
+            sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterCIR),
+            1,
+            NULL,
+            &miscParamBufferCIRid);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaStatus = vaMapBuffer(mVADisplay, miscParamBufferCIRid,  (void **)&misc_param);
+    CHECK_VA_STATUS_RETURN("vaMapBuffer");
+
+    misc_param->type = VAEncMiscParameterTypeCIR;
+    misc_cir_param = (VAEncMiscParameterCIR *)misc_param->data;
+    misc_cir_param->cir_num_mbs = mComParams.cirParams.cir_num_mbs;
+    LOG_I( "cir_num_mbs %d \n", misc_cir_param->cir_num_mbs);
+
+    vaUnmapBuffer(mVADisplay, miscParamBufferCIRid);
+    CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
+
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &miscParamBufferCIRid, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");
+
+    return ENCODE_SUCCESS;
+}
+
+Encode_Status VideoEncoderAVC::renderAIR() {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     LOG_V( "Begin\n\n");
-
-    if (mComParams.rcMode != RATE_CONTROL_VCM) {
-
-        LOG_W("Not in VCM mode, but call send_AIR\n");
-        return ENCODE_SUCCESS;
-    }
 
     VAEncMiscParameterBuffer   *miscEncParamBuf;
     VAEncMiscParameterAIR *airParams;

@@ -167,6 +167,17 @@ struct VideoEncSurfaceBuffer {
     VideoEncSurfaceBuffer *next;
 };
 
+struct CirParams {
+    uint32_t cir_num_mbs;
+
+    CirParams &operator=(const CirParams &other) {
+        if (this == &other) return *this;
+
+        this->cir_num_mbs = other.cir_num_mbs;
+        return *this;
+    }
+};
+
 struct AirParams {
     uint32_t airMBs;
     uint32_t airThreshold;
@@ -308,6 +319,7 @@ enum VideoParamConfigType {
     VideoConfigTypeSliceNum,
     VideoConfigTypeVP8,
     VideoConfigTypeVP8ReferenceFrame,
+    VideoConfigTypeCIR,
 
     VideoParamsConfigExtension
 };
@@ -337,6 +349,7 @@ struct VideoParamsCommon : VideoParamConfigSet {
     VideoIntraRefreshType refreshType;
     int32_t cyclicFrameInterval;
     AirParams airParams;
+    CirParams cirParams;
     uint32_t disableDeblocking;
     bool syncEncMode;
     //CodedBuffer properties
@@ -567,6 +580,16 @@ struct VideoConfigCyclicFrameInterval : VideoParamConfigSet {
     }
 
     int32_t cyclicFrameInterval;
+};
+
+struct VideoConfigCIR : VideoParamConfigSet {
+
+    VideoConfigCIR() {
+        type = VideoConfigTypeCIR;
+        size = sizeof(VideoConfigCIR);
+    }
+
+    CirParams cirParams;
 };
 
 struct VideoConfigAIR : VideoParamConfigSet {

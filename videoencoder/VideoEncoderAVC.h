@@ -41,6 +41,7 @@ private:
 
     Encode_Status renderMaxSliceSize();
     Encode_Status renderAIR();
+    Encode_Status renderCIR();
     Encode_Status renderSequenceParams(EncodeTask *task);
     Encode_Status renderPictureParams(EncodeTask *task);
     Encode_Status renderSliceParams(EncodeTask *task);
