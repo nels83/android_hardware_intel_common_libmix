@@ -426,7 +426,7 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
                 }
             } else {//Nonblock
                 mEncodeTask_Lock.unlock();
-                return ENCODE_DATA_NOT_READY;
+                return ENCODE_NO_REQUEST_DATA;
             }
         }
 
@@ -476,9 +476,8 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
                 mCurOutputTask->completed = true;
                 //if need to call SyncSurface again ?
 
-            }	else {//not ready yet
-                ret = ENCODE_DATA_NOT_READY;
-                goto CLEAN_UP;
+            }  else {//not encode complet yet, but keep all context and return directly
+                return ENCODE_DATA_NOT_READY;
             }
 
         }
