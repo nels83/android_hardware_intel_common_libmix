@@ -532,7 +532,9 @@ const vp8_prob VP8_Coefficient_Default_Probabilites[BLOCK_TYPES] [COEF_BANDS] [P
 };
 
 const vp8_prob VP8_YMode_Const[VP8_YMODES-1] = {112,86,140,37};
+const vp8_prob VP8_KF_YMode_Const[VP8_YMODES-1] = {145,156,163,128};
 
-const vp8_prob VP8_UVMode_Const[VP8_UV_MODES-1] = {162, 101,204};
+const vp8_prob VP8_UVMode_Const[VP8_UV_MODES-1] = {162,101,204};
+const vp8_prob VP8_KF_UVMode_Const[VP8_UV_MODES-1] = {142,114,183};
 
 #endif

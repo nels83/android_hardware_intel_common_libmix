@@ -25,6 +25,7 @@
 #include <dlfcn.h>
 
 #include "vp8.h"
+#include "vp8_tables.h"
 #include "vbp_loader.h"
 #include "vbp_utils.h"
 #include "vbp_vp8_parser.h"
@@ -402,10 +403,10 @@ static uint32_t vbp_add_pic_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *qu
     {
         pic_parms->loop_filter_level[i] = baseline_filter_level[i];
     }
-    if ((pic_parms->pic_fields.bits.version == 0) || (pic_parms->pic_fields.bits.version == 1))
-    {
-        pic_parms->pic_fields.bits.loop_filter_disable = pic_parms->loop_filter_level[0] > 0 ? true : false;
-    }
+
+    int profile = pic_parms->pic_fields.bits.version;
+    pic_parms->pic_fields.bits.loop_filter_disable = ((profile > 1) || (pic_parms->loop_filter_level[0] == 0)) ? true : false;
+
     memcpy(pic_parms->loop_filter_deltas_ref_frame, pi->LoopFilter.DeltasRef, sizeof(char) * MAX_REF_LF_DELTAS);
     memcpy(pic_parms->loop_filter_deltas_mode, pi->LoopFilter.DeltasMode, sizeof(char) * MAX_MODE_LF_DELTAS);
 
@@ -420,19 +421,28 @@ static uint32_t vbp_add_pic_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *qu
     pic_parms->prob_last = pi->prob_lf;
     pic_parms->prob_gf = pi->prob_gf;
 
-    FrameContextData *fc = &(parser->info.FrameContext);
-    memcpy(pic_parms->y_mode_probs, fc->Y_Mode_Prob, sizeof(unsigned char) * 4);
-    memcpy(pic_parms->uv_mode_probs, fc->UV_Mode_Prob, sizeof(unsigned char) * 3);
-    /* Motion vector context */
-    for (i = 0; i < 2; i++)
+    if (pic_parms->pic_fields.bits.key_frame == KEY_FRAME)
     {
-        memcpy(pic_parms->mv_probs[i], fc->MVContext[i], sizeof(unsigned char) * 19);
+        memcpy(pic_parms->y_mode_probs, VP8_KF_YMode_Const, sizeof(VP8_KF_YMode_Const));
+        memcpy(pic_parms->uv_mode_probs, VP8_KF_UVMode_Const, sizeof(VP8_KF_UVMode_Const));
+        memcpy(pic_parms->mv_probs, VP8_MV_DefaultMVContext, sizeof(VP8_MV_DefaultMVContext));
+    }
+    else
+    {
+        FrameContextData *fc = &(parser->info.FrameContext);
+        memcpy(pic_parms->y_mode_probs, fc->Y_Mode_Prob, sizeof(unsigned char) * 4);
+        memcpy(pic_parms->uv_mode_probs, fc->UV_Mode_Prob, sizeof(unsigned char) * 3);
+        /* Motion vector context */
+        for (i = 0; i < 2; i++)
+        {
+            memcpy(pic_parms->mv_probs[i], fc->MVContext[i], sizeof(unsigned char) * 19);
+        }
     }
 
     /* Bool coder */
     pic_parms->bool_coder_ctx.range = pi->bool_coder.range;
     pic_parms->bool_coder_ctx.value = (pi->bool_coder.value >> 24) & 0xFF;
-    pic_parms->bool_coder_ctx.count = pi->bool_coder.count;
+    pic_parms->bool_coder_ctx.count = 8 - (pi->bool_coder.count & 0x07);
 
     //pic_parms->current_picture = VA_INVALID_SURFACE;
     pic_parms->last_ref_frame = VA_INVALID_SURFACE;
@@ -460,9 +470,10 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
     vbp_picture_data_vp8 *pic_data = &(query_data->pic_data[pic_index]);
     vbp_slice_data_vp8 *slc_data = &(pic_data->slc_data[pic_data->num_slices]);
 
-    slc_data->buffer_addr = pi->source;
+    int slice_offset = (pi->frame_tag.frame_type == KEY_FRAME) ? 10 : 3;
+    slc_data->buffer_addr = pi->source + slice_offset;
     slc_data->slice_offset = 0;
-    slc_data->slice_size = pi->source_sz;
+    slc_data->slice_size = pi->source_sz - slice_offset;
 
     VASliceParameterBufferVP8 *slc_parms = &(slc_data->slc_parms);
     /* number of bytes in the slice data buffer for this slice */
@@ -475,7 +486,7 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
     slc_parms->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
 
     /* the offset to the first bit of MB from the first byte of slice data */
-    slc_parms->macroblock_offset = pi->header_bits;
+    slc_parms->macroblock_offset = pi->header_bits - (slice_offset << 3);
 
     /* Token Partitions */
     slc_parms->num_of_partitions = pi->partition_count;
