@@ -164,6 +164,8 @@ Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
     /* only support OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
                                 HAL_PIXEL_FORMAT_NV12
                                 HAL_PIXEL_FORMAT_BGRA_8888
+                                HAL_PIXEL_FORMAT_RGBA_8888
+                                HAL_PIXEL_FORMAT_RGBX_8888
                                 HAL_PIXEL_FORMAT_BGRX_8888 */
     IMG_native_handle_t* h = (IMG_native_handle_t*) handle;
 
@@ -183,7 +185,9 @@ Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
             vinfo.lumaStride = 512;
     #endif
     } else if ((h->iFormat == HAL_PIXEL_FORMAT_BGRA_8888)||
-              ((h->iFormat == HAL_PIXEL_FORMAT_BGRX_8888))) {
+                  (h->iFormat == HAL_PIXEL_FORMAT_RGBA_8888)||
+                  (h->iFormat == HAL_PIXEL_FORMAT_RGBX_8888)||
+                  (h->iFormat == HAL_PIXEL_FORMAT_BGRX_8888)) {
         vinfo.lumaStride = (h->iWidth + 31) & ~31;
     } else if (h->iFormat == OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar) {
         //nothing to do
