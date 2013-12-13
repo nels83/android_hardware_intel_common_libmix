@@ -535,6 +535,7 @@ Decode_Status VideoDecoderWMV::parseBuffer(uint8_t *data, int32_t size, vbp_data
 
 
 Decode_Status VideoDecoderWMV::checkHardwareCapability(VAProfile profile) {
+#ifndef USE_GEN_HW
     VAStatus vaStatus;
     VAConfigAttrib cfgAttribs[2];
     cfgAttribs[0].type = VAConfigAttribMaxPictureWidth;
@@ -547,7 +548,7 @@ Decode_Status VideoDecoderWMV::checkHardwareCapability(VAProfile profile) {
                 cfgAttribs[0].value, cfgAttribs[1].value, mVideoFormatInfo.width, mVideoFormatInfo.height);
         return DECODE_DRIVER_FAIL;
     }
-
+#endif
     return DECODE_SUCCESS;
 }
 
