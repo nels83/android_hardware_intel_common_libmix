@@ -92,13 +92,20 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
         CHECK_STATUS("startVA");
     }
 
-    status = decodeFrame(buffer, data);
-    CHECK_STATUS("decodeFrame");
-    if (mSizeChanged) {
-        mSizeChanged = false;
+    if ((mVideoFormatInfo.width != (int32_t)data->codec_data.video_object_layer_width ||
+        mVideoFormatInfo.height != (int32_t)data->codec_data.video_object_layer_height) &&
+        data->codec_data.video_object_layer_width &&
+        data->codec_data.video_object_layer_height) {
+        // update  encoded image size
+        mVideoFormatInfo.width = data->codec_data.video_object_layer_width;
+        mVideoFormatInfo.height = data->codec_data.video_object_layer_height;
         flushSurfaceBuffers();
+        ITRACE("Video size is changed.");
         return DECODE_FORMAT_CHANGE;
     }
+
+    status = decodeFrame(buffer, data);
+    CHECK_STATUS("decodeFrame");
 
     return status;
 }
