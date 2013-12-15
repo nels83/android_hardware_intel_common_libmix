@@ -1815,6 +1815,8 @@ void h264_dpb_mm_unmark_short_term_for_reference(h264_Info * pInfo, int32_t diff
     int32_t currPicNum;
     uint32_t idx;
     int32_t unmark_done;
+    int32_t max_frame_num;
+
     h264_DecodedPictureBuffer *p_dpb = &pInfo->dpb;
 
     if (pInfo->img.structure == FRAME)
@@ -1823,6 +1825,13 @@ void h264_dpb_mm_unmark_short_term_for_reference(h264_Info * pInfo, int32_t diff
         currPicNum = (pInfo->img.frame_num << 1) + 1;
 
     picNumX = currPicNum - (difference_of_pic_nums_minus1 + 1);
+
+#ifdef USE_AVC_SHORT_FORMAT
+    if (picNumX < 0) {
+        max_frame_num = 1 << (pInfo->active_SPS.log2_max_frame_num_minus4 + 4);
+        picNumX = picNumX + max_frame_num;
+    }
+#endif
 
     unmark_done = 0;
 
