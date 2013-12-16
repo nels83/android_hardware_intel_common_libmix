@@ -31,6 +31,9 @@
 #include "AsfParserDefs.h"
 #include "AsfObjects.h"
 #include "AsfGuids.h"
+#include <vector>
+
+using namespace std;
 
 class AsfHeaderParser {
 public:
@@ -39,7 +42,7 @@ public:
 
 public:
     // buffer must contain a complete header object
-    int parse(uint8_t* buffer, uint32_t size);
+    int parse(uint8_t* buffer, uint64_t size);
 
     AsfAudioStreamInfo* getAudioInfo() const;
     AsfVideoStreamInfo* getVideoInfo() const;
@@ -56,7 +59,9 @@ public:
     bool hasVideo();
     bool hasAudio();
     bool isSeekable();
-
+    int getPlayreadyUuid(uint8_t* playreadyUuid);
+    int getPlayreadyHeaderXml(uint8_t* playreadyHeader, uint32_t* playreadyHeaderLen);
+    int getPayloadExtensionSystems(uint8_t streamNumber, vector<PayloadExtensionSystem *> **extSystems );
 private:
     int onFilePropertiesObject(uint8_t *buffer, uint32_t size);
     int onStreamPropertiesObject(uint8_t *buffer, uint32_t size);
@@ -72,6 +77,12 @@ private:
     AsfFileMediaInfo  *mFileInfo;
     uint32_t mNumObjectParsed;
     uint32_t mNumberofHeaderObjects;
+    uint8_t mPlayreadyUuid[UUIDSIZE];
+    bool mIsProtected;
+
+    uint8_t *mPlayreadyHeader;
+    uint32_t mPlayreadyHeaderLen;
+    vector<AsfExtendedStreamPropertiesObject *> mExtendedStreamPropertiesObj;
 };
 
 #endif

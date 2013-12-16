@@ -28,8 +28,12 @@
 #include "AsfGuids.h"
 #include "AsfObjects.h"
 #include <string.h>
+#include <utils/Log.h>
+#include "AsfHeaderParser.h"
 
+AsfHeaderParser *AsfDataParser::mHeaderParser = NULL;
 
+using namespace std;
 // Helper fucctions
 
 static inline uint8_t lengthType2Bytes(uint8_t lengthType) {
@@ -183,6 +187,7 @@ int AsfPayloadParsingInformation::parse(uint8_t *buffer, uint32_t size) {
 
 int AsfSinglePayloadUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPayloadDataInfo **out) {
     // initialize output
+    int retVal = 0;
     *out = NULL;
     streamNumber.value = *buffer;
     blockSize = 1;
@@ -216,11 +221,42 @@ int AsfSinglePayloadUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPaylo
         return ASF_PARSER_NO_MEMORY;
     }
 
+    ALOGD("replicatedDataLength = %d", replicatedDataLength);
+
+    // point to replicated data into object's buffer. Yet to be interpreted.
+    obj->replicatedDataLength = replicatedDataLength;
+    obj->replicatedData = buffer + blockSize;
+
     // Replicated data, at least 8 bytes
     obj->mediaObjectLength = *(uint32_t*)(buffer + blockSize);
     obj->presentationTime = *(uint32_t*)(buffer + blockSize + 4);
 
     blockSize += replicatedDataLength;
+
+    // defined for temporary use as arg for getPayloadExtensionSystems
+    uint8_t streamnumber = streamNumber.bits.streamNumber;
+    vector<PayloadExtensionSystem *> *extSystems;
+    retVal = AsfDataParser::mHeaderParser->getPayloadExtensionSystems(streamnumber, &extSystems);
+    if (retVal != ASF_PARSER_SUCCESS) {
+        ALOGD("Error while parsing Payload Extension Systems");
+    } else {
+        ALOGD("Extension System count = %d", extSystems->size());
+        // find IV in replicated data
+        int rep_data_offset = 0;
+
+        for (int i = 0; i < extSystems->size(); i++) {
+            // ptr to ext system's data in replicated data buffer.
+            if ((extSystems->at(i)->extensionSystemId) == ASF_Payload_Extension_System_Encryption_Sample_ID) {
+                obj->sampleID = obj->replicatedData + 8 + rep_data_offset;
+            }
+            if (extSystems->at(i)->extensionDataSize == 0xFFFF) {
+                uint16_t nSize = *((uint16_t*) (obj->replicatedData + 8 + rep_data_offset));
+                rep_data_offset += (sizeof(uint16_t) + nSize);
+            } else {
+                rep_data_offset += extSystems->at(i)->extensionDataSize;
+            }
+        }
+    }
 
     obj->payloadData = buffer + blockSize;
 
@@ -310,7 +346,6 @@ int AsfSinglePayloadCompressed::parse(uint8_t *buffer, uint32_t size, AsfPayload
         payloadLenRemaining -= subPayloadDataLength;
     }
 
-
     if (payloadLenRemaining != 0) {
         // TODO:
         freePayloadDataInfo(first);
@@ -340,6 +375,7 @@ int AsfMultiplePayloadsHeader::parse(uint8_t *buffer, uint32_t size) {
 
 int AsfMultiplePayloadsUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPayloadDataInfo **out) {
     // initialize output
+    int retVal = 0;
     *out = NULL;
     streamNumber.value = *buffer;
     blockSize = 1;
@@ -373,11 +409,35 @@ int AsfMultiplePayloadsUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPa
         return ASF_PARSER_NO_MEMORY;
     }
 
+    ALOGD("replicatedDataLength = %d", replicatedDataLength);
+
+    // point to replicated data into object's buffer. Yet to be interpreted.
+    obj->replicatedDataLength = replicatedDataLength;
+    obj->replicatedData = buffer + blockSize;
+
     // at least 8 bytes replicated data
     obj->mediaObjectLength = *(uint32_t *)(buffer + blockSize);
     obj->presentationTime = *(uint32_t *)(buffer + blockSize + 4);
 
     blockSize += replicatedDataLength;
+
+    // defined for temporary use as arg for getPayloadExtensionSystems
+    uint8_t streamnumber = streamNumber.bits.streamNumber;
+    vector<PayloadExtensionSystem *> *extSystems;
+    retVal = AsfDataParser::mHeaderParser->getPayloadExtensionSystems(streamnumber, &extSystems);
+    if (retVal != ASF_PARSER_SUCCESS) {
+        ALOGD("Error while parsing Payload Extension Systems");
+    } else {
+        // find IV in replicated data
+        int rep_data_offset = 0;
+        for (int i = 0; i < extSystems->size(); i++) {
+            // ptr to ext system's data in replicated data buffer.
+            if ((extSystems->at(i)->extensionSystemId) == ASF_Payload_Extension_System_Encryption_Sample_ID) {
+                obj->sampleID = obj->replicatedData + 8 + rep_data_offset;
+            }
+            rep_data_offset = rep_data_offset + extSystems->at(i)->extensionDataSize;
+        }
+    }
 
     // payload length must not be 0
     payloadLength = getFieldValue(buffer + blockSize, mpHeader->payloadFlags.bits.payloadLengthType);
@@ -473,7 +533,6 @@ int AsfMultiplePayloadsCompressed::parse(uint8_t *buffer, uint32_t size, AsfPayl
         payloadLenRemaining -= subPayloadDataLength;
     }
 
-
     if (payloadLenRemaining < 0) {
         // TODO:
         freePayloadDataInfo(first);
@@ -486,14 +545,13 @@ int AsfMultiplePayloadsCompressed::parse(uint8_t *buffer, uint32_t size, AsfPayl
 }
 
 
-AsfDataParser::AsfDataParser(void)
+AsfDataParser::AsfDataParser(AsfHeaderParser *hdrparser)
     : mTotalDataPackets(0) {
     mSPUncompressed.ppi = &mPPI;
     mSPCompressed.ppi = &mPPI;
     mMPHeader.ppi = &mPPI;
     mMPUncompressed.ppi = &mPPI;
     mMPCompressed.ppi = &mPPI;
-
     mMPUncompressed.mpHeader = &mMPHeader;
     mMPCompressed.mpHeader = &mMPHeader;
 
@@ -501,6 +559,9 @@ AsfDataParser::AsfDataParser(void)
     mSPCompressed.pool = &mPool;
     mMPUncompressed.pool = &mPool;
     mMPCompressed.pool = &mPool;
+    if (hdrparser) {
+        AsfDataParser::mHeaderParser = hdrparser;
+    }
 }
 
 
@@ -604,5 +665,3 @@ int AsfDataParser::parsePacket(uint8_t *buffer, uint32_t size, AsfPayloadDataInf
 void AsfDataParser::releasePayloadDataInfo(AsfPayloadDataInfo *info) {
     mPool.releasePayloadDataInfo(info);
 }
-
-

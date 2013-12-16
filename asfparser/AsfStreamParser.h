@@ -39,10 +39,12 @@ public:
     static bool isHeaderObject(uint8_t *guid);
 
     // buffer must contain a complete header object
-    int parseHeaderObject(uint8_t *buffer, uint32_t size);
+    int parseHeaderObject(uint8_t *buffer, uint64_t size);
     AsfAudioStreamInfo* getAudioInfo() const;
     AsfVideoStreamInfo* getVideoInfo() const;
     AsfFileMediaInfo* getFileInfo() const;
+    int getDrmUuid(uint8_t* playreadyUuid);
+    int getDrmHeaderXml(uint8_t* playreadyHeader, uint32_t* playreadyHeaderLen);
 
     // return duration in 100-nanosecond unit , readable when header object is parsed
     uint64_t getDuration();
@@ -79,6 +81,7 @@ private:
     // Preroll value is used for data buffering.
     uint32_t mTimeOffsetMs;
     bool mHeaderParsed;
+    uint8_t mPlayreadyUuid[UUIDSIZE];
     class AsfHeaderParser *mHeaderParser;
     class AsfDataParser *mDataParser;
     class AsfSimpleIndexParser *mSimpleIndexParser;

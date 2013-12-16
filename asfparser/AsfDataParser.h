@@ -223,7 +223,7 @@ struct AsfMultiplePayloadsCompressed {
 
 class AsfDataParser {
 public:
-    AsfDataParser(void);
+    AsfDataParser(class AsfHeaderParser *mhdrparser);
     ~AsfDataParser(void);
 
 public:
@@ -234,6 +234,7 @@ public:
     int parsePacket(uint8_t *buffer, uint32_t size, AsfPayloadDataInfo **out);
     // put payload data info to internal queue for reuse.
     void releasePayloadDataInfo(AsfPayloadDataInfo *info);
+    static class AsfHeaderParser *mHeaderParser;
 
 private:
     inline AsfPayloadDataInfo* getPayloadDataInfo();

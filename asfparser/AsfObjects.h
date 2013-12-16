@@ -30,9 +30,13 @@
 
 #include "AsfParserDefs.h"
 #include "AsfGuids.h"
+#include <vector>
+
+#define UUIDSIZE 16
 
 #pragma pack(push, 1)
 
+using namespace std;
 struct AsfObject {
     GUID objectID;
     uint64_t objectSize;
@@ -44,6 +48,14 @@ struct AsfHeaderObject : AsfObject {
     uint8_t reserved2;
 };
 
+struct PlayreadyHeaderObj : AsfObject {
+    uint8_t sysId[UUIDSIZE];
+    uint32_t sysVer;
+    uint32_t dataSize;
+    uint32_t lenRecords;
+    uint16_t countRecords;
+    // records
+};
 
 struct AsfFilePropertiesObject : AsfObject {
     GUID fileID;
@@ -146,6 +158,14 @@ struct AsfPaddingObject : AsfObject {
 };
 
 // objects in the ASF Header Extension object
+struct PayloadExtensionSystem {
+    GUID      extensionSystemId;
+    uint16_t  extensionDataSize;
+    uint32_t  extensionSystemInfoLength;
+    uint8_t  *extensionSystemInfo;
+};
+
+// class AsfHeaderParser;
 struct AsfExtendedStreamPropertiesObject  : AsfObject {
     uint64_t startTime;
     uint64_t endTime;
@@ -171,6 +191,7 @@ struct AsfExtendedStreamPropertiesObject  : AsfObject {
     uint64_t averageTimePerFrame;
     uint16_t streamNameCount;
     uint16_t payloadExtensionSystemCount;
+    vector<PayloadExtensionSystem *> extensionSystems;
     //Stream Names - variable length
     //Payload Extension Systems - variable length
     //Stream Properties Object - variable length
@@ -297,7 +318,7 @@ struct AsfBitmapInfoHeader {
     int32_t verticalPixelsPerMeter;
     uint32_t colorsUsedCount;
     uint32_t importantColorsCount;
-    //uint8_t codecSpecificData[];
+    uint32_t actualCompressionID;
 };
 
 #pragma pack(pop)

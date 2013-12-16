@@ -27,7 +27,9 @@
 #ifndef ASF_PARSER_DEFS_H_
 #define ASF_PARSER_DEFS_H_
 
+#include "AsfObjects.h"
 #include <stdint.h>
+#include <vector>
 
 #ifndef NULL
 //#define NULL (void*) 0
@@ -103,6 +105,9 @@ struct AsfSimpleIndexInfo {
 struct AsfPayloadDataInfo {
     const uint8_t *payloadData;
     uint32_t payloadSize;
+    uint8_t  replicatedDataLength;
+    uint8_t  *replicatedData;
+    uint8_t  *sampleID; // Sample Id is always 8 bytes to be used by playready
     uint32_t presentationTime; // in milliseconds
     uint32_t offsetIntoMediaObject;
     uint32_t mediaObjectLength;

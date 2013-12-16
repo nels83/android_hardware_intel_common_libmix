@@ -23,6 +23,9 @@
 */
 
 
+#define LOG_NDEBUG 0
+#define LOG_TAG "AsfStreamParser"
+#include <utils/Log.h>
 
 #include "AsfHeaderParser.h"
 #include "AsfDataParser.h"
@@ -36,8 +39,9 @@ AsfStreamParser::AsfStreamParser(void)
       mTimeOffsetMs(0),
       mHeaderParsed(false) {
     mHeaderParser = new AsfHeaderParser;
-    mDataParser = new AsfDataParser;
+    mDataParser = new AsfDataParser(mHeaderParser);
     mSimpleIndexParser = NULL;
+    memset(mPlayreadyUuid, 0, UUIDSIZE);
 }
 
 AsfStreamParser::~AsfStreamParser(void) {
@@ -56,7 +60,7 @@ bool AsfStreamParser::isHeaderObject(uint8_t *guid) {
     return (*id == ASF_Header_Object);
 }
 
-int AsfStreamParser::parseHeaderObject(uint8_t *buffer, uint32_t size) {
+int AsfStreamParser::parseHeaderObject(uint8_t *buffer, uint64_t size) {
     int status = mHeaderParser->parse(buffer, size);
     if (status != ASF_PARSER_SUCCESS) {
         return status;
@@ -73,6 +77,21 @@ int AsfStreamParser::parseHeaderObject(uint8_t *buffer, uint32_t size) {
     return ASF_PARSER_SUCCESS;
 }
 
+int AsfStreamParser::getDrmUuid(uint8_t *playreadyUuid) {
+    int status = ASF_PARSER_SUCCESS;
+
+    status = mHeaderParser->getPlayreadyUuid(playreadyUuid);
+    LOGV("AsfStreamParser::getDrmUuid() returns %x", status);
+    return status;
+}
+
+int AsfStreamParser::getDrmHeaderXml(uint8_t *playreadyHeader, uint32_t *playreadyHeaderLen) {
+    int status = ASF_PARSER_SUCCESS;
+
+    status = mHeaderParser->getPlayreadyHeaderXml(playreadyHeader, playreadyHeaderLen);
+    LOGV("AsfStreamParser::getDrmHeaderXml() returns %x", status);
+    return status;
+}
 AsfAudioStreamInfo* AsfStreamParser::getAudioInfo() const {
     return mHeaderParser->getAudioInfo();
 }
@@ -139,7 +158,7 @@ int AsfStreamParser::parseDataPacket(uint8_t *buffer, uint32_t size, AsfPayloadD
         else {
             // TODO:
             next->presentationTime = 0;
-            //return ASF_PARSER_BAD_VALUE;
+            // return ASF_PARSER_BAD_VALUE;
         }
         next = next->next;
     }
@@ -238,4 +257,3 @@ uint32_t AsfStreamParser::getMaxObjectSize() {
     if (!mSimpleIndexParser) return NULL;
     return mSimpleIndexParser->getMaximumPacketCount() * mDataPacketSize;
 }
-
