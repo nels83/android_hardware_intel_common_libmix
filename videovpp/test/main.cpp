@@ -52,7 +52,7 @@ struct mfx_gralloc_drm_handle_t {
     int pid;    // creator
 
     mutable int other;                                       // registered owner (pid)
-    mutable union { int data1; mutable drm_intel_bo *bo; };  // drm buffer object 
+    union { mutable int data1; mutable drm_intel_bo *bo; };  // drm buffer object 
     union { int data2; uint32_t fb; };                       // framebuffer id
     int pitch;                                               // buffer pitch (in bytes)
     int allocWidth;                                          // Allocated buffer width in pixels.
