@@ -704,11 +704,6 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         mVideoFormatInfo.height = height;
     }
 
-    if (data->new_sps) {
-        mSizeChanged = true;
-        ITRACE("New sequence is received. Assuming video size is changed.");
-    }
-
     // video_range has default value of 0.
     mVideoFormatInfo.videoRange = data->codec_data->video_full_range_flag;
 
