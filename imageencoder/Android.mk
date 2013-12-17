@@ -37,7 +37,9 @@ LOCAL_C_INCLUDES += \
     $(TARGET_OUT_HEADERS)/libmix_imageencoder
 
 LOCAL_SHARED_LIBRARIES := \
-    libmix_imageencoder
+    libmix_imageencoder \
+    libui \
+    libgui
 
 LOCAL_MODULE := libmix_imageencoder_tester
 LOCAL_MODULE_TAGS := optional

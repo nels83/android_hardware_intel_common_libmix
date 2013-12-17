@@ -140,8 +140,11 @@ int IntelImageEncoder::createSourceSurface(int source_type, void *source_buffer,
 	if (NULL == source_buffer) {
 		LOGE("createSourceSurface: the input buffer address can't be null!\n");
 		return VA_STATUS_ERROR_INVALID_PARAMETER;
-	} else if ((unsigned int)source_buffer & 0xFFF) {
-		LOGE("createSourceSurface: the input buffer wasn't aligned to 4096!\n");
+	}
+
+	if ((source_type == SURFACE_TYPE_USER_PTR) &&
+	((unsigned int)source_buffer & 0xFFF)) {
+		LOGE("createSourceSurface: the user input buffer wasn't aligned to 4096!\n");
 		return VA_STATUS_ERROR_INVALID_PARAMETER;
 	}
 

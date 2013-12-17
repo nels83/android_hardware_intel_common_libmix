@@ -11,7 +11,15 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <gui/Surface.h>
+#include <gui/SurfaceComposerClient.h>
+#include <gui/ISurfaceComposer.h>
+#include <ui/PixelFormat.h>
+#include <ui/DisplayInfo.h>
+#include <system/window.h>
 #include "ImageEncoder.h"
+
+using namespace android;
 
 inline unsigned long long int current_time(/*bool fixed*/)
 {
@@ -41,6 +49,7 @@ static void usage(const char* pname)
 		"  -width: declaring the source's raw data width (0, 65536].\n"
 		"  -height: declaring the source's raw data height (0, 65536].\n"
 		"  -output: specifying the output JPEG's file path (.JPG or .jpg).\n"
+		"  -surface: specifying the source surface type (0:malloc 1:gralloc).\n"
 		"  -burst (optional): enabling continuous encoding times (0, 50].\n"
 		"  -quality (optional): setting image quality [0, 100].\n"
 		"  -fix (optional): fixing CPU frequency for evaluating performance.\n\n"
@@ -77,6 +86,7 @@ int main(int argc, char** argv)
 	/* Parameter variables */
 	char *source_name = NULL;
 	char *output_name = (char *)"./output.jpg";
+	int surface_type = 0;
 	int quality = DEFAULT_QUALITY;
 	int burst = DEFAULT_BURST;
 	int width = 0, height = 0;
@@ -92,6 +102,8 @@ int main(int argc, char** argv)
 	unsigned int source_size = 0, source_buffer_size = 0;
 	unsigned int output_size = 0, output_buffer_size = 0;
 	unsigned int read_size = 0, write_size = 0;
+	GraphicBuffer *gralloc_buffer = NULL;
+	void *gralloc_handle = NULL;
 	void *source_buffer = NULL, *output_buffer = NULL;
 	void *aligned_source_buffer = NULL, *current_position = NULL;
 	void *surface_buffer = NULL, *surface_buffer_ptr = NULL;
@@ -187,6 +199,19 @@ int main(int argc, char** argv)
 				fprintf(stderr, "Invalid output file name: %s!\n", output_name);
 				return 1;
 			}
+                } else if (match_key(arg, "surface", strlen("surface"))) {
+                        if (++argn >= argc) {
+                                usage(pname); /* "surface" should be followed by a type */
+                                fprintf(stderr, "-sruface should be followed by a type!\n");
+                                return 1;
+                        }
+
+                        if ((1 != sscanf(argv[argn], "%d", &surface_type)) ||
+			(surface_type < 0) || (surface_type > 1)) {
+                                usage(pname); /* Invalid surface type */
+                                fprintf(stderr, "Invalid surface type!\n");
+                                return 1;
+                        }
 		} else if (match_key(arg, "burst", strlen("burst"))) {
 			if (++argn >= argc) {
 				usage(pname); /* "burst" should be followed by a quality value */
@@ -241,18 +266,38 @@ int main(int argc, char** argv)
 	}
 
 	source_size = width * height * YUV420_SAMPLE_SIZE;
-	stride = (width+0x3f) & (~0x3f); /* TopazHP requires stride must be an integral multiple of 64. */
-	source_buffer_size = stride * height * YUV420_SAMPLE_SIZE;
 
-	source_buffer = malloc(source_buffer_size+4096);
-	if (NULL == source_buffer) {
-		fprintf(stderr, "Fail to allocate source buffer: %d(%s)!\n", errno, strerror(errno));
-		close(source_fd);
-		return 1;
+	if (0 == surface_type) { /* malloc */
+		/* TopazHP requires stride must be an integral multiple of 64. */
+		stride = (width+0x3f) & (~0x3f);
+		source_buffer_size = stride * height * YUV420_SAMPLE_SIZE;
+
+		source_buffer = malloc(source_buffer_size+4096);
+		if (NULL == source_buffer) {
+			fprintf(stderr, "Fail to allocate source buffer: %d(%s)!\n", errno, strerror(errno));
+			close(source_fd);
+			return 1;
+		}
+		memset(source_buffer, 0, source_buffer_size+4096);
+		aligned_source_buffer = (void *)((unsigned int)source_buffer -
+					((unsigned int)source_buffer)%4096 + 4096);
+	} else { /* gralloc */
+		gralloc_buffer = new GraphicBuffer(width, height, VA_FOURCC_NV12,
+						GraphicBuffer::USAGE_SW_WRITE_RARELY);
+		if (NULL == gralloc_buffer) {
+			fprintf(stderr, "Allocating GraphicBuffer failed!\n");
+			close(source_fd);
+			return 1;
+		}
+		stride = (gralloc_buffer->getNativeBuffer())->stride;
+		gralloc_handle = (void *)((gralloc_buffer->getNativeBuffer())->handle);
+
+		if(gralloc_buffer->lock(GRALLOC_USAGE_SW_WRITE_RARELY, &aligned_source_buffer)) {
+			fprintf(stderr, "Locking GraphicBuffer failed!\n");
+			close(source_fd);
+			return 1;
+		}
 	}
-	memset(source_buffer, 0, source_buffer_size+4096);
-	aligned_source_buffer = (void *)((unsigned int)source_buffer -
-				((unsigned int)source_buffer)%4096 + 4096);
 
 	current_position = aligned_source_buffer;
 	for (i=0; i<height; ++i) { /* Y Component */
@@ -266,10 +311,15 @@ int main(int argc, char** argv)
 
 	close(source_fd);
 
+	if (1 == surface_type) {
+		aligned_source_buffer = NULL;
+		gralloc_buffer->unlock();
+	}
+
 	if (read_size != source_size) {
 		fprintf(stderr, "Incorrect source file size: %d(%s)!\n", read_size, strerror(errno));
 		fprintf(stderr, "The correct size should be : %d.\n", source_size);
-		free(source_buffer);
+		if (source_buffer) free(source_buffer);
 		return 1;
 	}
 
@@ -390,6 +440,10 @@ int main(int argc, char** argv)
 	printf("Width: %d\n", width);
 	printf("Height: %d\n", height);
 	printf("Output: %s\n", output_name);
+	if (0 == surface_type)
+		printf("Surface: malloc\n");
+	else
+		printf("Surface: gralloc\n");
 	printf("Burst: %d times\n", burst);
 	printf("Quality: %d\n", quality);
 	if (true == fix_cpu_frequency)
@@ -404,20 +458,21 @@ int main(int argc, char** argv)
 	PERF_STOP(init_driver_time, fix_cpu_frequency);
 	if (status != 0) {
 		fprintf(stderr, "initializeEncoder failed (%d)!\n", status);
-		free(source_buffer);
+		if (source_buffer) free(source_buffer);
 		return 1;
 	}
 
 	/* Create a source surface*/
 	PERF_START(create_source_time, fix_cpu_frequency);
-	status = image_encoder.createSourceSurface(SURFACE_TYPE_USER_PTR, aligned_source_buffer,
+	status = image_encoder.createSourceSurface(surface_type? SURFACE_TYPE_GRALLOC:SURFACE_TYPE_USER_PTR,
+							surface_type? gralloc_handle:aligned_source_buffer,
 							width, height,
 							stride, VA_RT_FORMAT_YUV420,
 							&image_seq);
 	PERF_STOP(create_source_time, fix_cpu_frequency);
 	if (status != 0) {
 		fprintf(stderr, "createSourceSurface failed (%d)!\n", status);
-		free(source_buffer);
+		if (source_buffer) free(source_buffer);
 		image_encoder.deinitializeEncoder();
 		return 1;
 	}
@@ -428,7 +483,7 @@ int main(int argc, char** argv)
 	PERF_STOP(create_context_time, fix_cpu_frequency);
 	if (status != 0) {
 		fprintf(stderr, "createContext failed (%d)!\n", status);
-		free(source_buffer);
+		if (source_buffer) free(source_buffer);
 		image_encoder.deinitializeEncoder();
 		return 1;
 	}
@@ -436,7 +491,7 @@ int main(int argc, char** argv)
 	output_buffer = malloc(output_buffer_size);
 	if (NULL == output_buffer) {
 		fprintf(stderr, "Fail to allocate output buffer: %d(%s)!\n", errno, strerror(errno));
-		free(source_buffer);
+		if (source_buffer) free(source_buffer);
 		image_encoder.deinitializeEncoder();
 		return 1;
 	}
@@ -452,7 +507,7 @@ int main(int argc, char** argv)
 		PERF_STOP(prepare_encoding_time, fix_cpu_frequency);
 		if (status != 0) {
 			fprintf(stderr, "encode failed (%d)!\n", status);
-			free(source_buffer);
+			if (source_buffer) free(source_buffer);
 			free(output_buffer);
 			image_encoder.deinitializeEncoder();
 			return 1;
@@ -463,7 +518,7 @@ int main(int argc, char** argv)
 		PERF_STOP(encode_time, fix_cpu_frequency);
 		if (status != 0) {
 			fprintf(stderr, "getCoded failed (%d)!\n", status);
-			free(source_buffer);
+			if (source_buffer) free(source_buffer);
 			free(output_buffer);
 			image_encoder.deinitializeEncoder();
 			return 1;
@@ -482,7 +537,7 @@ int main(int argc, char** argv)
 		if (-1 == output_fd) {
 			fprintf(stderr, "Error opening output file: %s (%s)!\n",
 				final_output_name, strerror(errno));
-			free(source_buffer);
+			if (source_buffer) free(source_buffer);
 			free(output_buffer);
 			image_encoder.deinitializeEncoder();
 			return 1;
@@ -493,7 +548,7 @@ int main(int argc, char** argv)
 		if (write_size != output_size) {
 			fprintf(stderr, "Fail to write coded data to output file: %d(%s)!\n",
 				write_size , strerror(errno));
-			free(source_buffer);
+			if (source_buffer) free(source_buffer);
 			free(output_buffer);
 			image_encoder.deinitializeEncoder();
 			return 1;
@@ -502,7 +557,7 @@ int main(int argc, char** argv)
 		output_fd = -1;
 	}
 
-	free(source_buffer);
+	if (source_buffer) free(source_buffer);
 	free(output_buffer);
 
 	/* Deinitialize encoder */
