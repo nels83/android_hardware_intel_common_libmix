@@ -840,16 +840,16 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         }
         mVASurfaceAttrib->num_buffers = mNumSurfaces;
         mVASurfaceAttrib->pixel_format = VA_FOURCC_NV12;
-        mVASurfaceAttrib->width = mVideoFormatInfo.width;
-        mVASurfaceAttrib->height = mVideoFormatInfo.height;
-        mVASurfaceAttrib->data_size = mConfigBuffer.graphicBufferStride * mVideoFormatInfo.height * 1.5;
+        mVASurfaceAttrib->width = mVideoFormatInfo.surfaceWidth;
+        mVASurfaceAttrib->height = mVideoFormatInfo.surfaceHeight;
+        mVASurfaceAttrib->data_size = mConfigBuffer.graphicBufferStride * mVideoFormatInfo.surfaceHeight * 1.5;
         mVASurfaceAttrib->num_planes = 2;
         mVASurfaceAttrib->pitches[0] = mConfigBuffer.graphicBufferStride;
         mVASurfaceAttrib->pitches[1] = mConfigBuffer.graphicBufferStride;
         mVASurfaceAttrib->pitches[2] = 0;
         mVASurfaceAttrib->pitches[3] = 0;
         mVASurfaceAttrib->offsets[0] = 0;
-        mVASurfaceAttrib->offsets[1] = mConfigBuffer.graphicBufferStride * mVideoFormatInfo.height;
+        mVASurfaceAttrib->offsets[1] = mConfigBuffer.graphicBufferStride * mVideoFormatInfo.surfaceHeight;
         mVASurfaceAttrib->offsets[2] = 0;
         mVASurfaceAttrib->offsets[3] = 0;
         mVASurfaceAttrib->private_data = (void *)mConfigBuffer.nativeWindow;
@@ -900,8 +900,8 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         vaStatus = vaCreateSurfaces(
             mVADisplay,
             format,
-            mVideoFormatInfo.width,
-            mVideoFormatInfo.height,
+            mVideoFormatInfo.surfaceWidth,
+            mVideoFormatInfo.surfaceHeight,
             mExtraSurfaces,
             mNumExtraSurfaces,
             NULL,
@@ -916,8 +916,8 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         vaStatus = vaCreateContext(
                 mVADisplay,
                 mVAConfig,
-                mVideoFormatInfo.width,
-                mVideoFormatInfo.height,
+                mVideoFormatInfo.surfaceWidth,
+                mVideoFormatInfo.surfaceHeight,
                 0,
                 mSurfaces,
                 mNumSurfaces + mNumExtraSurfaces,
@@ -929,7 +929,6 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
     if (mSurfaceBuffers == NULL) {
         return DECODE_MEMORY_FAIL;
     }
-
     initSurfaceBuffer(true);
 
     if ((int32_t)profile == VAProfileSoftwareDecoding) {
