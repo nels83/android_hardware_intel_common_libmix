@@ -51,7 +51,8 @@ LOCAL_CFLAGS += -DUSE_HW_VP8
 endif
 
 PLATFORM_SUPPORT_AVC_SHORT_FORMAT := \
-    baytrail
+    baytrail \
+    cherrytrail
 
 ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_AVC_SHORT_FORMAT)),)
 LOCAL_CFLAGS += -DUSE_AVC_SHORT_FORMAT
