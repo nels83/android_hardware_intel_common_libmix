@@ -80,7 +80,7 @@ LOCAL_SRC_FILES += \
 
 LOCAL_C_INCLUDES += \
     $(LOCAL_PATH) \
-    $(TOP)/external/jpeg \
+    $(call include-path-for, jpeg) \
     $(TARGET_OUT_HEADERS)/libva \
     $(TARGET_OUT_HEADERS)/libjpegdec \
     $(TARGET_OUT_HEADERS)/libmix_videovpp

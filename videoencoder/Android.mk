@@ -29,7 +29,7 @@ endif
 LOCAL_C_INCLUDES :=             \
     $(LOCAL_PATH)               \
     $(TARGET_OUT_HEADERS)/libva \
-    $(TOPDIR)/frameworks/native/include \
+    $(call include-path-for, frameworks-native) \
     $(TARGET_OUT_HEADERS)/pvr
 
 ifeq ($(ENABLE_IMG_GRAPHICS),)
