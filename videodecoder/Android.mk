@@ -28,7 +28,8 @@ LOCAL_CFLAGS += -DUSE_INTEL_SECURE_AVC
 endif
 
 PLATFORM_USE_GEN_HW := \
-    baytrail
+    baytrail \
+    cherrytrail
 ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_USE_GEN_HW)),)
     LOCAL_CFLAGS += -DUSE_AVC_SHORT_FORMAT -DUSE_GEN_HW
 endif
