@@ -738,6 +738,18 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         data->codec_data->crop_right,
         data->codec_data->crop_bottom);
 
+    if (!(mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER)){
+        // BUG 159760: the port definition's height were set according to the infomation in container.
+        // In some cases, this info is not right. Need to correct it by format change notification.
+        uint32_t cropWidth = mVideoFormatInfo.width - (mVideoFormatInfo.cropLeft + mVideoFormatInfo.cropRight);
+        uint32_t cropHeight = mVideoFormatInfo.height - (mVideoFormatInfo.cropBottom + mVideoFormatInfo.cropTop);
+
+        if (width != cropWidth || height != cropHeight) {
+            mSizeChanged = true;
+            ITRACE("Raw data mode: video size is changed.");
+        }
+    }
+
     int diff = data->codec_data->num_ref_frames + 1 - mOutputWindowSize;
 
     if (mConfigBuffer.flag & WANT_SURFACE_PROTECTION) {
