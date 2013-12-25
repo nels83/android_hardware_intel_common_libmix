@@ -768,9 +768,7 @@ Encode_Status VideoEncoderAVC::sendEncodeCommand(EncodeTask *task) {
         mRenderAIR = false;
     }
     
-    if (mRenderCIR &&
-        (mComParams.refreshType == VIDEO_ENC_CIR ||
-        mComParams.refreshType == VIDEO_ENC_BOTH)) {
+    if (mRenderCIR) {
 
         ret = renderCIR();
         CHECK_ENCODE_STATUS_RETURN("renderCIR");
