@@ -61,10 +61,13 @@ void VideoDecoderVP8::updateFormatInfo(vbp_data_vp8 *data) {
     if ((mVideoFormatInfo.width != width ||
             mVideoFormatInfo.height != height) &&
             width && height) {
+        if ((VideoDecoderBase::alignMB(mVideoFormatInfo.width) != width) ||
+            (VideoDecoderBase::alignMB(mVideoFormatInfo.height) != height)) {
+            mSizeChanged = true;
+            ITRACE("Video size is changed.");
+        }
         mVideoFormatInfo.width = width;
         mVideoFormatInfo.height = height;
-        mSizeChanged = true;
-        ITRACE("Video size is changed.");
     }
 
     mVideoFormatInfo.cropLeft = data->codec_data->crop_left;
