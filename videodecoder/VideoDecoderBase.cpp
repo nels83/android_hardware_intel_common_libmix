@@ -763,7 +763,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
     }
 
     // Display is defined as "unsigned int"
-#ifndef USE_GEN_HW
+#ifndef USE_HYBRID_DRIVER
     mDisplay = new Display;
     *mDisplay = ANDROID_DISPLAY_HANDLE;
 #else
@@ -995,7 +995,7 @@ Decode_Status VideoDecoderBase::terminateVA(void) {
     }
 
     if (mDisplay) {
-#ifndef USE_GEN_HW
+#ifndef USE_HYBRID_DRIVER
         delete mDisplay;
 #endif
         mDisplay = NULL;
