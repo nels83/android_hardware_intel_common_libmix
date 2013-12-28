@@ -92,6 +92,14 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
         CHECK_STATUS("startVA");
     }
 
+    if (mSizeChanged) {
+        // some container has the incorrect width/height.
+        // send the format change to OMX to update the crop info.
+        mSizeChanged = false;
+        ITRACE("Video size is changed during startVA");
+        return DECODE_FORMAT_CHANGE;
+    }
+
     if ((mVideoFormatInfo.width != (int32_t)data->codec_data.video_object_layer_width ||
         mVideoFormatInfo.height != (int32_t)data->codec_data.video_object_layer_height) &&
         data->codec_data.video_object_layer_width &&
