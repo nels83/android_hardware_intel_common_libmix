@@ -175,6 +175,10 @@ int IntelImageEncoder::createSourceSurface(int source_type, void *source_buffer,
 			break;
 		}
 	}
+	if(INTEL_IMAGE_ENCODER_MAX_BUFFERS == i) {
+		LOGE("createSourceSurface: failed because the max surface count was reached!\n");
+		return VA_STATUS_ERROR_ALLOCATION_FAILED;
+	}
 
 	/* Allocate a source surface */
 	if (VA_RT_FORMAT_YUV420 == fourcc)
