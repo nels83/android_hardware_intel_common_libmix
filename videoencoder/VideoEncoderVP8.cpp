@@ -27,9 +27,9 @@ VideoEncoderVP8::VideoEncoderVP8()
         mVideoParamsVP8.init_qp = 26;
         mVideoParamsVP8.rc_undershoot = 100;
         mVideoParamsVP8.rc_overshoot = 100;
-        mVideoParamsVP8.hrd_buf_size = 6000;
-        mVideoParamsVP8.hrd_buf_initial_fullness = 4000;
-        mVideoParamsVP8.hrd_buf_optimal_fullness = 5000;
+        mVideoParamsVP8.hrd_buf_size = 1000;
+        mVideoParamsVP8.hrd_buf_initial_fullness = 500;
+        mVideoParamsVP8.hrd_buf_optimal_fullness = 600;
 
         mVideoConfigVP8.force_kf = 0;
         mVideoConfigVP8.refresh_entropy_probs = 0;
@@ -195,9 +195,9 @@ Encode_Status VideoEncoderVP8::renderHRDParams(void)
     misc_param->type = VAEncMiscParameterTypeHRD;
     misc_hrd = (VAEncMiscParameterHRD *)misc_param->data;
     memset(misc_hrd, 0, sizeof(*misc_hrd));
-    misc_hrd->buffer_size = 6000;
-    misc_hrd->initial_buffer_fullness = 4000;
-    misc_hrd->optimal_buffer_fullness = 5000;
+    misc_hrd->buffer_size = 1000;
+    misc_hrd->initial_buffer_fullness = 500;
+    misc_hrd->optimal_buffer_fullness = 600;
     vaUnmapBuffer(mVADisplay, hrd_param_buf);
 
     vaStatus = vaRenderPicture(mVADisplay,mVAContext, &hrd_param_buf, 1);
