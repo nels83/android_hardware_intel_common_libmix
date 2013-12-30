@@ -105,12 +105,12 @@ Decode_Status VideoDecoderWMV::decode(VideoDecodeBuffer *buffer) {
         mVideoFormatInfo.height != data->se_data->CODED_HEIGHT) &&
         data->se_data->CODED_WIDTH &&
         data->se_data->CODED_HEIGHT) {
-        updateFormatInfo(data);
-        if (mSizeChanged) {
-            flushSurfaceBuffers();
-            mSizeChanged = false;
-            return DECODE_FORMAT_CHANGE;
-        }
+       ITRACE("video size is changed from %dx%d to %dx%d", mVideoFormatInfo.width, mVideoFormatInfo.height,
+               data->se_data->CODED_WIDTH, data->se_data->CODED_HEIGHT);
+       mVideoFormatInfo.width = data->se_data->CODED_WIDTH;
+       mVideoFormatInfo.height = data->se_data->CODED_HEIGHT;
+       flushSurfaceBuffers();
+       return DECODE_FORMAT_CHANGE;
     }
 
     status = decodeFrame(buffer, data);
