@@ -237,6 +237,8 @@ public:
 
     virtual status_t read(MediaBuffer **buffer, const MediaSource::ReadOptions *options) {
 
+        static int64_t lastTS = 0;
+
         if (gNumFramesOutput == mMaxNumFrames) {
             return ERROR_END_OF_STREAM;
         }
@@ -298,13 +300,21 @@ public:
         (*buffer)->set_range(offset, size);
         (*buffer)->meta_data()->clear();
         (*buffer)->meta_data()->setInt64(
-                kKeyTime, (gNumFramesOutput * 1000000) / mFrameRate);
+                kKeyTime, (gNumFramesOutput*100 / mFrameRate) * 10000);
 
         postSourceWriting(gNumFramesOutput % PRELOAD_FRAME_NUM);
 
         ++gNumFramesOutput;
         if (gNumFramesOutput % 10 ==0)
             fprintf(stderr, ".");
+
+        int64_t currTS = systemTime();
+        if (lastTS > 0) {
+            int32_t delayTS = (1000000 / mFrameRate) - (currTS - lastTS) / 1000;
+			if (delayTS > 0)
+                usleep(delayTS);
+        }
+        lastTS = systemTime();
         return OK;
     }
 
@@ -881,7 +891,6 @@ private:
 	    sp<GraphicBuffer> buf;
         
         for ( gNumFramesOutput = 0; gNumFramesOutput < source->mMaxNumFrames; gNumFramesOutput++) {
-
             ANativeWindowBuffer* anb;
             native_window_set_buffers_format(source->mANW.get(), HAL_PIXEL_FORMAT_NV12);
             native_window_dequeue_buffer_and_wait(source->mANW.get(), &anb);
@@ -896,8 +905,8 @@ private:
 #endif	
             if (NO_ERROR != source->mANW->queueBuffer(source->mANW.get(), buf->getNativeBuffer(), -1))
                 return NULL;
-            else
-                usleep(1000000 / source->mFPS);
+//            else
+//                usleep(1000000 / source->mFPS);
         }
 
         source->stop();
@@ -916,8 +925,8 @@ class MixEncoder : public MediaSource {
 
 public:
     MixEncoder(const sp<MediaSource> &source, const sp<MetaData> &meta, int rcmode, uint32_t flag) {
-        mFirstFrame = false;
-        mSrcEOS = false;
+        mFirstFrame = true;
+        mEOS = false;
         mEncoderFlag = flag;
         mEncodeFrameCount = 0;
         mSource = source;
@@ -968,9 +977,6 @@ public:
         success = meta->findInt32('difs', &mDisableFrameSkip);
         CHECK(success);
 
-        success = meta->findInt32('sync', &mSyncMode);
-        CHECK(success);
-
         success = meta->findInt32('rawc', &mRawColor);
         CHECK(success);
 
@@ -1019,15 +1025,31 @@ public:
         mGroup.add_buffer(new MediaBuffer(maxsize));
         mGroup.add_buffer(new MediaBuffer(maxsize));
 
-        return mSource->start();
+        err = mSource->start();
+        if (err != OK)
+            return err;
+
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+        pthread_create(&mThread, &attr, MixEncoder::ThreadFunc, this);
+        pthread_attr_destroy(&attr);
+
+        return OK;
     }
 
     status_t stop() {
         Encode_Status ret;
 
+        mRunning = false;
+        void *dummy;
+        pthread_join(mThread, &dummy);
+
         ret = mVideoEncoder->stop();
         CHECK_ENC_STATUS("MIX::stop");
 
+        mEOS = false;
         return OK;
     }
 
@@ -1061,9 +1083,6 @@ public:
             mVideoEncoder->setConfig(&configBitrate);
         }
 
-#endif
-
-#if 0
         if (mEncodeFrameCount > 1 && mEncodeFrameCount % 60 == 0){
             VideoParamConfigSet configIDRRequest;
             configIDRRequest.type = VideoConfigTypeIDRRequest;
@@ -1093,17 +1112,28 @@ public:
         OutBuf.flag = 0;
         OutBuf.timeStamp = 0;
 
-        ret = mVideoEncoder->getOutput(&OutBuf);
+        ret = mVideoEncoder->getOutput(&OutBuf, 500);
         if (ret < ENCODE_SUCCESS) {
-            if ((ret == ENCODE_NO_REQUEST_DATA) && (strcmp(mMixCodec, H263_MIME_TYPE) == 0)) {
-                printf("H263 FrameSkip happens at Frame #%d\n", mEncodeFrameCount);
-                OutBuf.dataSize = 0;
+            if (ret == ENCODE_NO_REQUEST_DATA) {
+                if (mEOS) {
+                    out->release();
+                    return ERROR_END_OF_STREAM;
+                }
+
+                if (strcmp(mMixCodec, H263_MIME_TYPE) == 0) {
+                    printf("H263 FrameSkip happens at Frame #%d\n", mEncodeFrameCount);
+                    OutBuf.dataSize = 0;
+                }else {
+                    out->release();
+                    return UNKNOWN_ERROR;
+                }
             } else {
                 printf("MIX::getOutput failed, ret=%d\n", ret);
                 out->release();
                 return UNKNOWN_ERROR;
             }
-        }
+        } else if (ret == ENCODE_DATA_NOT_READY)
+            ret = mVideoEncoder->getOutput(&OutBuf, FUNC_BLOCK);
 
         out->set_range(0, OutBuf.dataSize);
         out->meta_data()->clear();
@@ -1128,60 +1158,28 @@ public:
     virtual status_t read(MediaBuffer **buffer, const MediaSource::ReadOptions *options) {
 
         status_t  err;
-        Encode_Status ret;
 
-        if (mSrcEOS)
-            return ERROR_END_OF_STREAM;
-
-        //write rest data of first frame after outputting csd, only for H264/MPEG4
-        if (mFirstFrame) {
+        if (mFirstFrame && (strcasecmp(mMixCodec, H263_MIME_TYPE) != 0)
+                        && (strcasecmp(mMixCodec, VP8_MIME_TYPE) != 0)) {
             err = mGroup.acquire_buffer(buffer);
             CHECK_STATUS(err);
 
-            err = getoutput(*buffer, OUTPUT_EVERYTHING);
+            err = getoutput(*buffer, OUTPUT_CODEC_DATA);
             CHECK_STATUS(err);
 
             mFirstFrame = false;
             return OK;
         }
 
-        //input buffers
-        int loop=1;
-        if (mSyncMode == 0 && mEncodeFrameCount == 0)
-            loop = 2;
+        mFirstFrame = false;
 
-        for(int i=0; i<loop; i++) {
-            MediaBuffer *src;
-            err = mSource->read (&src);
-
-            if (err == ERROR_END_OF_STREAM) {
-                LOG ("\nReach Resource EOS, still need to get final frame encoded data\n");
-                mSrcEOS = true;
-                if (mSyncMode)
-                    return ERROR_END_OF_STREAM;
-            }else {
-                CHECK_STATUS(err);
-                err = encode(src);
-                CHECK_STATUS(err);
-            }
-        }
-
-        //output buffers
+        //output buffer
         err = mGroup.acquire_buffer(buffer);
         CHECK_STATUS(err);
 
-        VideoOutputFormat format;
-        int n = 2;
-        if (mSyncMode)
-            n = 1;
-
-        if ((mEncodeFrameCount == n && (strcasecmp(mMixCodec, H263_MIME_TYPE) != 0))&&
-			(mEncodeFrameCount == n && (strcasecmp(mMixCodec, VP8_MIME_TYPE) != 0))){
-            format = OUTPUT_CODEC_DATA;
-            mFirstFrame = true;
-		}else
-            format = OUTPUT_EVERYTHING;;
-        err = getoutput(*buffer, format);
+        err = getoutput(*buffer, OUTPUT_EVERYTHING);
+        if (err == ERROR_END_OF_STREAM)
+            return err;
         CHECK_STATUS(err);
         return OK;
     }
@@ -1260,6 +1258,34 @@ private:
     }
 
 private:
+    //encoding thread
+    static void *ThreadFunc(void *me) {
+        MixEncoder *encoder = static_cast<MixEncoder *>(me);
+
+        status_t err = OK;
+
+        while (encoder->mRunning) {
+            MediaBuffer* src = NULL;
+
+            err = encoder->mSource->read(&src);
+
+            if (err == ERROR_END_OF_STREAM) {
+                encoder->mEOS = true;
+                return NULL;
+            }else {
+                if (err == OK)
+                    err = encoder->encode(src);
+                if (err != OK) {
+                    src->release();
+                    return NULL;
+                }
+            }
+        }
+
+        return NULL;
+    }
+
+private:
 
     const char* mMixCodec;
     const char* mCodec;
@@ -1275,11 +1301,9 @@ private:
     int mWinSize;
     int mIdrInt;
     int mDisableFrameSkip;
-    int mSyncMode;
     int mRawColor;
 
     bool mFirstFrame;
-    bool mSrcEOS;
 
     IVideoEncoder *mVideoEncoder;
     VideoParamsCommon mEncoderParams;
@@ -1290,6 +1314,11 @@ private:
     sp<MediaSource> mSource;
     MediaBufferGroup mGroup;
     sp<MetaData> mMeta;
+
+public:
+    pthread_t mThread;
+    bool mRunning;
+    bool mEOS;
 };
 
 class IVFWriter : public MediaWriter {
@@ -1573,7 +1602,6 @@ int main(int argc, char* argv[])
     int DisableFrameSkip = 0;
     int GfxColor = 0;
     int OutFormat = 0;
-    int SyncMode = 0;
     char* OutFileName = "out.264";
     const char* Yuvfile = "";
     unsigned int SessionFlag = 0;
@@ -1819,7 +1847,6 @@ int main(int argc, char* argv[])
         source = new MemHeapSource(src_meta, src_flags);
     } else if (SrcType == 7) {
         source = new MixSurfaceMediaSource(SrcWidth, SrcHeight, SrcFrameNum, SrcFps);
-        SyncMode = 1;
     }else{
         printf("Source Type is not supported\n");
         return 0;
@@ -1859,7 +1886,6 @@ int main(int argc, char* argv[])
     enc_meta->setInt32('wsiz', WinSize);
     enc_meta->setInt32('idri', IdrInt);
     enc_meta->setInt32('difs', DisableFrameSkip);
-    enc_meta->setInt32('sync', SyncMode);
     enc_meta->setInt32('rawc', GfxColor);
 
     uint32_t encoder_flags = 0;
@@ -1911,8 +1937,9 @@ int main(int argc, char* argv[])
         usleep(100000);
     }
 
-    err = writer->stop();
     int64_t end = systemTime();
+    err = writer->stop();
+
 
     if (EncType == 1) {
         client.disconnect();

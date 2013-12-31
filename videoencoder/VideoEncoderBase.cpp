@@ -422,7 +422,7 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
                 if(NO_ERROR != mEncodeTask_Cond.waitRelative(mEncodeTask_Lock, 1000000*timeout)) {
                     mEncodeTask_Lock.unlock();
                     LOG_E("Time out wait for encode task.\n");
-                    return ENCODE_DATA_NOT_READY;
+                    return ENCODE_NO_REQUEST_DATA;
                 }
             } else {//Nonblock
                 mEncodeTask_Lock.unlock();
