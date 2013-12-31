@@ -53,7 +53,7 @@ IVideoEncoder *createVideoEncoder(const char *mimeType) {
         PVSoftMPEG4Encoder *p = new PVSoftMPEG4Encoder("OMX.google.mpeg4.encoder");
 #endif
         return (IVideoEncoder *)p;
-    } else if (strcasecmp(mimeType, "video/x-webm") == 0) {
+    } else if (strcasecmp(mimeType, "video/x-vnd.on2.vp8") == 0) {
         VideoEncoderVP8 *p = new VideoEncoderVP8();
         return (IVideoEncoder *)p;
     } else {
