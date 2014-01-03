@@ -120,6 +120,7 @@ protected:
     bool mRenderFrameRate;
     bool mRenderBitRate;
     bool mRenderHrd;
+    bool mRenderMaxFrameSize;
 
     VABufferID mSeqParamBuf;
     VABufferID mRcParamBuf;

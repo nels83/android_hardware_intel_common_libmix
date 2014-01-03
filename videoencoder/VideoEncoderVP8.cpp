@@ -30,6 +30,7 @@ VideoEncoderVP8::VideoEncoderVP8()
         mVideoParamsVP8.hrd_buf_size = 1000;
         mVideoParamsVP8.hrd_buf_initial_fullness = 500;
         mVideoParamsVP8.hrd_buf_optimal_fullness = 600;
+        mVideoParamsVP8.max_frame_size = 0;
 
         mVideoConfigVP8.force_kf = 0;
         mVideoConfigVP8.refresh_entropy_probs = 0;
@@ -122,7 +123,7 @@ Encode_Status VideoEncoderVP8::renderRCParams(void)
 {
     VABufferID rc_param_buf;
 	VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncMiscParameterBuffer *misc_param, *misc_param_tmp;
+    VAEncMiscParameterBuffer *misc_param;
     VAEncMiscParameterRateControl *misc_rate_ctrl;
 
     vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
@@ -155,7 +156,7 @@ Encode_Status VideoEncoderVP8::renderFrameRateParams(void)
 {
     VABufferID framerate_param_buf;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncMiscParameterBuffer *misc_param, *misc_param_tmp;
+    VAEncMiscParameterBuffer *misc_param;
     VAEncMiscParameterFrameRate * misc_framerate;
     uint32_t frameRateNum = mComParams.frameRate.frameRateNum;
     uint32_t frameRateDenom = mComParams.frameRate.frameRateDenom;
@@ -183,8 +184,8 @@ Encode_Status VideoEncoderVP8::renderHRDParams(void)
 {
     VABufferID hrd_param_buf;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncMiscParameterBuffer *misc_param, *misc_param_tmp;
-    VAEncMiscParameterHRD * misc_hrd; //*misc_rate_ctrl;
+    VAEncMiscParameterBuffer *misc_param;
+    VAEncMiscParameterHRD * misc_hrd;
     vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
                               VAEncMiscParameterBufferType,
                               sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterHRD),
@@ -206,6 +207,30 @@ Encode_Status VideoEncoderVP8::renderHRDParams(void)
     return 0;
 }
 
+Encode_Status VideoEncoderVP8::renderMaxFrameSizeParams(void)
+{
+    VABufferID max_frame_size_param_buf;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncMiscParameterBuffer *misc_param;
+    VAEncMiscParameterBufferMaxFrameSize * misc_maxframesize;
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+                              VAEncMiscParameterBufferType,
+                              sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterHRD),
+                              1,NULL,&max_frame_size_param_buf);
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+
+    vaMapBuffer(mVADisplay, max_frame_size_param_buf,(void **)&misc_param);
+    misc_param->type = VAEncMiscParameterTypeMaxFrameSize;
+    misc_maxframesize = (VAEncMiscParameterBufferMaxFrameSize *)misc_param->data;
+    memset(misc_maxframesize, 0, sizeof(*misc_maxframesize));
+    misc_maxframesize->max_frame_size = mVideoParamsVP8.max_frame_size;
+    vaUnmapBuffer(mVADisplay, max_frame_size_param_buf);
+
+    vaStatus = vaRenderPicture(mVADisplay,mVAContext, &max_frame_size_param_buf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");;
+
+    return 0;
+}
 
 Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
 
@@ -217,6 +242,7 @@ Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
         ret = renderRCParams();
         ret = renderHRDParams();
         ret = renderSequenceParams();
+        ret = renderMaxFrameSizeParams();
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
     }
 
@@ -232,6 +258,13 @@ Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
         CHECK_ENCODE_STATUS_RETURN("renderFrameRateParams");
 
         mRenderFrameRate = false;
+    }
+
+    if (mRenderMaxFrameSize) {
+        ret = renderMaxFrameSizeParams();
+        CHECK_ENCODE_STATUS_RETURN("renderMaxFrameSizeParams");
+
+        mRenderMaxFrameSize = false;
     }
 
     ret = renderPictureParams(task);
@@ -300,9 +333,22 @@ Encode_Status VideoEncoderVP8::derivedGetConfig(VideoParamConfigSet *videoEncCon
                 }
                 break;
 
+                case VideoConfigTypeVP8MaxFrameSize:{
+
+                        VideoConfigVP8MaxFrameSize *encConfigVP8MaxFrameSize =
+                                reinterpret_cast<VideoConfigVP8MaxFrameSize*> (videoEncConfig);
+
+                        if (encConfigVP8MaxFrameSize->size != sizeof(VideoConfigVP8MaxFrameSize)) {
+                                return ENCODE_INVALID_PARAMS;
+                        }
+
+                        encConfigVP8MaxFrameSize->max_frame_size = mVideoParamsVP8.max_frame_size;
+                }
+                break;
+
                 default: {
-            LOG_E ("Invalid Config Type");
-            break;
+                   LOG_E ("Invalid Config Type");
+                   break;
                 }
        }
 
@@ -340,6 +386,19 @@ Encode_Status VideoEncoderVP8::derivedSetConfig(VideoParamConfigSet *videoEncCon
                         mVideoConfigVP8ReferenceFrame = *encConfigVP8ReferenceFrame;
 
                 }
+                break;
+
+                case VideoConfigTypeVP8MaxFrameSize:{
+                        VideoConfigVP8MaxFrameSize *encConfigVP8MaxFrameSize =
+                                reinterpret_cast<VideoConfigVP8MaxFrameSize*> (videoEncConfig);
+
+                        if (encConfigVP8MaxFrameSize->size != sizeof(VideoConfigVP8MaxFrameSize)) {
+                                return ENCODE_INVALID_PARAMS;
+                        }
+
+                        mVideoParamsVP8.max_frame_size = encConfigVP8MaxFrameSize->max_frame_size;
+                        mRenderMaxFrameSize = true;
+		}
                 break;
 
                 default: {

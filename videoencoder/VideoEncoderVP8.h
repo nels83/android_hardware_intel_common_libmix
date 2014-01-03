@@ -38,6 +38,7 @@ private:
 	Encode_Status renderRCParams(void);
 	Encode_Status renderHRDParams(void);
 	Encode_Status renderFrameRateParams(void);
+	Encode_Status renderMaxFrameSizeParams(void);
 
 
 	VideoConfigVP8 mVideoConfigVP8;

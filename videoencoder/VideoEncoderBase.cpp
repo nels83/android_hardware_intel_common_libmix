@@ -1199,7 +1199,8 @@ Encode_Status VideoEncoderBase::setConfig(VideoParamConfigSet *videoEncConfig) {
         case VideoConfigTypeIDRRequest:
         case VideoConfigTypeSliceNum:
         case VideoConfigTypeVP8:
-        case VideoConfigTypeVP8ReferenceFrame: {
+        case VideoConfigTypeVP8ReferenceFrame:
+        case VideoConfigTypeVP8MaxFrameSize:{
             ret = derivedSetConfig(videoEncConfig);
             break;
         }
