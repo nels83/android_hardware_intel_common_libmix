@@ -107,6 +107,9 @@ typedef enum {
 
     // indicate should allocate tiling surfaces
     USE_TILING_MEMORY = 0x20000,
+
+     // indicate the frame has resolution change
+    IS_RESOLUTION_CHANGE = 0x40000,
 } VIDEO_BUFFER_FLAG;
 
 typedef enum

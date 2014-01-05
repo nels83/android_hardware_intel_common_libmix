@@ -201,11 +201,6 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
         CHECK_STATUS("endDecodingFrame");
     }
 #endif
-
-    if (mSizeChanged) {
-        mSizeChanged = false;
-        return DECODE_FORMAT_CHANGE;
-    }
     return DECODE_SUCCESS;
 }
 
@@ -233,6 +228,10 @@ Decode_Status VideoDecoderAVC::beginDecodingFrame(vbp_data_h264 *data) {
     mAcquiredBuffer->renderBuffer.flag = 0;
     mAcquiredBuffer->renderBuffer.timeStamp = mCurrentPTS;
     mAcquiredBuffer->pictureOrder = getPOC(picture);
+    if (mSizeChanged) {
+        mAcquiredBuffer->renderBuffer.flag |= IS_RESOLUTION_CHANGE;
+        mSizeChanged = false;
+    }
 
     status  = continueDecodingFrame(data);
     // surface buffer is released if decode fails
@@ -775,7 +774,13 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
 
 Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
     updateFormatInfo(data);
-    if (mSizeChanged == false) {
+    bool noNeedFlush = false;
+    if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER) {
+        noNeedFlush = (mVideoFormatInfo.width <= mVideoFormatInfo.surfaceWidth)
+                && (mVideoFormatInfo.height <= mVideoFormatInfo.surfaceHeight);
+    }
+
+    if (mSizeChanged == false || noNeedFlush) {
         return DECODE_SUCCESS;
     } else {
         mSizeChanged = false;

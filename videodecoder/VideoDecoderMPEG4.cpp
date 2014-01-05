@@ -71,6 +71,7 @@ void VideoDecoderMPEG4::stop(void) {
 Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
     Decode_Status status;
     vbp_data_mp42 *data = NULL;
+    bool useGraphicbuffer = mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER;
     if (buffer == NULL) {
         return DECODE_INVALID_DATA;
     }
@@ -92,7 +93,7 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
         CHECK_STATUS("startVA");
     }
 
-    if (mSizeChanged) {
+    if (mSizeChanged && !useGraphicbuffer) {
         // some container has the incorrect width/height.
         // send the format change to OMX to update the crop info.
         mSizeChanged = false;
@@ -105,11 +106,22 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
         data->codec_data.video_object_layer_width &&
         data->codec_data.video_object_layer_height) {
         // update  encoded image size
+        ITRACE("Video size is changed. from %dx%d to %dx%d\n",mVideoFormatInfo.width,mVideoFormatInfo.height,
+                data->codec_data.video_object_layer_width,data->codec_data.video_object_layer_height);
+        bool noNeedFlush = false;
         mVideoFormatInfo.width = data->codec_data.video_object_layer_width;
         mVideoFormatInfo.height = data->codec_data.video_object_layer_height;
-        flushSurfaceBuffers();
-        ITRACE("Video size is changed.");
-        return DECODE_FORMAT_CHANGE;
+        if (useGraphicbuffer) {
+            noNeedFlush = (mVideoFormatInfo.width <= mVideoFormatInfo.surfaceWidth)
+                    && (mVideoFormatInfo.height <= mVideoFormatInfo.surfaceHeight);
+        }
+        if (!noNeedFlush) {
+            flushSurfaceBuffers();
+            mSizeChanged = false;
+            return DECODE_FORMAT_CHANGE;
+        } else {
+            mSizeChanged = true;
+        }
     }
 
     status = decodeFrame(buffer, data);
@@ -380,7 +392,10 @@ Decode_Status VideoDecoderMPEG4::continueDecodingFrame(vbp_data_mp42 *data) {
             // TODO:  set discontinuity flag
             mAcquiredBuffer->renderBuffer.flag = 0;
             mAcquiredBuffer->renderBuffer.timeStamp = mCurrentPTS;
-
+            if (mSizeChanged) {
+                mAcquiredBuffer->renderBuffer.flag |= IS_RESOLUTION_CHANGE;
+                mSizeChanged = false;
+            }
             if (codingType != MP4_VOP_TYPE_B) {
                 mLastVOPCodingType = codingType;
                 mLastVOPTimeIncrement = picData->vop_time_increment;

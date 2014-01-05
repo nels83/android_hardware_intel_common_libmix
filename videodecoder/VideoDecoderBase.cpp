@@ -184,6 +184,15 @@ void VideoDecoderBase::flush(void) {
 
     endDecodingFrame(true);
 
+    VideoSurfaceBuffer *p = mOutputHead;
+    // check if there's buffer with DRC flag in the output queue
+    while (p) {
+        if (p->renderBuffer.flag & IS_RESOLUTION_CHANGE) {
+            mSizeChanged = true;
+            break;
+        }
+        p = p->next;
+    }
     // avoid setting mSurfaceAcquirePos  to 0 as it may cause tearing
     // (surface is still being rendered)
     mSurfaceAcquirePos = (mSurfaceAcquirePos  + 1) % mNumSurfaces;

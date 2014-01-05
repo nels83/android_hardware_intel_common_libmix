@@ -89,6 +89,7 @@ void VideoDecoderWMV::flush(void) {
 Decode_Status VideoDecoderWMV::decode(VideoDecodeBuffer *buffer) {
     Decode_Status status;
     vbp_data_vc1 *data = NULL;
+    bool useGraphicbuffer = mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER;
     if (buffer == NULL) {
         return DECODE_INVALID_DATA;
     }
@@ -101,24 +102,36 @@ Decode_Status VideoDecoderWMV::decode(VideoDecodeBuffer *buffer) {
         CHECK_STATUS("startVA");
     }
 
+    if (mSizeChanged && !useGraphicbuffer) {
+        mSizeChanged = false;
+        return DECODE_FORMAT_CHANGE;
+    }
+
     if ((mVideoFormatInfo.width != data->se_data->CODED_WIDTH ||
         mVideoFormatInfo.height != data->se_data->CODED_HEIGHT) &&
         data->se_data->CODED_WIDTH &&
         data->se_data->CODED_HEIGHT) {
-       ITRACE("video size is changed from %dx%d to %dx%d", mVideoFormatInfo.width, mVideoFormatInfo.height,
-               data->se_data->CODED_WIDTH, data->se_data->CODED_HEIGHT);
-       mVideoFormatInfo.width = data->se_data->CODED_WIDTH;
-       mVideoFormatInfo.height = data->se_data->CODED_HEIGHT;
-       flushSurfaceBuffers();
-       return DECODE_FORMAT_CHANGE;
+        ITRACE("video size is changed from %dx%d to %dx%d", mVideoFormatInfo.width, mVideoFormatInfo.height,
+                data->se_data->CODED_WIDTH, data->se_data->CODED_HEIGHT);
+        mVideoFormatInfo.width = data->se_data->CODED_WIDTH;
+        mVideoFormatInfo.height = data->se_data->CODED_HEIGHT;
+        bool noNeedFlush = false;
+        if (useGraphicbuffer) {
+            noNeedFlush = (mVideoFormatInfo.width <= mVideoFormatInfo.surfaceWidth)
+                    && (mVideoFormatInfo.height <= mVideoFormatInfo.surfaceHeight);
+        }
+
+        if (noNeedFlush) {
+            mSizeChanged = true;
+        } else {
+            flushSurfaceBuffers();
+            mSizeChanged = false;
+            return DECODE_FORMAT_CHANGE;
+        }
     }
 
     status = decodeFrame(buffer, data);
     CHECK_STATUS("decodeFrame");
-    if (mSizeChanged) {
-        mSizeChanged = false;
-        return DECODE_FORMAT_CHANGE;
-    }
     return status;
 }
 
@@ -167,6 +180,10 @@ Decode_Status VideoDecoderWMV::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
     }
     if (buffer->flag & WANT_DECODE_ONLY) {
         mAcquiredBuffer->renderBuffer.flag |= WANT_DECODE_ONLY;
+    }
+    if (mSizeChanged) {
+        mSizeChanged = false;
+        mAcquiredBuffer->renderBuffer.flag |= IS_RESOLUTION_CHANGE;
     }
 
     if (data->num_pictures > 1) {

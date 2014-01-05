@@ -159,6 +159,7 @@ Decode_Status VideoDecoderVP8::decode(VideoDecodeBuffer *buffer) {
 
 Decode_Status VideoDecoderVP8::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_vp8 *data) {
     Decode_Status status;
+    bool useGraphicbuffer = mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER;
     mCurrentPTS = buffer->timeStamp;
     if (0 == data->num_pictures || NULL == data->pic_data) {
         WTRACE("Number of pictures is 0.");
@@ -166,12 +167,18 @@ Decode_Status VideoDecoderVP8::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
     }
 
     if (VP8_KEY_FRAME == data->codec_data->frame_type) {
-        if (mSizeChanged) {
+        if (mSizeChanged && !useGraphicbuffer){
             mSizeChanged = false;
             return DECODE_FORMAT_CHANGE;
         } else {
             updateFormatInfo(data);
-            if (mSizeChanged == true) {
+            bool noNeedFlush = false;
+            if (useGraphicbuffer) {
+                noNeedFlush = (mVideoFormatInfo.width <= mVideoFormatInfo.surfaceWidth)
+                        && (mVideoFormatInfo.height <= mVideoFormatInfo.surfaceHeight);
+            }
+            if (mSizeChanged == true && !noNeedFlush) {
+                flushSurfaceBuffers();
                 mSizeChanged = false;
                 return DECODE_FORMAT_CHANGE;
             }
@@ -196,7 +203,10 @@ Decode_Status VideoDecoderVP8::decodeFrame(VideoDecodeBuffer* buffer, vbp_data_v
     if (buffer->flag & WANT_DECODE_ONLY) {
         mAcquiredBuffer->renderBuffer.flag |= WANT_DECODE_ONLY;
     }
-
+    if (mSizeChanged) {
+        mSizeChanged = false;
+        mAcquiredBuffer->renderBuffer.flag |= IS_RESOLUTION_CHANGE;
+    }
 
     // Here data->num_pictures is always equal to 1
     for (int index = 0; index < data->num_pictures; index++) {
