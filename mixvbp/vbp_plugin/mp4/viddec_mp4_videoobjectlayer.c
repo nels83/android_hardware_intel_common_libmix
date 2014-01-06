@@ -378,6 +378,10 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
             vidObjLay->quarter_sample = code;
         }
+        else
+        {
+            vidObjLay->quarter_sample = 0;
+        }
 
         getbits = viddec_pm_get_bits(parent, &(code), 1);
         BREAK_GETBITS_REQD_MISSING(getbits, ret);
