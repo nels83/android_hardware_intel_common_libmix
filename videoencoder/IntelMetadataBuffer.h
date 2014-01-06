@@ -35,7 +35,6 @@
 
 using namespace android;
 #endif
-
 #define STRING_TO_FOURCC(format) ((uint32_t)(((format)[0])|((format)[1]<<8)|((format)[2]<<16)|((format)[3]<<24)))
 
 typedef enum {
@@ -156,11 +155,11 @@ public:
     static status_t instantiate();
 
     IntelBufferSharingService(){
-        LOGI("IntelBufferSharingService instance is created");
+        ALOGI("IntelBufferSharingService instance is created");
     }
 
     ~IntelBufferSharingService(){
-        LOGI("IntelBufferSharingService instance is destroyed");
+        ALOGI("IntelBufferSharingService instance is destroyed");
     }
 
     status_t onTransact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags);
