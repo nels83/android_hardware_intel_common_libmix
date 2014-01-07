@@ -50,6 +50,9 @@ typedef unsigned short uint16;
 #ifndef uint32
 typedef unsigned int uint32;
 #endif
+#ifndef int16
+typedef short int16;
+#endif
 
 typedef void *Handle;
 
@@ -171,6 +174,7 @@ typedef struct _vbp_codec_data_h264
 
     int bit_rate;
 
+    int has_slice;
 } vbp_codec_data_h264;
 
 typedef struct _vbp_slice_data_h264
@@ -225,6 +229,10 @@ typedef struct _vbp_data_h264
     VAIQMatrixBufferH264* IQ_matrix_buf;
 
     vbp_codec_data_h264* codec_data;
+
+#ifdef USE_SLICE_HEADER_PARSING
+    VAParsePictureParameterBuffer* pic_parse_buffer;
+#endif
 
 } vbp_data_h264;
 
@@ -406,7 +414,7 @@ enum _vbp_parser_type
 #ifdef USE_HW_VP8
     VBP_VP8,
 #endif
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
     VBP_H264SECURE,
 #endif
 };
@@ -459,8 +467,7 @@ uint32 vbp_query(Handle hcontext, void **data);
  */
 uint32 vbp_flush(Handle hcontent);
 
-
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
 /*
  * update the the vbp context using the new data
  * @param hcontext: handle to VBP context.

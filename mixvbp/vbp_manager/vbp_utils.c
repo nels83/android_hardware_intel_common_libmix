@@ -35,7 +35,7 @@
 #ifdef USE_HW_VP8
 #include "vbp_vp8_parser.h"
 #endif
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
 #include "vbp_h264secure_parser.h"
 #endif
 
@@ -131,7 +131,7 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
         break;
 #endif
 
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
     case VBP_H264SECURE:
         parser_name = "libmixvbp_h264secure.so";
         break;
@@ -177,11 +177,11 @@ static uint32 vbp_utils_initialize_context(vbp_context *pcontext)
 #ifdef USE_HW_VP8
         SET_FUNC_POINTER(VBP_VP8, vp8);
 #endif
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
         SET_FUNC_POINTER(VBP_H264SECURE, h264secure);
 #endif
     }
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
     if (pcontext->parser_type == VBP_H264SECURE) {
         pcontext->func_update_data = vbp_update_data_h264secure;
     }
@@ -562,8 +562,7 @@ uint32 vbp_utils_flush(vbp_context *pcontext)
     return VBP_OK;
 }
 
-
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
 /**
  *
  * provide query data back to the consumer

@@ -982,6 +982,8 @@ extern "C" {
         uint8_t			last_I_frame_idc;
         uint8_t			sei_b_state_ready;
         uint8_t			gop_err_flag;
+
+        uint8_t         has_slice;
     } h264_Info;
 
 

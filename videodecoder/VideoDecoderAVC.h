@@ -39,15 +39,15 @@ public:
     virtual Decode_Status decode(VideoDecodeBuffer *buffer);
 
 protected:
-    Decode_Status decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h264 *data);
-    Decode_Status beginDecodingFrame(vbp_data_h264 *data);
-    Decode_Status continueDecodingFrame(vbp_data_h264 *data);
+    virtual Decode_Status decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h264 *data);
+    virtual Decode_Status beginDecodingFrame(vbp_data_h264 *data);
+    virtual Decode_Status continueDecodingFrame(vbp_data_h264 *data);
     virtual Decode_Status decodeSlice(vbp_data_h264 *data, uint32_t picIndex, uint32_t sliceIndex);
     Decode_Status setReference(VASliceParameterBufferH264 *sliceParam);
     Decode_Status updateDPB(VAPictureParameterBufferH264 *picParam);
     Decode_Status updateReferenceFrames(vbp_picture_data_h264 *picData);
     void removeReferenceFromDPB(VAPictureParameterBufferH264 *picParam);
-    inline uint32_t getPOC(VAPictureH264 *pic); // Picture Order Count
+    uint32_t getPOC(VAPictureH264 *pic); // Picture Order Count
     inline VASurfaceID findSurface(VAPictureH264 *pic);
     inline VideoSurfaceBuffer* findSurfaceBuffer(VAPictureH264 *pic);
     inline VideoSurfaceBuffer* findRefSurfaceBuffer(VAPictureH264 *pic);

@@ -60,4 +60,12 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/secvideo/baytrail/
 LOCAL_SRC_FILES += secvideo/baytrail/vbp_h264secure_parser.c
 endif
 
+PLATFORM_SUPPORT_USE_SLICE_HEADER_PARSING := merrifield
+
+ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_USE_SLICE_HEADER_PARSING)),)
+LOCAL_CFLAGS += -DUSE_SLICE_HEADER_PARSING
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/secvideo/merrifield/
+LOCAL_SRC_FILES += secvideo/merrifield/vbp_h264secure_parser.c
+endif
+
 include $(BUILD_SHARED_LIBRARY)

@@ -90,8 +90,9 @@ protected:
 
     virtual Decode_Status getRawDataFromSurface(VideoRenderBuffer *renderBuffer = NULL, uint8_t *pRawData = NULL, uint32_t *pSize = NULL, bool internal = true);
 
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT) || (defined USE_SLICE_HEADER_PARSING)
     Decode_Status updateBuffer(uint8_t *buffer, int32_t size, void** vbpData);
+    Decode_Status queryBuffer(void **vbpData);
     Decode_Status setParserType(_vbp_parser_type type);
     virtual Decode_Status getCodecSpecificConfigs(VAProfile profile, VAConfigID *config);
 #endif

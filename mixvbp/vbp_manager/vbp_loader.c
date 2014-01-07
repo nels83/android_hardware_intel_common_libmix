@@ -174,7 +174,7 @@ uint32 vbp_flush(Handle hcontext)
     return error;
 }
 
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
 uint32 vbp_update(Handle hcontext, void *newdata, uint32 size, void **data)
 {
     vbp_context *pcontext;

@@ -64,7 +64,7 @@ typedef uint32 (*function_parse_init_data)(vbp_context* cxt);
 typedef uint32 (*function_parse_start_code)(vbp_context* cxt);
 typedef uint32 (*function_process_parsing_result)(vbp_context* cxt, int i);
 typedef uint32 (*function_populate_query_data)(vbp_context* cxt);
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
 typedef uint32 (*function_update_data)(vbp_context* cxt, void *newdata, uint32 size);
 #endif
 
@@ -101,7 +101,7 @@ struct vbp_context_t
     function_parse_start_code func_parse_start_code;
     function_process_parsing_result func_process_parsing_result;
     function_populate_query_data func_populate_query_data;
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
     function_update_data func_update_data;
 #endif
 };

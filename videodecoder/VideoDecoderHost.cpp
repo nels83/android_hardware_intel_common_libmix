@@ -25,9 +25,11 @@
 #include "VideoDecoderWMV.h"
 #include "VideoDecoderMPEG4.h"
 #include "VideoDecoderAVC.h"
+
 #ifdef USE_INTEL_SECURE_AVC
 #include "VideoDecoderAVCSecure.h"
 #endif
+
 #ifdef USE_HW_VP8
 #include "VideoDecoderVP8.h"
 #endif
@@ -71,6 +73,7 @@ IVideoDecoder* createVideoDecoder(const char* mimeType) {
         return (IVideoDecoder *)p;
     }
 #endif
+
     else {
         ETRACE("Unknown mime type: %s", mimeType);
     }

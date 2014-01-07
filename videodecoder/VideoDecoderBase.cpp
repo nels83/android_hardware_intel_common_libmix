@@ -98,6 +98,7 @@ Decode_Status VideoDecoderBase::start(VideoConfigBuffer *buffer) {
     }
 
     if ((int32_t)mParserType != VBP_INVALID) {
+        ITRACE("mParserType = %d", mParserType);
         if (vbp_open(mParserType, &mParserHandle) != VBP_OK) {
             ETRACE("Failed to open VBP parser.");
             return DECODE_NO_PARSER;
@@ -1041,6 +1042,8 @@ Decode_Status VideoDecoderBase::parseBuffer(uint8_t *buffer, int32_t size, bool 
     return DECODE_SUCCESS;
 }
 
+
+
 Decode_Status VideoDecoderBase::mapSurface(void) {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAImage image;
@@ -1288,7 +1291,7 @@ void VideoDecoderBase::querySurfaceRenderStatus(VideoSurfaceBuffer* surface) {
 }
 
 // This function should be called before start() to load different type of parsers
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
 Decode_Status VideoDecoderBase::setParserType(_vbp_parser_type type) {
     if ((int32_t)type != VBP_INVALID) {
         ITRACE("Parser Type = %d", (int32_t)type);
@@ -1312,6 +1315,18 @@ Decode_Status VideoDecoderBase::updateBuffer(uint8_t *buffer, int32_t size, void
 
     vbpStatus = vbp_update(mParserHandle, buffer, size, vbpData);
     CHECK_VBP_STATUS("vbp_update");
+
+    return DECODE_SUCCESS;
+}
+
+Decode_Status VideoDecoderBase::queryBuffer(void** vbpData) {
+    if (mParserHandle == NULL) {
+        return DECODE_NO_PARSER;
+    }
+
+    uint32_t vbpStatus;
+    vbpStatus = vbp_query(mParserHandle, vbpData);
+    CHECK_VBP_STATUS("vbp_query");
 
     return DECODE_SUCCESS;
 }

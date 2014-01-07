@@ -514,6 +514,7 @@ Decode_Status VideoDecoderAVC::updateReferenceFrames(vbp_picture_data_h264 *picD
     // update DPB  from the reference list in each slice.
     for (uint32_t slice = 0; slice < picData->num_slices; slice++) {
         sliceParam = &(picData->slc_data[slice].slc_parms);
+
         for (int32_t list = 0; list < 2; list++) {
             refList = (list == 0) ? sliceParam->RefPicList0 :
                                     sliceParam->RefPicList1;
@@ -702,6 +703,8 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         mVideoFormatInfo.width = width;
         mVideoFormatInfo.height = height;
     }
+
+
 
     // video_range has default value of 0.
     mVideoFormatInfo.videoRange = data->codec_data->video_full_range_flag;

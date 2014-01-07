@@ -2778,7 +2778,7 @@ void h264_dpb_idr_memory_management (h264_Info * pInfo,seq_param_set_used_ptr ac
                 h264_dpb_unmark_for_reference(p_dpb, p_dpb->active_fs->fs_idc);
                 h264_dpb_remove_ref_list(p_dpb, p_dpb->active_fs->fs_idc);
                 //h264_send_new_display_frame(0x01); //send ignore_frame signal to Host
-#ifndef USE_AVC_SHORT_FORMAT
+#if (!defined USE_AVC_SHORT_FORMAT && !defined USE_SLICE_HEADER_PARSING)
                 ///  Add into drop-out list for all frms in dpb without display
                 if (!(viddec_h264_get_is_non_existent(p_dpb->active_fs)))   {
                     if ( viddec_h264_get_is_output(&(p_dpb->fs[p_dpb->fs_dpb_idc[idx]])) ) {			//// This frame has been displayed but not released
@@ -3000,7 +3000,7 @@ void h264_dpb_remove_frame_from_dpb(h264_DecodedPictureBuffer *p_dpb, int32_t id
     h264_dpb_set_active_fs(p_dpb, fs_idc);
     viddec_h264_set_is_frame_used(p_dpb->active_fs, 0);
 
-#ifndef USE_AVC_SHORT_FORMAT
+#if (!defined USE_AVC_SHORT_FORMAT && !defined USE_SLICE_HEADER_PARSING)
     //add to support frame relocation interface to host
     if (!(viddec_h264_get_is_non_existent(p_dpb->active_fs)))
     {
@@ -3355,7 +3355,7 @@ void h264_dpb_frame_output(h264_Info * pInfo,int32_t fs_idc, int32_t direct, int
     if (viddec_h264_get_is_non_existent(p_dpb->active_fs) == 0)
     {
         *existing = 1;
-#ifndef USE_AVC_SHORT_FORMAT
+#if (!defined USE_AVC_SHORT_FORMAT && !defined USE_SLICE_HEADER_PARSING)
         p_dpb->frame_id_need_to_be_displayed[p_dpb->frame_numbers_need_to_be_displayed]=p_dpb->active_fs->fs_idc;
         p_dpb->frame_numbers_need_to_be_displayed++;
 #endif
