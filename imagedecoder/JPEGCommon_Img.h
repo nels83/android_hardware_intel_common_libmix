@@ -1,6 +1,5 @@
 /* INTEL CONFIDENTIAL
 * Copyright (c) 2013 Intel Corporation.  All rights reserved.
-* Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel

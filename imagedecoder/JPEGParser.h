@@ -30,7 +30,8 @@
 #define _JPEG_PARSE_H_
 
 #include <stdint.h>
-
+#include <utils/Vector.h>
+using namespace std;
 // Marker Codes
 #define CODE_SOF_BASELINE 0xC0
 #define CODE_SOF1         0xC1
@@ -78,9 +79,10 @@
 #define CODE_APP15        0xEF
 
 struct CJPEGParse {
-    uint8_t* stream_buff;
+    const uint8_t* stream_buff;
     uint32_t parse_index;
     uint32_t buff_size;
+    android::Vector<uint8_t> *inputs;
     bool end_of_buff;
     uint8_t (*readNextByte)(CJPEGParse* parser);
     uint32_t (*readBytes)( CJPEGParse* parser, uint32_t bytes_to_read );
@@ -88,10 +90,129 @@ struct CJPEGParse {
     uint8_t (*getNextMarker)(CJPEGParse* parser);
     uint32_t (*getByteOffset)(CJPEGParse* parser);
     bool (*endOfBuffer)(CJPEGParse* parser);
-    uint8_t* (*getCurrentIndex)(CJPEGParse* parser);
+    const uint8_t* (*getCurrentIndex)(CJPEGParse* parser);
     bool (*setByteOffset)( CJPEGParse* parser, uint32_t byte_offset );
+    uint32_t (*getRemainingBytes)(CJPEGParse* parser);
 };
 
-void parserInitialize(CJPEGParse* parser,  uint8_t* stream_buff, uint32_t buff_size);
+void parserInitialize(CJPEGParse* parser, const uint8_t* stream_buff, uint32_t buff_size);
+void parserInitialize(CJPEGParse* parser, android::Vector<uint8_t> *inputs);
+
+class JpegBitstreamParser
+{
+public:
+    void set(android::Vector<uint8_t>* inputs)
+    {
+        parserInitialize(&parser, inputs);
+        use_vector = true;
+    }
+    void set(const uint8_t *buf, uint32_t bufsize)
+    {
+        parserInitialize(&parser, buf, bufsize);
+        use_vector = false;
+    }
+    bool tryReadNextByte(uint8_t *byte)
+    {
+        if (parser.getRemainingBytes(&parser) >= 1) {
+            *byte = parser.readNextByte(&parser);
+            return true;
+        }
+        return false;
+    }
+    bool tryReadBytes(uint32_t *bytes, uint32_t bytes_to_read)
+    {
+        if (parser.getRemainingBytes(&parser) >= bytes_to_read) {
+            *bytes = parser.readBytes(&parser, bytes_to_read);
+            return true;
+        }
+        return false;
+    }
+    bool tryBurnBytes(uint32_t bytes_to_burn)
+    {
+        if (parser.getRemainingBytes(&parser) >= bytes_to_burn) {
+            parser.burnBytes(&parser, bytes_to_burn);
+            return true;
+        }
+        return false;
+    }
+    bool tryGetNextMarker(uint8_t *marker)
+    {
+        uint32_t rollbackoff = parser.getByteOffset(&parser);
+        while (!parser.endOfBuffer(&parser)) {
+            if (tryReadNextByte(marker)) {
+                if (*marker == 0xff) {
+                    //rollbackoff = parser.parse_index - 1;
+                    break;
+                }
+            } else {
+                goto rollback;
+            }
+        }
+        /* check the next byte to make sure we don't miss the real marker*/
+        if (tryReadNextByte(marker)) {
+            if (*marker == 0xff) {
+                if (tryReadNextByte(marker)) {
+                    return true;
+                }
+                else
+                    goto rollback;
+            }
+            else {
+                return true;
+            }
+        }
+        else goto rollback;
+rollback:
+        parser.parse_index = rollbackoff;
+        return false;
+    }
+    uint32_t getByteOffset()
+    {
+        return parser.getByteOffset(&parser);
+    }
+    bool endOfBuffer()
+    {
+        return parser.endOfBuffer(&parser);
+    }
+    const uint8_t* getCurrentIndex()
+    {
+        return parser.getCurrentIndex(&parser);
+    }
+    bool trySetByteOffset(uint32_t byte_offset)
+    {
+        uint32_t bufsize;
+        if (use_vector)
+            bufsize = parser.inputs->size();
+        else
+            bufsize= parser.buff_size;
+        if (bufsize > byte_offset) {
+            parser.setByteOffset(&parser, byte_offset);
+            return true;
+        }
+        return false;
+    }
+    uint32_t getRemainingBytes()
+    {
+        return parser.getRemainingBytes(&parser);
+    }
+    const uint8_t itemAt(uint32_t index)
+    {
+        if (use_vector)
+            return parser.inputs->itemAt(index);
+        else
+            return parser.stream_buff[index];
+    }
+    void reset()
+    {
+        parser.parse_index = 0;
+        parser.inputs = NULL;
+        parser.stream_buff = NULL;
+        parser.buff_size = 0;
+        use_vector = false;
+    }
+private:
+    CJPEGParse parser;
+    bool use_vector;
+};
 #endif // _JPEG_PARSE_H_
 

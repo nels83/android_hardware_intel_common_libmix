@@ -1,6 +1,5 @@
 /* INTEL CONFIDENTIAL
 * Copyright (c) 2013 Intel Corporation.  All rights reserved.
-* Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -29,25 +28,49 @@
 #ifndef JPEG_BLITTER_H
 #define JPEG_BLITTER_H
 
-#include <VideoVPPBase.h>
 #include "JPEGCommon.h"
 #include <utils/threads.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <hardware/gralloc.h>
+
+using namespace android;
 
 class JpegDecoder;
+typedef void* BlitEvent;
 
 class JpegBlitter
 {
 public:
-    JpegBlitter();
+    JpegBlitter(VADisplay display, VAConfigID vpCfgId, VAContextID vpCtxId);
     virtual ~JpegBlitter();
-    virtual void setDecoder(JpegDecoder &decoder);
-    virtual JpegDecodeStatus blit(RenderTarget &src, RenderTarget &dst);
+    virtual void init(JpegDecoder &dec);
+    virtual void deinit();
+    virtual JpegDecodeStatus blit(RenderTarget &src, RenderTarget &dst, int scale_factor);
+    virtual JpegDecodeStatus getRgbaTile(RenderTarget &src,
+                                         uint8_t *sysmem,
+                                         int left, int top, int width, int height, int scale_factor);
+    virtual JpegDecodeStatus blitToLinearRgba(RenderTarget &src,
+                                              uint8_t *sysmem,
+                                              uint32_t width, uint32_t height,
+                                              BlitEvent &event, int scale_factor);
+    virtual JpegDecodeStatus blitToCameraSurfaces(RenderTarget &src,
+                                                  buffer_handle_t dst_nv12,
+                                                  buffer_handle_t dst_yuy2,
+                                                  uint8_t *dst_nv21,
+                                                  uint8_t *dst_yv12,
+                                                  uint32_t width, uint32_t height,
+                                                  BlitEvent &event);
+    virtual void syncBlit(BlitEvent &event);
 private:
     mutable Mutex mLock;
-    virtual void destroyContext();
     JpegDecoder *mDecoder;
+    VADisplay mDisplay;
     VAConfigID mConfigId;
     VAContextID mContextId;
+    void *mPrivate;
+    bool mInitialized;
 };
 
 #endif

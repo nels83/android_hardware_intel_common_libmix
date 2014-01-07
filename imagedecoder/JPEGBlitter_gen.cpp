@@ -1,6 +1,5 @@
 /* INTEL CONFIDENTIAL
 * Copyright (c) 2013 Intel Corporation.  All rights reserved.
-* Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -25,32 +24,45 @@
 *    Yao Cheng <yao.cheng@intel.com>
 *
 */
-//#define LOG_NDEBUG 0
 
 #include "JPEGBlitter.h"
 #include "JPEGCommon_Gen.h"
 #include "JPEGDecoder.h"
-
+#include <utils/Timers.h>
 #include <va/va.h>
 #include <va/va_tpi.h>
 #include "ImageDecoderTrace.h"
 
+#include <cm/cm_rt.h>
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
-
 #include <assert.h>
+
+#define NV12_INTERMEDIATE 0
+#define PRE_INIT_CM 1
+#define BLIT_METHOD_CM 1 // 0 for VA+GpuCopy method, 1 for pure CM method
+#define DUMP_RGBA 0
+
+#define CM_KERNEL_FUNC_NAME yuv_tiled_to_rgba_linear
 
 #define JD_CHECK(err, label) \
         if (err) { \
-            ETRACE("%s::%d: failed: %d", __PRETTY_FUNCTION__, __LINE__, err); \
+            ETRACE("%s::%d: failed: %d", __FUNCTION__, __LINE__, err); \
             goto label; \
         }
 
 #define JD_CHECK_RET(err, label, retcode) \
         if (err) { \
             status = retcode; \
-            ETRACE("%s::%d: failed: %d", __PRETTY_FUNCTION__, __LINE__, err); \
+            ETRACE("%s::%d: failed: %d", __FUNCTION__, __LINE__, err); \
+            goto label; \
+        }
+
+#define JD_CM_CHECK_RET(err, label, retcode) \
+        if (err) { \
+            status = retcode; \
+            ETRACE("CM %s::%d: failed: 0x%08x", __FUNCTION__, __LINE__, err); \
             goto label; \
         }
 
@@ -59,11 +71,13 @@ const VAProcColorStandardType fourcc2ColorStandard(uint32_t fourcc)
     switch(fourcc) {
     case VA_FOURCC_NV12:
     case VA_FOURCC_YUY2:
-    case VA_FOURCC_422H:
-    case VA_FOURCC_422V:
+    case VA_FOURCC_UYVY:
+    case VA_FOURCC('4','0','0','P'):
     case VA_FOURCC_411P:
     case VA_FOURCC_411R:
     case VA_FOURCC_IMC3:
+    case VA_FOURCC_422H:
+    case VA_FOURCC_422V:
     case VA_FOURCC_444P:
     case VA_FOURCC_YV12:
         return VAProcColorStandardBT601;
@@ -72,246 +86,7 @@ const VAProcColorStandardType fourcc2ColorStandard(uint32_t fourcc)
     }
 }
 
-void write_to_file(const char *file, const VAImage *pImg, const uint8_t *pSrc)
-{
-    FILE *fp = fopen(file, "wb");
-    if (!fp) {
-        return;
-    }
-    const uint8_t *pY, *pU, *pV, *pYUYV, *pRGBA, *pUV;
-    float h_samp_factor, v_samp_factor;
-    int row, col;
-    char fourccstr[5];
-    VTRACE("Dumping %s buffer to %s", fourcc2str(fourccstr, pImg->format.fourcc), file);
-    switch (pImg->format.fourcc) {
-    case VA_FOURCC_IMC3:
-        h_samp_factor = 1;
-        v_samp_factor = 0.5;
-        break;
-    case VA_FOURCC_422H:
-        h_samp_factor = 0.5;
-        v_samp_factor = 1;
-        break;
-    case VA_FOURCC_444P:
-        h_samp_factor = 1;
-        v_samp_factor = 1;
-        break;
-    case VA_FOURCC_YUY2:
-    {
-        pYUYV = pSrc + pImg->offsets[0];
-        VTRACE("YUY2 output width %u stride %u", pImg->width, pImg->pitches[0]);
-        for (row = 0; row < pImg->height; ++row) {
-            fwrite(pYUYV, 2, pImg->width, fp);
-            pYUYV += pImg->pitches[0];
-        }
-    }
-    fclose(fp);
-    return;
-    case VA_FOURCC_NV12:
-    {
-        pY = pSrc + pImg->offsets[0];
-        pUV = pSrc + pImg->offsets[1];
-        VTRACE("NV12 output width %u stride %u, %u", pImg->width, pImg->pitches[0], pImg->pitches[1]);
-        for (row = 0; row < pImg->height; ++row) {
-            fwrite(pY, 1, pImg->width, fp);
-            pY += pImg->pitches[0];
-        }
-        for (row = 0; row < pImg->height/2; ++row) {
-            fwrite(pUV, 1, pImg->width, fp);
-            pUV += pImg->pitches[1];
-        }
-    }
-    fclose(fp);
-    return;
-    case VA_FOURCC_RGBA:
-    case VA_FOURCC_BGRA:
-    case VA_FOURCC_ARGB:
-    case VA_FOURCC('A', 'B', 'G', 'R'):
-    {
-        pRGBA = pSrc + pImg->offsets[0];
-        VTRACE("RGBA output width %u stride %u", pImg->width, pImg->pitches[0]);
-        for (row = 0; row < pImg->height; ++row) {
-            fwrite(pRGBA, 4, pImg->width, fp);
-            pRGBA += pImg->pitches[0];
-        }
-    }
-    fclose(fp);
-    return;
-    default:
-        // non-supported
-        {
-            char fourccstr[5];
-            ETRACE("%s: Not-supported input YUV format", fourcc2str(fourccstr, pImg->format.fourcc));
-        }
-        return;
-    }
-    pY = pSrc + pImg->offsets[0];
-    pU = pSrc + pImg->offsets[1];
-    pV = pSrc + pImg->offsets[2];
-    // Y
-    for (row = 0; row < pImg->height; ++row) {
-        fwrite(pY, 1, pImg->width, fp);
-        pY += pImg->pitches[0];
-    }
-    // U
-    for (row = 0; row < pImg->height * v_samp_factor; ++row) {
-        fwrite(pU, 1, pImg->width * h_samp_factor, fp);
-        pU += pImg->pitches[1];
-    }
-    // V
-    for (row = 0; row < pImg->height * v_samp_factor; ++row) {
-        fwrite(pV, 1, pImg->width * h_samp_factor, fp);
-        pV += pImg->pitches[2];
-    }
-    fclose(fp);
-}
-
-static void write_to_YUY2(uint8_t *pDst,
-                          uint32_t dst_w,
-                          uint32_t dst_h,
-                          uint32_t dst_stride,
-                          const VAImage *pImg,
-                          const uint8_t *pSrc)
-{
-    const uint8_t *pY, *pU, *pV;
-    float h_samp_factor, v_samp_factor;
-    int row, col;
-    char fourccstr[5];
-    uint32_t copy_w = (dst_w < pImg->width)? dst_w: pImg->width;
-    uint32_t copy_h = (dst_h < pImg->height)? dst_h: pImg->height;
-    switch (pImg->format.fourcc) {
-    case VA_FOURCC_IMC3:
-        h_samp_factor = 0.5;
-        v_samp_factor = 0.5;
-        break;
-    case VA_FOURCC_422H:
-        h_samp_factor = 0.5;
-        v_samp_factor = 1;
-        break;
-    case VA_FOURCC_444P:
-        h_samp_factor = 1;
-        v_samp_factor = 1;
-        break;
-    default:
-        // non-supported
-        ETRACE("%s to YUY2: Not-supported input YUV format", fourcc2str(fourccstr, pImg->format.fourcc));
-        return;
-    }
-    pY = pSrc + pImg->offsets[0];
-    pU = pSrc + pImg->offsets[1];
-    pV = pSrc + pImg->offsets[2];
-    for (row = 0; row < copy_h; ++row) {
-        for (col = 0; col < copy_w; ++col) {
-            // Y
-            *(pDst + 2 * col) = *(pY + col);
-            uint32_t actual_col = h_samp_factor * col;
-            if (col % 2 == 1) {
-                // U
-                *(pDst + 2 * col + 1) = *(pU + actual_col);
-            }
-            else {
-                // V
-                *(pDst + 2 * col + 1) = *(pV + actual_col);
-            }
-        }
-        pDst += dst_stride;
-        pY += pImg->pitches[0];
-        uint32_t actual_row = row * v_samp_factor;
-        pU = pSrc + pImg->offsets[1] + actual_row * pImg->pitches[1];
-        pV = pSrc + pImg->offsets[2] + actual_row * pImg->pitches[2];
-    }
-}
-
-static void dumpSurface(const char* filename, VADisplay display, VASurfaceID surface)
-{
-    VAStatus st;
-    VAImage img;
-    uint8_t *buf;
-    st = vaDeriveImage(display, surface, &img);
-    if (st) {
-        ETRACE("vaDeriveImage failed with %d", st);
-        return;
-    }
-    uint32_t in_fourcc = img.format.fourcc;
-    VTRACE("Start dumping %s surface to %s", fourcc2str(NULL, in_fourcc), filename);
-    st = vaMapBuffer(display, img.buf, (void **)&buf);
-    if (st) {
-        ETRACE("vaMapBuffer failed with %d", st);
-        vaDestroyImage(display, img.image_id);
-        return;
-    }
-    VTRACE("start write_to_file");
-    write_to_file(filename, &img, buf);
-    vaUnmapBuffer(display, img.buf);
-    vaDestroyImage(display, img.image_id);
-}
-
-static void dumpGallocBuffer(const char* filename,
-                                buffer_handle_t handle,
-                                int width,
-                                int height,
-                                uint32_t fourcc)
-{
-    // NOT IMPLEMENTED
-}
-
-
-static JpegDecodeStatus swBlit(VADisplay display, VAContextID context,
-                 VASurfaceID in_surf, VARectangle *in_rect, uint32_t in_fourcc,
-                 VASurfaceID out_surf, VARectangle *out_rect, uint32_t out_fourcc)
-{
-    assert(out_fourcc == VA_FOURCC_YUY2);
-    assert((in_fourcc == VA_FOURCC_IMC3) || (in_fourcc == VA_FOURCC_422H) || (in_fourcc == VA_FOURCC_444P));
-    VAStatus st;
-    char str[10];
-    JpegDecodeStatus status;
-    VAImage in_img, out_img;
-    in_img.image_id = VA_INVALID_ID;
-    in_img.buf = VA_INVALID_ID;
-    out_img.image_id = VA_INVALID_ID;
-    out_img.buf = VA_INVALID_ID;
-    uint8_t *in_buf, *out_buf;
-    in_buf = out_buf = NULL;
-    st = vaDeriveImage(display, in_surf, &in_img);
-    JD_CHECK_RET(st, cleanup, JD_BLIT_FAILURE);
-    st = vaDeriveImage(display, out_surf, &out_img);
-    JD_CHECK_RET(st, cleanup, JD_BLIT_FAILURE);
-    st = vaMapBuffer(display, in_img.buf, (void **)&in_buf);
-    JD_CHECK_RET(st, cleanup, JD_BLIT_FAILURE);
-    st = vaMapBuffer(display, out_img.buf, (void **)&out_buf);
-    JD_CHECK_RET(st, cleanup, JD_BLIT_FAILURE);
-    VTRACE("%s in: %s, %ux%u, size %u, offset=%u,%u,%u, pitch=%u,%u,%u", __FUNCTION__,
-        fourcc2str(NULL, in_fourcc),
-        in_img.width,
-        in_img.height,
-        in_img.data_size,
-        in_img.offsets[0], in_img.offsets[1], in_img.offsets[2],
-        in_img.pitches[0], in_img.pitches[1], in_img.pitches[2]);
-    VTRACE("%s out: %s, %ux%u, size %u, offset=%u,%u,%u, pitch=%u,%u,%u", __FUNCTION__,
-        fourcc2str(NULL, out_fourcc),
-        out_img.width,
-        out_img.height,
-        out_img.data_size,
-        out_img.offsets[0], out_img.offsets[1], out_img.offsets[2],
-        out_img.pitches[0], out_img.pitches[1], out_img.pitches[2]);
-    write_to_YUY2(out_buf, out_img.width, out_img.height, out_img.pitches[0], &in_img, in_buf);
-    vaUnmapBuffer(display, in_img.buf);
-    vaUnmapBuffer(display, out_img.buf);
-    vaDestroyImage(display, in_img.image_id);
-    vaDestroyImage(display, out_img.image_id);
-    VTRACE("%s Finished SW CSC %s=>%s", __FUNCTION__, fourcc2str(str, in_fourcc), fourcc2str(str + 5, out_fourcc));
-    return JD_SUCCESS;
-
-cleanup:
-    ETRACE("%s failed to do swBlit %s=>%s", __FUNCTION__, fourcc2str(str, in_fourcc), fourcc2str(str + 5, out_fourcc));
-    if (in_buf != NULL) vaUnmapBuffer(display, in_img.buf);
-    if (out_buf != NULL) vaUnmapBuffer(display, out_img.buf);
-    if (in_img.image_id != VA_INVALID_ID) vaDestroyImage(display, in_img.image_id);
-    if (out_img.image_id != VA_INVALID_ID) vaDestroyImage(display, out_img.image_id);
-    return status;
-}
-
-static JpegDecodeStatus hwBlit(VADisplay display, VAContextID context,
+static JpegDecodeStatus vaVppBlit(VADisplay display, VAContextID context,
                  VASurfaceID in_surf, VARectangle *in_rect, uint32_t in_fourcc,
                  VASurfaceID out_surf, VARectangle *out_rect, uint32_t out_fourcc)
 {
@@ -324,9 +99,6 @@ static JpegDecodeStatus hwBlit(VADisplay display, VAContextID context,
     nsecs_t t1, t2;
 
     memset(&vpp_param, 0, sizeof(VAProcPipelineParameterBuffer));
-#if PRE_TOUCH_SURFACE
-    //zeroSurfaces(display, &out_surf, 1);
-#endif
     t1 = systemTime();
     vpp_param.surface                 = in_surf;
     vpp_param.output_region           = out_rect;
@@ -371,9 +143,9 @@ static JpegDecodeStatus hwBlit(VADisplay display, VAContextID context,
     JD_CHECK_RET(vpp_status, cleanup, JD_BLIT_FAILURE);
     t2 = systemTime();
     VTRACE("Finished HW CSC %s(%d,%d,%u,%u)=>%s(%d,%d,%u,%u) for %f ms",
-        fourcc2str(str, in_fourcc),
+        fourcc2str(in_fourcc, str),
         in_rect->x, in_rect->y, in_rect->width, in_rect->height,
-        fourcc2str(str + 5, out_fourcc),
+        fourcc2str(out_fourcc, str + 5),
         out_rect->x, out_rect->y, out_rect->width, out_rect->height,
         ns2us(t2 - t1)/1000.0);
 
@@ -388,38 +160,175 @@ static JpegDecodeStatus vaBlit(VADisplay display, VAContextID context,
                  VASurfaceID in_surf, VARectangle *in_rect, uint32_t in_fourcc,
                  VASurfaceID out_surf, VARectangle *out_rect, uint32_t out_fourcc)
 {
+    char fourccstr[10];
+    ALOGD("%s, in %s, out %s", __FUNCTION__, fourcc2str(in_fourcc, fourccstr), fourcc2str(out_fourcc, fourccstr + 5));
     if (((in_fourcc == VA_FOURCC_422H) ||
+        (in_fourcc == VA_FOURCC_444P) ||
+        (in_fourcc == VA_FOURCC_IMC3) ||
+        (in_fourcc == VA_FOURCC_411P) ||
+        (in_fourcc == VA_FOURCC_422V) ||
         (in_fourcc == VA_FOURCC_NV12) ||
         (in_fourcc == VA_FOURCC_YUY2) ||
+        (in_fourcc == VA_FOURCC_UYVY) ||
         (in_fourcc == VA_FOURCC_YV12) ||
+        (in_fourcc == VA_FOURCC_BGRA) ||
         (in_fourcc == VA_FOURCC_RGBA))
         &&
         ((out_fourcc == VA_FOURCC_422H) ||
+        (out_fourcc == VA_FOURCC_444P) ||
+        (out_fourcc == VA_FOURCC_IMC3) ||
+        (out_fourcc == VA_FOURCC_411P) ||
+        (out_fourcc == VA_FOURCC_422V) ||
         (out_fourcc == VA_FOURCC_NV12) ||
         (out_fourcc == VA_FOURCC_YV12) ||
         (out_fourcc == VA_FOURCC_YUY2) ||
+        (out_fourcc == VA_FOURCC_UYVY) ||
+        (out_fourcc == VA_FOURCC_BGRA) ||
         (out_fourcc == VA_FOURCC_RGBA))) {
-        return hwBlit(display, context, in_surf, in_rect, in_fourcc,
+        return vaVppBlit(display, context, in_surf, in_rect, in_fourcc,
                out_surf, out_rect, out_fourcc);
     }
     else {
-        return swBlit(display, context, in_surf, in_rect, in_fourcc,
-               out_surf, out_rect, out_fourcc);
+        return JD_INPUT_FORMAT_UNSUPPORTED;
     }
 }
 
-JpegDecodeStatus JpegBlitter::blit(RenderTarget &src, RenderTarget &dst)
+static CmDevice *pDev = NULL;
+static CmProgram *pProgram = NULL;
+static CmKernel *pKernel = NULL;
+static Mutex cmLock;
+void JpegBlitter::init(JpegDecoder &dec)
 {
+    if (!mInitialized) {
+        Mutex::Autolock autoLock(mLock);
+        if (!mInitialized) {
+            mDecoder = &dec;
+#if PRE_INIT_CM
+            nsecs_t t1, t2;
+            t1 = t2 = systemTime();
+#if BLIT_METHOD_CM
+#define ISA_FILE "/system/lib/libjpeg_cm_genx.isa"
+            if (!pDev || !pProgram) {
+                VTRACE("%s waiting for cm lock", __FUNCTION__);
+                Mutex::Autolock autoCmLock(cmLock);
+                VTRACE("%s got cm lock", __FUNCTION__);
+                if (!pDev || !pProgram) {
+                    ITRACE("%s CM is not initialized yet, pre-init it", __FUNCTION__);
+                    UINT ver;
+                    INT result;
+                    FILE* pIsaFile = NULL;
+                    int codeSize;
+                    BYTE* pIsaBytes = NULL;
+                    result = CreateCmDevice(pDev, ver, mDisplay);
+                    if (result != CM_SUCCESS) {
+                        ETRACE("%s CreateCmDevice failed: %d", __FUNCTION__, result);
+                        VTRACE("%s release cm lock", __FUNCTION__);
+                        abort();
+                    }
+
+                    pIsaFile = fopen(ISA_FILE, "rb");
+                    if (pIsaFile==NULL) {
+                        ETRACE("%s fopen failed", __FUNCTION__);
+                        DestroyCmDevice(pDev);
+                        VTRACE("%s release cm lock", __FUNCTION__);
+                        abort();
+                    }
+                    fseek (pIsaFile, 0, SEEK_END);
+                    codeSize = ftell (pIsaFile);
+                    rewind(pIsaFile);
+                    if (codeSize==0) {
+                        ETRACE("%s codesize failed", __FUNCTION__);
+                        DestroyCmDevice(pDev);
+                        fclose(pIsaFile);
+                        VTRACE("%s release cm lock", __FUNCTION__);
+                        abort();
+                    }
+                    pIsaBytes = (BYTE*) malloc(codeSize);
+                    if (pIsaBytes==NULL) {
+                        ETRACE("%s malloc failed", __FUNCTION__);
+                        DestroyCmDevice(pDev);
+                        fclose(pIsaFile);
+                        abort();
+                    }
+                    if (fread(pIsaBytes, 1, codeSize, pIsaFile) != codeSize) {
+                        ETRACE("%s fread failed", __FUNCTION__);
+                        free(pIsaBytes);
+                        DestroyCmDevice(pDev);
+                        fclose(pIsaFile);
+                        VTRACE("%s release cm lock", __FUNCTION__);
+                        abort();
+                    }
+                    fclose(pIsaFile);
+                    pIsaFile = NULL;
+
+                    result = pDev->LoadProgram(pIsaBytes, codeSize, pProgram);
+                    if (result != CM_SUCCESS) {
+                        ETRACE("%s LoadProgram failed: %d", __FUNCTION__, result);
+                        free(pIsaBytes);
+                        DestroyCmDevice(pDev);
+                        VTRACE("%s release cm lock", __FUNCTION__);
+                        abort();
+                    }
+                    free(pIsaBytes);
+                    pIsaBytes = NULL;
+
+                    t2 = systemTime();
+                    VTRACE("%s CM pre-init succeded, took %.2f ms", __FUNCTION__, (t2-t1)/1000000.0);
+                }
+                VTRACE("%s release cm lock", __FUNCTION__);
+            }
+#else
+            if (!pDev) {
+                ITRACE("%s CM is not initialized yet, pre-init it", __FUNCTION__);
+                UINT ver;
+                INT result;
+                result = CreateCmDevice(pDev, ver, mDisplay);
+                if (result != CM_SUCCESS || !pDev) {
+                    ETRACE("%s CreateCmDevice returns %d", __FUNCTION__, result);
+                    abort();
+                }
+                t2 = systemTime();
+                VTRACE("%s CM pre-init succeded, took %.2f ms", __FUNCTION__, (t2-t1)/1000000.0);
+            }
+#endif
+#endif
+            mInitialized = true;
+        }
+    }
+}
+
+void JpegBlitter::deinit()
+{
+    if (mInitialized) {
+        Mutex::Autolock autoLock(mLock);
+        if (mInitialized) {
+#if PRE_INIT_CM
+#if BLIT_METHOD_CM
+            //if (pIsaBytes && pProgram && pDev) {
+            //    free(pIsaBytes);
+            //    pDev->DestroyProgram(pProgram);
+            //    DestroyCmDevice(pDev);
+            //}
+#endif
+#endif
+            mInitialized = false;
+        }
+    }
+}
+
+JpegDecodeStatus JpegBlitter::blit(RenderTarget &src, RenderTarget &dst, int scale_factor)
+{
+    assert(mInitialized);
     if (mDecoder == NULL)
         return JD_UNINITIALIZED;
     JpegDecodeStatus st;
     uint32_t src_fourcc, dst_fourcc;
     char tmp[10];
-    src_fourcc = pixelFormat2Fourcc(src.pixel_format);
-    dst_fourcc = pixelFormat2Fourcc(dst.pixel_format);
+    src_fourcc = src.pixel_format;
+    dst_fourcc = dst.pixel_format;
     VASurfaceID src_surf = mDecoder->getSurfaceID(src);
     if (src_surf == VA_INVALID_ID) {
-        ETRACE("%s invalid src %s target", __FUNCTION__, fourcc2str(NULL, src_fourcc));
+        ETRACE("%s invalid src %s target", __FUNCTION__, fourcc2str(src_fourcc));
         return JD_INVALID_RENDER_TARGET;
     }
     VASurfaceID dst_surf = mDecoder->getSurfaceID(dst);
@@ -432,10 +341,721 @@ JpegDecodeStatus JpegBlitter::blit(RenderTarget &src, RenderTarget &dst)
         }
     }
 
-    VTRACE("%s blitting from %s to %s", __FUNCTION__, fourcc2str(tmp, src_fourcc), fourcc2str(tmp + 5, dst_fourcc));
+    VTRACE("%s blitting from %s to %s", __FUNCTION__, fourcc2str(src_fourcc, tmp), fourcc2str(dst_fourcc, tmp + 5));
     st = vaBlit(mDecoder->mDisplay, mContextId, src_surf, &src.rect, src_fourcc,
                 dst_surf, &dst.rect, dst_fourcc);
 
     return st;
+}
+
+static JpegDecodeStatus blitToLinearRgba_va_gpucopy(JpegDecoder *decoder,
+        VADisplay dp, VAContextID ctx, RenderTarget &src,
+        uint8_t *sysmem, uint32_t width, uint32_t height, int scale_factor)
+{
+    CmQueue *pQueue = NULL;
+    CmSurface2D *pSurf= NULL;
+    CmEvent *pEvent = NULL;
+    INT result;
+    UINT ver;
+    RenderTarget target;
+    VASurfaceID surf;
+    nsecs_t t1, t2, t3, t4;
+    target.type = RenderTarget::INTERNAL_BUF;
+    target.pixel_format = VA_FOURCC_RGBA;
+    target.handle = generateHandle();
+    target.width = aligned_width(width, SURF_TILING_Y);
+    target.height = aligned_height(height, SURF_TILING_Y);
+    target.stride = aligned_width(width, SURF_TILING_Y);
+    target.rect.x = target.rect.y = 0;
+    target.rect.width = width;
+    target.rect.height = height;
+    VASurfaceID src_surf = decoder->getSurfaceID(src);
+    if (src_surf == VA_INVALID_ID) {
+        ETRACE("%s invalid src %s target", __FUNCTION__, fourcc2str(src.pixel_format));
+        return JD_INVALID_RENDER_TARGET;
+    }
+    JpegDecodeStatus st = decoder->createSurfaceFromRenderTarget(target, &surf);
+    if (st != JD_SUCCESS || surf == VA_INVALID_ID) {
+        ETRACE("%s failed to create surface for RGBA linear target", __FUNCTION__);
+        return JD_RESOURCE_FAILURE;
+    }
+    st = vaBlit(dp, ctx, src_surf, &src.rect, src.pixel_format,
+                surf, &target.rect, target.pixel_format);
+    if (st != JD_SUCCESS) {
+        ETRACE("%s failed to VA blit to RGBA", __FUNCTION__);
+        return JD_RESOURCE_FAILURE;
+    }
+
+#if DUMP_RGBA
+    uint8_t *data;
+    uint32_t offsets[3];
+    uint32_t pitches[3];
+    JpegDecoder::MapHandle hnd = decoder->mapData(target, (void**)&data, offsets, pitches);
+    assert(hnd);
+    char fname[128];
+    sprintf(fname, "/sdcard/%dx%d.rgba", target.stride, target.height);
+    FILE *fdump = fopen(fname, "wb");
+    assert(fdump);
+    fwrite(data, 4, target.height * target.stride, fdump);
+    fclose(fdump);
+    decoder->unmapData(target, hnd);
+#endif
+
+    if (st) {
+        ETRACE("%s: failed to blit to RGBA linear", __FUNCTION__);
+        decoder->destroySurface(target);
+        return JD_BLIT_FAILURE;
+    }
+
+    t1 = systemTime();
+#if PRE_INIT_CM
+#else
+    result = CreateCmDevice(pDev, ver, dp);
+    if (result != CM_SUCCESS || !pDev) {
+        ETRACE("%s CmCreateSurface2D returns %d", __FUNCTION__, result);
+        return JD_BLIT_FAILURE;
+    }
+#endif
+    result = pDev->CreateSurface2D(surf, pSurf);
+    if (result != CM_SUCCESS || !pSurf) {
+        ETRACE("%s CmCreateSurface2D returns %d", __FUNCTION__, result);
+        DestroyCmDevice(pDev );
+        return JD_BLIT_FAILURE;
+    }
+    result = pDev->CreateQueue( pQueue);
+    if (result != CM_SUCCESS || !pQueue) {
+        ETRACE("%s CmCreateQueue returns %d", __FUNCTION__, result);
+        pDev->DestroySurface(pSurf);
+        DestroyCmDevice( pDev );
+        return JD_BLIT_FAILURE;
+    }
+    t2 = systemTime();
+    result = pQueue->EnqueueCopyGPUToCPU(pSurf, sysmem, pEvent);
+    if (result != CM_SUCCESS) {
+        ETRACE("%s CmEnqueueCopyGPUToCPU returns %d", __FUNCTION__, result);
+        pDev->DestroySurface(pSurf);
+        DestroyCmDevice( pDev );
+        return JD_BLIT_FAILURE;
+    }
+    t3 = systemTime();
+    result = pDev->DestroySurface(pSurf);
+    if (result != CM_SUCCESS) {
+        WTRACE("%s CmDestroySurface returns %d", __FUNCTION__, result);
+    }
+#if PRE_INIT_CM
+    assert(pDev);
+#else
+    result = DestroyCmDevice(pDev);
+    if (result != CM_SUCCESS) {
+        WTRACE("%s DestroyCmDevice failed %d", __FUNCTION__, result);
+    }
+#endif
+    t4 = systemTime();
+    st = decoder->destroySurface(target);
+    if (st) {
+        WTRACE("%s: failed to destroy VA surface", __FUNCTION__);
+    }
+    ITRACE("%s: cm GpuCopy took %.2f+%.2f+%.2f ms", __FUNCTION__,
+        (t2 - t1)/1000000.0,
+        (t3 - t2)/1000000.0,
+        (t4 - t3)/1000000.0);
+    return st;
+}
+
+JpegDecodeStatus JpegBlitter::getRgbaTile(RenderTarget &src,
+                                     uint8_t *sysmem,
+                                     int left, int top, int width, int height, int scale_factor)
+{
+#define ISA_FILE "/system/lib/libjpeg_cm_genx.isa"
+#define CM_GPU_TASK_WIDTH 8
+#define CM_GPU_TASK_HEIGHT 8
+    VASurfaceID srcVaId;
+
+    srcVaId = mDecoder->getSurfaceID(src);
+    JpegDecodeStatus status = JD_SUCCESS;
+    uint32_t aligned_w = width;//aligned_width(width, SURF_TILING_Y);
+    uint32_t aligned_h = height;//aligned_height(height, SURF_TILING_Y);
+
+    CmThreadSpace *pThreadSpace = NULL;
+    CmTask *pKernelArray = NULL;
+    CmQueue *pQueue = NULL;
+    CmSurface2D *pInSurf= NULL;
+    SurfaceIndex *pInSurfId = NULL;
+    CmBufferUP *pOutBuf = NULL;
+    SurfaceIndex *pOutBufId = NULL;
+    CmEvent *pEvent = NULL;
+    UINT ver;
+    int threadswidth, threadsheight;
+    INT result;
+    DWORD dwTimeOutMs = -1;
+    uint32_t cm_in_fourcc;
+    threadswidth = aligned_w/CM_GPU_TASK_WIDTH;
+    threadsheight = aligned_h/CM_GPU_TASK_HEIGHT;
+    nsecs_t t1, t2, t3, t4, t5, t6, t7;
+    VTRACE("%s before holding cm lock", __FUNCTION__);
+    Mutex::Autolock autoLock(cmLock);
+    VTRACE("%s got cm lock", __FUNCTION__);
+    t1 = t2 = t3 = t4 = t5 = t6 = t7 = systemTime();
+
+#if PRE_INIT_CM
+    assert(pDev && pProgram);
+#else
+    FILE* pIsaFile = NULL;
+    int codeSize;
+    BYTE* pIsaBytes = NULL;
+    result = CreateCmDevice(pDev, ver, dp);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+
+    pIsaFile = fopen(ISA_FILE, "rb");
+    if (pIsaFile==NULL) {
+        ETRACE("%s fopen failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        VTRACE("%s release cm lock", __FUNCTION__);
+        return JD_BLIT_FAILURE;
+    }
+    fseek (pIsaFile, 0, SEEK_END);
+    codeSize = ftell (pIsaFile);
+    rewind(pIsaFile);
+    if (codeSize==0) {
+        ETRACE("%s codesize failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        fclose(pIsaFile);
+        VTRACE("%s release cm lock", __FUNCTION__);
+        return JD_BLIT_FAILURE;
+    }
+    pIsaBytes = (BYTE*) malloc(codeSize);
+    if (pIsaBytes==NULL) {
+        ETRACE("%s malloc failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        fclose(pIsaFile);
+        VTRACE("%s release cm lock", __FUNCTION__);
+        return JD_BLIT_FAILURE;
+    }
+    if (fread(pIsaBytes, 1, codeSize, pIsaFile) != codeSize) {
+        ETRACE("%s fread failed", __FUNCTION__);
+        free(pIsaFile);
+        fclose(pIsaFile);
+        DestroyCmDevice(pDev);
+        VTRACE("%s release cm lock", __FUNCTION__);
+        return JD_BLIT_FAILURE;
+    }
+    fclose(pIsaFile);
+    pIsaFile = NULL;
+
+    result = pDev->LoadProgram(pIsaBytes, codeSize, pProgram);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    free(pIsaBytes);
+    pIsaBytes = NULL;
+    VTRACE("%s cm init succeded", __FUNCTION__);
+#endif
+
+    t2 = systemTime();
+    // create thread space
+    result = pDev->CreateKernel(pProgram, CM_KERNEL_FUNCTION(yuv_tiled_to_rgba_tile), pKernel);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+
+    result = pDev->CreateSurface2D(srcVaId, pInSurf);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pInSurf->GetIndex(pInSurfId);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // create bufferUp from dst ptr
+    result = pDev->CreateBufferUP(aligned_w * aligned_h * 4, sysmem, pOutBuf);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pOutBuf->GetIndex(pOutBufId);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+
+    result = pDev->CreateQueue( pQueue);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pDev->CreateThreadSpace(threadswidth, threadsheight, pThreadSpace);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pKernel->SetThreadCount( threadswidth* threadsheight );
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // enqueue csc
+    pKernel->SetKernelArg(0,sizeof(SurfaceIndex),pInSurfId);
+    pKernel->SetKernelArg(1,sizeof(SurfaceIndex),pOutBufId);
+    pKernel->SetKernelArg(2,sizeof(int),&left);
+    pKernel->SetKernelArg(3,sizeof(int),&top);
+    pKernel->SetKernelArg(4,sizeof(int),&aligned_w);
+    pKernel->SetKernelArg(5,sizeof(int),&aligned_h);
+
+    cm_in_fourcc = src.pixel_format;
+
+    pKernel->SetKernelArg(6,sizeof(uint32_t),&cm_in_fourcc);
+    result = pDev->CreateTask(pKernelArray);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pKernelArray->AddKernel (pKernel);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pQueue->Enqueue(pKernelArray, pEvent, pThreadSpace);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // wait kernel finish
+    t3 = systemTime();
+    result = pEvent->WaitForTaskFinished(dwTimeOutMs);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    //event = NULL;//(BlitEvent)pEvent;
+    t4 = systemTime();
+
+cleanup:
+    // destroy thread space/house cleaning
+    if (pOutBuf) pDev->DestroyBufferUP(pOutBuf);
+    t5 = systemTime();
+    if (pInSurf) pDev->DestroySurface(pInSurf);
+    t6 = systemTime();
+    if (pKernelArray) pDev->DestroyTask(pKernelArray);
+    if (pThreadSpace) pDev->DestroyThreadSpace(pThreadSpace);
+    if (pKernel) pDev->DestroyKernel(pKernel);
+#if PRE_INIT_CM
+#else
+    if (pProgram) pDev->DestroyProgram(pProgram);
+    if (pDev) DestroyCmDevice(pDev);
+#endif
+    t7 = systemTime();
+
+    VTRACE("%s blit with CM %ux%u took %.2f + %.2f + %.2f + %.2f + %.2f + %.2f ms", __FUNCTION__,
+        width, height,
+        (t2 - t1)/1000000.0,
+        (t3 - t2)/1000000.0,
+        (t4 - t3)/1000000.0,
+        (t5 - t4)/1000000.0,
+        (t6 - t5)/1000000.0,
+        (t7 - t6)/1000000.0);
+    VTRACE("%s release cm lock", __FUNCTION__);
+    return status;
+}
+
+
+static JpegDecodeStatus blitToLinearRgba_cm(JpegDecoder *decoder,
+        VADisplay dp, VAContextID ctx, RenderTarget &src, uint8_t *sysmem, uint32_t width, uint32_t height,
+        BlitEvent &event, int scale_factor)
+{
+#define ISA_FILE "/system/lib/libjpeg_cm_genx.isa"
+#define CM_GPU_TASK_WIDTH 32
+#define CM_GPU_TASK_HEIGHT 8
+    VASurfaceID srcVaId;
+    Mutex::Autolock autoLock(cmLock);
+
+    srcVaId = decoder->getSurfaceID(src);
+    JpegDecodeStatus status = JD_SUCCESS;
+    uint32_t aligned_in_w = aligned_width(width, SURF_TILING_Y);
+    uint32_t aligned_in_h = aligned_height(height, SURF_TILING_Y);
+    uint32_t aligned_out_w = aligned_width(width/scale_factor, SURF_TILING_Y);
+    uint32_t aligned_out_h = aligned_height(height/scale_factor, SURF_TILING_Y);
+
+#if NV12_INTERMEDIATE
+    RenderTarget nv12_target;
+    VASurfaceID nv12_surf_id;
+    VASurfaceID nv12_surf;
+    nv12_target.type = RenderTarget::INTERNAL_BUF;
+    nv12_target.pixel_format = VA_FOURCC_NV12;
+    nv12_target.handle = generateHandle();
+    nv12_target.width = aligned_in_w;
+    nv12_target.height = aligned_in_h;
+    nv12_target.stride = aligned_in_w;
+    nv12_target.rect.x = nv12_target.rect.y = 0;
+    nv12_target.rect.width = width;
+    nv12_target.rect.height = height;
+    status = decoder->createSurfaceFromRenderTarget(nv12_target, &nv12_surf_id);
+    if (status != JD_SUCCESS || nv12_surf_id == VA_INVALID_ID) {
+        ETRACE("%s failed to create surface for NV12 target", __FUNCTION__);
+        return JD_RESOURCE_FAILURE;
+    }
+    vaBlit(dp, ctx, srcVaId, &src.rect, src.pixel_format,
+        nv12_surf_id, &nv12_target.rect, VA_FOURCC_NV12);
+    srcVaId = nv12_surf_id;
+#endif
+
+    CmThreadSpace *pThreadSpace = NULL;
+    CmTask *pKernelArray = NULL;
+    CmQueue *pQueue = NULL;
+    CmSurface2D *pInSurf= NULL;
+    SurfaceIndex *pInSurfId = NULL;
+    CmBufferUP *pOutBuf = NULL;
+    SurfaceIndex *pOutBufId = NULL;
+    CmEvent *pEvent = NULL;
+    UINT ver;
+    int threadswidth, threadsheight;
+    INT result;
+    DWORD dwTimeOutMs = -1;
+    uint32_t cm_in_fourcc;
+    threadswidth = aligned_in_w/CM_GPU_TASK_WIDTH;
+    threadsheight = aligned_in_h/CM_GPU_TASK_HEIGHT;
+    nsecs_t t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
+    VTRACE("%s before holding cm lock", __FUNCTION__);
+    VTRACE("%s got cm lock", __FUNCTION__);
+    t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = systemTime();
+
+#if PRE_INIT_CM
+    assert(pDev && pProgram);
+#else
+    FILE* pIsaFile = NULL;
+    int codeSize;
+    BYTE* pIsaBytes = NULL;
+    result = CreateCmDevice(pDev, ver, dp);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+
+    pIsaFile = fopen(ISA_FILE, "rb");
+    if (pIsaFile==NULL) {
+        ETRACE("%s fopen failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        VTRACE("%s release cm lock", __FUNCTION__);
+        return JD_BLIT_FAILURE;
+    }
+    fseek (pIsaFile, 0, SEEK_END);
+    codeSize = ftell (pIsaFile);
+    rewind(pIsaFile);
+    if (codeSize==0) {
+        ETRACE("%s codesize failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        fclose(pIsaFile);
+        VTRACE("%s release cm lock", __FUNCTION__);
+        return JD_BLIT_FAILURE;
+    }
+    pIsaBytes = (BYTE*) malloc(codeSize);
+    if (pIsaBytes==NULL) {
+        ETRACE("%s malloc failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        fclose(pIsaFile);
+        VTRACE("%s release cm lock", __FUNCTION__);
+        return JD_BLIT_FAILURE;
+    }
+    if (fread(pIsaBytes, 1, codeSize, pIsaFile) != codeSize) {
+        ETRACE("%s fread failed", __FUNCTION__);
+        free(pIsaFile);
+        fclose(pIsaFile);
+        DestroyCmDevice(pDev);
+        VTRACE("%s release cm lock", __FUNCTION__);
+        return JD_BLIT_FAILURE;
+    }
+    fclose(pIsaFile);
+    pIsaFile = NULL;
+
+    result = pDev->LoadProgram(pIsaBytes, codeSize, pProgram);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    free(pIsaBytes);
+    pIsaBytes = NULL;
+    VTRACE("%s cm init succeded", __FUNCTION__);
+#endif
+
+    // create thread space
+    result = pDev->CreateKernel(pProgram, CM_KERNEL_FUNCTION(CM_KERNEL_FUNC_NAME), pKernel);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+
+    VTRACE("Creating CmSurface from VASurface %d", srcVaId);
+    t2 = systemTime();
+    result = pDev->CreateSurface2D(srcVaId, pInSurf);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+
+    result = pInSurf->GetIndex(pInSurfId);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // create bufferUp from dst ptr
+    VTRACE("CmSurfaceID got");
+    t3 = systemTime();
+    result = pDev->CreateBufferUP(aligned_out_w * aligned_out_h * 4, sysmem, pOutBuf);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pOutBuf->GetIndex(pOutBufId);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    t4 = systemTime();
+    result = pDev->CreateQueue( pQueue);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pDev->CreateThreadSpace(threadswidth, threadsheight, pThreadSpace);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pKernel->SetThreadCount( threadswidth* threadsheight );
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // enqueue csc
+    pKernel->SetKernelArg(0,sizeof(SurfaceIndex),pInSurfId);
+    pKernel->SetKernelArg(1,sizeof(SurfaceIndex),pOutBufId);
+    pKernel->SetKernelArg(2,sizeof(int),&aligned_out_w);
+#if NV12_INTERMEDIATE
+    cm_in_fourcc = VA_FOURCC_NV12;
+#else
+    cm_in_fourcc = src.pixel_format;
+#endif
+    pKernel->SetKernelArg(3,sizeof(uint32_t),&cm_in_fourcc);
+    pKernel->SetKernelArg(4,sizeof(int), &scale_factor);
+    result = pDev->CreateTask(pKernelArray);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pKernelArray->AddKernel (pKernel);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pQueue->Enqueue(pKernelArray, pEvent, pThreadSpace);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // wait kernel finish
+    t5 = systemTime();
+    result = pEvent->WaitForTaskFinished(dwTimeOutMs);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    event = NULL;//(BlitEvent)pEvent;
+    t6 = systemTime();
+
+cleanup:
+#if NV12_INTERMEDIATE
+    if (nv12_surf_id != VA_INVALID_ID) decoder->destroySurface(nv12_target);
+#endif
+    // destroy thread space/house cleaning
+    if (pOutBuf) pDev->DestroyBufferUP(pOutBuf);
+    t7 = systemTime();
+    if (pInSurf) pDev->DestroySurface(pInSurf);
+    t8 = systemTime();
+    if (pKernelArray) pDev->DestroyTask(pKernelArray);
+    if (pThreadSpace) pDev->DestroyThreadSpace(pThreadSpace);
+    if (pKernel) pDev->DestroyKernel(pKernel);
+#if PRE_INIT_CM
+#else
+    if (pProgram) pDev->DestroyProgram(pProgram);
+    if (pDev) DestroyCmDevice(pDev);
+#endif
+    t9 = systemTime();
+
+    VTRACE("%s blit with CM %ux%u(%dx) took %.2f + %.2f + %.2f + %.2f + %.2f + %.2f + %.2f + %.2f ms", __FUNCTION__,
+        width, height, scale_factor,
+        (t2 - t1)/1000000.0,
+        (t3 - t2)/1000000.0,
+        (t4 - t3)/1000000.0,
+        (t5 - t4)/1000000.0,
+        (t6 - t5)/1000000.0,
+        (t7 - t6)/1000000.0,
+        (t8 - t7)/1000000.0,
+        (t9 - t8)/1000000.0);
+    VTRACE("%s release cm lock", __FUNCTION__);
+    return status;
+}
+
+JpegDecodeStatus JpegBlitter::blitToLinearRgba(RenderTarget &src,
+                                               uint8_t *sysmem,
+                                               uint32_t width, uint32_t height,
+                                               BlitEvent &event, int scale_factor)
+{
+    Mutex::Autolock autoLock(mDecoder->mLock);
+#if BLIT_METHOD_CM
+    return blitToLinearRgba_cm(mDecoder, mDecoder->mDisplay, mContextId, src, sysmem, width, height, event, scale_factor);
+#else
+    return blitToLinearRgba_va_gpucopy(mDecoder, mDecoder->mDisplay, mContextId, src, sysmem, width, height, scale_factor);
+#endif
+}
+
+JpegDecodeStatus JpegBlitter::blitToCameraSurfaces(RenderTarget &src,
+                                                   buffer_handle_t dst_nv12,
+                                                   buffer_handle_t dst_yuy2,
+                                                   uint8_t *dst_nv21,
+                                                   uint8_t *dst_yv12,
+                                                   uint32_t width, uint32_t height,
+                                                   BlitEvent &event)
+{
+#define CM_GPU_TASK_WIDTH 32
+#define CM_GPU_TASK_HEIGHT 8
+    VASurfaceID srcVaId, nv12_surf_id, yuy2_surf_id;
+    srcVaId = nv12_surf_id = yuy2_surf_id = VA_INVALID_ID;
+    srcVaId = mDecoder->getSurfaceID(src);
+    JpegDecodeStatus status = JD_SUCCESS;
+    uint32_t aligned_w = aligned_width(width, SURF_TILING_Y);
+    uint32_t aligned_h = aligned_height(height, SURF_TILING_Y);
+
+    CmThreadSpace *pThreadSpace = NULL;
+    CmTask *pKernelArray = NULL;
+    CmQueue *pQueue = NULL;
+    CmSurface2D *pInSurf= NULL;
+    SurfaceIndex *pInSurfId = NULL;
+    CmSurface2D *pOutNV12Surf= NULL;
+    SurfaceIndex *pOutNV12SurfId = NULL;
+    CmSurface2D *pOutYUY2Surf= NULL;
+    SurfaceIndex *pOutYUY2SurfId = NULL;
+    CmBufferUP *pOutNV21Surf = NULL;
+    SurfaceIndex *pOutNV21SurfId = NULL;
+    CmBufferUP *pOutYV12Surf = NULL;
+    SurfaceIndex *pOutYV12SurfId = NULL;
+    uint8_t do_nv21, do_yv12;
+    do_nv21 = do_yv12 = 0;
+    CmEvent *pEvent = NULL;
+    RenderTarget nv12_target, yuy2_target;
+    UINT ver;
+    int threadswidth, threadsheight;
+    INT result;
+    DWORD dwTimeOutMs = -1;
+    uint32_t cm_in_fourcc;
+    threadswidth = aligned_w/CM_GPU_TASK_WIDTH;
+    threadsheight = aligned_h/CM_GPU_TASK_HEIGHT;
+    nsecs_t t1, t2, t3, t4, t5;
+    t1 = t2 = t3 = t4 = t5 = systemTime();
+    VTRACE("%s before holding cm lock", __FUNCTION__);
+    Mutex::Autolock autoLock(cmLock);
+
+#if PRE_INIT_CM
+    assert(pDev && pProgram);
+#else
+    result = CreateCmDevice(pDev, ver, dp);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+
+    pIsaFile = fopen(ISA_FILE, "rb");
+    if (pIsaFile==NULL) {
+        ETRACE("%s fopen failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        return JD_BLIT_FAILURE;
+    }
+    fseek (pIsaFile, 0, SEEK_END);
+    codeSize = ftell (pIsaFile);
+    rewind(pIsaFile);
+    if (codeSize==0) {
+        ETRACE("%s codesize failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        fclose(pIsaFile);
+        return JD_BLIT_FAILURE;
+    }
+    pIsaBytes = (BYTE*) malloc(codeSize);
+    if (pIsaBytes==NULL) {
+        ETRACE("%s malloc failed", __FUNCTION__);
+        DestroyCmDevice(pDev);
+        fclose(pIsaFile);
+        return JD_BLIT_FAILURE;
+    }
+    if (fread(pIsaBytes, 1, codeSize, pIsaFile) != codeSize) {
+        ETRACE("%s fread failed", __FUNCTION__);
+        free(pIsaFile);
+        fclose(pIsaFile);
+        DestroyCmDevice(pDev);
+        return JD_BLIT_FAILURE;
+    }
+    fclose(pIsaFile);
+    pIsaFile = NULL;
+
+    result = pDev->LoadProgram(pIsaBytes, codeSize, pProgram);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    free(pIsaBytes);
+    pIsaBytes = NULL;
+    VTRACE("%s cm init succeded", __FUNCTION__);
+#endif
+
+    t2 = systemTime();
+    // create thread space
+    result = pDev->CreateKernel(pProgram, CM_KERNEL_FUNCTION(yuv422h_tiled_to_camera_surfaces), pKernel);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+
+    // src surface
+    result = pDev->CreateSurface2D(srcVaId, pInSurf);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pInSurf->GetIndex(pInSurfId);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // dst nv12 + yuy2
+    nv12_target.handle = (int)dst_nv12;
+    nv12_target.type = RenderTarget::ANDROID_GRALLOC;
+    nv12_target.height = aligned_height(height, SURF_TILING_Y);
+    nv12_target.width = aligned_width(width, SURF_TILING_Y);
+    nv12_target.pixel_format = VA_FOURCC_NV12;
+    nv12_target.stride = nv12_target.width;
+    nv12_target.rect.x = nv12_target.rect.y = 0;
+    nv12_target.rect.width = nv12_target.width;
+    nv12_target.rect.height = nv12_target.height;
+    mDecoder->createSurfaceFromRenderTarget(nv12_target, &nv12_surf_id);
+    yuy2_target.handle = (int)dst_yuy2;
+    yuy2_target.type = RenderTarget::ANDROID_GRALLOC;
+    yuy2_target.height = aligned_height(height, SURF_TILING_Y);
+    yuy2_target.width = aligned_width(width, SURF_TILING_Y);
+    yuy2_target.pixel_format = VA_FOURCC_YUY2;
+    yuy2_target.stride = yuy2_target.width * 2;
+    yuy2_target.rect.x = yuy2_target.rect.y = 0;
+    yuy2_target.rect.width = yuy2_target.width;
+    yuy2_target.rect.height = yuy2_target.height;
+    mDecoder->createSurfaceFromRenderTarget(yuy2_target, &yuy2_surf_id);
+    result = pDev->CreateSurface2D(nv12_surf_id, pOutNV12Surf);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pOutNV12Surf->GetIndex(pOutNV12SurfId);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pDev->CreateSurface2D(yuy2_surf_id, pOutYUY2Surf);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pOutYUY2Surf->GetIndex(pOutYUY2SurfId);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // dst nv21
+    if (dst_nv21) {
+        result = pDev->CreateBufferUP(aligned_w * aligned_h * 3 / 2, dst_nv21, pOutNV21Surf);
+        JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+        result = pOutNV21Surf->GetIndex(pOutNV21SurfId);
+        JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+        do_nv21 = 1;
+    }
+    else {
+        pOutNV21SurfId = pInSurfId;
+        do_nv21 = 0;
+    }
+    // dst yv12
+    if (dst_yv12) {
+        result = pDev->CreateBufferUP(aligned_w * aligned_h * 3 / 2, dst_yv12, pOutYV12Surf);
+        JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+        result = pOutYV12Surf->GetIndex(pOutYV12SurfId);
+        JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+        do_yv12 = 1;
+    }
+    else {
+        pOutYV12SurfId = pInSurfId;
+        do_yv12 = 0;
+    }
+    result = pDev->CreateQueue( pQueue);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pDev->CreateThreadSpace(threadswidth, threadsheight, pThreadSpace);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pKernel->SetThreadCount( threadswidth* threadsheight );
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // enqueue csc
+    pKernel->SetKernelArg(0,sizeof(SurfaceIndex),pInSurfId);
+    pKernel->SetKernelArg(1,sizeof(SurfaceIndex),pOutNV12SurfId);
+    pKernel->SetKernelArg(2,sizeof(SurfaceIndex),pOutYUY2SurfId);
+    pKernel->SetKernelArg(3,sizeof(SurfaceIndex),pOutNV21SurfId);
+    pKernel->SetKernelArg(4,sizeof(SurfaceIndex),pOutYV12SurfId);
+    pKernel->SetKernelArg(5,sizeof(int),&aligned_h);
+    pKernel->SetKernelArg(6,sizeof(int),&aligned_w);
+    pKernel->SetKernelArg(7,sizeof(uint8_t),&do_nv21);
+    pKernel->SetKernelArg(8,sizeof(uint8_t),&do_yv12);
+    result = pDev->CreateTask(pKernelArray);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pKernelArray->AddKernel (pKernel);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    result = pQueue->Enqueue(pKernelArray, pEvent, pThreadSpace);
+    JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    // wait kernel finish
+    t3 = systemTime();
+    //result = pEvent->WaitForTaskFinished(dwTimeOutMs);
+    //JD_CM_CHECK_RET(result, cleanup, JD_BLIT_FAILURE);
+    event = (BlitEvent)pEvent;
+    t4 = systemTime();
+
+cleanup:
+    // destroy thread space/house cleaning
+    if (pOutYV12Surf) pDev->DestroyBufferUP(pOutYV12Surf);
+    if (pOutNV21Surf) pDev->DestroyBufferUP(pOutNV21Surf);
+    if (pOutYUY2Surf) pDev->DestroySurface(pOutYUY2Surf);
+    if (pOutNV12Surf) pDev->DestroySurface(pOutNV12Surf);
+    if (pInSurf) pDev->DestroySurface(pInSurf);
+    if (nv12_surf_id != VA_INVALID_ID) mDecoder->destroySurface(nv12_target);
+    if (yuy2_surf_id != VA_INVALID_ID) mDecoder->destroySurface(yuy2_target);
+    if (pKernelArray) pDev->DestroyTask(pKernelArray);
+    if (pThreadSpace) pDev->DestroyThreadSpace(pThreadSpace);
+    if (pKernel) pDev->DestroyKernel(pKernel);
+#if PRE_INIT_CM
+#else
+    if (pIsaBytes) free(pIsaBytes);
+    if (pIsaFile) fclose(pIsaFile);
+    if (pProgram) pDev->DestroyProgram(pProgram);
+    if (pDev) DestroyCmDevice(pDev);
+#endif
+    t5 = systemTime();
+    VTRACE("%s blit with CM took %.2f + %.2f + %.2f + %.2f ms", __FUNCTION__,
+        (t2 - t1)/1000000.0,
+        (t3 - t2)/1000000.0,
+        (t4 - t3)/1000000.0,
+        (t5 - t4)/1000000.0);
+    return status;
+}
+
+void JpegBlitter::syncBlit(BlitEvent &event)
+{
+    nsecs_t now = systemTime();
+    DWORD dwTimeOutMs = -1;
+    CmEvent *pEvent = (CmEvent*)event;
+    UINT64 executionTime;
+    if (event == NULL)
+        return;
+    INT result = pEvent->WaitForTaskFinished(dwTimeOutMs);
+    if (result != CM_SUCCESS) {
+        ETRACE("%s: Failed to sync blit event", __FUNCTION__);
+    }
+    else {
+        event = NULL;
+        VTRACE("%s: syncBlit took %.2f ms", __FUNCTION__, (systemTime()-now)/1000000.0);
+    }
 }
 

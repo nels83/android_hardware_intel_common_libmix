@@ -1,6 +1,5 @@
 /* INTEL CONFIDENTIAL
 * Copyright (c) 2013 Intel Corporation.  All rights reserved.
-* Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -25,17 +24,46 @@
 *    Yao Cheng <yao.cheng@intel.com>
 *
 */
-//#define LOG_NDEBUG 0
 
 #include "va/va.h"
 #include "va/va_vpp.h"
 #include "va/va_drmcommon.h"
+#include "va/va_tpi.h"
 #include "JPEGDecoder.h"
 #include "ImageDecoderTrace.h"
 #include <string.h>
 #include <sys/types.h>
 #include <time.h>
 #include "JPEGCommon_Gen.h"
+
+uint32_t aligned_height(uint32_t height, int tiling)
+{
+    switch(tiling) {
+    // Y-tile (128 x 32): NV12, 411P, IMC3, 422H, 422V, 444P
+    case SURF_TILING_Y:
+        return (height + (32-1)) & ~(32-1);
+    // X-tile (512 x 8):
+    case SURF_TILING_X:
+        return (height + (8-1)) & ~(8-1);
+    // Linear: other
+    default:
+        return height;
+    }
+}
+uint32_t aligned_width(uint32_t width, int tiling)
+{
+    switch(tiling) {
+    // Y-tile (128 x 32): NV12, 411P, IMC3, 422H, 422V, 444P
+    case SURF_TILING_Y:
+        return (width + (128-1)) & ~(128-1);
+    // X-tile (512 x 8):
+    case SURF_TILING_X:
+        return (width + (512-1)) & ~(512-1);
+    // Linear: other
+    default:
+        return width;
+    }
+}
 
 int fourcc2PixelFormat(uint32_t fourcc)
 {
@@ -50,8 +78,6 @@ int fourcc2PixelFormat(uint32_t fourcc)
         return HAL_PIXEL_FORMAT_NV12_TILED_INTEL;
     case VA_FOURCC_RGBA:
         return HAL_PIXEL_FORMAT_RGBA_8888;
-    case VA_FOURCC_422V:
-    case VA_FOURCC_411P:
     default:
         return -1;
     }
@@ -74,8 +100,6 @@ uint32_t pixelFormat2Fourcc(int pixel_format)
     }
 }
 
-//#define LOG_TAG "ImageDecoder"
-
 #define JD_CHECK(err, label) \
         if (err) { \
             ETRACE("%s::%d: failed: %d", __PRETTY_FUNCTION__, __LINE__, err); \
@@ -93,17 +117,19 @@ bool JpegDecoder::jpegColorFormatSupported(JpegInfo &jpginfo) const
 {
     return (jpginfo.image_color_fourcc == VA_FOURCC_IMC3) ||
         (jpginfo.image_color_fourcc == VA_FOURCC_422H) ||
+        (jpginfo.image_color_fourcc == VA_FOURCC_422V) ||
+        (jpginfo.image_color_fourcc == VA_FOURCC_411P) ||
+        (jpginfo.image_color_fourcc == VA_FOURCC('4','0','0','P')) ||
         (jpginfo.image_color_fourcc == VA_FOURCC_444P);
 }
 
-JpegDecodeStatus JpegDecoder::createSurfaceDrm(int width, int height, int pixel_format, unsigned long boname, int stride, VASurfaceID *surf_id)
+JpegDecodeStatus JpegDecoder::createSurfaceDrm(int width, int height, uint32_t fourcc, unsigned long boname, int stride, VASurfaceID *surf_id)
 {
     VAStatus st;
     VASurfaceAttrib                 attrib_list;
     VASurfaceAttribExternalBuffers  vaSurfaceExternBuf;
-    uint32_t fourcc = pixelFormat2Fourcc(pixel_format);
+    memset(&vaSurfaceExternBuf, 0, sizeof (VASurfaceAttribExternalBuffers));
     vaSurfaceExternBuf.pixel_format = fourcc;
-    VTRACE("%s extBuf.pixel_format is %s", __FUNCTION__, fourcc2str(NULL, fourcc));
     vaSurfaceExternBuf.width        = width;
     vaSurfaceExternBuf.height       = height;
     vaSurfaceExternBuf.pitches[0]   = stride;
@@ -115,6 +141,22 @@ JpegDecodeStatus JpegDecoder::createSurfaceDrm(int width, int height, int pixel_
     attrib_list.value.type    = VAGenericValueTypePointer;
     attrib_list.value.value.p = (void *)&vaSurfaceExternBuf;
 
+    VTRACE("%s, vaformat=0x%x, width=%d, height=%d, attrib=", __FUNCTION__, fourcc2VaFormat(fourcc),
+        width, height);
+    VTRACE("            ext.pixel_format=0x%x", vaSurfaceExternBuf.pixel_format);
+    VTRACE("            ext.width=%u", vaSurfaceExternBuf.width);
+    VTRACE("            ext.height=%u", vaSurfaceExternBuf.height);
+    VTRACE("            ext.data_size=%u", vaSurfaceExternBuf.data_size);
+    VTRACE("            ext.num_planes=%u", vaSurfaceExternBuf.num_planes);
+    VTRACE("            ext.pitches=%u,%u,%u,%u", vaSurfaceExternBuf.pitches[0],vaSurfaceExternBuf.pitches[1],vaSurfaceExternBuf.pitches[2],vaSurfaceExternBuf.pitches[3]);
+    VTRACE("            ext.offsets=%u,%u,%u,%u", vaSurfaceExternBuf.offsets[0],vaSurfaceExternBuf.offsets[1],vaSurfaceExternBuf.offsets[2],vaSurfaceExternBuf.offsets[3]);
+    VTRACE("            ext.buffers[0]=%lu", vaSurfaceExternBuf.buffers[0]);
+    VTRACE("            ext.num_buffers=%u", vaSurfaceExternBuf.num_buffers);
+    VTRACE("            ext.flags=%u", vaSurfaceExternBuf.flags);
+    VTRACE("            attrib_list.type=%u", attrib_list.type);
+    VTRACE("            attrib_list.flags=%u", attrib_list.flags);
+    VTRACE("            attrib_list.type=%u", attrib_list.value.type);
+
     st = vaCreateSurfaces(mDisplay,
             fourcc2VaFormat(fourcc),
             width,
@@ -123,7 +165,7 @@ JpegDecodeStatus JpegDecoder::createSurfaceDrm(int width, int height, int pixel_
             1,
             &attrib_list,
             1);
-    VTRACE("%s createSurface DRM for vaformat %u, fourcc %s", __FUNCTION__, fourcc2VaFormat(fourcc), fourcc2str(NULL, fourcc));
+    VTRACE("%s createSurface DRM for vaformat %u, fourcc %s", __FUNCTION__, fourcc2VaFormat(fourcc), fourcc2str(fourcc));
     if (st != VA_STATUS_SUCCESS) {
         ETRACE("%s: vaCreateSurfaces returns %d", __PRETTY_FUNCTION__, st);
         return JD_RESOURCE_FAILURE;
@@ -131,51 +173,201 @@ JpegDecodeStatus JpegDecoder::createSurfaceDrm(int width, int height, int pixel_
     return JD_SUCCESS;
 }
 
-JpegDecodeStatus JpegDecoder::createSurfaceGralloc(int width, int height, int pixel_format, buffer_handle_t handle, int stride, VASurfaceID *surf_id)
+JpegDecodeStatus JpegDecoder::createSurfaceGralloc(int width, int height, uint32_t fourcc, buffer_handle_t handle, int stride, VASurfaceID *surf_id)
 {
-    unsigned long boname;
-    hw_module_t const* module = NULL;
-    alloc_device_t *allocdev = NULL;
-    struct gralloc_module_t *gralloc_module = NULL;
-    JpegDecodeStatus st;
+    VAStatus st;
+    VASurfaceAttrib                 attrib_list;
+    VASurfaceAttribExternalBuffers  vaSurfaceExternBuf;
+    memset(&vaSurfaceExternBuf, 0, sizeof (VASurfaceAttribExternalBuffers));
+    vaSurfaceExternBuf.pixel_format = fourcc;
+    vaSurfaceExternBuf.width        = width;
+    vaSurfaceExternBuf.height       = height;
+    vaSurfaceExternBuf.pitches[0]   = stride;
+    vaSurfaceExternBuf.buffers      = (unsigned long*)&handle;
+    vaSurfaceExternBuf.num_buffers  = 1;
+    vaSurfaceExternBuf.flags        = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
+    attrib_list.type          = VASurfaceAttribExternalBufferDescriptor;
+    attrib_list.flags         = VA_SURFACE_ATTRIB_SETTABLE;
+    attrib_list.value.type    = VAGenericValueTypePointer;
+    attrib_list.value.value.p = (void *)&vaSurfaceExternBuf;
+    VTRACE("%s, vaformat=0x%x, width=%d, height=%d, attrib=", __FUNCTION__, fourcc2VaFormat(fourcc),
+        width, height);
+    VTRACE("            ext.pixel_format=0x%x", vaSurfaceExternBuf.pixel_format);
+    VTRACE("            ext.width=%u", vaSurfaceExternBuf.width);
+    VTRACE("            ext.height=%u", vaSurfaceExternBuf.height);
+    VTRACE("            ext.data_size=%u", vaSurfaceExternBuf.data_size);
+    VTRACE("            ext.num_planes=%u", vaSurfaceExternBuf.num_planes);
+    VTRACE("            ext.pitches=%u,%u,%u,%u", vaSurfaceExternBuf.pitches[0],vaSurfaceExternBuf.pitches[1],vaSurfaceExternBuf.pitches[2],vaSurfaceExternBuf.pitches[3]);
+    VTRACE("            ext.offsets=%u,%u,%u,%u", vaSurfaceExternBuf.offsets[0],vaSurfaceExternBuf.offsets[1],vaSurfaceExternBuf.offsets[2],vaSurfaceExternBuf.offsets[3]);
+    VTRACE("            ext.buffers[0]=%lu", vaSurfaceExternBuf.buffers[0]);
+    VTRACE("            ext.num_buffers=%u", vaSurfaceExternBuf.num_buffers);
+    VTRACE("            ext.flags=%u", vaSurfaceExternBuf.flags);
+    VTRACE("            attrib_list.type=%u", attrib_list.type);
+    VTRACE("            attrib_list.flags=%u", attrib_list.flags);
+    VTRACE("            attrib_list.type=%u", attrib_list.value.type);
 
-    uint32_t fourcc = pixelFormat2Fourcc(pixel_format);
-    VTRACE("enter %s, pixel_format 0x%x, fourcc %s", __FUNCTION__, pixel_format, fourcc2str(NULL, fourcc));
-
-    int err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module);
-    if (err) {
-        ETRACE("%s failed to get gralloc module", __PRETTY_FUNCTION__);
-        st = JD_RESOURCE_FAILURE;
-    }
-    JD_CHECK(err, cleanup);
-    gralloc_module = (struct gralloc_module_t *)module;
-    err = gralloc_open(module, &allocdev);
-    if (err) {
-        ETRACE("%s failed to open alloc device", __PRETTY_FUNCTION__);
-        st = JD_RESOURCE_FAILURE;
-    }
-    JD_CHECK(err, cleanup);
-    err = gralloc_module->perform(gralloc_module,
-        INTEL_UFO_GRALLOC_MODULE_PERFORM_GET_BO_NAME,
-        handle,
-        &boname);
-    if (err) {
-        ETRACE("%s failed to get boname via gralloc->perform", __PRETTY_FUNCTION__);
-        st = JD_RESOURCE_FAILURE;
-    }
-    JD_CHECK(err, cleanup);
-    VTRACE("YAO %s fourcc %s luma_stride is %d", __FUNCTION__,
-        fourcc2str(NULL, fourcc), stride);
-
-    gralloc_close(allocdev);
-    return createSurfaceDrm(width, height, pixel_format, boname, stride, surf_id);
-cleanup:
-    if (allocdev)
-        gralloc_close(allocdev);
-    return st;
+    st = vaCreateSurfaces(mDisplay,
+            fourcc2VaFormat(fourcc),
+            width,
+            height,
+            surf_id,
+            1,
+            &attrib_list,
+            1);
+    VTRACE("%s createSurface GRALLOC for vaformat %u, fourcc %s", __FUNCTION__, fourcc2VaFormat(fourcc), fourcc2str(fourcc));
+    if (st != VA_STATUS_SUCCESS) {
+        ETRACE("%s: vaCreateSurfaces returns %d", __PRETTY_FUNCTION__, st);
+        return JD_RESOURCE_FAILURE;
+     }
+    return JD_SUCCESS;
 }
 
 
+JpegDecodeStatus JpegDecoder::createSurfaceUserptr(int width, int height, uint32_t fourcc, uint8_t* ptr, VASurfaceID *surf_id)
+{
+    VAStatus st;
+    VASurfaceAttrib                 attrib_list;
+    VASurfaceAttribExternalBuffers  vaSurfaceExternBuf;
+    memset(&vaSurfaceExternBuf, 0, sizeof (VASurfaceAttribExternalBuffers));
+    vaSurfaceExternBuf.pixel_format = fourcc;
+    vaSurfaceExternBuf.width        = width;
+    vaSurfaceExternBuf.height       = height;
+    vaSurfaceExternBuf.pitches[0]   = width;
+    vaSurfaceExternBuf.offsets[0]   = 0;
+    switch (fourcc) {
+    case VA_FOURCC_NV12:
+        vaSurfaceExternBuf.pitches[1]   = width;
+        vaSurfaceExternBuf.pitches[2]   = 0;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = width * height;
+        vaSurfaceExternBuf.offsets[2]   = 0;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_YUY2:
+    case VA_FOURCC_UYVY:
+        vaSurfaceExternBuf.pitches[0]   = width * 2;
+        vaSurfaceExternBuf.pitches[1]   = 0;
+        vaSurfaceExternBuf.pitches[2]   = 0;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = 0;
+        vaSurfaceExternBuf.offsets[2]   = 0;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_YV12:
+        vaSurfaceExternBuf.pitches[1]   = width / 2;
+        vaSurfaceExternBuf.pitches[2]   = width / 2;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = width * height;
+        vaSurfaceExternBuf.offsets[2]   = width * height * 5 / 4;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_RGBA:
+        vaSurfaceExternBuf.pitches[0]   = width * 4;
+        vaSurfaceExternBuf.pitches[1]   = 0;
+        vaSurfaceExternBuf.pitches[2]   = 0;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = 0;
+        vaSurfaceExternBuf.offsets[2]   = 0;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_411P:
+        vaSurfaceExternBuf.pitches[1]   = width;
+        vaSurfaceExternBuf.pitches[2]   = width;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = width * height;
+        vaSurfaceExternBuf.offsets[2]   = width * height * 2;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_411R:
+        vaSurfaceExternBuf.pitches[1]   = width;
+        vaSurfaceExternBuf.pitches[2]   = width;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = width * height;
+        vaSurfaceExternBuf.offsets[2]   = width * height * 5 / 4;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_IMC3:
+        vaSurfaceExternBuf.pitches[1]   = width;
+        vaSurfaceExternBuf.pitches[2]   = width;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = width * height;
+        vaSurfaceExternBuf.offsets[2]   = width * height * 3 / 2;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_422H:
+        vaSurfaceExternBuf.pitches[1]   = width;
+        vaSurfaceExternBuf.pitches[2]   = width;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = width * height;
+        vaSurfaceExternBuf.offsets[2]   = width * height;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_422V:
+        vaSurfaceExternBuf.pitches[1]   = width;
+        vaSurfaceExternBuf.pitches[2]   = width;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = width * height;
+        vaSurfaceExternBuf.offsets[2]   = width * height * 3 / 2;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC_444P:
+        vaSurfaceExternBuf.pitches[1]   = width;
+        vaSurfaceExternBuf.pitches[2]   = width;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = width * height;
+        vaSurfaceExternBuf.offsets[2]   = width * height * 2;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    case VA_FOURCC('4','0','0','P'):
+    default:
+        vaSurfaceExternBuf.pitches[1]   = 0;
+        vaSurfaceExternBuf.pitches[2]   = 0;
+        vaSurfaceExternBuf.pitches[3]   = 0;
+        vaSurfaceExternBuf.offsets[1]   = 0;
+        vaSurfaceExternBuf.offsets[2]   = 0;
+        vaSurfaceExternBuf.offsets[3]   = 0;
+        break;
+    }
+    vaSurfaceExternBuf.buffers      = (unsigned long*)ptr;
+    vaSurfaceExternBuf.num_buffers  = 1;
+    vaSurfaceExternBuf.flags        = VA_SURFACE_ATTRIB_MEM_TYPE_ANDROID_GRALLOC;
+    attrib_list.type          = VASurfaceAttribMemoryType;
+    attrib_list.flags         = VA_SURFACE_ATTRIB_SETTABLE;
+    attrib_list.value.type    = VAGenericValueTypeInteger;
+    attrib_list.value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_USER_PTR;
+
+    VTRACE("%s, vaformat=0x%x, width=%d, height=%d, attrib=", __FUNCTION__, fourcc2VaFormat(fourcc),
+        width, height);
+    VTRACE("            ext.pixel_format=0x%x", vaSurfaceExternBuf.pixel_format);
+    VTRACE("            ext.width=%u", vaSurfaceExternBuf.width);
+    VTRACE("            ext.height=%u", vaSurfaceExternBuf.height);
+    VTRACE("            ext.data_size=%u", vaSurfaceExternBuf.data_size);
+    VTRACE("            ext.num_planes=%u", vaSurfaceExternBuf.num_planes);
+    VTRACE("            ext.pitches=%u,%u,%u,%u", vaSurfaceExternBuf.pitches[0],vaSurfaceExternBuf.pitches[1],vaSurfaceExternBuf.pitches[2],vaSurfaceExternBuf.pitches[3]);
+    VTRACE("            ext.offsets=%u,%u,%u,%u", vaSurfaceExternBuf.offsets[0],vaSurfaceExternBuf.offsets[1],vaSurfaceExternBuf.offsets[2],vaSurfaceExternBuf.offsets[3]);
+    VTRACE("            ext.buffers[0]=%lu", vaSurfaceExternBuf.buffers[0]);
+    VTRACE("            ext.num_buffers=%u", vaSurfaceExternBuf.num_buffers);
+    VTRACE("            ext.flags=%u", vaSurfaceExternBuf.flags);
+    VTRACE("            attrib_list.type=%u", attrib_list.type);
+    VTRACE("            attrib_list.flags=%u", attrib_list.flags);
+    VTRACE("            attrib_list.type=%u", attrib_list.value.type);
+
+    st = vaCreateSurfaces(mDisplay,
+            fourcc2VaFormat(fourcc),
+            width,
+            height,
+            surf_id,
+            1,
+            &attrib_list,
+            1);
+    VTRACE("%s createSurface GRALLOC for vaformat %u, fourcc %s", __FUNCTION__, fourcc2VaFormat(fourcc), fourcc2str(fourcc));
+    if (st != VA_STATUS_SUCCESS) {
+        ETRACE("%s: vaCreateSurfaces returns %d", __PRETTY_FUNCTION__, st);
+        return JD_RESOURCE_FAILURE;
+    }
+    return JD_SUCCESS;
+
+}
 
 
 

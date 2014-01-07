@@ -1,6 +1,5 @@
 /* INTEL CONFIDENTIAL
 * Copyright (c) 2012, 2013 Intel Corporation.  All rights reserved.
-* Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -34,8 +33,6 @@
  * to determine which path will be use (SW or HW)
  *
  */
-//#define LOG_NDEBUG 0
-#define LOG_TAG "ImageDecoder"
 
 #include <utils/Log.h>
 #include "JPEGDecoder_libjpeg_wrapper.h"
@@ -43,26 +40,41 @@
 #include <utils/threads.h>
 #include "JPEGDecoder.h"
 #include <va/va.h>
+#include <va/va_android.h>
 #include "va/va_dec_jpeg.h"
-
+#include <utils/Timers.h>
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
 
 #include <assert.h>
-
+#include <utils/Vector.h>
 static Mutex jdlock;
+static VADisplay display = NULL;
+static VAConfigID vpCfgId = VA_INVALID_ID;
+static VAContextID vpCtxId = VA_INVALID_ID;
+
+#define DUMP_DECODE 0
+#define DUMP_RGBA 0
+#define RGBA_DUMP_FILE_PATTERN "/sdcard/jpeg_%dx%d_from_%s.rgba"
+#define DECODE_DUMP_FILE_PATTERN "/sdcard/jpeg_%dx%d.%s"
+
+using namespace android;
 
 struct jdva_private
 {
     JpegInfo jpg_info;
-    JpegDecoder decoder;
+    android::Vector<uint8_t> inputs;
+    JpegDecoder *decoder;
     RenderTarget dec_buffer;
-    RenderTarget yuy2_buffer;
-    RenderTarget rgba_buffer;
+    uint8_t* rgba_out;
+    BlitEvent blit_event;
+    int tile_read_x;
+    int tile_read_y;
+    int tile_read_width;
+    int tile_read_height;
+    int scale_factor;
 };
-
-static int internal_buffer_handle = 0;
 
 #define JD_CHECK(err, label) \
         if (err) { \
@@ -76,6 +88,38 @@ static int internal_buffer_handle = 0;
             ALOGE("%s::%d: failed: %d", __PRETTY_FUNCTION__, __LINE__, err); \
             goto label; \
         }
+
+static void libva_vp_pre_init_locked()
+{
+    if (display == NULL && vpCfgId == VA_INVALID_ID && vpCtxId == VA_INVALID_ID) {
+        Display dpy;
+        int va_major_version, va_minor_version;
+        VAConfigAttrib  vpp_attrib;
+        VAStatus st;
+        display = vaGetDisplay(&dpy);
+        st = vaInitialize(display, &va_major_version, &va_minor_version);
+        assert(st == VA_STATUS_SUCCESS);
+        vpp_attrib.type  = VAConfigAttribRTFormat;
+        vpp_attrib.value = VA_RT_FORMAT_YUV420;
+        st = vaCreateConfig(display, VAProfileNone,
+                                    VAEntrypointVideoProc,
+                                    &vpp_attrib,
+                                    1, &vpCfgId);
+        assert(st == VA_STATUS_SUCCESS);
+        st = vaCreateContext(display, vpCfgId, 1920, 1080, 0, NULL, 0, &vpCtxId);
+        assert(st == VA_STATUS_SUCCESS);
+    }
+}
+
+/* clear the global VA context
+ * actually it's not needed
+ * when the process terminates, the drm fd will be closed by kernel and the VA
+ * context will be automatically released
+ */
+static void libva_vp_post_deinit_locked()
+{
+    // DO NOTHING
+}
 
 Decode_Status jdva_initialize (jd_libva_struct * jd_libva_ptr)
 {
@@ -91,21 +135,38 @@ Decode_Status jdva_initialize (jd_libva_struct * jd_libva_ptr)
     VAStatus va_status = VA_STATUS_SUCCESS;
     Decode_Status status = DECODE_SUCCESS;
 
+    Mutex::Autolock autoLock(jdlock);
+
+    if (display == NULL || vpCfgId == VA_INVALID_ID || vpCtxId == VA_INVALID_ID) {
+        libva_vp_pre_init_locked();
+    }
+
     if (jd_libva_ptr->initialized) {
         ALOGW("%s HW decode already initialized", __FUNCTION__);
         return DECODE_NOT_STARTED;
     }
 
     {
-        Mutex::Autolock autoLock(jdlock);
         if (!(jd_libva_ptr->initialized)) {
             jdva_private *priv = new jdva_private;
             memset(&priv->jpg_info, 0, sizeof(JpegInfo));
+            priv->jpg_info.use_vector_input = true;
             memset(&priv->dec_buffer, 0, sizeof(RenderTarget));
-            memset(&priv->yuy2_buffer, 0, sizeof(RenderTarget));
-            memset(&priv->rgba_buffer, 0, sizeof(RenderTarget));
+            priv->rgba_out = NULL;
+            priv->inputs.clear();
+            priv->jpg_info.inputs = &priv->inputs;
             jd_libva_ptr->initialized = TRUE;
             jd_libva_ptr->priv = (uint32_t)priv;
+            jd_libva_ptr->cap_available= 0x0;
+            jd_libva_ptr->cap_available |= JPEG_CAPABILITY_DECODE;
+#ifdef GFXGEN
+            jd_libva_ptr->cap_available |= JPEG_CAPABILITY_UPSAMPLE | JPEG_CAPABILITY_DOWNSCALE;
+#endif
+            jd_libva_ptr->cap_enabled = jd_libva_ptr->cap_available;
+            if (jd_libva_ptr->cap_available & JPEG_CAPABILITY_UPSAMPLE)
+                priv->decoder = new JpegDecoder(display, vpCfgId, vpCtxId, true);
+            else
+                priv->decoder = new JpegDecoder();
             status = DECODE_SUCCESS;
         }
     }
@@ -127,74 +188,127 @@ void jdva_deinitialize (jd_libva_struct * jd_libva_ptr)
         Mutex::Autolock autoLock(jdlock);
         if (jd_libva_ptr->initialized) {
             jdva_private *p = (jdva_private*)jd_libva_ptr->priv;
+            delete p->decoder;
+            jd_libva_ptr->bitstream_buf = NULL;
+            p->inputs.clear();
             delete p;
             jd_libva_ptr->initialized = FALSE;
         }
     }
-    ALOGV("jdva_deinitialize finished");
     return;
 }
 
-RenderTarget * create_render_target(RenderTarget* target, int width, int height, int pixel_format)
+Decode_Status jdva_fill_input(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr)
+{
+    jdva_private *p = (jdva_private*)jd_libva_ptr->priv;
+    if ((*cinfo->src->fill_input_buffer)(cinfo)) {
+        assert(cinfo->src->next_input_byte);
+        assert(cinfo->src->bytes_in_buffer);
+        p->inputs.appendArray(cinfo->src->next_input_byte, cinfo->src->bytes_in_buffer);
+        jd_libva_ptr->file_size += cinfo->src->bytes_in_buffer;
+        ALOGV("%s read %d bytes, file_size %u bytes, vector %u bytes", __FUNCTION__, cinfo->src->bytes_in_buffer, jd_libva_ptr->file_size, p->inputs.size());
+        cinfo->src->bytes_in_buffer = 0;
+    }
+    else {
+        return DECODE_DRIVER_FAIL;
+    }
+    return DECODE_SUCCESS;
+}
+
+void jdva_drain_input(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr)
+{
+    nsecs_t now = systemTime();
+    jdva_private *p = (jdva_private*)jd_libva_ptr->priv;
+    do {
+      if ((*cinfo->src->fill_input_buffer)(cinfo)) {
+          p->inputs.appendArray(cinfo->src->next_input_byte, cinfo->src->bytes_in_buffer);
+          jd_libva_ptr->file_size += cinfo->src->bytes_in_buffer;
+      }
+      else {
+          break;
+      }
+    } while (cinfo->src->bytes_in_buffer > 0);
+    jd_libva_ptr->bitstream_buf = p->inputs.array();
+    ALOGV("%s drained input %u bytes took %.2f ms", __FUNCTION__, jd_libva_ptr->file_size,
+        (systemTime() - now)/1000000.0);
+}
+
+RenderTarget * create_render_target(RenderTarget* target, int width, int height, uint32_t fourcc)
 {
     hw_module_t const* module = NULL;
     alloc_device_t *allocdev = NULL;
     struct gralloc_module_t *gralloc_module = NULL;
     buffer_handle_t handle;
-    uint32_t fourcc;
     int stride, bpp, err;
-    fourcc = pixelFormat2Fourcc(pixel_format);
     bpp = fourcc2LumaBitsPerPixel(fourcc);
     if (target == NULL) {
         ALOGE("%s malloc new RenderTarget failed", __FUNCTION__);
         return NULL;
     }
-    ALOGV("%s created %s target %p", __FUNCTION__, fourcc2str(NULL, fourcc), target);
-    if ((fourcc == VA_FOURCC_422H) ||
-        (fourcc == VA_FOURCC_YUY2) ||
-        (fourcc == VA_FOURCC_RGBA)){
-        err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module);
-        if (err || !module) {
-            ALOGE("%s failed to get gralloc module", __FUNCTION__);
-            return NULL;
-        }
-        gralloc_module = (struct gralloc_module_t *)module;
-        err = gralloc_open(module, &allocdev);
-        if (err || !allocdev) {
-            ALOGE("%s failed to open alloc device", __FUNCTION__);
-            return NULL;
-        }
-        err = allocdev->alloc(allocdev,
-                width, height, pixel_format,
-                GRALLOC_USAGE_HW_RENDER,
-                &handle, &stride);
-        if (err) {
-            gralloc_close(allocdev);
-            ALOGE("%s failed to allocate surface", __FUNCTION__);
-            return NULL;
-        }
-        target->type = RenderTarget::ANDROID_GRALLOC;
-        target->handle = (int)handle;
-        target->stride = stride * bpp;
-    }
-    else {
-        *((int*)(&target->type)) = RENDERTARGET_INTERNAL_BUFFER;
-        target->handle = internal_buffer_handle++;
-    }
+    ALOGV("%s created %s target %p", __FUNCTION__, fourcc2str(fourcc), target);
+    target->type = RenderTarget::INTERNAL_BUF;
+    target->handle = generateHandle();
     target->width = width;
     target->height = height;
-    target->pixel_format = pixel_format;
+    target->pixel_format = fourcc;
     target->rect.x = target->rect.y = 0;
     target->rect.width = target->width;
     target->rect.height = target->height;
     return target;
 }
 
+Decode_Status jdva_init_read_tile_scanline(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr, int *x, int *y, int *w, int *h)
+{
+    if (jd_libva_ptr->cap_enabled & JPEG_CAPABILITY_UPSAMPLE) {
+        JpegDecodeStatus st;
+        jdva_private * priv = (jdva_private*)jd_libva_ptr->priv;
+        if (priv->scale_factor != cinfo->scale_denom) {
+            ALOGV("%s scale_denom changed from %d to %d!!!!", __FUNCTION__, priv->scale_factor, cinfo->scale_denom);
+        }
+        priv->tile_read_x = (*x < cinfo->image_width)? *x: (cinfo->image_width - 1);
+        priv->tile_read_y = (*y < cinfo->image_height)? *y: (cinfo->image_height - 1);
+        priv->tile_read_width = (priv->tile_read_x + *w < cinfo->image_width)? *w: (cinfo->image_width - priv->tile_read_x);
+        priv->tile_read_width /= priv->scale_factor;
+        priv->tile_read_height = (priv->tile_read_y + *h < cinfo->image_height)? *h: (cinfo->image_height - priv->tile_read_y);
+        priv->tile_read_height /= priv->scale_factor;
+        ALOGV("%s, x=%d->%d, y=%d>%d, w=%d->%d, h=%d->%d", __FUNCTION__,
+            *x, priv->tile_read_x,
+            *y, priv->tile_read_y,
+            *w, priv->tile_read_width,
+            *h, priv->tile_read_height);
+        *x = priv->tile_read_x;
+        *y = priv->tile_read_y;
+        *w = priv->tile_read_width;
+        *h = priv->tile_read_height;
+        return DECODE_SUCCESS;
+    }
+    else {
+        // should not be here
+        assert(false);
+        return DECODE_DRIVER_FAIL;
+    }
+}
+Decode_Status jdva_read_tile_scanline (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr, char ** scanlines, unsigned int* row_ctr)
+{
+    if (jd_libva_ptr->cap_enabled & JPEG_CAPABILITY_UPSAMPLE) {
+        jdva_private *priv = (jdva_private*)jd_libva_ptr->priv;
+        *row_ctr = 1;
+        memcpy(scanlines[0], priv->rgba_out + priv->tile_read_y * cinfo->image_width * 4 + priv->tile_read_x * 4, priv->tile_read_width * 4);
+        priv->tile_read_y++;
+        return DECODE_SUCCESS;
+    }
+    else {
+        // should not be here
+        assert(false);
+        return DECODE_DRIVER_FAIL;
+    }
+}
+
 void free_render_target(RenderTarget *target)
 {
     if (target == NULL)
         return;
-    uint32_t fourcc = pixelFormat2Fourcc(target->pixel_format);
+    uint32_t fourcc = target->pixel_format;
     if (target->type == RenderTarget::ANDROID_GRALLOC) {
         buffer_handle_t handle = (buffer_handle_t)target->handle;
         hw_module_t const* module = NULL;
@@ -214,218 +328,190 @@ void free_render_target(RenderTarget *target)
         allocdev->free(allocdev, handle);
         gralloc_close(allocdev);
     }
-    ALOGV("%s deleting %s target %p", __FUNCTION__, fourcc2str(NULL, fourcc), target);
+    ALOGV("%s deleting %s target %p", __FUNCTION__, fourcc2str(fourcc), target);
 }
 
-void dump_yuy2_target(RenderTarget *target, JpegDecoder *decoder, const char *filename)
-{
-    uint32_t fourcc = pixelFormat2Fourcc(target->pixel_format);
-    assert(fourcc == VA_FOURCC_YUY2);
-    uint8_t *data;
-    uint32_t offsets[3];
-    uint32_t pitches[3];
-    JpegDecoder::MapHandle maphandle = decoder->mapData(*target, (void**) &data, offsets, pitches);
-    assert (maphandle.valid);
-    FILE* fpdump = fopen(filename, "wb");
-    if (fpdump) {
-        // YUYV
-        for (int i = 0; i < target->height; ++i) {
-            fwrite(data + offsets[0] + i * pitches[0], 1, target->width * 2, fpdump);
-        }
-        fclose(fpdump);
-    }
-    else {
-        ALOGW("%s failed to create %s", __FUNCTION__, filename);
-    }
-    decoder->unmapData(*target, maphandle);
-}
-
-void dump_dec_target(RenderTarget *target, JpegDecoder *decoder, const char *filename)
-{
-    uint32_t fourcc = pixelFormat2Fourcc(target->pixel_format);
-    assert((fourcc == VA_FOURCC_IMC3) ||
-        (fourcc == VA_FOURCC_411P) ||
-        (fourcc == VA_FOURCC('4','0','0','P')) ||
-        (fourcc == VA_FOURCC_422H) ||
-        (fourcc == VA_FOURCC_422V) ||
-        (fourcc == VA_FOURCC_444P));
-    uint8_t *data;
-    uint32_t offsets[3];
-    uint32_t pitches[3];
-    JpegDecoder::MapHandle maphandle = decoder->mapData(*target, (void**) &data, offsets, pitches);
-    assert (maphandle.valid);
-    FILE* fpdump = fopen(filename, "wb");
-    if(fpdump) {
-        float hfactor, vfactor;
-        switch (fourcc) {
-            case VA_FOURCC_IMC3:
-                hfactor = 1;
-                vfactor = 0.5;
-                break;
-            case VA_FOURCC_444P:
-                hfactor = vfactor = 1;
-                break;
-            case VA_FOURCC_422H:
-                hfactor = 0.5;
-                vfactor = 1;
-                break;
-            case VA_FOURCC('4','0','0','P'):
-                hfactor = vfactor = 0;
-                break;
-            case VA_FOURCC_411P:
-                hfactor = 0.25;
-                vfactor = 1;
-                break;
-            case VA_FOURCC_422V:
-                hfactor = 0.5;
-                vfactor = 1;
-                break;
-            default:
-                hfactor = vfactor = 1;
-                break;
-        }
-        // Y
-        for (int i = 0; i < target->height; ++i) {
-            fwrite(data + offsets[0] + i * pitches[0], 1, target->width, fpdump);
-        }
-        // U
-        for (int i = 0; i < target->height * vfactor; ++i) {
-            fwrite(data + offsets[1] + i * pitches[1], 1, target->width * hfactor, fpdump);
-        }
-        // V
-        for (int i = 0; i < target->height * vfactor; ++i) {
-            fwrite(data + offsets[2] + i * pitches[2], 1, target->width * hfactor, fpdump);
-        }
-        fclose(fpdump);
-    }
-    else {
-        ALOGW("%s failed to create %s", __FUNCTION__, filename);
-    }
-    decoder->unmapData(*target, maphandle);
-}
-
+Decode_Status jdva_blit(struct jdva_private * priv);
 
 Decode_Status jdva_decode (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr)
 {
     JpegDecodeStatus st;
-    char **outbuf = jd_libva_ptr->output_image;
-    uint32_t lines = jd_libva_ptr->output_lines;
     jdva_private * priv = (jdva_private*)jd_libva_ptr->priv;
-    if (!priv)
-        return DECODE_DRIVER_FAIL;
-
-    JpegInfo& jpginfo = priv->jpg_info;
-
-    st = priv->decoder.decode(jpginfo, priv->dec_buffer);
-    if (st != JD_SUCCESS) {
-        ALOGE("%s: error decoding %s image", __FUNCTION__, fourcc2str(NULL, jpginfo.image_color_fourcc));
-        return DECODE_DRIVER_FAIL;
-    }
-    ALOGI("%s successfully decoded JPEG with VAAPI", __FUNCTION__);
-    RenderTarget *src_target = &priv->dec_buffer;
-    //dump_dec_target(src_target, decoder,"/sdcard/dec_dump.yuv");
-
-    bool yuy2_csc = false;
     hw_module_t const* module = NULL;
     alloc_device_t *allocdev = NULL;
     struct gralloc_module_t *gralloc_module = NULL;
     buffer_handle_t handle;
     int err;
+    char fname[256];
+    FILE *fdec;
     uint8_t *data = NULL;
     uint32_t offsets[3];
     uint32_t pitches[3];
+    nsecs_t t1, t2, t3;
     JpegDecoder::MapHandle maphandle;
-    FILE *rgbafile = NULL;
-    if (jpginfo.image_color_fourcc != VA_FOURCC_422H)
-        yuy2_csc = true;
+    if (!priv)
+        return DECODE_DRIVER_FAIL;
 
-    // CSC to YUY2 if needed
-    if (yuy2_csc) {
-        st = priv->decoder.blit(*src_target, priv->yuy2_buffer);
-        if (st != JD_SUCCESS) {
-            ALOGE("%s: error blitting to YUY2 buffer", __FUNCTION__);
-            goto cleanup;
-        }
-        //dump_yuy2_target(src_target, decoder,"/sdcard/yuy2_dump.yuv");
-        src_target = &priv->yuy2_buffer;
+    t1 = systemTime();
+    JpegInfo& jpginfo = priv->jpg_info;
+
+    if (jd_libva_ptr->cap_enabled & JPEG_CAPABILITY_DOWNSCALE) {
+        priv->scale_factor = cinfo->scale_denom;
+        cinfo->min_DCT_scaled_size = DCTSIZE/priv->scale_factor;
+        cinfo->output_width = cinfo->image_width/priv->scale_factor;
+        cinfo->output_height = cinfo->image_height/priv->scale_factor;
+    }
+    else {
+        priv->scale_factor = 1;
+        cinfo->min_DCT_scaled_size = DCTSIZE;
+        cinfo->output_width = cinfo->image_width;
+        cinfo->output_height = cinfo->image_height;
     }
 
-    st = priv->decoder.blit(*src_target, priv->rgba_buffer);
+    jdva_drain_input(cinfo, jd_libva_ptr);
+    jpginfo.need_header_only = false;
+    st = priv->decoder->parse(jpginfo);
+    switch (st) {
+    case JD_ERROR_BITSTREAM:
+        ALOGE("%s: error parsing bitstream", __FUNCTION__);
+        return DECODE_PARSER_FAIL;
+    case JD_SUCCESS:
+        break;
+    default:
+        ALOGE("%s: error in driver: parse failed", __FUNCTION__);
+        return DECODE_DRIVER_FAIL;
+    }
+
+    st = priv->decoder->decode(jpginfo, priv->dec_buffer);
     if (st != JD_SUCCESS) {
-        ALOGE("%s: error blitting to RGBA buffer", __FUNCTION__);
-        goto cleanup;
+        ALOGE("%s: error decoding %s image", __FUNCTION__, fourcc2str(jpginfo.image_color_fourcc));
+        return DECODE_DRIVER_FAIL;
     }
-    maphandle = priv->decoder.mapData(priv->rgba_buffer, (void**) &data, offsets, pitches);
+#if DUMP_DECODE
+    sprintf(fname, DECODE_DUMP_FILE_PATTERN, jpginfo.image_width, jpginfo.image_height, fourcc2str(jpginfo.image_color_fourcc));
+    fdec = fopen(fname, "wb");
+    if (fdec) {
+        maphandle = priv->decoder->mapData(priv->dec_buffer, (void**)&data, offsets, pitches);
+        int ss_x, ss_y;
+        ss_x = ss_y = -1;
+        switch(jpginfo.image_color_fourcc) {
+        case VA_FOURCC_411P:
+            ss_x = 2;
+            ss_y = 0;
+            break;
+        case VA_FOURCC_IMC3:
+            ss_x = 1;
+            ss_y = 1;
+            break;
+        case VA_FOURCC_422V:
+            ss_x = 0;
+            ss_y = 1;
+            break;
+        case VA_FOURCC_422H:
+            ss_x = 1;
+            ss_y = 0;
+            break;
+        case VA_FOURCC_444P:
+            ss_x = 0;
+            ss_y = 0;
+            break;
+        default:
+            break;
+        }
+        for (int r = 0; r < jpginfo.image_height; ++r)
+            fwrite(data + offsets[0] + pitches[0] * r, 1, jpginfo.image_width, fdec);
+        if (ss_x >=0 && ss_y >=0) {
+            for (int r = 0; r < jpginfo.image_height >> ss_y; ++r)
+                fwrite(data + offsets[1] + pitches[1] * r, 1, jpginfo.image_width >> ss_x, fdec);
+            for (int r = 0; r < jpginfo.image_height >> ss_y; ++r)
+                fwrite(data + offsets[2] + pitches[2] * r, 1, jpginfo.image_width >> ss_x, fdec);
+        }
+        priv->decoder->unmapData(priv->dec_buffer, maphandle);
+        fclose(fdec);
+        ALOGV("%s Dumped decode surface into %s", __FUNCTION__, fname);
+    }
+#endif
+    t2 = systemTime();
 
-    //rgbafile = fopen("/sdcard/rgba_dump", "wb");
+    if (!(jd_libva_ptr->cap_enabled & JPEG_CAPABILITY_UPSAMPLE)) {
+        ALOGV("%s decoded %ux%u %s JPEG for %.2f ms", __FUNCTION__,
+            priv->jpg_info.image_width, priv->jpg_info.image_height,
+            fourcc2str(priv->jpg_info.image_color_fourcc),
+            (t2-t1)/1000000.0);
+        // TODO: implement
+    }
+    else {
+        priv->rgba_out = (uint8_t*)memalign(0x1000,
+            aligned_width(cinfo->output_width, SURF_TILING_Y)
+            * aligned_height(cinfo->output_height, SURF_TILING_Y) * 4);
+        if (priv->rgba_out == NULL) {
+            ALOGE("%s failed to create RGBA buffer", __FUNCTION__);
+            return DECODE_MEMORY_FAIL;
+        }
 
-    for (uint32_t i = 0; i < lines; ++i) {
-        if (outbuf[i] != NULL) {
-            //memcpy(outbuf[i], data + offsets[0] + i * pitches[0], 4 * jpginfo.image_width);
-            for (int j = 0; j < priv->rgba_buffer.width; ++j) {
-                // BGRA -> RGBA
-                // R
-                memcpy(outbuf[i] + 4 * j, data + offsets[0] + i * pitches[0] + 4 * j + 2, 1);
-                // G
-                memcpy(outbuf[i] + 4 * j + 1, data + offsets[0] + i * pitches[0] + 4 * j + 1, 1);
-                // B
-                memcpy(outbuf[i] + 4 * j + 2, data + offsets[0] + i * pitches[0] + 4 * j, 1);
-                // A
-                memcpy(outbuf[i] + 4 * j + 3, data + offsets[0] + i * pitches[0] + 4 * j + 3, 1);
+        Decode_Status ret;
+        {
+            Mutex::Autolock autoLock(jdlock);
+            ret = jdva_blit(priv);
+            if (ret != DECODE_SUCCESS) {
+                ALOGE("%s blit %ux%u (%dx scaling) %s failed", __FUNCTION__,
+                    priv->jpg_info.image_width, priv->jpg_info.image_height,
+                    priv->scale_factor,
+                    fourcc2str(priv->jpg_info.image_color_fourcc));
+                goto cleanup;
             }
         }
-        else {
-            ALOGE("%s outbuf line %u is NULL", __FUNCTION__, i);
-        }
-        //if (rgbafile) {
-        //    fwrite(data + offsets[0] + i * pitches[0], 1, 4 * rgba_target->width, rgbafile);
-        //}
+        t3 = systemTime();
+        ALOGI("%s decode+blit %ux%u (%dx scaling) %s JPEG for %.2f+%.2f ms", __FUNCTION__,
+            priv->jpg_info.image_width, priv->jpg_info.image_height,
+            priv->scale_factor,
+            fourcc2str(priv->jpg_info.image_color_fourcc),
+            (t2-t1)/1000000.0, (t3-t2)/1000000.0);
     }
-    //if (rgbafile)
-    //    fclose(rgbafile);
-    ALOGI("%s successfully blitted RGBA from JPEG %s data", __FUNCTION__, fourcc2str(NULL, priv->jpg_info.image_color_fourcc));
-    priv->decoder.unmapData(priv->rgba_buffer, maphandle);
     return DECODE_SUCCESS;
-
 cleanup:
+    if (priv->rgba_out) {
+        free(priv->rgba_out);
+        priv->rgba_out = NULL;
+    }
     return DECODE_DRIVER_FAIL;
+}
+
+Decode_Status jdva_read_scanlines (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr, char ** scanlines, unsigned int* row_ctr, unsigned int max_lines)
+{
+    if (jd_libva_ptr->cap_enabled & JPEG_CAPABILITY_UPSAMPLE) {
+        jdva_private *priv = (jdva_private*)jd_libva_ptr->priv;
+        uint32_t scanline = cinfo->output_scanline;
+        for (*row_ctr = 0; *row_ctr + scanline < cinfo->output_height && *row_ctr < max_lines; ++*row_ctr) {
+            memcpy(scanlines[*row_ctr], priv->rgba_out + (scanline + *row_ctr) * aligned_width(cinfo->output_width, SURF_TILING_Y) * 4, cinfo->output_width * 4);
+        }
+        return DECODE_SUCCESS;
+    }
+    else {
+        // should not be here
+        assert(false);
+        return DECODE_DRIVER_FAIL;
+    }
 }
 
 Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr)
 {
     VAStatus va_status = VA_STATUS_SUCCESS;
     Decode_Status status = DECODE_SUCCESS;
-    RenderTarget *dec_target, *yuy2_target, *rgba_target;
-    dec_target = yuy2_target = rgba_target = NULL;
     JpegDecodeStatus st;
     Mutex::Autolock autoLock(jdlock);
     jdva_private *priv = (jdva_private*)jd_libva_ptr->priv;
     jd_libva_ptr->image_width = priv->jpg_info.picture_param_buf.picture_width;
     jd_libva_ptr->image_height = priv->jpg_info.picture_param_buf.picture_height;
-    dec_target = create_render_target(&priv->dec_buffer, jd_libva_ptr->image_width,jd_libva_ptr->image_height,fourcc2PixelFormat(priv->jpg_info.image_color_fourcc));
-    if (dec_target == NULL) {
+    create_render_target(&priv->dec_buffer, jd_libva_ptr->image_width,jd_libva_ptr->image_height,priv->jpg_info.image_color_fourcc);
+    if (&priv->dec_buffer == NULL) {
         ALOGE("%s failed to create decode render target", __FUNCTION__);
         return DECODE_MEMORY_FAIL;
     }
-    rgba_target = create_render_target(&priv->rgba_buffer, jd_libva_ptr->image_width,jd_libva_ptr->image_height, HAL_PIXEL_FORMAT_RGBA_8888);
-    if (rgba_target == NULL) {
-        ALOGE("%s failed to create YUY2 csc buffer", __FUNCTION__);
-        free_render_target(dec_target);
-        return DECODE_MEMORY_FAIL;
-    }
-    yuy2_target = create_render_target(&priv->yuy2_buffer, jd_libva_ptr->image_width,jd_libva_ptr->image_height, HAL_PIXEL_FORMAT_YCbCr_422_I);
-    if (yuy2_target == NULL) {
-        ALOGE("%s failed to create RGBA csc buffer", __FUNCTION__);
-        free_render_target(dec_target);
-        free_render_target(rgba_target);
-        return DECODE_MEMORY_FAIL;
-    }
-    RenderTarget *targetlist[3] = { dec_target, yuy2_target, rgba_target };
-    st = priv->decoder.init(jd_libva_ptr->image_width, jd_libva_ptr->image_height, targetlist, 3);
+    RenderTarget *targets = &priv->dec_buffer;
+    st = priv->decoder->init(jd_libva_ptr->image_width, jd_libva_ptr->image_height, &targets, 1);
     if (st != JD_SUCCESS) {
-        free_render_target(dec_target);
-        free_render_target(rgba_target);
-        free_render_target(yuy2_target);
+        free_render_target(&priv->dec_buffer);
         ALOGE("%s failed to initialize resources for decoder: %d", __FUNCTION__, st);
         return DECODE_DRIVER_FAIL;
     }
@@ -455,10 +541,12 @@ Decode_Status jdva_release_resource (jd_libva_struct * jd_libva_ptr)
     ALOGV("%s deiniting priv 0x%x", __FUNCTION__, jd_libva_ptr->priv);
     jdva_private *priv = (jdva_private*)jd_libva_ptr->priv;
     if (priv) {
-        priv->decoder.deinit();
+        priv->decoder->deinit();
         free_render_target(&priv->dec_buffer);
-        free_render_target(&priv->yuy2_buffer);
-        free_render_target(&priv->rgba_buffer);
+        if (priv->rgba_out) {
+            free(priv->rgba_out);
+            priv->rgba_out = NULL;
+        }
     }
   /*
    * It is safe to destroy Surface/Config/Context severl times
@@ -477,9 +565,17 @@ Decode_Status jdva_parse_bitstream(j_decompress_ptr cinfo, jd_libva_struct * jd_
     if (!priv)
         return DECODE_DRIVER_FAIL;
     JpegInfo& jpginfo = priv->jpg_info;
-    jpginfo.buf = jd_libva_ptr->bitstream_buf;
-    jpginfo.bufsize = jd_libva_ptr->file_size;
-    JpegDecodeStatus st = priv->decoder.parse(jpginfo);
+    JpegDecodeStatus st;
+
+    Decode_Status res;
+    jpginfo.need_header_only = true;
+    do {
+        res = jdva_fill_input(cinfo, jd_libva_ptr);
+        if (res) {
+            return res;
+        }
+        st = priv->decoder->parse(jpginfo);
+    } while (st == JD_INSUFFICIENT_BYTE);
     if (st != JD_SUCCESS) {
         ALOGE("%s parser for HW decode failed: %d", __FUNCTION__, st);
         return DECODE_PARSER_FAIL;
@@ -492,8 +588,44 @@ Decode_Status jdva_parse_bitstream(j_decompress_ptr cinfo, jd_libva_struct * jd_
     cinfo->image_height = jpginfo.picture_param_buf.picture_height;  /* nominal image height */
     cinfo->num_components = jpginfo.picture_param_buf.num_components;       /* # of color components in JPEG image */
     cinfo->jpeg_color_space = JCS_YCbCr; /* colorspace of JPEG image */
-    cinfo->out_color_space = JCS_RGB; /* colorspace for output */
+    cinfo->out_color_space = JCS_RGB; /* set default colorspace for output */
     cinfo->src->bytes_in_buffer = jd_libva_ptr->file_size;
+    cinfo->scale_num = cinfo->scale_denom = 1; /* set default value */
     return DECODE_SUCCESS;
+}
+
+Decode_Status jdva_blit(struct jdva_private * priv)
+{
+    JpegDecodeStatus st;
+    nsecs_t t1, t2;
+
+    char fname[256];
+    FILE *fdec;
+    t1 = systemTime();
+    st = priv->decoder->blitToLinearRgba(priv->dec_buffer, priv->rgba_out,
+        priv->jpg_info.image_width,
+        priv->jpg_info.image_height,
+        priv->blit_event, priv->scale_factor);
+    if (st != JD_SUCCESS) {
+        ALOGE("%s: error blitting to RGBA buffer", __FUNCTION__);
+        goto cleanup;
+    }
+    t2 = systemTime();
+#if DUMP_RGBA
+    sprintf(fname, RGBA_DUMP_FILE_PATTERN, priv->jpg_info.output_width, priv->jpg_info.output_height, fourcc2str(priv->jpg_info.image_color_fourcc));
+    fdec = fopen(fname, "wb");
+    if (fdec) {
+        fwrite(priv->rgba_out, 1, priv->jpg_info.output_width * priv->jpg_info.output_height * 4, fdec);
+        fclose(fdec);
+        ALOGV("%s Dumped RGBA output into %s", __FUNCTION__, fname);
+    }
+#endif
+    ALOGV("%s blitted %ux%u RGBA from JPEG %s data for %.2f ms", __FUNCTION__,
+        priv->jpg_info.image_width, priv->jpg_info.image_height,
+        fourcc2str(priv->jpg_info.image_color_fourcc),
+        (t2-t1)/1000000.0);
+    return DECODE_SUCCESS;
+cleanup:
+    return DECODE_DRIVER_FAIL;
 }
 

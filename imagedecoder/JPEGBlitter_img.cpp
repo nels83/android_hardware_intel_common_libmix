@@ -1,6 +1,5 @@
 /* INTEL CONFIDENTIAL
 * Copyright (c) 2013 Intel Corporation.  All rights reserved.
-* Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -28,8 +27,40 @@
 
 #include "JPEGBlitter.h"
 
-JpegDecodeStatus JpegBlitter::blit(RenderTarget &src, RenderTarget &dst)
+JpegDecodeStatus JpegBlitter::blit(RenderTarget &src, RenderTarget &dst, int scale_factor)
 {
     return JD_OUTPUT_FORMAT_UNSUPPORTED;
 }
 
+JpegDecodeStatus JpegBlitter::blitToLinearRgba(RenderTarget &src, uint8_t *sysmem, uint32_t width, uint32_t height, BlitEvent &event, int scale_factor)
+{
+    return JD_OUTPUT_FORMAT_UNSUPPORTED;
+}
+JpegDecodeStatus JpegBlitter::getRgbaTile(RenderTarget &src,
+                                     uint8_t *sysmem,
+                                     int left, int top, int width, int height, int scale_factor)
+{
+    return JD_OUTPUT_FORMAT_UNSUPPORTED;
+}
+void JpegBlitter::init(JpegDecoder& /*dec*/)
+{
+    // Do nothing
+}
+void JpegBlitter::deinit()
+{
+    // Do nothing
+}
+void JpegBlitter::syncBlit(BlitEvent &event)
+{
+    // Do nothing
+}
+JpegDecodeStatus JpegBlitter::blitToCameraSurfaces(RenderTarget &src,
+                                                   buffer_handle_t dst_nv12,
+                                                   buffer_handle_t dst_yuy2,
+                                                   uint8_t *dst_nv21,
+                                                   uint8_t *dst_yv12,
+                                                   uint32_t width, uint32_t height,
+                                                   BlitEvent &event)
+{
+    return JD_OUTPUT_FORMAT_UNSUPPORTED;
+}

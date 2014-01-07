@@ -26,7 +26,6 @@
 *    Yao Cheng <yao.cheng@intel.com>
 *
 */
-//#define LOG_NDEBUG 0
 
 #include <va/va.h>
 #include <va/va_tpi.h>
@@ -39,8 +38,6 @@
 #undef NDEBUG
 #endif
 #include <assert.h>
-
-//#define LOG_TAG "ImageDecoder"
 
 #define JPEG_MAX_SETS_HUFFMAN_TABLES 2
 
@@ -67,20 +64,41 @@ typedef uint32_t Display;
             goto label; \
         }
 
-JpegDecoder::JpegDecoder()
+static int handlectr = 0;
+int generateHandle()
+{
+    return handlectr++;
+}
+
+JpegDecoder::JpegDecoder(VADisplay display, VAConfigID vpCfgId, VAContextID vpCtxId, bool use_blitter)
     :mInitialized(false),
-    mDisplay(0),
+    mDisplay(display),
     mConfigId(VA_INVALID_ID),
     mContextId(VA_INVALID_ID),
     mParser(NULL),
-    mBlitter(NULL)
+    mBlitter(NULL),
+    mParserInitialized(false),
+    mDispCreated(false)
 {
     mParser = new CJPEGParse;
-    mBlitter = new JpegBlitter;
-    Display dpy;
-    int va_major_version, va_minor_version;
-    mDisplay = vaGetDisplay(&dpy);
-    vaInitialize(mDisplay, &va_major_version, &va_minor_version);
+    mBsParser = new JpegBitstreamParser;
+    if (!display) {
+        assert(vpCfgId == VA_INVALID_ID);
+        assert(vpCtxId == VA_INVALID_ID);
+        assert(use_blitter == false);
+        Display dpy;
+        int va_major_version, va_minor_version;
+        mDisplay = vaGetDisplay(&dpy);
+        vaInitialize(mDisplay, &va_major_version, &va_minor_version);
+        mDispCreated = true;
+    }
+    if (use_blitter) {
+        assert(display != NULL);
+        assert(vpCfgId != VA_INVALID_ID);
+        assert(vpCtxId != VA_INVALID_ID);
+        mBlitter = new JpegBlitter(display, vpCfgId,vpCtxId);
+    }
+    VTRACE("%s CTOR succeded", __FUNCTION__);
 }
 JpegDecoder::~JpegDecoder()
 {
@@ -88,73 +106,82 @@ JpegDecoder::~JpegDecoder()
         WTRACE("Freeing JpegDecoder: not destroyed yet. Force destroy resource");
         deinit();
     }
+    if (mBlitter)
+        mBlitter->deinit();
     delete mBlitter;
-    vaTerminate(mDisplay);
+    if (mDispCreated)
+        vaTerminate(mDisplay);
     delete mParser;
+    delete mBsParser;
+    VTRACE("%s DTOR succeded", __FUNCTION__);
 }
 
 JpegDecoder::MapHandle JpegDecoder::mapData(RenderTarget &target, void ** data, uint32_t * offsets, uint32_t * pitches)
 {
-    JpegDecoder::MapHandle handle;
-    handle.img = NULL;
-    handle.valid = false;
+    VAImage *img = NULL;
     VASurfaceID surf_id = getSurfaceID(target);
     if (surf_id != VA_INVALID_ID) {
-        handle.img = new VAImage();
-        if (handle.img == NULL) {
+        img = new VAImage();
+        if (img == NULL) {
             ETRACE("%s: create VAImage fail", __FUNCTION__);
-            return handle;
+            return 0;
         }
         VAStatus st;
-        st = vaDeriveImage(mDisplay, surf_id, handle.img);
+        st = vaDeriveImage(mDisplay, surf_id, img);
         if (st != VA_STATUS_SUCCESS) {
-            delete handle.img;
-            handle.img = NULL;
+            delete img;
+            img = NULL;
             ETRACE("%s: vaDeriveImage fail %d", __FUNCTION__, st);
-            return handle;
+            return 0;
         }
-        st = vaMapBuffer(mDisplay, handle.img->buf, data);
+        st = vaMapBuffer(mDisplay, img->buf, data);
         if (st != VA_STATUS_SUCCESS) {
-            vaDestroyImage(mDisplay, handle.img->image_id);
-            delete handle.img;
-            handle.img = NULL;
+            vaDestroyImage(mDisplay, img->image_id);
+            delete img;
+            img = NULL;
             ETRACE("%s: vaMapBuffer fail %d", __FUNCTION__, st);
-            return handle;
+            return 0;
         }
-        handle.valid = true;
-        offsets[0] = handle.img->offsets[0];
-        offsets[1] = handle.img->offsets[1];
-        offsets[2] = handle.img->offsets[2];
-        pitches[0] = handle.img->pitches[0];
-        pitches[1] = handle.img->pitches[1];
-        pitches[2] = handle.img->pitches[2];
-        return handle;
+        offsets[0] = img->offsets[0];
+        offsets[1] = img->offsets[1];
+        offsets[2] = img->offsets[2];
+        pitches[0] = img->pitches[0];
+        pitches[1] = img->pitches[1];
+        pitches[2] = img->pitches[2];
+        VTRACE("%s: successfully mapped RenderTarget %p, handle %d, data=%p, offsets=[%u,%u,%u], pitches=[%u,%u,%u], size=%u, %ux%u, to handle.img %p",
+            __FUNCTION__, &target, target.handle, *data, offsets[0], offsets[1], offsets[2],
+            pitches[0], pitches[1], pitches[2], img->data_size,
+            img->width, img->height, img);
+
+        return (uint32_t)img;
     }
     ETRACE("%s: get Surface ID fail", __FUNCTION__);
-    return handle;
+    return 0;
 }
 
 void JpegDecoder::unmapData(RenderTarget &target, JpegDecoder::MapHandle maphandle)
 {
-    if (maphandle.valid == false)
-        return;
-    if (maphandle.img != NULL) {
-        vaUnmapBuffer(mDisplay, maphandle.img->buf);
-        vaDestroyImage(mDisplay, maphandle.img->image_id);
-        delete maphandle.img;
+    if (maphandle != 0) {
+        vaUnmapBuffer(mDisplay, ((VAImage*)maphandle)->buf);
+        vaDestroyImage(mDisplay, ((VAImage*)maphandle)->image_id);
+        VTRACE("%s deleting VAImage %p", __FUNCTION__, ((VAImage*)maphandle));
+        delete ((VAImage*)maphandle);
     }
 }
 
 JpegDecodeStatus JpegDecoder::init(int w, int h, RenderTarget **targets, int num)
 {
-    if (mInitialized)
+    if (mInitialized) {
+        VTRACE("%s already initialized", __FUNCTION__);
         return JD_ALREADY_INITIALIZED;
+    }
     Mutex::Autolock autoLock(mLock);
-    mBlitter->setDecoder(*this);
     if (!mInitialized) {
+        nsecs_t now = systemTime();
         mGrallocSurfaceMap.clear();
         mDrmSurfaceMap.clear();
         mNormalSurfaceMap.clear();
+        mUserptrSurfaceMap.clear();
         VAStatus st;
         VASurfaceID surfid;
         for (int i = 0; i < num; ++i) {
@@ -164,6 +191,8 @@ JpegDecodeStatus JpegDecoder::init(int w, int h, RenderTarget **targets, int num
                     __FUNCTION__, targets[i]->handle);
                 return JD_RESOURCE_FAILURE;
             }
+            VTRACE("%s successfully created surface %u for renderTarget %p, handle %d",
+                __FUNCTION__, surfid, targets[i], targets[i]->handle);
         }
         VAConfigAttrib attrib;
 
@@ -182,14 +211,17 @@ JpegDecodeStatus JpegDecoder::init(int w, int h, RenderTarget **targets, int num
         size_t gmsize = mGrallocSurfaceMap.size();
         size_t dmsize = mDrmSurfaceMap.size();
         size_t nmsize = mNormalSurfaceMap.size();
+        size_t umsize = mUserptrSurfaceMap.size();
         VASurfaceID *surfaces = new VASurfaceID[gmsize + dmsize + nmsize];
-        for (size_t i = 0; i < gmsize + dmsize + nmsize; ++i) {
+        for (size_t i = 0; i < gmsize + dmsize + nmsize + umsize; ++i) {
             if (i < gmsize)
                 surfaces[i] = mGrallocSurfaceMap.valueAt(i);
             else if (i < gmsize + dmsize)
                 surfaces[i] = mDrmSurfaceMap.valueAt(i - gmsize);
-            else
+            else if (i < gmsize + dmsize + nmsize)
                 surfaces[i] = mNormalSurfaceMap.valueAt(i - gmsize - dmsize);
+            else
+                surfaces[i] = mUserptrSurfaceMap.valueAt(i - gmsize - dmsize - nmsize);
         }
         st = vaCreateContext(mDisplay, mConfigId,
             w, h,
@@ -202,34 +234,121 @@ JpegDecodeStatus JpegDecoder::init(int w, int h, RenderTarget **targets, int num
             return JD_INITIALIZATION_ERROR;
         }
 
-        VTRACE("vaconfig = %u, vacontext = %u", mConfigId, mContextId);
+        VTRACE("JpegDecoder::init took %.2f ms", (systemTime() - now)/1000000.0);
         mInitialized = true;
     }
     return JD_SUCCESS;
 }
 
-JpegDecodeStatus JpegDecoder::blit(RenderTarget &src, RenderTarget &dst)
+JpegDecodeStatus JpegDecoder::blit(RenderTarget &src, RenderTarget &dst, int scale_factor)
 {
-    return mBlitter->blit(src, dst);
+    if (mBlitter) {
+        mBlitter->init(*this);
+        return mBlitter->blit(src, dst, scale_factor);
+    }
+    else
+        return JD_BLIT_FAILURE;
 }
 
-JpegDecodeStatus JpegDecoder::parse(JpegInfo &jpginfo)
+JpegDecodeStatus JpegDecoder::getRgbaTile(RenderTarget &src,
+                                     uint8_t *sysmem,
+                                     int left, int top, int width, int height, int scale_factor)
 {
-    uint32_t component_order = 0 ;
-    uint32_t dqt_ind = 0;
-    uint32_t dht_ind = 0;
-    uint32_t scan_ind = 0;
-    bool frame_marker_found = false;
+    if (mBlitter) {
+        nsecs_t now = systemTime();
+        mBlitter->init(*this);
+        nsecs_t t1 = systemTime();
+        JpegDecodeStatus st = mBlitter->getRgbaTile(src, sysmem, left, top, width, height, scale_factor);
+        VTRACE("Decoder::%s took %.2f + %.2f ms", __FUNCTION__,
+            (t1-now)/1000000.0, (systemTime()-t1)/1000000.0);
+        return st;
+    }
+    else
+        return JD_BLIT_FAILURE;
+
+}
+
+JpegDecodeStatus JpegDecoder::blitToLinearRgba(RenderTarget &src, uint8_t *sysmem, uint32_t width, uint32_t height, BlitEvent &event, int scale_factor)
+{
+    if (mBlitter) {
+        nsecs_t now = systemTime();
+        mBlitter->init(*this);
+        nsecs_t t1 = systemTime();
+        JpegDecodeStatus st = mBlitter->blitToLinearRgba(src, sysmem, width, height, event, scale_factor);
+        VTRACE("Decoder::%s took %.2f + %.2f ms", __FUNCTION__,
+            (t1-now)/1000000.0, (systemTime()-t1)/1000000.0);
+        return st;
+    }
+    else
+        return JD_BLIT_FAILURE;
+}
+
+JpegDecodeStatus JpegDecoder::blitToCameraSurfaces(RenderTarget &src,
+                                                   buffer_handle_t dst_nv12,
+                                                   buffer_handle_t dst_yuy2,
+                                                   uint8_t *dst_nv21,
+                                                   uint8_t *dst_yv12,
+                                                   uint32_t width, uint32_t height, BlitEvent &event)
+{
+    if (mBlitter) {
+        nsecs_t now = systemTime();
+        mBlitter->init(*this);
+        nsecs_t t1 = systemTime();
+        JpegDecodeStatus st = mBlitter->blitToCameraSurfaces(src, dst_nv12, dst_yuy2, dst_nv21, dst_yv12, width, height, event);
+        VTRACE("Decoder::%s took %.2f + %.2f ms", __FUNCTION__,
+            (t1-now)/1000000.0, (systemTime()-t1)/1000000.0);
+        return st;
+    }
+    else
+        return JD_BLIT_FAILURE;
+}
+
+void JpegDecoder::syncBlit(BlitEvent &event)
+{
+    assert(mBlitter);
+    mBlitter->syncBlit(event);
+}
+
+JpegDecodeStatus JpegDecoder::parseHeader(JpegInfo &jpginfo)
+{
+#define ROLLBACK_IF_FAIL(stmt) \
+    do { \
+        if (!stmt) { \
+            VTRACE("%s::%d, parser failed at offset %u, remaining bytes %u, total bytes %zu", \
+                __FUNCTION__, __LINE__, mBsParser->getByteOffset(), mBsParser->getRemainingBytes(), \
+                bufsize); \
+            goto rollback; \
+        } \
+    } while(0);
+
     int i;
+    uint32_t bufsize;
+    if (!mParserInitialized) {
+        Mutex::Autolock autoLock(mLock);
+        if (!mParserInitialized) {
+            if (jpginfo.use_vector_input)
+                mBsParser->set(jpginfo.inputs);
+            else
+                mBsParser->set(jpginfo.buf, jpginfo.bufsize);
+            mParserInitialized = true;
+        }
+    }
+    if (jpginfo.use_vector_input)
+        bufsize = jpginfo.inputs->size();
+    else
+        bufsize = jpginfo.bufsize;
 
-    parserInitialize(mParser, jpginfo.buf, jpginfo.bufsize);
+    uint8_t marker;
+    uint32_t rollbackoff;
+    rollbackoff = mBsParser->getByteOffset();
+    ROLLBACK_IF_FAIL(mBsParser->tryGetNextMarker(&marker));
 
-    uint8_t marker = mParser->getNextMarker(mParser);
-
-    while (marker != CODE_EOI &&( !mParser->endOfBuffer(mParser))) {
+    while (marker != CODE_EOI &&( !mBsParser->endOfBuffer())) {
         switch (marker) {
             case CODE_SOI: {
-                 jpginfo.soi_offset = mParser->getByteOffset(mParser) - 2;
+                VTRACE("%s SOI at 0x%08x", __FUNCTION__, mBsParser->getByteOffset());
+                jpginfo.soi_offset = mBsParser->getByteOffset() - 2;
+                jpginfo.soi_parsed = true;
                 break;
             }
             // If the marker is an APP marker skip over the data
@@ -249,22 +368,28 @@ JpegDecodeStatus JpegDecoder::parse(JpegInfo &jpginfo)
             case CODE_APP13:
             case CODE_APP14:
             case CODE_APP15: {
-
-                uint32_t bytes_to_burn = mParser->readBytes(mParser, 2) - 2;
-                mParser->burnBytes(mParser, bytes_to_burn);
-                    break;
+                VTRACE("%s APP %x at 0x%08x", __FUNCTION__, marker, mBsParser->getByteOffset());
+                uint32_t bytes_to_burn;
+                ROLLBACK_IF_FAIL(mBsParser->tryReadBytes(&bytes_to_burn, 2));
+                bytes_to_burn -= 2;
+                ROLLBACK_IF_FAIL(mBsParser->tryBurnBytes(bytes_to_burn));
+                break;
             }
             // Store offset to DQT data to avoid parsing bitstream in user mode
             case CODE_DQT: {
-                if (dqt_ind < 4) {
-                    jpginfo.dqt_byte_offset[dqt_ind] = mParser->getByteOffset(mParser) - jpginfo.soi_offset;
-                    dqt_ind++;
-                    uint32_t bytes_to_burn = mParser->readBytes(mParser, 2 ) - 2;
-                    mParser->burnBytes( mParser, bytes_to_burn );
+                VTRACE("%s DQT at 0x%08x", __FUNCTION__, mBsParser->getByteOffset());
+                if (jpginfo.dqt_ind < 4) {
+                    jpginfo.dqt_byte_offset[jpginfo.dqt_ind] = mBsParser->getByteOffset() - jpginfo.soi_offset;
+                    jpginfo.dqt_ind++;
+                    uint32_t bytes_to_burn;
+                    ROLLBACK_IF_FAIL(mBsParser->tryReadBytes(&bytes_to_burn, 2));
+                    bytes_to_burn -= 2;
+                    ROLLBACK_IF_FAIL(mBsParser->tryBurnBytes(bytes_to_burn));
                 } else {
                     ETRACE("ERROR: Decoder does not support more than 4 Quant Tables\n");
-                    return JD_ERROR_BITSTREAM;
+                    return JD_CODEC_UNSUPPORTED;
                 }
+                jpginfo.dqt_parsed = true;
                 break;
             }
             // Throw exception for all SOF marker other than SOF0
@@ -284,20 +409,31 @@ JpegDecodeStatus JpegDecoder::parse(JpegInfo &jpginfo)
                 ETRACE("ERROR: unsupport SOF\n");
                 break;
             }
-            // Parse component information in SOF marker
             case CODE_SOF_BASELINE: {
-                frame_marker_found = true;
-
-                mParser->burnBytes(mParser, 2); // Throw away frame header length
-                uint8_t sample_precision = mParser->readNextByte(mParser);
+                VTRACE("%s SOF_BASELINE at 0x%08x", __FUNCTION__, mBsParser->getByteOffset());
+                ROLLBACK_IF_FAIL((mBsParser->getRemainingBytes() >= 10));
+                jpginfo.frame_marker_found = true;
+                bool r;
+                ROLLBACK_IF_FAIL(mBsParser->tryBurnBytes(2)); // Throw away frame header length 
+                uint8_t sample_precision;
+                ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&sample_precision));
                 if (sample_precision != 8) {
                     ETRACE("sample_precision is not supported\n");
-                    return JD_ERROR_BITSTREAM;
+                    return JD_INPUT_FORMAT_UNSUPPORTED;
                 }
                 // Extract pic width and height
-                jpginfo.picture_param_buf.picture_height = mParser->readBytes(mParser, 2);
-                jpginfo.picture_param_buf.picture_width = mParser->readBytes(mParser, 2);
-                jpginfo.picture_param_buf.num_components = mParser->readNextByte(mParser);
+                uint32_t w, h;
+                ROLLBACK_IF_FAIL(mBsParser->tryReadBytes(&h, 2));
+                ROLLBACK_IF_FAIL(mBsParser->tryReadBytes(&w, 2));
+                ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&jpginfo.picture_param_buf.num_components));
+                jpginfo.picture_param_buf.picture_width = w;
+                jpginfo.picture_param_buf.picture_height = h;
+                VTRACE("%s pic wxh=%ux%u, %u components", __FUNCTION__, 
+                    jpginfo.picture_param_buf.picture_width,
+                    jpginfo.picture_param_buf.picture_height,
+                    jpginfo.picture_param_buf.num_components);
+
+                ROLLBACK_IF_FAIL((mBsParser->getRemainingBytes() >= jpginfo.picture_param_buf.num_components * 3));
 
                 if (jpginfo.picture_param_buf.num_components > JPEG_MAX_COMPONENTS) {
                     ETRACE("ERROR: reached max components\n");
@@ -308,110 +444,225 @@ JpegDecodeStatus JpegDecoder::parse(JpegInfo &jpginfo)
                     VTRACE("PERFORMANCE: %ux%u JPEG will decode faster with SW\n",
                         jpginfo.picture_param_buf.picture_width,
                         jpginfo.picture_param_buf.picture_height);
-                    return JD_ERROR_BITSTREAM;
+                    return JD_IMAGE_TOO_SMALL;
                 }
                 uint8_t comp_ind = 0;
                 for (comp_ind = 0; comp_ind < jpginfo.picture_param_buf.num_components; comp_ind++) {
-                    jpginfo.picture_param_buf.components[comp_ind].component_id = mParser->readNextByte(mParser);
-
-                    uint8_t hv_sampling = mParser->readNextByte(mParser);
+                    ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&jpginfo.picture_param_buf.components[comp_ind].component_id));
+                    uint8_t hv_sampling;
+                    ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&hv_sampling));
                     jpginfo.picture_param_buf.components[comp_ind].h_sampling_factor = hv_sampling >> 4;
                     jpginfo.picture_param_buf.components[comp_ind].v_sampling_factor = hv_sampling & 0xf;
-                    jpginfo.picture_param_buf.components[comp_ind].quantiser_table_selector = mParser->readNextByte(mParser);
+                    ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&jpginfo.picture_param_buf.components[comp_ind].quantiser_table_selector));
                 }
+                jpginfo.image_width = jpginfo.picture_param_buf.picture_width;
+                jpginfo.image_height = jpginfo.picture_param_buf.picture_height;
+                jpginfo.image_color_fourcc = sampFactor2Fourcc(jpginfo.picture_param_buf.components[0].h_sampling_factor,
+                    jpginfo.picture_param_buf.components[1].h_sampling_factor,
+                    jpginfo.picture_param_buf.components[2].h_sampling_factor,
+                    jpginfo.picture_param_buf.components[0].v_sampling_factor,
+                    jpginfo.picture_param_buf.components[1].v_sampling_factor,
+                    jpginfo.picture_param_buf.components[2].v_sampling_factor);
 
+                VTRACE("%s jpg %ux%u, fourcc=%s",
+                    __FUNCTION__, jpginfo.image_width, jpginfo.image_height, fourcc2str(jpginfo.image_color_fourcc));
 
+                if (!jpegColorFormatSupported(jpginfo)) {
+                    ETRACE("%s color format not supported", fourcc2str(jpginfo.image_color_fourcc));
+                    return JD_INPUT_FORMAT_UNSUPPORTED;
+                }
+                jpginfo.sof_parsed = true;
                 break;
             }
-            // Store offset to DHT data to avoid parsing bitstream in user mode
             case CODE_DHT: {
-                if (dht_ind < 4) {
-                    jpginfo.dht_byte_offset[dht_ind] = mParser->getByteOffset(mParser) - jpginfo.soi_offset;
-                    dht_ind++;
-                    uint32_t bytes_to_burn = mParser->readBytes(mParser, 2) - 2;
-                    mParser->burnBytes(mParser, bytes_to_burn );
+                VTRACE("%s DHT at 0x%08x", __FUNCTION__, mBsParser->getByteOffset());
+                if (jpginfo.dht_ind < 4) {
+                    jpginfo.dht_byte_offset[jpginfo.dht_ind] = mBsParser->getByteOffset() - jpginfo.soi_offset;
+                    jpginfo.dht_ind++;
+                    uint32_t bytes_to_burn;
+                    if (!mBsParser->tryReadBytes(&bytes_to_burn, 2)) {
+                        VTRACE("%s failed to read 2 bytes from 0x%08x, remaining 0x%08x, total 0x%08x",
+                            __FUNCTION__, mBsParser->getByteOffset(),
+                            mBsParser->getRemainingBytes(), bufsize);
+                        jpginfo.dht_ind--;
+                        goto rollback;
+                    }
+                    bytes_to_burn -= 2;
+                    if (!mBsParser->tryBurnBytes(bytes_to_burn)) {
+                        VTRACE("%s failed to burn %x bytes from 0x%08x, remaining 0x%08x, total 0x%08x",
+                            __FUNCTION__, bytes_to_burn, mBsParser->getByteOffset(),
+                            mBsParser->getRemainingBytes(), bufsize);
+                        jpginfo.dht_ind--;
+                        goto rollback;
+                    }
                 } else {
                     ETRACE("ERROR: Decoder does not support more than 4 Huff Tables\n");
                     return JD_ERROR_BITSTREAM;
                 }
+                jpginfo.dht_parsed = true;
                 break;
             }
             // Parse component information in SOS marker
             case CODE_SOS: {
-                mParser->burnBytes(mParser, 2);
-                uint32_t component_in_scan = mParser->readNextByte(mParser);
+                VTRACE("%s SOS at 0x%08x", __FUNCTION__, mBsParser->getByteOffset());
+                ROLLBACK_IF_FAIL(mBsParser->tryBurnBytes(2));
+                uint8_t component_in_scan;
+                ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&component_in_scan));
                 uint8_t comp_ind = 0;
-
+                ROLLBACK_IF_FAIL((mBsParser->getRemainingBytes() >= 2 * component_in_scan + 3));
                 for (comp_ind = 0; comp_ind < component_in_scan; comp_ind++) {
-                    uint8_t comp_id = mParser->readNextByte(mParser);
+                    uint8_t comp_id;
+                    mBsParser->tryReadNextByte(&comp_id);
                     uint8_t comp_data_ind;
                     for (comp_data_ind = 0; comp_data_ind < jpginfo.picture_param_buf.num_components; comp_data_ind++) {
                         if (comp_id == jpginfo.picture_param_buf.components[comp_data_ind].component_id) {
-                            jpginfo.slice_param_buf[scan_ind].components[comp_ind].component_selector = comp_data_ind + 1;
+                            jpginfo.slice_param_buf[jpginfo.scan_ind].components[comp_ind].component_selector = comp_data_ind + 1;
                             break;
                         }
                     }
-                    uint8_t huffman_tables = mParser->readNextByte(mParser);
-                    jpginfo.slice_param_buf[scan_ind].components[comp_ind].dc_table_selector = huffman_tables >> 4;
-                    jpginfo.slice_param_buf[scan_ind].components[comp_ind].ac_table_selector = huffman_tables & 0xf;
+                    uint8_t huffman_tables;
+                    ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&huffman_tables));
+                    jpginfo.slice_param_buf[jpginfo.scan_ind].components[comp_ind].dc_table_selector = huffman_tables >> 4;
+                    jpginfo.slice_param_buf[jpginfo.scan_ind].components[comp_ind].ac_table_selector = huffman_tables & 0xf;
                 }
-                uint32_t curr_byte = mParser->readNextByte(mParser); // Ss
+                uint8_t curr_byte;
+                ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&curr_byte)); // Ss
                 if (curr_byte != 0) {
-                    ETRACE("ERROR: curr_byte 0x%08x != 0\n", curr_byte);
+                    ETRACE("ERROR: curr_byte 0x%08x (position 0x%08x) != 0\n", curr_byte, mBsParser->getByteOffset());
                     return JD_ERROR_BITSTREAM;
                 }
-                curr_byte = mParser->readNextByte(mParser);  // Se
+                ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&curr_byte));  // Se
                 if (curr_byte != 0x3f) {
-                    ETRACE("ERROR: curr_byte 0x%08x != 0x3f\n", curr_byte);
+                    ETRACE("ERROR: curr_byte 0x%08x (position 0x%08x) != 0x3f\n", curr_byte, mBsParser->getByteOffset());
                     return JD_ERROR_BITSTREAM;
                 }
-                curr_byte = mParser->readNextByte(mParser);  // Ah, Al
+                ROLLBACK_IF_FAIL(mBsParser->tryReadNextByte(&curr_byte));  // Ah, Al
                 if (curr_byte != 0) {
-                    ETRACE("ERROR: curr_byte 0x%08x != 0\n", curr_byte);
+                    ETRACE("ERROR: curr_byte 0x%08x (position 0x%08x) != 0\n", curr_byte, mBsParser->getByteOffset());
                     return JD_ERROR_BITSTREAM;
                 }
                 // Set slice control variables needed
-                jpginfo.slice_param_buf[scan_ind].slice_data_offset = mParser->getByteOffset(mParser) - jpginfo.soi_offset;
-                jpginfo.slice_param_buf[scan_ind].num_components = component_in_scan;
-                if (scan_ind) {
+                jpginfo.slice_param_buf[jpginfo.scan_ind].slice_data_offset = mBsParser->getByteOffset() - jpginfo.soi_offset;
+                jpginfo.slice_param_buf[jpginfo.scan_ind].num_components = component_in_scan;
+                jpginfo.sos_parsed = true;
+                if (jpginfo.scan_ind) {
                     /* If there is more than one scan, the slice for all but the final scan should only run up to the beginning of the next scan */
-                    jpginfo.slice_param_buf[scan_ind - 1].slice_data_size =
-                        (jpginfo.slice_param_buf[scan_ind].slice_data_offset - jpginfo.slice_param_buf[scan_ind - 1].slice_data_offset );;
+                    jpginfo.slice_param_buf[jpginfo.scan_ind - 1].slice_data_size =
+                        (jpginfo.slice_param_buf[jpginfo.scan_ind].slice_data_offset - jpginfo.slice_param_buf[jpginfo.scan_ind - 1].slice_data_offset );;
                     }
-                    scan_ind++;
+                    jpginfo.scan_ind++;
                     jpginfo.scan_ctrl_count++;   // gsDXVA2Globals.uiScanCtrlCount
                     break;
                 }
             case CODE_DRI: {
-                uint32_t size =  mParser->readBytes(mParser, 2);
-                jpginfo.slice_param_buf[scan_ind].restart_interval =  mParser->readBytes(mParser, 2);
-                mParser->burnBytes(mParser, (size - 4));
+                rollbackoff = mBsParser->getByteOffset() - 2;
+                VTRACE("%s DRI at 0x%08x", __FUNCTION__, mBsParser->getByteOffset());
+                uint32_t size;
+                ROLLBACK_IF_FAIL(mBsParser->tryReadBytes(&size, 2));
+                uint32_t ri;
+                ROLLBACK_IF_FAIL(mBsParser->tryReadBytes(&ri, 2));
+                jpginfo.slice_param_buf[jpginfo.scan_ind].restart_interval = ri;
+                ROLLBACK_IF_FAIL(mBsParser->tryBurnBytes(size - 4));
+                jpginfo.dri_parsed = true;
                 break;
             }
             default:
                 break;
         }
-
-        marker = mParser->getNextMarker(mParser);
-        // If the EOI code is found, store the byte offset before the parsing finishes
-        if( marker == CODE_EOI ) {
-            jpginfo.eoi_offset = mParser->getByteOffset(mParser);
+        if (jpginfo.need_header_only &&
+            jpginfo.soi_parsed && jpginfo.sos_parsed &&
+            jpginfo.sof_parsed && jpginfo.dqt_parsed &&
+            jpginfo.dht_parsed) {
+            VTRACE("%s: for header_only, we've got all what we need. return now", __FUNCTION__);
+            return JD_SUCCESS;
+        }
+        else {
+            VTRACE("%s: soi %d, sos %d, sof %d, dqt %d, dht %d, dri %d, remaining %u", __FUNCTION__,
+                jpginfo.soi_parsed,
+                jpginfo.sos_parsed,
+                jpginfo.sof_parsed,
+                jpginfo.dqt_parsed,
+                jpginfo.dht_parsed,
+                jpginfo.dri_parsed,
+                mBsParser->getRemainingBytes());
+        }
+        rollbackoff = mBsParser->getByteOffset();
+        if (!mBsParser->tryGetNextMarker(&marker)) {
+            VTRACE("%s: can't get next marker, offset 0x%08x, need_header_only=%d",
+                __FUNCTION__,
+                mBsParser->getByteOffset(),
+                jpginfo.need_header_only);
+            if (jpginfo.need_header_only) {
+                mBsParser->trySetByteOffset(rollbackoff);
+                return JD_INSUFFICIENT_BYTE;
+            }
+            else {
+                return JD_SUCCESS;
+            }
+        }
+        else if (marker == 0) {
+            VTRACE("%s: got non-marker %x at offset 0x%08x", __FUNCTION__, marker, mBsParser->getByteOffset());
+            return JD_SUCCESS;
         }
 
+        // If the EOI code is found, store the byte offset before the parsing finishes
+        if( marker == CODE_EOI ) {
+            jpginfo.eoi_offset = mBsParser->getByteOffset();
+            VTRACE("%s: got EOI at 0x%08x, stop parsing now", __FUNCTION__, jpginfo.eoi_offset);
+            return JD_SUCCESS;
+        }
     }
+    return JD_SUCCESS;
+rollback:
+    mBsParser->trySetByteOffset(rollbackoff);
+    return JD_INSUFFICIENT_BYTE;
+}
 
-    jpginfo.quant_tables_num = dqt_ind;
-    jpginfo.huffman_tables_num = dht_ind;
+JpegDecodeStatus JpegDecoder::parse(JpegInfo &jpginfo)
+{
+    if (!mParserInitialized) {
+        Mutex::Autolock autoLock(mLock);
+        if (!mParserInitialized) {
+            if (jpginfo.use_vector_input)
+                mBsParser->set(jpginfo.inputs);
+            else
+                mBsParser->set(jpginfo.buf, jpginfo.bufsize);
+            mParserInitialized = true;
+        }
+    }
+    JpegDecodeStatus st = parseHeader(jpginfo);
+    if (st) {
+        if (st != JD_INSUFFICIENT_BYTE)
+            ETRACE("%s header parsing failure: %d", __FUNCTION__, st);
+        return st;
+    }
+    if (jpginfo.need_header_only)
+        return JD_SUCCESS;
+    uint32_t bufsize;
+    if (jpginfo.use_vector_input) {
+        mBsParser->set(jpginfo.inputs);
+        bufsize = jpginfo.inputs->size();
+    }
+    else {
+        mBsParser->set(jpginfo.buf, jpginfo.bufsize);
+        bufsize = jpginfo.bufsize;
+    }
+    assert(mParserInitialized);
+    assert (jpginfo.soi_parsed && jpginfo.sos_parsed &&
+        jpginfo.sof_parsed && jpginfo.dqt_parsed &&
+        jpginfo.dht_parsed);
+    jpginfo.quant_tables_num = jpginfo.dqt_ind;
+    jpginfo.huffman_tables_num = jpginfo.dht_ind;
 
     /* The slice for the last scan should run up to the end of the picture */
     if (jpginfo.eoi_offset) {
-        jpginfo.slice_param_buf[scan_ind - 1].slice_data_size = (jpginfo.eoi_offset - jpginfo.slice_param_buf[scan_ind - 1].slice_data_offset);
+        jpginfo.slice_param_buf[jpginfo.scan_ind - 1].slice_data_size = (jpginfo.eoi_offset - jpginfo.slice_param_buf[jpginfo.scan_ind - 1].slice_data_offset);
     }
     else {
-        jpginfo.slice_param_buf[scan_ind - 1].slice_data_size = (jpginfo.bufsize - jpginfo.slice_param_buf[scan_ind - 1].slice_data_offset);
+        jpginfo.slice_param_buf[jpginfo.scan_ind - 1].slice_data_size = (bufsize - jpginfo.slice_param_buf[jpginfo.scan_ind - 1].slice_data_offset);
     }
     // throw AppException if SOF0 isn't found
-    if (!frame_marker_found) {
+    if (!jpginfo.frame_marker_found) {
         ETRACE("EEORR: Reached end of bitstream while trying to parse headers\n");
         return JD_ERROR_BITSTREAM;
     }
@@ -419,7 +670,7 @@ JpegDecodeStatus JpegDecoder::parse(JpegInfo &jpginfo)
     JpegDecodeStatus status = parseTableData(jpginfo);
     if (status != JD_SUCCESS) {
         ETRACE("ERROR: Parsing table data returns %d", status);
-        return JD_ERROR_BITSTREAM;
+        return status;
     }
 
     jpginfo.image_width = jpginfo.picture_param_buf.picture_width;
@@ -430,81 +681,94 @@ JpegDecodeStatus JpegDecoder::parse(JpegInfo &jpginfo)
         jpginfo.picture_param_buf.components[0].v_sampling_factor,
         jpginfo.picture_param_buf.components[1].v_sampling_factor,
         jpginfo.picture_param_buf.components[2].v_sampling_factor);
-    jpginfo.image_pixel_format = fourcc2PixelFormat(jpginfo.image_color_fourcc);
 
-    VTRACE("%s jpg %ux%u, fourcc=%s, pixelformat=0x%x",
-        __FUNCTION__, jpginfo.image_width, jpginfo.image_height, fourcc2str(NULL, jpginfo.image_color_fourcc),
-        jpginfo.image_pixel_format);
+    VTRACE("%s jpg %ux%u, fourcc=%s",
+        __FUNCTION__, jpginfo.image_width, jpginfo.image_height, fourcc2str(jpginfo.image_color_fourcc));
 
-    if (!jpegColorFormatSupported(jpginfo))
+    if (!jpegColorFormatSupported(jpginfo)) {
+        ETRACE("%s color format not supported", fourcc2str(jpginfo.image_color_fourcc));
         return JD_INPUT_FORMAT_UNSUPPORTED;
+    }
     return JD_SUCCESS;
 }
 
 JpegDecodeStatus JpegDecoder::createSurfaceFromRenderTarget(RenderTarget &target, VASurfaceID *surfid)
 {
-    if (target.type == RENDERTARGET_INTERNAL_BUFFER) {
-        JpegDecodeStatus st = createSurfaceInternal(target.width,
-            target.height,
-            target.pixel_format,
-            target.handle,
-            surfid);
-        if (st != JD_SUCCESS)
-            return st;
-        mNormalSurfaceMap.add(target.handle, *surfid);
-        VTRACE("%s added surface %u (internal buffer id %d) to SurfaceList",
-            __PRETTY_FUNCTION__, *surfid, target.handle);
-    }
-    else {
-        switch (target.type) {
-        case RenderTarget::KERNEL_DRM:
-            {
-                JpegDecodeStatus st = createSurfaceDrm(target.width,
-                    target.height,
-                    target.pixel_format,
-                    (unsigned long)target.handle,
-                    target.stride,
-                    surfid);
-                if (st != JD_SUCCESS)
-                    return st;
-                mDrmSurfaceMap.add((unsigned long)target.handle, *surfid);
-                VTRACE("%s added surface %u (Drm handle %d) to DrmSurfaceMap",
-                    __PRETTY_FUNCTION__, *surfid, target.handle);
-            }
-            break;
-        case RenderTarget::ANDROID_GRALLOC:
-            {
-                JpegDecodeStatus st = createSurfaceGralloc(target.width,
-                    target.height,
-                    target.pixel_format,
-                    (buffer_handle_t)target.handle,
-                    target.stride,
-                    surfid);
-                if (st != JD_SUCCESS)
-                    return st;
-                mGrallocSurfaceMap.add((buffer_handle_t)target.handle, *surfid);
-                VTRACE("%s added surface %u (Gralloc handle %d) to DrmSurfaceMap",
-                    __PRETTY_FUNCTION__, *surfid, target.handle);
-            }
-            break;
-        default:
-            return JD_RENDER_TARGET_TYPE_UNSUPPORTED;
+    switch (target.type) {
+    case RenderTarget::KERNEL_DRM:
+        {
+            JpegDecodeStatus st = createSurfaceDrm(target.width,
+                target.height,
+                target.pixel_format,
+                (unsigned long)target.handle,
+                target.stride,
+                surfid);
+            if (st != JD_SUCCESS)
+                return st;
+            mDrmSurfaceMap.add((unsigned long)target.handle, *surfid);
+            VTRACE("%s added surface %u (Drm handle %d) to DrmSurfaceMap",
+                __PRETTY_FUNCTION__, *surfid, target.handle);
         }
+        break;
+    case RenderTarget::ANDROID_GRALLOC:
+        {
+            JpegDecodeStatus st = createSurfaceGralloc(target.width,
+                target.height,
+                target.pixel_format,
+                (buffer_handle_t)target.handle,
+                target.stride,
+                surfid);
+            if (st != JD_SUCCESS)
+                return st;
+            mGrallocSurfaceMap.add((buffer_handle_t)target.handle, *surfid);
+            VTRACE("%s added surface %u (Gralloc handle %d) to DrmSurfaceMap",
+                __PRETTY_FUNCTION__, *surfid, target.handle);
+        }
+        break;
+    case RenderTarget::INTERNAL_BUF:
+        {
+            JpegDecodeStatus st = createSurfaceInternal(target.width,
+                target.height,
+                target.pixel_format,
+                target.handle,
+                surfid);
+            if (st != JD_SUCCESS)
+                return st;
+            mNormalSurfaceMap.add(target.handle, *surfid);
+            VTRACE("%s added surface %u (internal buffer id %d) to SurfaceList",
+                __PRETTY_FUNCTION__, *surfid, target.handle);
+        }
+        break;
+    case RenderTarget::USER_PTR:
+        {
+            JpegDecodeStatus st = createSurfaceUserptr(target.width,
+                target.height,
+                target.pixel_format,
+                (uint8_t*)target.handle,
+                surfid);
+            if (st != JD_SUCCESS)
+                return st;
+            mUserptrSurfaceMap.add(target.handle, *surfid);
+            VTRACE("%s added surface %u (internal buffer id %d) to SurfaceList",
+                __PRETTY_FUNCTION__, *surfid, target.handle);
+        }
+        break;
+    default:
+        return JD_RENDER_TARGET_TYPE_UNSUPPORTED;
     }
     return JD_SUCCESS;
 }
 
-JpegDecodeStatus JpegDecoder::createSurfaceInternal(int width, int height, int pixel_format, int handle, VASurfaceID *surf_id)
+JpegDecodeStatus JpegDecoder::createSurfaceInternal(int width, int height, uint32_t fourcc, int handle, VASurfaceID *surf_id)
 {
     VAStatus va_status;
     VASurfaceAttrib attrib;
     attrib.type = VASurfaceAttribPixelFormat;
     attrib.flags = VA_SURFACE_ATTRIB_SETTABLE;
     attrib.value.type = VAGenericValueTypeInteger;
-    uint32_t fourcc = pixelFormat2Fourcc(pixel_format);
     uint32_t vaformat = fourcc2VaFormat(fourcc);
     attrib.value.value.i = fourcc;
-    VTRACE("enter %s, pixel_format 0x%x, fourcc %s", __FUNCTION__, pixel_format, fourcc2str(NULL, fourcc));
+    VTRACE("enter %s, fourcc 0x%x, fourcc %s", __FUNCTION__, fourcc, fourcc2str(fourcc));
     va_status = vaCreateSurfaces(mDisplay,
                                 vaformat,
                                 width,
@@ -514,22 +778,48 @@ JpegDecodeStatus JpegDecoder::createSurfaceInternal(int width, int height, int p
                                 &attrib,
                                 1);
     if (va_status != VA_STATUS_SUCCESS) {
-        ETRACE("%s: createSurface (format %u, fourcc %s) returns %d", __PRETTY_FUNCTION__, vaformat, fourcc2str(NULL, fourcc), va_status);
+        ETRACE("%s: createSurface (format %u, fourcc %s) returns %d", __PRETTY_FUNCTION__, vaformat, fourcc2str(fourcc), va_status);
         return JD_RESOURCE_FAILURE;
     }
     return JD_SUCCESS;
 }
 
+JpegDecodeStatus JpegDecoder::destroySurface(RenderTarget &target)
+{
+    Mutex::Autolock autoLock(mLock);
+    VASurfaceID surf = getSurfaceID(target);
+    if (surf == VA_INVALID_ID) {
+        ETRACE("%s: failed to destroy surface type %d, handle %d", __FUNCTION__, target.type, target.handle);
+        return JD_INVALID_RENDER_TARGET;
+    }
+    switch(target.type) {
+    case RenderTarget::KERNEL_DRM:
+        mDrmSurfaceMap.removeItem((unsigned long)target.handle);
+        break;
+    case RenderTarget::ANDROID_GRALLOC:
+        mGrallocSurfaceMap.removeItem((buffer_handle_t)target.handle);
+        break;
+    case RenderTarget::INTERNAL_BUF:
+        mNormalSurfaceMap.removeItem(target.handle);
+        break;
+    case RenderTarget::USER_PTR:
+        mUserptrSurfaceMap.removeItem(target.handle);
+        break;
+    default:
+        break;
+    }
+    VTRACE("%s: succeeded destroying surface type %d, handle %d", __FUNCTION__, target.type, target.handle);
+    return JD_SUCCESS;
+}
+
+JpegDecodeStatus JpegDecoder::destroySurface(VASurfaceID surf)
+{
+    return JD_UNIMPLEMENTED;
+}
+
 VASurfaceID JpegDecoder::getSurfaceID(RenderTarget &target) const
 {
     int index;
-    if (target.type == RENDERTARGET_INTERNAL_BUFFER) {
-        index = mNormalSurfaceMap.indexOfKey(target.handle);
-        if (index < 0)
-            return VA_INVALID_ID;
-        else
-            return mNormalSurfaceMap.valueAt(index);
-    }
     switch (target.type) {
     case RenderTarget::KERNEL_DRM:
         index = mDrmSurfaceMap.indexOfKey((unsigned long)target.handle);
@@ -543,6 +833,18 @@ VASurfaceID JpegDecoder::getSurfaceID(RenderTarget &target) const
             return VA_INVALID_ID;
         else
             return mGrallocSurfaceMap.valueAt(index);
+    case RenderTarget::INTERNAL_BUF:
+        index = mNormalSurfaceMap.indexOfKey(target.handle);
+        if (index < 0)
+            return VA_INVALID_ID;
+        else
+            return mNormalSurfaceMap.valueAt(index);
+    case RenderTarget::USER_PTR:
+        index = mUserptrSurfaceMap.indexOfKey(target.handle);
+        if (index < 0)
+            return VA_INVALID_ID;
+        else
+            return mUserptrSurfaceMap.valueAt(index);
     default:
         assert(false);
     }
@@ -576,24 +878,39 @@ JpegDecodeStatus JpegDecoder::decode(JpegInfo &jpginfo, RenderTarget &target)
     VASurfaceStatus surf_status;
     VABufferID desc_buf[5];
     uint32_t bitstream_buffer_size = 0;
+    uint8_t* bufaddr = NULL;
     uint32_t scan_idx = 0;
     uint32_t buf_idx = 0;
     uint32_t chopping = VA_SLICE_DATA_FLAG_ALL;
     uint32_t bytes_remaining;
     VASurfaceID surf_id = getSurfaceID(target);
-    if (surf_id == VA_INVALID_ID)
+    nsecs_t now = systemTime();
+    if (surf_id == VA_INVALID_ID) {
+        ETRACE("%s render_target %p, handle %d is not initailized by JpegDecoder", __FUNCTION__, &target, target.handle);
         return JD_RENDER_TARGET_NOT_INITIALIZED;
+    }
     va_status = vaQuerySurfaceStatus(mDisplay, surf_id, &surf_status);
-    if (surf_status != VASurfaceReady)
+    if (surf_status != VASurfaceReady) {
+        ETRACE("%s render_target %p, handle %d is still busy", __FUNCTION__, &target, target.handle);
         return JD_RENDER_TARGET_BUSY;
+    }
+
+    if (jpginfo.use_vector_input) {
+        bitstream_buffer_size = jpginfo.inputs->size();
+        bufaddr = const_cast<uint8_t*>(jpginfo.inputs->array());
+    }
+    else {
+        bitstream_buffer_size = jpginfo.bufsize;
+        bufaddr = jpginfo.buf;
+    }
 
     if (jpginfo.eoi_offset)
         bytes_remaining = jpginfo.eoi_offset - jpginfo.soi_offset;
     else
-        bytes_remaining = jpginfo.bufsize - jpginfo.soi_offset;
+        bytes_remaining = bitstream_buffer_size - jpginfo.soi_offset;
+
     uint32_t src_offset = jpginfo.soi_offset;
     uint32_t cpy_row;
-    bitstream_buffer_size = jpginfo.bufsize;//cinfo->src->bytes_in_buffer;//1024*1024*5;
 
     Vector<VABufferID> buf_list;
     va_status = vaBeginPicture(mDisplay, mContextId, surf_id);
@@ -601,24 +918,29 @@ JpegDecodeStatus JpegDecoder::decode(JpegInfo &jpginfo, RenderTarget &target)
         ETRACE("vaBeginPicture failed. va_status = 0x%x", va_status);
         return JD_DECODE_FAILURE;
     }
+    VTRACE("%s begin decode render target %p, handle %d", __FUNCTION__, &target, target.handle);
     va_status = vaCreateBuffer(mDisplay, mContextId, VAPictureParameterBufferType, sizeof(VAPictureParameterBufferJPEGBaseline), 1, &jpginfo.picture_param_buf, &desc_buf[buf_idx]);
     if (va_status != VA_STATUS_SUCCESS) {
         ETRACE("vaCreateBuffer VAPictureParameterBufferType failed. va_status = 0x%x", va_status);
         return JD_RESOURCE_FAILURE;
     }
+    VTRACE("%s successfully created PicParamBuf, id=%u", __FUNCTION__, desc_buf[buf_idx]);
     buf_list.add(desc_buf[buf_idx++]);
-    va_status = vaCreateBuffer(mDisplay, mContextId, VAIQMatrixBufferType, sizeof(VAIQMatrixBufferJPEGBaseline), 1, &jpginfo.qmatrix_buf, &desc_buf[buf_idx]);
 
+    va_status = vaCreateBuffer(mDisplay, mContextId, VAIQMatrixBufferType, sizeof(VAIQMatrixBufferJPEGBaseline), 1, &jpginfo.qmatrix_buf, &desc_buf[buf_idx]);
     if (va_status != VA_STATUS_SUCCESS) {
         ETRACE("vaCreateBuffer VAIQMatrixBufferType failed. va_status = 0x%x", va_status);
         return JD_RESOURCE_FAILURE;
     }
+    VTRACE("%s successfully created IQMatrixBuf, id=%u", __FUNCTION__, desc_buf[buf_idx]);
     buf_list.add(desc_buf[buf_idx++]);
+
     va_status = vaCreateBuffer(mDisplay, mContextId, VAHuffmanTableBufferType, sizeof(VAHuffmanTableBufferJPEGBaseline), 1, &jpginfo.hufman_table_buf, &desc_buf[buf_idx]);
     if (va_status != VA_STATUS_SUCCESS) {
         ETRACE("vaCreateBuffer VAHuffmanTableBufferType failed. va_status = 0x%x", va_status);
         return JD_RESOURCE_FAILURE;
     }
+    VTRACE("%s successfully created HuffmanTableBuf, id=%u", __FUNCTION__, desc_buf[buf_idx]);
     buf_list.add(desc_buf[buf_idx++]);
 
     do {
@@ -676,16 +998,18 @@ JpegDecodeStatus JpegDecoder::decode(JpegInfo &jpginfo, RenderTarget &target)
         /* Get Slice Control Buffer */
         va_status = vaCreateBuffer(mDisplay, mContextId, VASliceParameterBufferType, sizeof(VASliceParameterBufferJPEGBaseline) * dest_idx, 1, dest_scan_ctrl, &desc_buf[buf_idx]);
         if (va_status != VA_STATUS_SUCCESS) {
-            ETRACE("vaCreateBuffer VASliceParameterBufferType failed. va_status = 0x%x", va_status);
+            ETRACE("vaCreateBuffer VASliceParameterBufferType failed. va_status = 0x%x, dest_idx=%d, buf_idx=%d", va_status, dest_idx, buf_idx);
             return JD_RESOURCE_FAILURE;
         }
+        VTRACE("vaCreateBuffer VASliceParameterBufferType succeeded. va_status = 0x%x, dest_idx=%d, buf_idx=%d", va_status, dest_idx, buf_idx);
         buf_list.add(desc_buf[buf_idx++]);
-        va_status = vaCreateBuffer(mDisplay, mContextId, VASliceDataBufferType, bytes, 1, &jpginfo.buf[ src_offset ], &desc_buf[buf_idx]);
-        buf_list.add(desc_buf[buf_idx++]);
+        va_status = vaCreateBuffer(mDisplay, mContextId, VASliceDataBufferType, bytes, 1, bufaddr + src_offset, &desc_buf[buf_idx]);
         if (va_status != VA_STATUS_SUCCESS) {
             ETRACE("vaCreateBuffer VASliceDataBufferType (%u bytes) failed. va_status = 0x%x", bytes, va_status);
             return JD_RESOURCE_FAILURE;
         }
+        VTRACE("%s successfully created SliceDataBuf, id=%u", __FUNCTION__, desc_buf[buf_idx]);
+        buf_list.add(desc_buf[buf_idx++]);
         va_status = vaRenderPicture( mDisplay, mContextId, desc_buf, buf_idx);
         if (va_status != VA_STATUS_SUCCESS) {
             ETRACE("vaRenderPicture failed. va_status = 0x%x", va_status);
@@ -706,6 +1030,9 @@ JpegDecodeStatus JpegDecoder::decode(JpegInfo &jpginfo, RenderTarget &target)
         ETRACE("vaEndPicture failed. va_status = 0x%x", va_status);
         return JD_DECODE_FAILURE;
     }
+
+    VTRACE("%s successfully ended picture, rendertarget %p, handle %d", __FUNCTION__, &target, target.handle);
+    VTRACE("JpegDecoder decode took %.2f ms", (systemTime() - now)/1000000.0);
     return JD_SUCCESS;
 }
 void JpegDecoder::deinit()
@@ -719,6 +1046,7 @@ void JpegDecoder::deinit()
             size_t gralloc_size = mGrallocSurfaceMap.size();
             size_t drm_size = mDrmSurfaceMap.size();
             size_t internal_surf_size = mNormalSurfaceMap.size();
+            size_t up_surf_size = mUserptrSurfaceMap.size();
             for (size_t i = 0; i < gralloc_size; ++i) {
                 VASurfaceID surf_id = mGrallocSurfaceMap.valueAt(i);
                 vaDestroySurfaces(mDisplay, &surf_id, 1);
@@ -731,117 +1059,141 @@ void JpegDecoder::deinit()
                 VASurfaceID surf_id = mNormalSurfaceMap.valueAt(i);
                 vaDestroySurfaces(mDisplay, &surf_id, 1);
             }
+            for (size_t i = 0; i < up_surf_size; ++i) {
+                VASurfaceID surf_id = mUserptrSurfaceMap.valueAt(i);
+                vaDestroySurfaces(mDisplay, &surf_id, 1);
+            }
             mGrallocSurfaceMap.clear();
             mDrmSurfaceMap.clear();
             mNormalSurfaceMap.clear();
+            mUserptrSurfaceMap.clear();
+            mBsParser->reset();
         }
     }
 }
 
 JpegDecodeStatus JpegDecoder::parseTableData(JpegInfo &jpginfo) {
-    parserInitialize(mParser, jpginfo.buf, jpginfo.bufsize);
-    // Parse Quant tables
+#define REPORT_BS_ERR_IF_FAIL(stmt) \
+            do { \
+                if (!stmt) { \
+                    ETRACE("%s::%d, bitstream error at offset %u, remaining bytes %u, total bytes %zu", \
+                        __FUNCTION__, __LINE__, mBsParser->getByteOffset(), mBsParser->getRemainingBytes(), \
+                        bufsize); \
+                    return JD_ERROR_BITSTREAM; \
+                } \
+            } while(0);
+
+    assert(mParserInitialized);
     memset(&jpginfo.qmatrix_buf, 0, sizeof(jpginfo.qmatrix_buf));
     uint32_t dqt_ind = 0;
+    uint32_t bufsize;
+
+    if (jpginfo.use_vector_input)
+        bufsize = jpginfo.inputs->size();
+    else
+        bufsize = jpginfo.bufsize;
+
     for (dqt_ind = 0; dqt_ind < jpginfo.quant_tables_num; dqt_ind++) {
-        if (mParser->setByteOffset(mParser, jpginfo.dqt_byte_offset[dqt_ind])) {
-            // uint32_t uiTableBytes = mParser->readBytes( 2 ) - 2;
-            uint32_t table_bytes = mParser->readBytes( mParser, 2 ) - 2;
-            do {
-                uint32_t table_info = mParser->readNextByte(mParser);
-                table_bytes--;
-                uint32_t table_length = table_bytes > 64 ? 64 : table_bytes;
-                uint32_t table_precision = table_info >> 4;
-                if (table_precision != 0) {
-                    ETRACE("%s ERROR: Parsing table data returns %d", __FUNCTION__, JD_ERROR_BITSTREAM);
-                    return JD_ERROR_BITSTREAM;
-                }
-                uint32_t table_id = table_info & 0xf;
+        REPORT_BS_ERR_IF_FAIL(mBsParser->trySetByteOffset(jpginfo.dqt_byte_offset[dqt_ind]));
+        uint32_t table_bytes;
+        REPORT_BS_ERR_IF_FAIL(mBsParser->tryReadBytes(&table_bytes, 2 ));
+        table_bytes -= 2;
+        do {
+            uint8_t table_info;
+            REPORT_BS_ERR_IF_FAIL(mBsParser->tryReadNextByte(&table_info));
+            table_bytes--;
+            uint32_t table_length = table_bytes > 64 ? 64 : table_bytes;
+            uint32_t table_precision = table_info >> 4;
+            REPORT_BS_ERR_IF_FAIL ((table_precision == 0));
+            uint32_t table_id = table_info & 0xf;
 
-                jpginfo.qmatrix_buf.load_quantiser_table[table_id] = 1;
+            jpginfo.qmatrix_buf.load_quantiser_table[table_id] = 1;
 
-                if (table_id < JPEG_MAX_QUANT_TABLES) {
-                    // Pull Quant table data from bitstream
-                    uint32_t byte_ind;
-                    for (byte_ind = 0; byte_ind < table_length; byte_ind++) {
-                        jpginfo.qmatrix_buf.quantiser_table[table_id][byte_ind] = mParser->readNextByte(mParser);
-                    }
-                } else {
-                    ETRACE("%s DQT table ID is not supported", __FUNCTION__);
-                    mParser->burnBytes(mParser, table_length);
+            if (table_id < JPEG_MAX_QUANT_TABLES) {
+                // Pull Quant table data from bitstream
+                uint32_t byte_ind;
+                for (byte_ind = 0; byte_ind < table_length; byte_ind++) {
+                    REPORT_BS_ERR_IF_FAIL(mBsParser->tryReadNextByte(&jpginfo.qmatrix_buf.quantiser_table[table_id][byte_ind]));
                 }
-                table_bytes -= table_length;
-            } while (table_bytes);
-        }
+            } else {
+                ETRACE("%s DQT table ID is not supported", __FUNCTION__);
+                REPORT_BS_ERR_IF_FAIL(mBsParser->tryBurnBytes(table_length));
+            }
+            table_bytes -= table_length;
+        } while (table_bytes);
     }
 
     // Parse Huffman tables
     memset(&jpginfo.hufman_table_buf, 0, sizeof(jpginfo.hufman_table_buf));
     uint32_t dht_ind = 0;
     for (dht_ind = 0; dht_ind < jpginfo.huffman_tables_num; dht_ind++) {
-        if (mParser->setByteOffset(mParser, jpginfo.dht_byte_offset[dht_ind])) {
-            uint32_t table_bytes = mParser->readBytes( mParser, 2 ) - 2;
-            do {
-                uint32_t table_info = mParser->readNextByte(mParser);
-                table_bytes--;
-                uint32_t table_class = table_info >> 4; // Identifies whether the table is for AC or DC
-                uint32_t table_id = table_info & 0xf;
-                jpginfo.hufman_table_buf.load_huffman_table[table_id] = 1;
+        REPORT_BS_ERR_IF_FAIL(mBsParser->trySetByteOffset(jpginfo.dht_byte_offset[dht_ind]));
+        uint32_t table_bytes;
+        REPORT_BS_ERR_IF_FAIL(mBsParser->tryReadBytes( &table_bytes, 2 ));
+        table_bytes -= 2;
+        do {
+            uint8_t table_info;
+            REPORT_BS_ERR_IF_FAIL(mBsParser->tryReadNextByte(&table_info));
+            table_bytes--;
+            uint32_t table_class = table_info >> 4; // Identifies whether the table is for AC or DC
+            uint32_t table_id = table_info & 0xf;
+            jpginfo.hufman_table_buf.load_huffman_table[table_id] = 1;
 
-                if ((table_class < TABLE_CLASS_NUM) && (table_id < JPEG_MAX_SETS_HUFFMAN_TABLES)) {
-                    if (table_class == 0) {
-                        uint8_t* bits = mParser->getCurrentIndex(mParser);
-                        // Find out the number of entries in the table
-                        uint32_t table_entries = 0;
-                        uint32_t bit_ind;
-                        for (bit_ind = 0; bit_ind < 16; bit_ind++) {
-                            jpginfo.hufman_table_buf.huffman_table[table_id].num_dc_codes[bit_ind] = bits[bit_ind];
-                            table_entries += jpginfo.hufman_table_buf.huffman_table[table_id].num_dc_codes[bit_ind];
-                        }
-
-                        // Create table of code values
-                        mParser->burnBytes(mParser, 16);
-                        table_bytes -= 16;
-                        uint32_t tbl_ind;
-                        for (tbl_ind = 0; tbl_ind < table_entries; tbl_ind++) {
-                            jpginfo.hufman_table_buf.huffman_table[table_id].dc_values[tbl_ind] = mParser->readNextByte(mParser);
-                            table_bytes--;
-                        }
-
-                    } else { // for AC class
-                        uint8_t* bits = mParser->getCurrentIndex(mParser);
-                        // Find out the number of entries in the table
-                        uint32_t table_entries = 0;
-                        uint32_t bit_ind = 0;
-                        for (bit_ind = 0; bit_ind < 16; bit_ind++) {
-                            jpginfo.hufman_table_buf.huffman_table[table_id].num_ac_codes[bit_ind] = bits[bit_ind];
-                            table_entries += jpginfo.hufman_table_buf.huffman_table[table_id].num_ac_codes[bit_ind];
-                        }
-
-                        // Create table of code values
-                        mParser->burnBytes(mParser, 16);
-                        table_bytes -= 16;
-                        uint32_t tbl_ind = 0;
-                        for (tbl_ind = 0; tbl_ind < table_entries; tbl_ind++) {
-                            jpginfo.hufman_table_buf.huffman_table[table_id].ac_values[tbl_ind] = mParser->readNextByte(mParser);
-                            table_bytes--;
-                        }
-                    }//end of else
-                } else {
+            if ((table_class < TABLE_CLASS_NUM) && (table_id < JPEG_MAX_SETS_HUFFMAN_TABLES)) {
+                if (table_class == 0) {
+                    //const uint8_t* bits = mBsParser->getCurrentIndex();
                     // Find out the number of entries in the table
-                    ETRACE("%s DHT table ID is not supported", __FUNCTION__);
                     uint32_t table_entries = 0;
-                    uint32_t bit_ind = 0;
-                    for(bit_ind = 0; bit_ind < 16; bit_ind++) {
-                        table_entries += mParser->readNextByte(mParser);
+                    uint32_t bit_ind;
+                    for (bit_ind = 0; bit_ind < 16; bit_ind++) {
+                        jpginfo.hufman_table_buf.huffman_table[table_id].num_dc_codes[bit_ind] = mBsParser->itemAt(mBsParser->getByteOffset() + bit_ind);
+                        table_entries += jpginfo.hufman_table_buf.huffman_table[table_id].num_dc_codes[bit_ind];
+                    }
+
+                    // Create table of code values
+                    REPORT_BS_ERR_IF_FAIL(mBsParser->tryBurnBytes(16));
+                    table_bytes -= 16;
+                    uint32_t tbl_ind;
+                    for (tbl_ind = 0; tbl_ind < table_entries; tbl_ind++) {
+                        REPORT_BS_ERR_IF_FAIL(mBsParser->tryReadNextByte(&jpginfo.hufman_table_buf.huffman_table[table_id].dc_values[tbl_ind]));
                         table_bytes--;
                     }
-                    mParser->burnBytes(mParser, table_entries);
-                    table_bytes -= table_entries;
-                }
 
-            } while (table_bytes);
-        }
+                } else { // for AC class
+                    //const uint8_t* bits = mBsParser->getCurrentIndex();
+                    // Find out the number of entries in the table
+                    uint32_t table_entries = 0;
+                    uint32_t bit_ind = 0;
+                    for (bit_ind = 0; bit_ind < 16; bit_ind++) {
+                        jpginfo.hufman_table_buf.huffman_table[table_id].num_ac_codes[bit_ind] = mBsParser->itemAt(mBsParser->getByteOffset() + bit_ind);//bits[bit_ind];
+                        table_entries += jpginfo.hufman_table_buf.huffman_table[table_id].num_ac_codes[bit_ind];
+                    }
+
+                    // Create table of code values
+                    REPORT_BS_ERR_IF_FAIL(mBsParser->tryBurnBytes(16));
+                    table_bytes -= 16;
+                    uint32_t tbl_ind = 0;
+                    for (tbl_ind = 0; tbl_ind < table_entries; tbl_ind++) {
+                        REPORT_BS_ERR_IF_FAIL(mBsParser->tryReadNextByte(&jpginfo.hufman_table_buf.huffman_table[table_id].ac_values[tbl_ind]));
+                        table_bytes--;
+                    }
+                }//end of else
+            } else {
+                // Find out the number of entries in the table
+                ETRACE("%s DHT table ID is not supported", __FUNCTION__);
+                uint32_t table_entries = 0;
+                uint32_t bit_ind = 0;
+                for(bit_ind = 0; bit_ind < 16; bit_ind++) {
+                    uint8_t tmp;
+                    REPORT_BS_ERR_IF_FAIL(mBsParser->tryReadNextByte(&tmp));
+                    table_entries += tmp;
+                    table_bytes--;
+                }
+                REPORT_BS_ERR_IF_FAIL(mBsParser->tryBurnBytes(table_entries));
+                table_bytes -= table_entries;
+            }
+
+        } while (table_bytes);
     }
 
     return JD_SUCCESS;

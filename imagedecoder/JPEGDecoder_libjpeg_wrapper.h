@@ -1,6 +1,5 @@
 /* INTEL CONFIDENTIAL
 * Copyright (c) 2012, 2013 Intel Corporation.  All rights reserved.
-* Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -41,7 +40,7 @@
 #define JPEG_MAX_QUANT_TABLES 4
 
 typedef struct {
-    uint8_t* bitstream_buf;
+    const uint8_t* bitstream_buf;
     uint32_t image_width;
     uint32_t image_height;
 
@@ -53,23 +52,29 @@ typedef struct {
 
     uint32_t file_size;
     uint32_t rotation;
+    int      tile_mode;
 
-    char ** output_image;
-    uint32_t output_lines;
+    uint32_t cap_available;
+    uint32_t cap_enabled;
 
     uint32_t priv;
 } jd_libva_struct;
 
 typedef enum {
-    DECODE_NOT_STARTED = -6,
-    DECODE_INVALID_DATA = -5,
-    DECODE_DRIVER_FAIL = -4,
-    DECODE_PARSER_FAIL = -3,
+    DECODE_NOT_STARTED = -7,
+    DECODE_INVALID_DATA = -6,
+    DECODE_DRIVER_FAIL = -5,
+    DECODE_PARSER_FAIL = -4,
+    DECODE_PARSER_INSUFFICIENT_BYTES = -3,
     DECODE_MEMORY_FAIL = -2,
     DECODE_FAIL = -1,
     DECODE_SUCCESS = 0,
 
 } IMAGE_DECODE_STATUS;
+
+#define JPEG_CAPABILITY_DECODE     0x0
+#define JPEG_CAPABILITY_UPSAMPLE   0x1
+#define JPEG_CAPABILITY_DOWNSCALE  0x2
 
 /*********************** for libjpeg ****************************/
 typedef int32_t Decode_Status;
@@ -79,7 +84,12 @@ extern "C" {
 #endif
 Decode_Status jdva_initialize (jd_libva_struct * jd_libva_ptr);
 void jdva_deinitialize (jd_libva_struct * jd_libva_ptr);
+Decode_Status jdva_fill_input(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
+void jdva_drain_input(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
 Decode_Status jdva_decode (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);
+Decode_Status jdva_read_scanlines (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr, char ** scanlines, unsigned int* row_ctr, unsigned int max_lines);
+Decode_Status jdva_init_read_tile_scanline(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr, int *x, int *y, int *w, int *h);
+Decode_Status jdva_read_tile_scanline (j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr, char ** scanlines, unsigned int* row_ctr);
 Decode_Status jdva_create_resource (jd_libva_struct * jd_libva_ptr);
 Decode_Status jdva_release_resource (jd_libva_struct * jd_libva_ptr);
 Decode_Status jdva_parse_bitstream(j_decompress_ptr cinfo, jd_libva_struct * jd_libva_ptr);

@@ -1,6 +1,5 @@
 /* INTEL CONFIDENTIAL
 * Copyright (c) 2013 Intel Corporation.  All rights reserved.
-* Copyright (c) Imagination Technologies Limited, UK
 *
 * The source code contained or described herein and all documents
 * related to the source code ("Material") are owned by Intel
@@ -33,23 +32,66 @@
 #include <va/va_dec_jpeg.h>
 #include <sys/types.h>
 #include <string.h>
+#include <utils/Vector.h>
+
+using namespace android;
 
 #define JPEG_MAX_COMPONENTS 4
 #define JPEG_MAX_QUANT_TABLES 4
 
+#define SURF_TILING_NONE    0
+#define SURF_TILING_X       1
+#define SURF_TILING_Y       2
 
-#define RENDERTARGET_INTERNAL_BUFFER (RenderTarget::ANDROID_GRALLOC + 1)
+extern uint32_t aligned_width(uint32_t width, int tiling);
+extern uint32_t aligned_height(uint32_t height, int tiling);
+
+struct RenderTarget {
+    enum bufType{
+        KERNEL_DRM,
+        ANDROID_GRALLOC,
+        INTERNAL_BUF,
+        USER_PTR,
+    };
+
+    int width;
+    int height;
+    int stride;
+    bufType type;
+    int format;
+    int pixel_format;
+    int handle;
+    VARectangle rect;
+};
 
 struct JpegInfo
 {
-    // in
-    uint8_t *buf;
-    size_t bufsize;
+    // in: use either buf+bufsize or inputs
+    union {
+        struct {
+            uint8_t *buf;
+            uint32_t bufsize;
+        };
+        android::Vector<uint8_t> *inputs;
+    };
+    bool use_vector_input;
+    bool need_header_only;
+    // internal use
+    uint32_t component_order;
+    uint32_t dqt_ind;
+    uint32_t dht_ind;
+    uint32_t scan_ind;
+    bool frame_marker_found;
+    bool soi_parsed;
+    bool sof_parsed;
+    bool dqt_parsed;
+    bool dht_parsed;
+    bool sos_parsed;
+    bool dri_parsed;
     // out
     uint32_t image_width;
     uint32_t image_height;
     uint32_t image_color_fourcc;
-    int      image_pixel_format;
     VAPictureParameterBufferJPEGBaseline picture_param_buf;
     VASliceParameterBufferJPEGBaseline slice_param_buf[JPEG_MAX_COMPONENTS];
     VAIQMatrixBufferJPEGBaseline qmatrix_buf;
@@ -80,10 +122,13 @@ enum JpegDecodeStatus
     JD_BLIT_FAILURE,
     JD_ERROR_BITSTREAM,
     JD_RENDER_TARGET_BUSY,
+    JD_IMAGE_TOO_SMALL,
+    JD_INSUFFICIENT_BYTE,
+    JD_UNIMPLEMENTED,
 };
 
 
-inline char * fourcc2str(char * str, uint32_t fourcc)
+inline char * fourcc2str(uint32_t fourcc, char * str = NULL)
 {
     static char tmp[5];
     if (str == NULL) {
@@ -104,6 +149,7 @@ inline int fourcc2VaFormat(uint32_t fourcc)
     case VA_FOURCC_422H:
     case VA_FOURCC_422V:
     case VA_FOURCC_YUY2:
+    case VA_FOURCC_UYVY:
         return VA_RT_FORMAT_YUV422;
     case VA_FOURCC_IMC3:
     case VA_FOURCC_YV12:
@@ -112,12 +158,16 @@ inline int fourcc2VaFormat(uint32_t fourcc)
     case VA_FOURCC_444P:
         return VA_RT_FORMAT_YUV444;
     case VA_FOURCC_411P:
+    case VA_FOURCC_411R:
         return VA_RT_FORMAT_YUV411;
+    case VA_FOURCC('4','0','0','P'):
+        return VA_RT_FORMAT_YUV400;
     case VA_FOURCC_BGRA:
     case VA_FOURCC_ARGB:
     case VA_FOURCC_RGBA:
         return VA_RT_FORMAT_RGB32;
     default:
+        // Add if needed
         return -1;
     }
 }
@@ -139,6 +189,10 @@ inline uint32_t sampFactor2Fourcc(int h1, int h2, int h3, int v1, int v2, int v3
     else if (h1 == 4 && h2 == 1 && h3 == 1 &&
             v1 == 1 && v2 == 1 && v3 == 1) {
         return VA_FOURCC_411P;
+    }
+    else if (h1 == 1 && h2 == 1 && h3 == 1 &&
+            v1 == 4 && v2 == 1 && v3 == 1) {
+        return VA_FOURCC_411R;
     }
     else if (h1 == 1 && h2 == 1 && h3 == 1 &&
             v1 == 2 && v2 == 1 && v3 == 1) {
@@ -168,18 +222,23 @@ inline int fourcc2LumaBitsPerPixel(uint32_t fourcc)
     case VA_FOURCC_NV12:
     case VA_FOURCC_444P:
     case VA_FOURCC_411P:
+    case VA_FOURCC_411R:
+    case VA_FOURCC('4','0','0','P'):
         return 1;
     case VA_FOURCC_YUY2:
+    case VA_FOURCC_UYVY:
         return 2;
     case VA_FOURCC_BGRA:
     case VA_FOURCC_ARGB:
     case VA_FOURCC_RGBA:
         return 4;
     default:
+        // Add if needed
         return 1;
     }
 }
 
+// Platform dependent
 extern int fourcc2PixelFormat(uint32_t fourcc);
 extern uint32_t pixelFormat2Fourcc(int pixel_format);
 
