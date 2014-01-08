@@ -1351,6 +1351,8 @@ void VideoDecoderBase::drainDecodingErrors(VideoErrorBuffer *outErrBuf, VideoRen
         currentSurface->errBuf.errorNumber = 0;
         currentSurface->errBuf.timeStamp = INVALID_PTS;
     }
+    if (outErrBuf)
+        VTRACE("%s: error number is %d", __FUNCTION__, outErrBuf->errorNumber);
 }
 
 void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *currentSurface) {
@@ -1371,8 +1373,17 @@ void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *currentSurface) {
             if (err_drv_output[i].status != -1) {
                 currentSurface->errBuf.errorNumber++;
                 currentSurface->errBuf.errorArray[i + offset].type = (VideoDecodeErrorType)err_drv_output[i].decode_error_type;
+                currentSurface->errBuf.errorArray[i + offset].error_data.mb_pos.start_mb = err_drv_output[i].start_mb;
+                currentSurface->errBuf.errorArray[i + offset].error_data.mb_pos.end_mb = err_drv_output[i].end_mb;
+                ITRACE("Error Index[%d]: type = %d, start_mb = %d, end_mb = %d",
+                    currentSurface->errBuf.errorNumber - 1,
+                    currentSurface->errBuf.errorArray[i + offset].type,
+                    currentSurface->errBuf.errorArray[i + offset].error_data.mb_pos.start_mb,
+                    currentSurface->errBuf.errorArray[i + offset].error_data.mb_pos.end_mb);
             } else break;
         }
+        ITRACE("%s: error number of current surface is %d, timestamp @%llu",
+            __FUNCTION__, currentSurface->errBuf.errorNumber, currentSurface->timeStamp);
     }
 }
 

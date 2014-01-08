@@ -158,7 +158,7 @@ struct VideoConfigBuffer {
 struct VideoErrorInfo {
     VideoDecodeErrorType type;
     union {
-        typedef struct {uint32_t start_mb; uint32_t end_mb;} mb_pos;
+        struct {uint32_t start_mb; uint32_t end_mb;} mb_pos;
     } error_data;
 };
 
