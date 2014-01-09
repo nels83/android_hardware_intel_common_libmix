@@ -526,15 +526,16 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
 
             getbits = viddec_pm_get_bits(parent, &(code), 2);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
-            vidObjLay->video_object_layer_shape = code;
             /* If shape is not rectangluar exit early without parsing */
-            if (vidObjLay->video_object_layer_shape != MP4_SHAPE_TYPE_RECTANGULAR)
+            if (code != MP4_SHAPE_TYPE_RECTANGULAR)
             {
                 ETRACE("Error: mp4_Parse_VideoObject: shape not rectangluar(%d):%d\n",
-                    MP4_SHAPE_TYPE_RECTANGULAR, vidObjLay->video_object_layer_shape);
+                    MP4_SHAPE_TYPE_RECTANGULAR, code);
                 ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
                 break;
             }
+
+            vidObjLay->video_object_layer_shape = code;
 
             if ((vidObjLay->video_object_layer_verid != 1) &&
                     (vidObjLay->video_object_layer_shape == MP4_SHAPE_TYPE_GRAYSCALE))
