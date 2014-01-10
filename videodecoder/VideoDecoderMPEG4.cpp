@@ -150,7 +150,7 @@ Decode_Status VideoDecoderMPEG4::decodeFrame(VideoDecodeBuffer *buffer, vbp_data
     // and return error to OMX to avoid mediaserver crash.
     if (data->picture_data && (data->picture_data->picture_param.vop_width == 0
         || data->picture_data->picture_param.vop_height == 0)) {
-        return DECODE_FAIL;
+        return DECODE_PARSER_FAIL;
     }
 
     uint64_t lastPTS = mCurrentPTS;
