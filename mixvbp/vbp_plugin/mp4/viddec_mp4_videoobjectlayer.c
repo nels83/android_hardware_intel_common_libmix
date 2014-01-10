@@ -304,8 +304,15 @@ static mp4_Status_t mp4_Parse_VOL_notbinaryonly(void *parent, viddec_mp4_parser_
             /* TODO: check for validity of marker bits */
             getbits = viddec_pm_get_bits(parent, &(code), 29);
             BREAK_GETBITS_REQD_MISSING(getbits, ret);
-            vidObjLay->video_object_layer_height = (code >> 1) & 0x1FFF;
-            vidObjLay->video_object_layer_width = (code >> 15) & 0x1FFF;
+            int height = (code >> 1) & 0x1FFF;
+            int width = (code >> 15) & 0x1FFF;
+            if (width > 4096 || height > 4096) {
+               ret = (mp4_Status_t)(MP4_STATUS_NOTSUPPORT | MP4_STATUS_REQD_DATA_ERROR);
+               ETRACE("width or height is invalid: width = %d, height = %d", width, height);
+               break;
+            }
+            vidObjLay->video_object_layer_height = height;
+            vidObjLay->video_object_layer_width = width;
         }
 
         getbits = viddec_pm_get_bits(parent, &(code), 2);
@@ -446,10 +453,6 @@ mp4_Status_t mp4_Parse_VideoObjectLayer(void *parent, viddec_mp4_parser_t *parse
     int32_t                 getbits=0;
 
 //VTRACE("entering mp4_Parse_VideoObjectLayer: bs_err: %d, ret: %d\n", parser->bitstream_error, ret);
-
-    // Trying to parse more header data as it is more important than frame data
-    if (parser->bitstream_error > MP4_HDR_ERROR_MASK)
-        return ret;
 
     do {
         vidObjLay->VideoObjectPlane.sprite_transmit_mode = MP4_SPRITE_TRANSMIT_MODE_PIECE;
