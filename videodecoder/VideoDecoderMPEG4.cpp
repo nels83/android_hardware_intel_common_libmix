@@ -260,11 +260,19 @@ Decode_Status VideoDecoderMPEG4::beginDecodingFrame(vbp_data_mp42 *data) {
         if (codingType == MP4_VOP_TYPE_B)  {
             if (mForwardReference ==  NULL ||
                 mLastReference == NULL) {
-                return DECODE_NO_REFERENCE;
+                if (mIsShortHeader) {
+                    status = DECODE_SUCCESS;
+                    VTRACE("%s: No reference frame but keep decoding", __FUNCTION__);
+                } else
+                    return DECODE_NO_REFERENCE;
             }
         } else if (codingType == MP4_VOP_TYPE_P || codingType == MP4_VOP_TYPE_S) {
-            if (mLastReference == NULL&& mIsSyncFrame == false) {
-                return DECODE_NO_REFERENCE;
+            if (mLastReference == NULL && mIsSyncFrame == false) {
+                if (mIsShortHeader) {
+                    status = DECODE_SUCCESS;
+                    VTRACE("%s: No reference frame but keep decoding", __FUNCTION__);
+                } else
+                    return DECODE_NO_REFERENCE;
             }
         }
         // all sanity checks pass, continue decoding through continueDecodingFrame
@@ -507,12 +515,13 @@ Decode_Status VideoDecoderMPEG4::setReference(VAPictureParameterBufferMPEG4 *pic
             picParam->backward_reference_picture = VA_INVALID_SURFACE;
             break;
         case MP4_VOP_TYPE_P:
-            if (mLastReference == NULL&& mIsSyncFrame == false) {
+            if (mLastReference == NULL && mIsSyncFrame == false && !mIsShortHeader) {
                 return DECODE_NO_REFERENCE;
             }
             if (mLastReference != NULL) {
                 picParam->forward_reference_picture = mLastReference->renderBuffer.surface;
             } else {
+                VTRACE("%s: no reference frame, but keep decoding", __FUNCTION__);
                 picParam->forward_reference_picture = VA_INVALID_SURFACE;
             }
             picParam->backward_reference_picture = VA_INVALID_SURFACE;
@@ -520,11 +529,25 @@ Decode_Status VideoDecoderMPEG4::setReference(VAPictureParameterBufferMPEG4 *pic
         case MP4_VOP_TYPE_B:
             picParam->vop_fields.bits.backward_reference_vop_coding_type = mLastVOPCodingType;
             // WEIRD, CHECK AGAIN !!!!!!!
-            if (mLastReference == NULL || mForwardReference == NULL) {
+            if (mIsShortHeader) {
+                if (mLastReference != NULL) {
+                    picParam->forward_reference_picture = mLastReference->renderBuffer.surface;
+                } else {
+                    VTRACE("%s: no forward reference frame, but keep decoding", __FUNCTION__);
+                    picParam->forward_reference_picture = VA_INVALID_SURFACE;
+                }
+                if (mForwardReference != NULL) {
+                    picParam->backward_reference_picture = mForwardReference->renderBuffer.surface;
+                } else {
+                    VTRACE("%s: no backward reference frame, but keep decoding", __FUNCTION__);
+                    picParam->backward_reference_picture = VA_INVALID_SURFACE;
+                }
+            } else if (mLastReference == NULL || mForwardReference == NULL) {
                 return DECODE_NO_REFERENCE;
+            } else {
+                picParam->forward_reference_picture = mLastReference->renderBuffer.surface;
+                picParam->backward_reference_picture = mForwardReference->renderBuffer.surface;
             }
-            picParam->forward_reference_picture = mLastReference->renderBuffer.surface;
-            picParam->backward_reference_picture = mForwardReference->renderBuffer.surface;
             break;
         case MP4_VOP_TYPE_S:
             // WEIRD, CHECK AGAIN!!!! WAS using mForwardReference
