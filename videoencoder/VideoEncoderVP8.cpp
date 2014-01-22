@@ -30,7 +30,7 @@ VideoEncoderVP8::VideoEncoderVP8()
         mVideoParamsVP8.hrd_buf_size = 1000;
         mVideoParamsVP8.hrd_buf_initial_fullness = 500;
         mVideoParamsVP8.hrd_buf_optimal_fullness = 600;
-        mVideoParamsVP8.max_frame_size = 0;
+        mVideoParamsVP8.max_frame_size_ratio = 0;
 
         mVideoConfigVP8.force_kf = 0;
         mVideoConfigVP8.refresh_entropy_probs = 0;
@@ -213,6 +213,11 @@ Encode_Status VideoEncoderVP8::renderMaxFrameSizeParams(void)
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncMiscParameterBuffer *misc_param;
     VAEncMiscParameterBufferMaxFrameSize * misc_maxframesize;
+    unsigned int frameRateNum = mComParams.frameRate.frameRateNum;
+    unsigned int frameRateDenom = mComParams.frameRate.frameRateDenom;
+    unsigned int frameRate = (unsigned int)(frameRateNum + frameRateDenom /2);
+    unsigned int bitRate = mComParams.rcParams.bitRate;
+
     vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
                               VAEncMiscParameterBufferType,
                               sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterHRD),
@@ -223,7 +228,7 @@ Encode_Status VideoEncoderVP8::renderMaxFrameSizeParams(void)
     misc_param->type = VAEncMiscParameterTypeMaxFrameSize;
     misc_maxframesize = (VAEncMiscParameterBufferMaxFrameSize *)misc_param->data;
     memset(misc_maxframesize, 0, sizeof(*misc_maxframesize));
-    misc_maxframesize->max_frame_size = mVideoParamsVP8.max_frame_size;
+    misc_maxframesize->max_frame_size = (unsigned int)((bitRate/frameRate) * mVideoParamsVP8.max_frame_size_ratio);
     vaUnmapBuffer(mVADisplay, max_frame_size_param_buf);
 
     vaStatus = vaRenderPicture(mVADisplay,mVAContext, &max_frame_size_param_buf, 1);
@@ -333,16 +338,16 @@ Encode_Status VideoEncoderVP8::derivedGetConfig(VideoParamConfigSet *videoEncCon
                 }
                 break;
 
-                case VideoConfigTypeVP8MaxFrameSize:{
+                case VideoConfigTypeVP8MaxFrameSizeRatio :{
 
-                        VideoConfigVP8MaxFrameSize *encConfigVP8MaxFrameSize =
-                                reinterpret_cast<VideoConfigVP8MaxFrameSize*> (videoEncConfig);
+                        VideoConfigVP8MaxFrameSizeRatio *encConfigVP8MaxFrameSizeRatio =
+                                reinterpret_cast<VideoConfigVP8MaxFrameSizeRatio*> (videoEncConfig);
 
-                        if (encConfigVP8MaxFrameSize->size != sizeof(VideoConfigVP8MaxFrameSize)) {
+                        if (encConfigVP8MaxFrameSizeRatio->size != sizeof(VideoConfigVP8MaxFrameSizeRatio)) {
                                 return ENCODE_INVALID_PARAMS;
                         }
 
-                        encConfigVP8MaxFrameSize->max_frame_size = mVideoParamsVP8.max_frame_size;
+                        encConfigVP8MaxFrameSizeRatio->max_frame_size_ratio = mVideoParamsVP8.max_frame_size_ratio;
                 }
                 break;
 
@@ -388,15 +393,15 @@ Encode_Status VideoEncoderVP8::derivedSetConfig(VideoParamConfigSet *videoEncCon
                 }
                 break;
 
-                case VideoConfigTypeVP8MaxFrameSize:{
-                        VideoConfigVP8MaxFrameSize *encConfigVP8MaxFrameSize =
-                                reinterpret_cast<VideoConfigVP8MaxFrameSize*> (videoEncConfig);
+                case VideoConfigTypeVP8MaxFrameSizeRatio:{
+                        VideoConfigVP8MaxFrameSizeRatio *encConfigVP8MaxFrameSizeRatio =
+                                reinterpret_cast<VideoConfigVP8MaxFrameSizeRatio*> (videoEncConfig);
 
-                        if (encConfigVP8MaxFrameSize->size != sizeof(VideoConfigVP8MaxFrameSize)) {
+                        if (encConfigVP8MaxFrameSizeRatio->size != sizeof(VideoConfigVP8MaxFrameSizeRatio)) {
                                 return ENCODE_INVALID_PARAMS;
                         }
 
-                        mVideoParamsVP8.max_frame_size = encConfigVP8MaxFrameSize->max_frame_size;
+                        mVideoParamsVP8.max_frame_size_ratio = encConfigVP8MaxFrameSizeRatio->max_frame_size_ratio;
                         mRenderMaxFrameSize = true;
 		}
                 break;

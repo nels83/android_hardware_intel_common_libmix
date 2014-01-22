@@ -329,7 +329,7 @@ enum VideoParamConfigType {
     VideoConfigTypeVP8,
     VideoConfigTypeVP8ReferenceFrame,
     VideoConfigTypeCIR,
-    VideoConfigTypeVP8MaxFrameSize,
+    VideoConfigTypeVP8MaxFrameSizeRatio,
 
     VideoParamsConfigExtension
 };
@@ -638,7 +638,7 @@ struct VideoParamsVP8 : VideoParamConfigSet {
         uint32_t hrd_buf_size;
         uint32_t hrd_buf_initial_fullness;
         uint32_t hrd_buf_optimal_fullness;
-        uint32_t max_frame_size;
+        uint32_t max_frame_size_ratio;
 
         VideoParamsVP8() {
                 type = VideoParamsTypeVP8;
@@ -674,14 +674,14 @@ struct VideoConfigVP8ReferenceFrame : VideoParamConfigSet {
         }
 };
 
-struct VideoConfigVP8MaxFrameSize : VideoParamConfigSet {
+struct VideoConfigVP8MaxFrameSizeRatio : VideoParamConfigSet {
 
-    VideoConfigVP8MaxFrameSize() {
-        type = VideoConfigTypeVP8MaxFrameSize;
-        size = sizeof(VideoConfigVP8MaxFrameSize);
+    VideoConfigVP8MaxFrameSizeRatio() {
+        type = VideoConfigTypeVP8MaxFrameSizeRatio;
+        size = sizeof(VideoConfigVP8MaxFrameSizeRatio);
     }
 
-    uint32_t max_frame_size;
+    uint32_t max_frame_size_ratio;
 };
 
 
