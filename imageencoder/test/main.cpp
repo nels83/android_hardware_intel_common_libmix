@@ -514,8 +514,16 @@ int main(int argc, char** argv)
 		}
 
 		PERF_START(encode_time, fix_cpu_frequency);
-		status = image_encoder.getCoded(output_buffer, output_buffer_size, &output_size);
-		PERF_STOP(encode_time, fix_cpu_frequency);
+		status = image_encoder.getCodedSize(&output_size);
+		if (status != 0) {
+			fprintf(stderr, "getCodedSize failed (%d)!\n", status);
+			if (source_buffer) free(source_buffer);
+			free(output_buffer);
+			image_encoder.deinitializeEncoder();
+			return 1;
+		}
+
+		status = image_encoder.getCoded(output_buffer, output_buffer_size);
 		if (status != 0) {
 			fprintf(stderr, "getCoded failed (%d)!\n", status);
 			if (source_buffer) free(source_buffer);
@@ -523,6 +531,7 @@ int main(int argc, char** argv)
 			image_encoder.deinitializeEncoder();
 			return 1;
 		}
+		PERF_STOP(encode_time, fix_cpu_frequency);
 
 		printf("Prepare encoding: %.3fms\n", (double)PERF_GET(prepare_encoding_time)/cpu_available_max);
 		printf("Encode and stitch coded: %.3fms\n", (double)PERF_GET(encode_time)/cpu_available_max);

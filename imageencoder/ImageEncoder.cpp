@@ -29,6 +29,9 @@ IntelImageEncoder::IntelImageEncoder(void)
 
 	reserved_image_seq = -1;
 
+	va_codedbuffersegment = NULL;
+	coded_data_size = 0;
+
 	LOGV("IntelImageEncoder: done\n");
 }
 
@@ -355,6 +358,10 @@ int IntelImageEncoder::encode(int image_seq, unsigned int new_quality)
 		return VA_STATUS_ERROR_INVALID_PARAMETER;
 	}
 
+	/* Reset coded */
+	va_codedbuffersegment = NULL;
+	coded_data_size = 0;
+
 	/* Begin picture */
 	va_status = vaBeginPicture(va_dpy, va_contextid, va_surfaceid[image_seq]);
 	if (va_status != VA_STATUS_SUCCESS) {
@@ -407,38 +414,30 @@ int IntelImageEncoder::encode(int image_seq, unsigned int new_quality)
 	return VA_STATUS_SUCCESS;
 }
 
-int IntelImageEncoder::getCoded(void *user_coded_buf,
-					unsigned int user_coded_buf_size,
-					unsigned int *coded_data_sizep)
+int IntelImageEncoder::getCodedSize(unsigned int *coded_data_sizep)
 {
 	VAStatus va_status;
-	VACodedBufferSegment *va_codedbuffersegment = NULL;
+	VACodedBufferSegment *coded_segment = NULL;
 
-	if ((NULL == user_coded_buf) ||
-		(NULL == coded_data_sizep)) {
-		LOGE("getCoded: invalid NULL pointer as input paramter!\n");
+	if (encoder_status != LIBVA_ENCODING) {
+		LOGE("getCodedSize: no encoding active to get coded data!\n");
+		return VA_STATUS_ERROR_OPERATION_FAILED;
+	}
+
+	if (NULL == coded_data_sizep) {
+		LOGE("getCodedSize: invalid NULL pointer as input paramter!\n");
 		return VA_STATUS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (user_coded_buf_size < coded_buf_size) {
-		LOGE("getCoded: the coded buffer was too small!\n");
-		return VA_STATUS_ERROR_OPERATION_FAILED;
-	}
-
-	if (encoder_status != LIBVA_ENCODING) {
-		LOGE("getCoded: no encoding active to get coded data!\n");
-		return VA_STATUS_ERROR_OPERATION_FAILED;
-	}
-
 	if (0 == va_surfaceid[reserved_image_seq]) {
-		LOGE("getCoded: invalid image, probably already destroyed!\n");
+		LOGE("getCodedSize: invalid image, probably already destroyed!\n");
 		return VA_STATUS_ERROR_OPERATION_FAILED;
 	}
 
 	/* Sync surface */
 	va_status = vaSyncSurface(va_dpy, va_surfaceid[reserved_image_seq]);
 	if (va_status != VA_STATUS_SUCCESS) {
-		LOGE("getCoded: vaSyncSurface failed (%d)!\n", va_status);
+		LOGE("getCodedSize: vaSyncSurface failed (%d)!\n", va_status);
 		reserved_image_seq = -1;
 		encoder_status = LIBVA_CONTEXT_CREATED;
 		return va_status;
@@ -453,25 +452,66 @@ int IntelImageEncoder::getCoded(void *user_coded_buf,
 		return va_status;
 	}
 
-	/* Mark the coded buffer empty */
+	/* Initialize coded data size */
 	*coded_data_sizep = 0;
+	coded_segment = va_codedbuffersegment;
+
+	/* Get the total size of coded data */
+	while (coded_segment != NULL) {
+		*coded_data_sizep += coded_segment->size;
+		coded_segment = (VACodedBufferSegment *)coded_segment->next;
+	}
+	coded_data_size = *coded_data_sizep;
+
+	reserved_image_seq = -1;
+	encoder_status = LIBVA_PENDING_GET_CODED;
+
+	LOGV("getCodedSize: done\n");
+	return va_status;
+}
+
+int IntelImageEncoder::getCoded(void *user_coded_buf,
+				unsigned int user_coded_buf_size)
+{
+	VAStatus va_status;
+	unsigned int copied_size = 0;
+
+	if (encoder_status != LIBVA_PENDING_GET_CODED) {
+		LOGE("getCoded: no ready coded data!\n");
+		return VA_STATUS_ERROR_OPERATION_FAILED;
+	}
+
+	if (NULL == user_coded_buf) {
+		LOGE("getCoded: invalid NULL pointer as input paramter!\n");
+		return VA_STATUS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (user_coded_buf_size < coded_data_size) {
+		LOGE("getCoded: coded buffer was smaller than coded data size!\n");
+		return VA_STATUS_ERROR_OPERATION_FAILED;
+	}
 
 	/* Get the total size of coded data */
 	while (va_codedbuffersegment != NULL) {
-		memcpy((void *)((unsigned int)user_coded_buf+*coded_data_sizep),
+		memcpy((void *)((unsigned int)user_coded_buf+copied_size),
 				va_codedbuffersegment->buf,
 				va_codedbuffersegment->size);
-		*coded_data_sizep += va_codedbuffersegment->size;
+		copied_size += va_codedbuffersegment->size;
 		va_codedbuffersegment = (VACodedBufferSegment *)va_codedbuffersegment->next;
 	}
+
+	/* Reset coded records */
+	va_codedbuffersegment = NULL;
+	coded_data_size = 0;
+
+	reserved_image_seq = -1;
+	encoder_status = LIBVA_CONTEXT_CREATED;
 
 	va_status = vaUnmapBuffer(va_dpy, va_codedbufferid);
 	if (va_status != VA_STATUS_SUCCESS) {
 		LOGE("getCoded: vaUnmapBuffer failed (%d)!\n", va_status);
+		return va_status;
 	}
-
-	reserved_image_seq = -1;
-	encoder_status = LIBVA_CONTEXT_CREATED;
 
 	LOGV("getCoded: done\n");
 	return va_status;
@@ -513,7 +553,8 @@ int IntelImageEncoder::destroySourceSurface(int image_seq)
 
 int IntelImageEncoder::destroyContext(void)
 {
-	VAStatus va_status, va_final_status;
+	VAStatus va_status = VA_STATUS_SUCCESS;
+	VAStatus va_final_status = VA_STATUS_SUCCESS;
 
 	if (0 == va_contextid) {
 		LOGE("destroyContext: no context to destroy!\n");
@@ -525,12 +566,23 @@ int IntelImageEncoder::destroyContext(void)
 		return VA_STATUS_ERROR_OPERATION_FAILED;
 	}
 
+	if (LIBVA_PENDING_GET_CODED == encoder_status) {
+		va_codedbuffersegment = NULL;
+		coded_data_size = 0;
+
+		va_status = vaUnmapBuffer(va_dpy, va_codedbufferid);
+		if (va_status != VA_STATUS_SUCCESS) {
+			LOGE("destroyContext: vaUnmapBuffer failed (%d)!\n", va_status);
+		}
+		va_final_status |= va_status;
+	}
+
 	/* Destroy the coded buffer */
 	va_status = vaDestroyBuffer(va_dpy, va_codedbufferid);
 	if (va_status != VA_STATUS_SUCCESS) {
-		LOGE("createContext: vaDestroyBuffer VAEncCodedBufferType failed (%d)!\n", va_status);
+		LOGE("destroyContext: vaDestroyBuffer VAEncCodedBufferType failed (%d)!\n", va_status);
 	}
-	va_final_status = va_status;
+	va_final_status |= va_status;
 	va_codedbufferid = 0;
 	coded_buf_size = 0;
 
@@ -572,7 +624,8 @@ int IntelImageEncoder::deinitializeEncoder(void)
 	if (LIBVA_ENCODING == encoder_status) {
 		LOGE("deinitializeEncoder: encoding was ongoing, can't deinitialize LibVA!\n");
 		return VA_STATUS_ERROR_OPERATION_FAILED;
-	} else if (LIBVA_CONTEXT_CREATED == encoder_status) {
+	} else if ((LIBVA_CONTEXT_CREATED == encoder_status) ||
+		(LIBVA_PENDING_GET_CODED == encoder_status)) {
 		/* Destroy context if it exists */
 		destroyContext();
 	}

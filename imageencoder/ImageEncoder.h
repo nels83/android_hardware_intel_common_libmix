@@ -112,25 +112,33 @@ public:
 	}
 
 	/*
-	 * getCoded waits for the current encoding task's completion.
+	 * getCodedSize waits for the current encoding task's completion
+	 * and returns the exact coded size.
 	 * Only one encoding task can be triggered under an instance
 	 * of IntelImageEncoder at any minute.
 	 * This has not be called right after encode is called,
 	 * instead, this can be called any minutes after the encoding
 	 * is triggered to support both synced/asynced encoding usage.
 	 * Parameters:
+	 * coded_data_sizep: the returned pointer to the actual size
+	 *                   value of coded JPEG.
+	 * Return zero for success and non-zero for failure.
+	 */
+	int getCodedSize(unsigned int *coded_data_sizep);
+
+	/*
+	 * getCoded copies coded data out for users.
+	 * This should be called after getCodedSize.
+	 * Parameters:
 	 * user_coded_buf: the input buffer to take coded data.
 	 *                 After getCoded is returned with no errors,
 	 *                 this buffer will have the coded JPEG in it.
 	 * user_coded_buf_size: the size of input buffer.
 	 *                      If too small, an error'll be returned.
-	 * coded_data_sizep: the returned pointer to the actual size
-	 *                   value of coded JPEG.
 	 * Return zero for success and non-zero for failure.
 	 */
 	int getCoded(void *user_coded_buf,
-			unsigned int user_coded_buf_size,
-			unsigned int *coded_data_sizep);
+			unsigned int user_coded_buf_size);
 
 	int destroySourceSurface(int image_seq);
 	int destroyContext(void);
@@ -142,6 +150,7 @@ private:
 		LIBVA_INITIALIZED,
 		LIBVA_CONTEXT_CREATED,
 		LIBVA_ENCODING,
+		LIBVA_PENDING_GET_CODED,
 	}IntelImageEncoderStatus;
 
 	/* Valid since LIBVA_UNINITIALIZED */
@@ -170,6 +179,10 @@ private:
 
 	/* Valid since LIBVA_ENCODING */
 	int reserved_image_seq;
+
+	/* Valid since LIBVA_PENDING_GET_CODED */
+	VACodedBufferSegment *va_codedbuffersegment;
+	unsigned int coded_data_size;
 };
 
 #endif /* __LIBMIX_INTEL_IMAGE_ENCODER_H__ */
