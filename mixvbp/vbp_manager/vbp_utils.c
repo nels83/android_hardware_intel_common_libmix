@@ -389,7 +389,7 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
         /* can't return error for now. Neet further investigation */
         if (0 != error)
         {
-            WTRACE("failed to parse the syntax: %d!", error);
+            VTRACE("failed to parse the syntax: %d!", error);
         }
 
         /* process parsing result */
