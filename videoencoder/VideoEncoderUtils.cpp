@@ -177,7 +177,10 @@ Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
 
     if (h->iFormat == HAL_PIXEL_FORMAT_NV12) {
     #ifdef MRFLD_GFX
-        vinfo.lumaStride = (h->iWidth + 31) & ~31; //32 aligned
+        if((h->usage | GRALLOC_USAGE_HW_CAMERA_READ) || (h->usage | GRALLOC_USAGE_HW_CAMERA_WRITE) )
+            vinfo.lumaStride = (h->iWidth + 63) & ~63; //64 aligned
+        else
+            vinfo.lumaStride = (h->iWidth + 31) & ~31; //32 aligned
     #else //on CTP
         if (h->iWidth > 512)
             vinfo.lumaStride = (h->iWidth + 63) & ~63;  //64 aligned
