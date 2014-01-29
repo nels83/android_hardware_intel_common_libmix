@@ -114,9 +114,10 @@ typedef enum {
 
 typedef enum
 {
-        DecodeSliceMissing  = 0,
+        DecodeHeaderError   = 0,
         DecodeMBError       = 1,
-        DecodeRefMissing    = 2,
+        DecodeSliceMissing  = 2,
+        DecodeRefMissing    = 3,
 } VideoDecodeErrorType;
 
 #define MAX_ERR_NUM 10
@@ -157,6 +158,7 @@ struct VideoConfigBuffer {
 
 struct VideoErrorInfo {
     VideoDecodeErrorType type;
+    uint32_t num_mbs;
     union {
         struct {uint32_t start_mb; uint32_t end_mb;} mb_pos;
     } error_data;

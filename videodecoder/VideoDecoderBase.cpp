@@ -1387,9 +1387,10 @@ void VideoDecoderBase::fillDecodingErrors(VideoRenderBuffer *currentSurface) {
         for (int i = 0; i < MAX_ERR_NUM - offset; i++) {
             if (err_drv_output[i].status != -1) {
                 currentSurface->errBuf.errorNumber++;
-                currentSurface->errBuf.errorArray[i + offset].type = (VideoDecodeErrorType)err_drv_output[i].decode_error_type;
+                currentSurface->errBuf.errorArray[i + offset].type = DecodeMBError;
                 currentSurface->errBuf.errorArray[i + offset].error_data.mb_pos.start_mb = err_drv_output[i].start_mb;
                 currentSurface->errBuf.errorArray[i + offset].error_data.mb_pos.end_mb = err_drv_output[i].end_mb;
+                currentSurface->errBuf.errorArray[i + offset].num_mbs = err_drv_output[i].end_mb - err_drv_output[i].start_mb + 1;
                 ITRACE("Error Index[%d]: type = %d, start_mb = %d, end_mb = %d",
                     currentSurface->errBuf.errorNumber - 1,
                     currentSurface->errBuf.errorArray[i + offset].type,
