@@ -43,7 +43,8 @@ ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_USE_HYBRID_DRIVER)),)
 endif
 
 PLATFORM_SUPPORT_SLICE_HEADER_PARSER := \
-    merrifield
+    merrifield \
+    moorefield
 
 ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_SLICE_HEADER_PARSER)),)
     LOCAL_CFLAGS += -DUSE_SLICE_HEADER_PARSING
