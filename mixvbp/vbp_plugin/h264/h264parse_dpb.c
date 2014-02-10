@@ -3106,6 +3106,12 @@ void h264_dpb_get_smallest_poc(h264_DecodedPictureBuffer *p_dpb, int32_t *poc, i
     h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dpb_idc[0]);
     poc_int = p_dpb->active_fs->frame.poc;
 
+    uint8_t used_size = (uint8_t)(sizeof(p_dpb->fs_dpb_idc)/sizeof(p_dpb->fs_dpb_idc[0]));
+    if (p_dpb->used_size >= used_size) {
+        WTRACE("DPB overflow: p_dpb->used_size = %d", p_dpb->used_size);
+        return;
+    }
+
     for (idx = 0; idx < p_dpb->used_size; idx++)
     {
         h264_dpb_set_active_fs(p_dpb, p_dpb->fs_dpb_idc[idx]);
