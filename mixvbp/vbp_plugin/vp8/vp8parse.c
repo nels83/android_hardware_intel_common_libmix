@@ -451,10 +451,6 @@ void vp8_parse_remaining_frame_header_data(vp8_Info *pi)
     {
         pi->prob_skip_false = (vp8_prob)vp8_read_bits(bc, 8);
     }
-    else
-    {
-        pi->mb_skip_coeff = 0;
-    }
 
     if (pi->frame_tag.frame_type == INTER_FRAME)
     {

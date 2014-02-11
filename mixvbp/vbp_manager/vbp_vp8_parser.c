@@ -414,7 +414,6 @@ static uint32_t vbp_add_pic_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *qu
     pic_parms->pic_fields.bits.sign_bias_alternate = pi->sign_bias_alternate;
 
     pic_parms->pic_fields.bits.mb_no_coeff_skip = pi->mb_no_coeff_skip;
-    pic_parms->pic_fields.bits.mb_skip_coeff = pi->mb_skip_coeff;
 
     pic_parms->prob_skip_false = pi->prob_skip_false;
     pic_parms->prob_intra = pi->prob_intra;
@@ -442,7 +441,7 @@ static uint32_t vbp_add_pic_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *qu
     /* Bool coder */
     pic_parms->bool_coder_ctx.range = pi->bool_coder.range;
     pic_parms->bool_coder_ctx.value = (pi->bool_coder.value >> 24) & 0xFF;
-    pic_parms->bool_coder_ctx.count = 8 - (pi->bool_coder.count & 0x07);
+    pic_parms->bool_coder_ctx.count = pi->bool_coder.count;
 
     //pic_parms->current_picture = VA_INVALID_SURFACE;
     pic_parms->last_ref_frame = VA_INVALID_SURFACE;
@@ -470,7 +469,8 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
     vbp_picture_data_vp8 *pic_data = &(query_data->pic_data[pic_index]);
     vbp_slice_data_vp8 *slc_data = &(pic_data->slc_data[pic_data->num_slices]);
 
-    int slice_offset = (pi->frame_tag.frame_type == KEY_FRAME) ? 10 : 3;
+    int tag_size = (pi->frame_tag.frame_type == KEY_FRAME) ? 10 : 3;
+    int slice_offset = pi->header_bits >> 3;
     slc_data->buffer_addr = pi->source + slice_offset;
     slc_data->slice_offset = 0;
     slc_data->slice_size = pi->source_sz - slice_offset;
@@ -486,15 +486,20 @@ static uint32_t vbp_add_slice_data_vp8(vp8_viddec_parser *parser, vbp_data_vp8 *
     slc_parms->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
 
     /* the offset to the first bit of MB from the first byte of slice data */
-    slc_parms->macroblock_offset = pi->header_bits - (slice_offset << 3);
+    slc_parms->macroblock_offset = 8 - pi->bool_coder.count;
 
     /* Token Partitions */
-    slc_parms->num_of_partitions = pi->partition_count;
-    slc_parms->partition_size[0] = pi->frame_tag.first_part_size;
+    slc_parms->num_of_partitions = pi->partition_count + 1;
+    slc_parms->partition_size[0] = pi->frame_tag.first_part_size - (pi->frame_data_offset - tag_size);
     for (part_index = 1; part_index < 9; part_index++)
     {
         slc_parms->partition_size[part_index] = pi->partition_size[part_index - 1];
     }
+
+    // Do not remove below code, for the purpose of debug
+#if 0
+    ITRACE("header_bits = %d, slice_offset = %d, mb_offset = %d, first_part_size = %d, frame_data_offset = %d, partition_size[0] = %d, pos = %d, count = %d ", pi->header_bits, slice_offset, slc_parms->macroblock_offset, pi->frame_tag.first_part_size, pi->frame_data_offset, slc_parms->partition_size[0], pi->bool_coder.pos, pi->bool_coder.count);
+#endif
 
     pic_data->num_slices++;
     if (pic_data->num_slices > VP8_MAX_NUM_SLICES)

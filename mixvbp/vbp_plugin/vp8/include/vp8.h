@@ -334,7 +334,6 @@ extern "C" {
         // Macroblock No Coeff Skip
         uint8_t                mb_no_coeff_skip;
         vp8_prob               prob_skip_false;
-        vp8_prob               mb_skip_coeff;
 
         // Frame context
         FrameContextData       FrameContext;
