@@ -284,6 +284,8 @@ int IntelImageEncoder::createContext(int first_image_seq, unsigned int *max_code
 	/* Create a coded buffer */
 	coded_buf_size = (((context_width+15)/16)*((context_height+15)/16)*160) + 640;
 	coded_buf_size = (coded_buf_size+0xf) & ~0xf;
+	coded_buf_size = (coded_buf_size<3145728)? 3145728:coded_buf_size; /* At least 3MB */
+
 	va_status = vaCreateBuffer(va_dpy, va_contextid, VAEncCodedBufferType, coded_buf_size,
 					1, NULL, &va_codedbufferid);
 	if (va_status != VA_STATUS_SUCCESS) {
