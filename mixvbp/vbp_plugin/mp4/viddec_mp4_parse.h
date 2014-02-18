@@ -522,7 +522,6 @@ typedef struct
             break;}                             \
     }
 
-extern void *memset(void *s, int32_t c, uint32_t n);
 
 void mp4_set_hdr_bitstream_error(viddec_mp4_parser_t *parser, uint8_t hdr_flag, mp4_Status_t parse_status);
 

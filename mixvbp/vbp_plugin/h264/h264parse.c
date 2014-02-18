@@ -276,7 +276,7 @@ void h264_init_sps_pps(struct h264_viddec_parser* parser, uint32_t *persist_mem)
 
     h264_Info * pInfo = &(parser->info);
 
-    parser->sps_pps_ddr_paddr = (uint32_t)persist_mem;
+    parser->sps_pps_ddr_paddr = (uintptr_t)persist_mem;
 
     pInfo->SPS_PADDR_GL = parser->sps_pps_ddr_paddr;
     pInfo->PPS_PADDR_GL = pInfo->SPS_PADDR_GL + MAX_NUM_SPS * sizeof(seq_param_set_all);

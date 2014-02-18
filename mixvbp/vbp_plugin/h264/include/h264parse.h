@@ -2,6 +2,7 @@
 #define __H264PARSE_H_
 
 #include "h264.h"
+#include <string.h>
 
 #define true 1
 #define false 0
@@ -159,12 +160,9 @@ uint32_t mult_u(uint32_t var1, uint32_t var2);
 ///////////////////////////// utils functions outside h264
 ////////////////////////////////////////////////////////////////////
 
-extern void *memset(void *s, int32_t c, uint32_t n);
-extern void *memcpy(void *dest, const void *src, uint32_t n);
-extern uint32_t cp_using_dma(uint32_t ddr_addr, uint32_t local_addr, uint32_t size, char to_ddr, char swap);
+extern uint32_t cp_using_dma(uintptr_t ddr_addr, uintptr_t local_addr, uint32_t size, char to_ddr, char swap);
 extern int32_t viddec_pm_get_bits(void *parent, uint32_t *data, uint32_t num_bits);
 extern int32_t viddec_pm_peek_bits(void *parent, uint32_t *data, uint32_t num_bits);
-
 
 
 ////////////////////////////////////////////////////////////////////

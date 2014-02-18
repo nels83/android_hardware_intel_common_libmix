@@ -681,7 +681,7 @@ uint32 vbp_get_sc_pos_mp42(
     {
         /* Check if we are byte aligned & phase=0, if thats the case we can check
          work at a time instead of byte*/
-        if (((((uint32) ptr) & 0x3) == 0) && (phase == 0))
+        if (((((uintptr_t) ptr) & 0x3) == 0) && (phase == 0))
         {
             while (data_left > 3)
             {

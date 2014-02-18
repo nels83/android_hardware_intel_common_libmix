@@ -50,11 +50,11 @@ void* h264_memcpy( void* dest, void* src, uint32_t num )
 void h264_Parse_Copy_Pps_To_DDR(h264_Info* pInfo, pic_param_set_ptr PPS, uint32_t nPPSId)
 {
     uint32_t  copy_size = sizeof(pic_param_set);
-    uint32_t  pps_entry_ptr = pInfo->PPS_PADDR_GL+nPPSId*copy_size;
+    uintptr_t  pps_entry_ptr = (uintptr_t)(pInfo->PPS_PADDR_GL+nPPSId*copy_size);
 
     if (nPPSId < MAX_NUM_PPS)
     {
-        cp_using_dma(pps_entry_ptr, (uint32_t)PPS, copy_size, 1, 0);
+        cp_using_dma(pps_entry_ptr, (uintptr_t)PPS, copy_size, 1, 0);
     }
 
     return;
@@ -68,11 +68,11 @@ void h264_Parse_Copy_Pps_From_DDR(h264_Info* pInfo, pic_param_set_ptr PPS, uint3
 {
 
     uint32_t copy_size= sizeof(pic_param_set);
-    uint32_t pps_entry_ptr = pInfo->PPS_PADDR_GL+nPPSId*copy_size;
+    uintptr_t pps_entry_ptr = (uintptr_t)(pInfo->PPS_PADDR_GL+nPPSId*copy_size);
 
     if ( nPPSId < MAX_NUM_PPS)
     {
-        cp_using_dma(pps_entry_ptr, (uint32_t)PPS, copy_size, 0, 0);
+        cp_using_dma(pps_entry_ptr, (uintptr_t)PPS, copy_size, 0, 0);
     }
 
     return;
@@ -84,11 +84,11 @@ void h264_Parse_Copy_Pps_From_DDR(h264_Info* pInfo, pic_param_set_ptr PPS, uint3
 void h264_Parse_Copy_Sps_To_DDR(h264_Info* pInfo, seq_param_set_used_ptr SPS, uint32_t nSPSId)
 {
     uint32_t  copy_size = sizeof(seq_param_set_used);
-    uint32_t  sps_entry_ptr = pInfo->SPS_PADDR_GL+nSPSId*sizeof(seq_param_set_all);
+    uintptr_t  sps_entry_ptr = (uintptr_t)(pInfo->SPS_PADDR_GL+nSPSId*sizeof(seq_param_set_all));
 
     if (nSPSId < MAX_NUM_SPS)
     {
-        cp_using_dma(sps_entry_ptr, (uint32_t)SPS, copy_size, 1, 0);
+        cp_using_dma(sps_entry_ptr, (uintptr_t)SPS, copy_size, 1, 0);
     }
 
     //OS_INFO("SPS->seq_parameter_set_id = %d\n", SPS->seq_parameter_set_id);
@@ -104,11 +104,11 @@ void h264_Parse_Copy_Sps_To_DDR(h264_Info* pInfo, seq_param_set_used_ptr SPS, ui
 void h264_Parse_Copy_Sps_From_DDR(h264_Info* pInfo, seq_param_set_used_ptr SPS, uint32_t nSPSId)
 {
     uint32_t copy_size= sizeof(seq_param_set_used);
-    uint32_t sps_entry_ptr = pInfo->SPS_PADDR_GL+nSPSId*sizeof(seq_param_set_all);
+    uintptr_t sps_entry_ptr = (uintptr_t)(pInfo->SPS_PADDR_GL+nSPSId*sizeof(seq_param_set_all));
 
     if (nSPSId < MAX_NUM_SPS)
     {
-        cp_using_dma(sps_entry_ptr, (uint32_t)SPS, copy_size, 0, 0);
+        cp_using_dma(sps_entry_ptr, (uintptr_t)SPS, copy_size, 0, 0);
     }
 
     return;
@@ -155,14 +155,14 @@ void h264_Parse_Copy_Offset_Ref_Frames_From_DDR(h264_Info* pInfo, int32_t* pOffs
 //h264_Parse_Check_Sps_Updated_Flag () copy local sps to ddr mem with nSPSId
 uint32_t h264_Parse_Check_Sps_Updated_Flag(h264_Info* pInfo, uint32_t nSPSId)
 {
-    uint32_t  is_updated=0;
+    uintptr_t  is_updated=0;
     uint32_t  copy_size = sizeof(uint32_t);
-    uint32_t  sps_entry_ptr = pInfo->SPS_PADDR_GL+nSPSId*copy_size;
+    uintptr_t  sps_entry_ptr = (uintptr_t)(pInfo->SPS_PADDR_GL+nSPSId*copy_size);
 
 
     if (nSPSId < MAX_NUM_SPS)
     {
-        cp_using_dma(sps_entry_ptr, (uint32_t)(&is_updated), copy_size, 1, 0);
+        cp_using_dma(sps_entry_ptr, &is_updated, copy_size, 1, 0);
     }
 
     //OS_INFO("SPS->seq_parameter_set_id = %d\n", SPS->seq_parameter_set_id);
@@ -177,13 +177,13 @@ uint32_t h264_Parse_Check_Sps_Updated_Flag(h264_Info* pInfo, uint32_t nSPSId)
 // h264_Parse_Clear_Sps_Updated_Flag copy a sps with nSPSId from ddr mem to local SPS
 void h264_Parse_Clear_Sps_Updated_Flag(h264_Info* pInfo, uint32_t nSPSId)
 {
-    uint32_t  is_updated=0;
+    uintptr_t  is_updated=0;
     uint32_t copy_size= sizeof(uint32_t);
     uint32_t sps_entry_ptr = pInfo->SPS_PADDR_GL+nSPSId*copy_size;
 
     if (nSPSId < MAX_NUM_SPS)
     {
-        cp_using_dma(sps_entry_ptr, (uint32_t)(&is_updated), copy_size, 0, 0);
+        cp_using_dma(sps_entry_ptr, &is_updated, copy_size, 0, 0);
     }
 
     return;

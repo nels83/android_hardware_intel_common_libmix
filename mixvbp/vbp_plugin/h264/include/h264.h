@@ -941,10 +941,10 @@ extern "C" {
 
         h264_img_par      img;
 
-        uint32_t          SPS_PADDR_GL;
-        uint32_t          PPS_PADDR_GL;
+        uintptr_t         SPS_PADDR_GL;
+        uintptr_t         PPS_PADDR_GL;
         uint32_t          OFFSET_REF_FRAME_PADDR_GL;
-        uint32_t				TMP_OFFSET_REFFRM_PADDR_GL;
+        uint32_t          TMP_OFFSET_REFFRM_PADDR_GL;
 
         uint32_t          h264_list_replacement;
 
@@ -964,7 +964,7 @@ extern "C" {
         //h264_NAL_Unit_t
         uint8_t           nal_unit_type;
         uint8_t           old_nal_unit_type;
-        uint8_t    			got_start;
+        uint8_t           got_start;
 
         //workload
         uint8_t           push_to_cur;
@@ -975,22 +975,22 @@ extern "C" {
         uint8_t           is_frame_boundary_detected_by_non_slice_nal;
         uint8_t           is_frame_boundary_detected_by_slice_nal;
         uint8_t           is_current_workload_done;
-        uint8_t			 primary_pic_type_plus_one;	  //AUD---[0,7]
+        uint8_t           primary_pic_type_plus_one;   //AUD---[0,7]
 
         //Error handling
-        uint8_t			sei_rp_received;
-        uint8_t			last_I_frame_idc;
-        uint8_t			sei_b_state_ready;
-        uint8_t			gop_err_flag;
+        uint8_t           sei_rp_received;
+        uint8_t           last_I_frame_idc;
+        uint8_t           sei_b_state_ready;
+        uint8_t           gop_err_flag;
 
-        uint8_t         has_slice;
+        uint8_t           has_slice;
     } h264_Info;
 
 
 
     struct h264_viddec_parser
     {
-        uint32_t     sps_pps_ddr_paddr;
+        uintptr_t    sps_pps_ddr_paddr;
         h264_Info    info;
     };
 

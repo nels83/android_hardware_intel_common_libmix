@@ -86,7 +86,7 @@ struct vbp_context_t
     viddec_pm_cxt_t *parser_cxt;
 
     /* persistent memory for parser */
-    uint32 *persist_mem;
+    uintptr_t *persist_mem;
 
     /* format specific query data */
     void *query_data;

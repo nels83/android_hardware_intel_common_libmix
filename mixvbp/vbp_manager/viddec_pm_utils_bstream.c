@@ -11,7 +11,7 @@ typedef union
 
 void viddec_pm_utils_bstream_reload(viddec_pm_utils_bstream_cxt_t *cxt);
 uint32_t viddec_pm_utils_bstream_getphys(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t pos, uint32_t lst_index);
-extern uint32_t cp_using_dma(uint32_t ddr_addr, uint32_t local_addr, uint32_t size, char to_ddr, char swap);
+extern uint32_t cp_using_dma(uintptr_t ddr_addr, uintptr_t local_addr, uint32_t size, char to_ddr, char swap);
 
 static int32_t viddec_pm_utils_bstream_peekbits_noemul(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t *out, uint32_t num_bits);
 static int32_t viddec_pm_utils_bstream_peekbits_emul(viddec_pm_utils_bstream_cxt_t *cxt, uint32_t *out, uint32_t num_bits);

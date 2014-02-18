@@ -23,7 +23,7 @@ uint32_t viddec_parse_sc(void *in, void *pcxt, void *sc_state)
         /* Check if we are 16 bytes aligned & phase=0 & more than 16 bytes left,
            if thats the case we can check work at a time instead of byte */
 
-        if (((((uint32_t)ptr) & 0xF) == 0) && (phase == 0) && (data_left > 0xF))
+        if (((((uintptr_t)ptr) & 0xF) == 0) && (phase == 0) && (data_left > 0xF))
         {
             // 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00      -- check 16 bytes at one time
             // 00 ?? 00 ?? 00 ?? 00 ?? 00 ?? 00 ?? 00 ?? 00 ??      -- if no 00 at byte position: 15,13,11,09,07,05,03,01

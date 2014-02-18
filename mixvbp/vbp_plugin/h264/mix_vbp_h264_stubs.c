@@ -6,7 +6,7 @@
 
 extern void* h264_memcpy( void* dest, void* src, uint32_t num );
 
-uint32_t cp_using_dma(uint32_t ddr_addr, uint32_t local_addr, uint32_t size, char to_ddr, char swap)
+uint32_t cp_using_dma(uintptr_t ddr_addr, uintptr_t local_addr, uint32_t size, char to_ddr, char swap)
 {
     if (swap != 0)
     {

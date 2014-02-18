@@ -870,7 +870,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
             mVASurfaceAttrib->flags |= VA_SURFACE_EXTBUF_DESC_ENABLE_TILING;
 
         for (int i = 0; i < mNumSurfaces; i++) {
-            mVASurfaceAttrib->buffers[i] = (unsigned int )mConfigBuffer.graphicBufferHandler[i];
+            mVASurfaceAttrib->buffers[i] = (unsigned long)mConfigBuffer.graphicBufferHandler[i];
         }
 
         attribs[0].type = (VASurfaceAttribType)VASurfaceAttribMemoryType;
