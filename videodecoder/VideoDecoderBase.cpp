@@ -972,6 +972,7 @@ Decode_Status VideoDecoderBase::terminateVA(void) {
     }
 
     if (mVASurfaceAttrib) {
+        if (mVASurfaceAttrib->buffers) free(mVASurfaceAttrib->buffers);
         delete mVASurfaceAttrib;
         mVASurfaceAttrib = NULL;
     }
