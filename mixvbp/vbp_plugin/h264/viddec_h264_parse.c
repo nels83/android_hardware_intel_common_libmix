@@ -102,7 +102,6 @@ uint32_t viddec_h264_parse(void *parent, void *ctxt)
         /// IDR flag
         next_SliceHeader.idr_flag = (pInfo->nal_unit_type == h264_NAL_UNIT_TYPE_IDR);
 
-
         /// Pass slice header
         status = h264_Parse_Slice_Layer_Without_Partitioning_RBSP(parent, pInfo, &next_SliceHeader);
 

@@ -56,7 +56,7 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
     switch ( pInfo->nal_unit_type )
     {
     case h264_NAL_UNIT_TYPE_IDR:
-        if (pInfo->got_start)	{
+        if (pInfo->got_start) {
             pInfo->img.recovery_point_found |= 1;
         }
 
@@ -83,7 +83,7 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
         h264_memset(&next_SliceHeader, 0x0, sizeof(h264_Slice_Header_t));
         next_SliceHeader.nal_ref_idc = nal_ref_idc;
 
-        if ( (1==pInfo->primary_pic_type_plus_one)&&(pInfo->got_start))
+        if ((1==pInfo->primary_pic_type_plus_one)&&(pInfo->got_start))
         {
             pInfo->img.recovery_point_found |=4;
         }
@@ -198,7 +198,6 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
             /// 2) else: update img info
             h264_update_img_info(pInfo);
         }
-
 
         //////////////////////////////////////////////////////////////
         // Step 4: DPB reference list init and reordering

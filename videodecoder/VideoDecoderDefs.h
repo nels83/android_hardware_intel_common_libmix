@@ -116,6 +116,10 @@ typedef enum {
 
     // indicate adaptive playback mode
     WANT_ADAPTIVE_PLAYBACK = 0x100000,
+
+    // indicate the modular drm type
+    IS_SUBSAMPLE_ENCRYPTION = 0x200000,
+
 } VIDEO_BUFFER_FLAG;
 
 typedef enum

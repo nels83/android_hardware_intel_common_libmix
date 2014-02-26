@@ -21,12 +21,14 @@
 * approved by Intel in writing.
 *
 */
+
 #include <va/va.h>
 #include "VideoDecoderBase.h"
 #include "VideoDecoderAVC.h"
 #include "VideoDecoderTrace.h"
 #include "vbp_loader.h"
 #include "VideoDecoderAVCSecure.h"
+#include "VideoFrameInfo.h"
 
 #define MAX_SLICEHEADER_BUFFER_SIZE 4096
 #define STARTCODE_PREFIX_LEN        3
@@ -61,12 +63,20 @@ VideoDecoderAVCSecure::VideoDecoderAVCSecure(const char *mimeType)
     mFrameData     = NULL;
     mIsEncryptData = 0;
     mClearData     = NULL;
+    mCachedHeader  = NULL;
     setParserType(VBP_H264SECURE);
     mFrameIdx = 0;
+    mModularMode = 0;
+    mSliceNum = 0;
 }
 
 Decode_Status VideoDecoderAVCSecure::start(VideoConfigBuffer *buffer) {
     VTRACE("VideoDecoderAVCSecure::start");
+
+    if (buffer->flag & IS_SUBSAMPLE_ENCRYPTION) {
+        mModularMode = 1;
+    }
+
     Decode_Status status = VideoDecoderAVC::start(buffer);
     if (status != DECODE_SUCCESS) {
         return status;
@@ -75,6 +85,12 @@ Decode_Status VideoDecoderAVCSecure::start(VideoConfigBuffer *buffer) {
     mClearData = new uint8_t [MAX_NALU_HEADER_BUFFER];
     if (mClearData == NULL) {
         ETRACE("Failed to allocate memory for mClearData");
+        return DECODE_MEMORY_FAIL;
+    }
+
+    mCachedHeader= new uint8_t [MAX_SLICEHEADER_BUFFER_SIZE];
+    if (mCachedHeader == NULL) {
+        ETRACE("Failed to allocate memory for mCachedHeader");
         return DECODE_MEMORY_FAIL;
     }
 
@@ -89,16 +105,130 @@ void VideoDecoderAVCSecure::stop(void) {
         delete [] mClearData;
         mClearData = NULL;
     }
-}
 
-Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
-    VTRACE("VideoDecoderAVCSecure::decode");
+    if (mCachedHeader) {
+        delete [] mCachedHeader;
+        mCachedHeader = NULL;
+    }
+}
+Decode_Status VideoDecoderAVCSecure::processModularInputBuffer(VideoDecodeBuffer *buffer, vbp_data_h264 **data)
+{
+    VTRACE("processModularInputBuffer +++");
     Decode_Status status;
-    vbp_data_h264 *data = NULL;
-    if (buffer == NULL) {
-        return DECODE_INVALID_DATA;
+    int32_t clear_data_size = 0;
+    uint8_t *clear_data = NULL;
+
+    int32_t nalu_num = 0;
+    uint8_t nalu_type = 0;
+    int32_t nalu_offset = 0;
+    uint32_t nalu_size = 0;
+    uint8_t naluType = 0;
+    uint8_t *nalu_data = NULL;
+    uint32_t sliceidx = 0;
+
+    frame_info_t *pFrameInfo = NULL;
+    mSliceNum = 0;
+    memset(&mSliceInfo, 0, sizeof(mSliceInfo));
+    mIsEncryptData = 0;
+
+    if (buffer->flag & IS_SECURE_DATA) {
+        VTRACE("Decoding protected video ...");
+        pFrameInfo = (frame_info_t *) buffer->data;
+        if (pFrameInfo == NULL) {
+            ETRACE("Invalid parameter: pFrameInfo is NULL!");
+            return DECODE_MEMORY_FAIL;
+        }
+
+        mFrameData = pFrameInfo->data;
+        mFrameSize = pFrameInfo->size;
+        VTRACE("mFrameData = %p, mFrameSize = %d", mFrameData, mFrameSize);
+
+        nalu_num  = pFrameInfo->num_nalus;
+        VTRACE("nalu_num = %d", nalu_num);
+
+        if (nalu_num <= 0 || nalu_num >= MAX_NUM_NALUS) {
+            ETRACE("Invalid parameter: nalu_num = %d", nalu_num);
+            return DECODE_MEMORY_FAIL;
+        }
+
+        for (int32_t i = 0; i < nalu_num; i++) {
+
+            nalu_size = pFrameInfo->nalus[i].length;
+            nalu_type = pFrameInfo->nalus[i].type;
+            nalu_offset = pFrameInfo->nalus[i].offset;
+            nalu_data = pFrameInfo->nalus[i].data;
+            naluType  = nalu_type & NALU_TYPE_MASK;
+
+            VTRACE("nalu_type = 0x%x, nalu_size = %d, nalu_offset = 0x%x", nalu_type, nalu_size, nalu_offset);
+
+            if (naluType >= h264_NAL_UNIT_TYPE_SLICE && naluType <= h264_NAL_UNIT_TYPE_IDR) {
+
+                mIsEncryptData = 1;
+                VTRACE("slice idx = %d", sliceidx);
+                mSliceInfo[sliceidx].sliceHeaderByte = nalu_type;
+                mSliceInfo[sliceidx].sliceStartOffset = (nalu_offset >> 4) << 4;
+                mSliceInfo[sliceidx].sliceByteOffset = nalu_offset - mSliceInfo[sliceidx].sliceStartOffset;
+                mSliceInfo[sliceidx].sliceLength = nalu_size;
+                mSliceInfo[sliceidx].sliceSize = (mSliceInfo[sliceidx].sliceByteOffset + nalu_size + 0xF) & ~0xF;
+                VTRACE("sliceHeaderByte = 0x%x", mSliceInfo[sliceidx].sliceHeaderByte);
+                VTRACE("sliceStartOffset = %d", mSliceInfo[sliceidx].sliceStartOffset);
+                VTRACE("sliceByteOffset = %d", mSliceInfo[sliceidx].sliceByteOffset);
+                VTRACE("sliceSize = %d", mSliceInfo[sliceidx].sliceSize);
+
+#if 0
+                uint32_t testsize;
+                uint8_t *testdata;
+                testsize = mSliceInfo[sliceidx].sliceSize > 64 ? 64 : mSliceInfo[sliceidx].sliceSize ;
+                testdata = (uint8_t *)(mFrameData);
+                for (int i = 0; i < testsize; i++) {
+                    VTRACE("testdata[%d] = 0x%x", i, testdata[i]);
+                }
+#endif
+                sliceidx++;
+
+            } else if (naluType == h264_NAL_UNIT_TYPE_SPS || naluType == h264_NAL_UNIT_TYPE_PPS) {
+                if (nalu_data == NULL) {
+                    ETRACE("Invalid parameter: nalu_data = NULL for naluType 0x%x", naluType);
+                    return DECODE_MEMORY_FAIL;
+                }
+                memcpy(mClearData + clear_data_size,
+                    nalu_data,
+                    nalu_size);
+                clear_data_size += nalu_size;
+            } else {
+                ITRACE("Nalu type = 0x%x is skipped", naluType);
+                continue;
+            }
+        }
+        clear_data = mClearData;
+        mSliceNum = sliceidx;
+
+    } else {
+        VTRACE("Decoding clear video ...");
+        mIsEncryptData = 0;
+        mFrameSize = buffer->size;
+        mFrameData = buffer->data;
+        clear_data = buffer->data;
+        clear_data_size = buffer->size;
     }
 
+    if (clear_data_size > 0) {
+        status =  VideoDecoderBase::parseBuffer(
+                clear_data,
+                clear_data_size,
+                false,
+                (void**)data);
+        CHECK_STATUS("VideoDecoderBase::parseBuffer");
+    } else {
+        status =  VideoDecoderBase::queryBuffer((void**)data);
+        CHECK_STATUS("VideoDecoderBase::queryBuffer");
+    }
+    return DECODE_SUCCESS;
+}
+
+Decode_Status VideoDecoderAVCSecure::processClassicInputBuffer(VideoDecodeBuffer *buffer, vbp_data_h264 **data)
+{
+    Decode_Status status;
     int32_t clear_data_size = 0;
     uint8_t *clear_data = NULL;
     uint8_t naluType = 0;
@@ -109,8 +239,7 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
     uint8_t *data_src;
     uint8_t *nalu_data;
     uint32_t nalu_size;
-//    uint32_t testsize;
-//    uint8_t *testdata;
+
     if (buffer->flag & IS_SECURE_DATA) {
         VTRACE("Decoding protected video ...");
         mIsEncryptData = 1;
@@ -118,13 +247,6 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
         mFrameData = buffer->data;
         mFrameSize = buffer->size;
         VTRACE("mFrameData = %p, mFrameSize = %d", mFrameData, mFrameSize);
-#if 0
-        testsize = *(uint32_t *)(buffer->data + buffer->size);
-        testdata = (uint8_t *)(buffer->data + buffer->size + sizeof(uint32_t));
-        for (int i = 0; i < testsize; i++) {
-            VTRACE("testdata[%d] = 0x%x", i, testdata[i]);
-        }
-#endif
         num_nalus  = *(uint32_t *)(buffer->data + buffer->size + sizeof(uint32_t));
         VTRACE("num_nalus = %d", num_nalus);
         offset = 4;
@@ -160,7 +282,6 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
             }
         }
         clear_data = mClearData;
-
     } else {
         VTRACE("Decoding clear video ...");
         mIsEncryptData = 0;
@@ -169,16 +290,46 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
         clear_data = buffer->data;
         clear_data_size = buffer->size;
     }
+
     if (clear_data_size > 0) {
         status =  VideoDecoderBase::parseBuffer(
                 clear_data,
                 clear_data_size,
                 false,
-                (void**)&data);
+                (void**)data);
         CHECK_STATUS("VideoDecoderBase::parseBuffer");
     } else {
-        status =  VideoDecoderBase::queryBuffer((void**)&data);
+        status =  VideoDecoderBase::queryBuffer((void**)data);
         CHECK_STATUS("VideoDecoderBase::queryBuffer");
+    }
+    return DECODE_SUCCESS;
+}
+
+Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
+    VTRACE("VideoDecoderAVCSecure::decode");
+    Decode_Status status;
+    vbp_data_h264 *data = NULL;
+    if (buffer == NULL) {
+        return DECODE_INVALID_DATA;
+    }
+
+#if 0
+    uint32_t testsize;
+    uint8_t *testdata;
+    testsize = buffer->size > 16 ? 16:buffer->size ;
+    testdata = (uint8_t *)(buffer->data);
+    for (int i = 0; i < 16; i++) {
+        VTRACE("testdata[%d] = 0x%x", i, testdata[i]);
+    }
+#endif
+
+    if (mModularMode) {
+        status = processModularInputBuffer(buffer,&data);
+        CHECK_STATUS("processModularInputBuffer");
+    }
+    else {
+        status = processClassicInputBuffer(buffer,&data);
+        CHECK_STATUS("processClassicInputBuffer");
     }
 
     if (!mVAStarted) {
@@ -190,6 +341,7 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
             return DECODE_SUCCESS;
         }
     }
+
     status = decodeFrame(buffer, data);
 
     return status;
@@ -220,6 +372,15 @@ Decode_Status VideoDecoderAVCSecure::decodeFrame(VideoDecodeBuffer *buffer, vbp_
         CHECK_STATUS("handleNewSequence");
     }
 
+    if (mModularMode && (!mIsEncryptData)) {
+        if (data->pic_data[0].num_slices == 0) {
+            ITRACE("No slice available for decoding.");
+            status = mSizeChanged ? DECODE_FORMAT_CHANGE : DECODE_SUCCESS;
+            mSizeChanged = false;
+            return status;
+        }
+    }
+
     uint64_t lastPTS = mCurrentPTS;
     mCurrentPTS = buffer->timeStamp;
 
@@ -227,9 +388,13 @@ Decode_Status VideoDecoderAVCSecure::decodeFrame(VideoDecodeBuffer *buffer, vbp_
     status = acquireSurfaceBuffer();
     CHECK_STATUS("acquireSurfaceBuffer");
 
-    if (mFrameSize > 0) {
-        status = parseSliceHeader(buffer, data);
+    if (mModularMode) {
+        parseModularSliceHeader(buffer,data);
     }
+    else {
+        parseClassicSliceHeader(buffer,data);
+    }
+
     if (status != DECODE_SUCCESS) {
         endDecodingFrame(true);
         return status;
@@ -271,6 +436,11 @@ Decode_Status VideoDecoderAVCSecure::beginDecodingFrame(vbp_data_h264 *data) {
     mAcquiredBuffer->renderBuffer.timeStamp = mCurrentPTS;
     mAcquiredBuffer->pictureOrder = getPOC(picture);
 
+    if (mSizeChanged) {
+        mAcquiredBuffer->renderBuffer.flag |= IS_RESOLUTION_CHANGE;
+        mSizeChanged = false;
+    }
+
     status  = continueDecodingFrame(data);
     return status;
 }
@@ -309,7 +479,7 @@ Decode_Status VideoDecoderAVCSecure::continueDecodingFrame(vbp_data_h264 *data) 
     return DECODE_SUCCESS;
 }
 
-Decode_Status VideoDecoderAVCSecure::parseSliceHeader(VideoDecodeBuffer *buffer, vbp_data_h264 *data) {
+Decode_Status VideoDecoderAVCSecure::parseClassicSliceHeader(VideoDecodeBuffer *buffer, vbp_data_h264 *data) {
     Decode_Status status;
     VAStatus vaStatus;
 
@@ -317,6 +487,9 @@ Decode_Status VideoDecoderAVCSecure::parseSliceHeader(VideoDecodeBuffer *buffer,
     VABufferID pictureparameterparsingbufferID;
     VABufferID mSlicebufferID;
 
+    if (mFrameSize <= 0) {
+        return DECODE_SUCCESS;
+    }
     vaStatus = vaBeginPicture(mVADisplay, mVAContext, mAcquiredBuffer->renderBuffer.surface);
     CHECK_VA_STATUS("vaBeginPicture");
 
@@ -415,6 +588,130 @@ Decode_Status VideoDecoderAVCSecure::parseSliceHeader(VideoDecodeBuffer *buffer,
     return DECODE_SUCCESS;
 }
 
+Decode_Status VideoDecoderAVCSecure::parseModularSliceHeader(VideoDecodeBuffer *buffer, vbp_data_h264 *data) {
+    Decode_Status status;
+    VAStatus vaStatus;
+
+    VABufferID sliceheaderbufferID;
+    VABufferID pictureparameterparsingbufferID;
+    VABufferID mSlicebufferID;
+    int32_t sliceIdx;
+
+    vaStatus = vaBeginPicture(mVADisplay, mVAContext, mAcquiredBuffer->renderBuffer.surface);
+    CHECK_VA_STATUS("vaBeginPicture");
+
+    if (mFrameSize <= 0 || mSliceNum <=0) {
+        return DECODE_SUCCESS;
+    }
+    void *sliceheaderbuf;
+    memset(mCachedHeader, 0, MAX_SLICEHEADER_BUFFER_SIZE);
+    int32_t offset = 0;
+    int32_t size = 0;
+
+    for (sliceIdx = 0; sliceIdx < mSliceNum; sliceIdx++) {
+        vaStatus = vaCreateBuffer(
+            mVADisplay,
+            mVAContext,
+            VAParseSliceHeaderGroupBufferType,
+            MAX_SLICEHEADER_BUFFER_SIZE,
+            1,
+            NULL,
+            &sliceheaderbufferID);
+        CHECK_VA_STATUS("vaCreateSliceHeaderGroupBuffer");
+
+        vaStatus = vaMapBuffer(
+            mVADisplay,
+            sliceheaderbufferID,
+            &sliceheaderbuf);
+        CHECK_VA_STATUS("vaMapBuffer");
+
+        memset(sliceheaderbuf, 0, MAX_SLICEHEADER_BUFFER_SIZE);
+
+        vaStatus = vaUnmapBuffer(
+            mVADisplay,
+            sliceheaderbufferID);
+        CHECK_VA_STATUS("vaUnmapBuffer");
+
+        vaStatus = vaCreateBuffer(
+            mVADisplay,
+            mVAContext,
+            VASliceDataBufferType,
+            mSliceInfo[sliceIdx].sliceSize, //size
+            1,        //num_elements
+            mFrameData + mSliceInfo[sliceIdx].sliceStartOffset,
+            &mSlicebufferID);
+        CHECK_VA_STATUS("vaCreateSliceDataBuffer");
+
+        data->pic_parse_buffer->frame_buf_id = mSlicebufferID;
+        data->pic_parse_buffer->slice_headers_buf_id = sliceheaderbufferID;
+        data->pic_parse_buffer->frame_size = mSliceInfo[sliceIdx].sliceLength;
+        data->pic_parse_buffer->slice_headers_size = MAX_SLICEHEADER_BUFFER_SIZE;
+        data->pic_parse_buffer->nalu_header.value = mSliceInfo[sliceIdx].sliceHeaderByte;
+        data->pic_parse_buffer->slice_offset = mSliceInfo[sliceIdx].sliceByteOffset;
+
+#if 0
+        VTRACE("data->pic_parse_buffer->slice_offset = 0x%x", data->pic_parse_buffer->slice_offset);
+        VTRACE("pic_parse_buffer->nalu_header.value = %x", data->pic_parse_buffer->nalu_header.value = mSliceInfo[sliceIdx].sliceHeaderByte);
+        VTRACE("flags.bits.frame_mbs_only_flag = %d", data->pic_parse_buffer->flags.bits.frame_mbs_only_flag);
+        VTRACE("flags.bits.pic_order_present_flag = %d", data->pic_parse_buffer->flags.bits.pic_order_present_flag);
+        VTRACE("flags.bits.delta_pic_order_always_zero_flag = %d", data->pic_parse_buffer->flags.bits.delta_pic_order_always_zero_flag);
+        VTRACE("flags.bits.redundant_pic_cnt_present_flag = %d", data->pic_parse_buffer->flags.bits.redundant_pic_cnt_present_flag);
+        VTRACE("flags.bits.weighted_pred_flag = %d", data->pic_parse_buffer->flags.bits.weighted_pred_flag);
+        VTRACE("flags.bits.entropy_coding_mode_flag = %d", data->pic_parse_buffer->flags.bits.entropy_coding_mode_flag);
+        VTRACE("flags.bits.deblocking_filter_control_present_flag = %d", data->pic_parse_buffer->flags.bits.deblocking_filter_control_present_flag);
+        VTRACE("flags.bits.weighted_bipred_idc = %d", data->pic_parse_buffer->flags.bits.weighted_bipred_idc);
+        VTRACE("pic_parse_buffer->expected_pic_parameter_set_id = %d", data->pic_parse_buffer->expected_pic_parameter_set_id);
+        VTRACE("pic_parse_buffer->num_slice_groups_minus1 = %d", data->pic_parse_buffer->num_slice_groups_minus1);
+        VTRACE("pic_parse_buffer->chroma_format_idc = %d", data->pic_parse_buffer->chroma_format_idc);
+        VTRACE("pic_parse_buffer->log2_max_pic_order_cnt_lsb_minus4 = %d", data->pic_parse_buffer->log2_max_pic_order_cnt_lsb_minus4);
+        VTRACE("pic_parse_buffer->pic_order_cnt_type = %d", data->pic_parse_buffer->pic_order_cnt_type);
+        VTRACE("pic_parse_buffer->residual_colour_transform_flag = %d", data->pic_parse_buffer->residual_colour_transform_flag);
+        VTRACE("pic_parse_buffer->num_ref_idc_l0_active_minus1 = %d", data->pic_parse_buffer->num_ref_idc_l0_active_minus1);
+        VTRACE("pic_parse_buffer->num_ref_idc_l1_active_minus1 = %d", data->pic_parse_buffer->num_ref_idc_l1_active_minus1);
+#endif
+        vaStatus = vaCreateBuffer(
+            mVADisplay,
+            mVAContext,
+            VAParsePictureParameterBufferType,
+            sizeof(VAParsePictureParameterBuffer),
+            1,
+            data->pic_parse_buffer,
+            &pictureparameterparsingbufferID);
+        CHECK_VA_STATUS("vaCreatePictureParameterParsingBuffer");
+
+        vaStatus = vaRenderPicture(
+            mVADisplay,
+            mVAContext,
+            &pictureparameterparsingbufferID,
+            1);
+        CHECK_VA_STATUS("vaRenderPicture");
+
+        vaStatus = vaMapBuffer(
+            mVADisplay,
+            sliceheaderbufferID,
+            &sliceheaderbuf);
+        CHECK_VA_STATUS("vaMapBuffer");
+
+        size = *(uint32 *)((uint8 *)sliceheaderbuf + 4) + 4;
+        VTRACE("slice header size = 0x%x, offset = 0x%x", size, offset);
+        if (offset + size <= MAX_SLICEHEADER_BUFFER_SIZE - 4) {
+            memcpy(mCachedHeader+offset, sliceheaderbuf, size);
+            offset += size;
+        } else {
+            WTRACE("Cached slice header is not big enough!");
+        }
+        vaStatus = vaUnmapBuffer(
+            mVADisplay,
+            sliceheaderbufferID);
+        CHECK_VA_STATUS("vaUnmapBuffer");
+    }
+    memset(mCachedHeader + offset, 0xFF, 4);
+    status = updateSliceParameter(data,mCachedHeader);
+    CHECK_STATUS("processSliceHeader");
+    return DECODE_SUCCESS;
+}
+
+
 Decode_Status VideoDecoderAVCSecure::updateSliceParameter(vbp_data_h264 *data, void *sliceheaderbuf) {
     VTRACE("VideoDecoderAVCSecure::updateSliceParameter");
     Decode_Status status;
@@ -437,6 +734,8 @@ Decode_Status VideoDecoderAVCSecure::decodeSlice(vbp_data_h264 *data, uint32_t p
     vbp_slice_data_h264 *sliceData = &(picData->slc_data[sliceIndex]);
     VAPictureParameterBufferH264 *picParam = picData->pic_parms;
     VASliceParameterBufferH264 *sliceParam = &(sliceData->slc_parms);
+    uint32_t slice_data_size = 0;
+    uint8_t* slice_data_addr = NULL;
 
     if (sliceParam->first_mb_in_slice == 0 || mDecodingFrame == false) {
         // either condition indicates start of a new frame
@@ -480,7 +779,21 @@ Decode_Status VideoDecoderAVCSecure::decodeSlice(vbp_data_h264 *data, uint32_t p
     status = setReference(sliceParam);
     CHECK_STATUS("setReference");
 
-    sliceParam->slice_data_size = mFrameSize;
+    if (mModularMode) {
+        if (mIsEncryptData) {
+            sliceParam->slice_data_size = mSliceInfo[sliceIndex].sliceSize;
+            slice_data_size = mSliceInfo[sliceIndex].sliceSize;
+            slice_data_addr = mFrameData + mSliceInfo[sliceIndex].sliceStartOffset;
+        } else {
+            slice_data_size = sliceData->slice_size;
+            slice_data_addr = sliceData->buffer_addr + sliceData->slice_offset;
+        }
+    } else {
+        sliceParam->slice_data_size = mFrameSize;
+        slice_data_size = mFrameSize;
+        slice_data_addr = mFrameData;
+    }
+
     vaStatus = vaCreateBuffer(
         mVADisplay,
         mVAContext,
@@ -505,9 +818,9 @@ Decode_Status VideoDecoderAVCSecure::decodeSlice(vbp_data_h264 *data, uint32_t p
         mVADisplay,
         mVAContext,
         VASliceDataBufferType,
-        mFrameSize, //size
+        slice_data_size, //size
         1,        //num_elements
-        mFrameData,
+        slice_data_addr,
         &slicebufferID);
     CHECK_VA_STATUS("vaCreateSliceDataBuffer");
 
@@ -520,4 +833,35 @@ Decode_Status VideoDecoderAVCSecure::decodeSlice(vbp_data_h264 *data, uint32_t p
 
     return DECODE_SUCCESS;
 
+}
+
+Decode_Status VideoDecoderAVCSecure::getCodecSpecificConfigs(
+    VAProfile profile, VAConfigID *config)
+{
+    VAStatus vaStatus;
+    VAConfigAttrib attrib[2];
+
+    if (config == NULL) {
+        ETRACE("Invalid parameter!");
+        return DECODE_FAIL;
+    }
+
+    attrib[0].type = VAConfigAttribRTFormat;
+    attrib[0].value = VA_RT_FORMAT_YUV420;
+    attrib[1].type = VAConfigAttribDecSliceMode;
+    attrib[1].value = VA_DEC_SLICE_MODE_NORMAL;
+    if (mModularMode) {
+        attrib[1].value = VA_DEC_SLICE_MODE_SUBSAMPLE;
+    }
+
+    vaStatus = vaCreateConfig(
+            mVADisplay,
+            profile,
+            VAEntrypointVLD,
+            &attrib[0],
+            2,
+            config);
+    CHECK_VA_STATUS("vaCreateConfig");
+
+    return DECODE_SUCCESS;
 }

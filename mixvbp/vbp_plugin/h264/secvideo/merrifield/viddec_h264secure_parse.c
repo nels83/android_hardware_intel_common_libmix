@@ -133,7 +133,127 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
         pInfo->sei_rp_received = 0;
 
     case h264_NAL_UNIT_TYPE_SLICE:
-        pInfo->has_slice = 1;
+        {
+            pInfo->has_slice = 1;
+            h264_Slice_Header_t next_SliceHeader;
+            /// Reset next slice header
+            h264_memset(&next_SliceHeader, 0x0, sizeof(h264_Slice_Header_t));
+            next_SliceHeader.nal_ref_idc = nal_ref_idc;
+
+            if ((1 == pInfo->primary_pic_type_plus_one) && (pInfo->got_start))
+            {
+                pInfo->img.recovery_point_found |= 4;
+            }
+            pInfo->primary_pic_type_plus_one = 0;
+
+            ////////////////////////////////////////////////////////////////////////////
+            // Step 2: Parsing slice header
+            ////////////////////////////////////////////////////////////////////////////
+            /// PWT
+            pInfo->h264_pwt_start_byte_offset = 0;
+            pInfo->h264_pwt_start_bit_offset = 0;
+            pInfo->h264_pwt_end_byte_offset = 0;
+            pInfo->h264_pwt_end_bit_offset = 0;
+            pInfo->h264_pwt_enabled = 0;
+            /// IDR flag
+            next_SliceHeader.idr_flag = (pInfo->nal_unit_type == h264_NAL_UNIT_TYPE_IDR);
+
+            /// Pass slice header
+            status = h264_Parse_Slice_Layer_Without_Partitioning_RBSP(parent, pInfo, &next_SliceHeader);
+            pInfo->sei_information.recovery_point = 0;
+
+            if (next_SliceHeader.sh_error & 3)
+            {
+                ETRACE("Slice Header parsing error.\n");
+                break;
+            }
+            pInfo->img.current_slice_num++;
+
+            ////////////////////////////////////////////////////////////////////////////
+            // Step 3: Processing if new picture coming
+            //  1) if it's the second field
+            //  2) if it's a new frame
+            ////////////////////////////////////////////////////////////////////////////
+            //AssignQuantParam(pInfo);
+            if (h264_is_new_picture_start(pInfo, next_SliceHeader, pInfo->SliceHeader))
+            {
+                //
+                ///----------------- New Picture.boundary detected--------------------
+                //
+                pInfo->img.g_new_pic++;
+                //
+                // Complete previous picture
+                h264_dpb_store_previous_picture_in_dpb(pInfo, 0, 0); //curr old
+                //h264_hdr_post_poc(0, 0, use_old);
+
+                //
+                // Update slice structures:
+                h264_update_old_slice(pInfo, next_SliceHeader);     //cur->old; next->cur;
+
+                //
+                // 1) if resolution change: reset dpb
+                // 2) else: init frame store
+                h264_update_img_info(pInfo);                                //img, dpb
+
+                //
+                ///----------------- New frame.boundary detected--------------------
+                //
+                pInfo->img.second_field = h264_is_second_field(pInfo);
+                if (pInfo->img.second_field == 0)
+                {
+                    pInfo->img.g_new_frame = 1;
+                    h264_dpb_update_queue_dangling_field(pInfo);
+                    //
+                    /// DPB management
+                    /// 1) check the gaps
+                    /// 2) assign fs for non-exist frames
+                    /// 3) fill the gaps
+                    /// 4) store frame into DPB if ...
+                    //
+                    //if(pInfo->SliceHeader.redundant_pic_cnt)
+                    {
+                        h264_dpb_gaps_in_frame_num_mem_management(pInfo);
+                    }
+                }
+                //
+                /// Decoding POC
+                h264_hdr_decoding_poc (pInfo, 0, 0);
+                //
+                /// Init Frame Store for next frame
+                h264_dpb_init_frame_store (pInfo);
+                pInfo->img.current_slice_num = 1;
+                if (pInfo->SliceHeader.first_mb_in_slice != 0)
+                {
+                    ////Come here means we have slice lost at the beginning, since no FMO support
+                    pInfo->SliceHeader.sh_error |= (pInfo->SliceHeader.structure << 17);
+                }
+                /// Emit out the New Frame
+                if (pInfo->img.g_new_frame)
+                {
+                    h264_parse_emit_start_new_frame(parent, pInfo);
+                }
+                h264_parse_emit_current_pic(parent, pInfo);
+            }
+            else ///////////////////////////////////////////////////// If Not a picture start
+            {
+                //
+                /// Update slice structures: cur->old; next->cur;
+                h264_update_old_slice(pInfo, next_SliceHeader);
+                //
+                /// 1) if resolution change: reset dpb
+                /// 2) else: update img info
+                h264_update_img_info(pInfo);
+            }
+            //////////////////////////////////////////////////////////////
+            // Step 4: DPB reference list init and reordering
+            //////////////////////////////////////////////////////////////
+            //////////////////////////////////////////////// Update frame Type--- IDR/I/P/B for frame or field
+            h264_update_frame_type(pInfo);
+
+            h264_dpb_update_ref_lists(pInfo);
+            /// Emit out the current "good" slice
+            h264_parse_emit_current_slice(parent, pInfo);
+        }
         break;
 
     ///// * Main profile doesn't support Data Partition, skipped.... *////
@@ -196,7 +316,7 @@ uint32_t viddec_h264secure_parse(void *parent, void *ctxt)
                 //h264_memset(&(pInfo->active_SPS), 0x0, sizeof(seq_param_set));
               //  h264_Parse_Copy_Sps_From_DDR(pInfo, &(pInfo->active_SPS), old_sps_id);
                 VTRACE("old_sps_id==pInfo->active_SPS.seq_parameter_set_id");
-               // pInfo->active_SPS.seq_parameter_set_id = 0xff;
+                pInfo->active_SPS.seq_parameter_set_id = 0xff;
             }
         }
 

@@ -5,17 +5,18 @@
 #include <vbp_loader.h>
 #include <va/va.h>
 #include <stdlib.h>
-
+#include <VideoFrameInfo.h>
 #define INPUTSIZE   (4*1024*1024)
 static int gImgWidth;
 static int gImgHeight;
 static int gCodec;
 static int gOutputSize;
+static int gFrame;
 
 void CheckArgs(int argc, char* argv[])
 {
     char c;
-    while ((c =getopt(argc, argv,"c:w:h:?") ) != EOF) {
+    while ((c =getopt(argc, argv,"c:w:h:f:?") ) != EOF) {
         switch (c) {
                 case 'w':
                     gImgWidth = atoi(optarg);
@@ -25,6 +26,9 @@ void CheckArgs(int argc, char* argv[])
                     break;
                 case 'c':
                     gCodec = atoi(optarg);
+                    break;
+                case 'f':
+                    gFrame = atoi(optarg);
                     break;
                 case '?':
                 default:
@@ -52,6 +56,8 @@ int main(int argc, char* argv[])
     uint32_t out_size;
     char *codecname = NULL;
 
+    uint8_t nalutype;
+
     char codecnamelist[2][32] = {"video/avc", "video/avc-secure"};
 
     CheckArgs(argc, argv);
@@ -70,6 +76,13 @@ int main(int argc, char* argv[])
         ALOGE("Err: wrong codec type = %d", gCodec);
         return -1;
     }
+
+    if (gFrame < 0) {
+        ALOGE("Err: wrong frame number = %d", gFrame);
+        return -1;
+    }
+
+    framenum = gFrame;
 
     gOutputSize = gImgWidth * gImgHeight * 3/2;
 
@@ -90,6 +103,7 @@ int main(int argc, char* argv[])
 
     configBuffer.width = gImgWidth;
     configBuffer.height = gImgHeight;
+    configBuffer.flag |= IS_SUBSAMPLE_ENCRYPTION;
 
     testDecoder->start(&configBuffer);
 
@@ -105,8 +119,12 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    frame_info_t frame_info;
+
     for (frameidx = 0; frameidx < framenum; frameidx++) {
-        sprintf(inputfilename, "/data/decrypted_frame/decrypted_frame_%d.h264", frameidx);
+
+        memset(inBuf, 0, INPUTSIZE);
+        sprintf(inputfilename, "/data/bitstream/frame_%04d.bin", frameidx);
         if((fp_in = fopen(inputfilename,"rb")) == NULL) {
             ALOGE("Fail to open inputfilename %s", inputfilename);
             return -1;
@@ -121,10 +139,52 @@ int main(int argc, char* argv[])
         }
         fread(inBuf, 1, in_size, fp_in);
         fclose(fp_in);
-
         memset(&buffer, 0, sizeof(VideoDecodeBuffer));
-        buffer.data = inBuf;
-        buffer.size = in_size;
+
+        nalutype = inBuf[4] & 0x1F;
+        if (nalutype == 0x07 || nalutype == 0x08) {
+            ALOGV("Clear SPS/PPS is sent");
+            frame_info.data = inBuf;
+            frame_info.size = in_size;
+            frame_info.num_nalus = 1;
+            frame_info.nalus[0].data = inBuf;
+            frame_info.nalus[0].length = in_size;
+            frame_info.nalus[0].type = inBuf[4];
+            frame_info.nalus[0].offset = 0;
+            buffer.data = (uint8_t *)&frame_info;
+            buffer.size = sizeof(frame_info_t);
+            buffer.flag |= IS_SECURE_DATA;
+
+   //         buffer.data = inBuf;
+   //         buffer.size = in_size;
+        } else {
+#if 0
+            ALOGV("Encrypted slice data is sent");
+            frame_info.data = (uint8_t *) &inBuf[5];
+            frame_info.size = in_size - 5;
+            frame_info.subsamplenum = 1;
+            frame_info.subsampletable[0].subsample_type = inBuf[4];
+            frame_info.subsampletable[0].subsample_size = in_size - 5;
+#endif
+            ALOGV("Encrypted slice data is sent");
+            frame_info.data = inBuf;
+            frame_info.size = in_size;
+            frame_info.num_nalus = 2;
+            frame_info.nalus[0].offset = 0;
+            frame_info.nalus[0].type = 0x06;
+            frame_info.nalus[0].length = 5;
+            frame_info.nalus[0].data = NULL;
+
+            frame_info.nalus[1].offset = 5;
+            frame_info.nalus[1].type = inBuf[4];
+            frame_info.nalus[1].length = in_size - 5;
+            frame_info.nalus[1].data = NULL;
+
+            buffer.data = (uint8_t *)&frame_info;
+            buffer.size = sizeof(frame_info_t);
+            buffer.flag |= IS_SECURE_DATA;
+        }
+
         buffer.rotationDegrees = 0;
         buffer.timeStamp = frameidx;
 
@@ -138,7 +198,7 @@ int main(int argc, char* argv[])
 
             renderbuf->renderDone = true;
             ALOGV("Output frame %d, out_size = %d", outidx, out_size);
-            sprintf(outputfilename, "/data/decodedframe/frame_%d.bin", outidx++);
+            sprintf(outputfilename, "/data/outputsurface/frame_%04d.bin", outidx++);
             if((fp_out = fopen(outputfilename,"wb")) == NULL) {
                 ALOGE("Fail to open outputfile: %s", outputfilename);
                 return -1;

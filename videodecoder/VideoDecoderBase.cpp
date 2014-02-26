@@ -804,7 +804,7 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         status = checkHardwareCapability(profile);
         CHECK_STATUS("checkHardwareCapability");
 
-#ifdef USE_AVC_SHORT_FORMAT
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
         status = getCodecSpecificConfigs(profile, &mVAConfig);
         CHECK_STATUS("getCodecSpecificAttributes");
 #else

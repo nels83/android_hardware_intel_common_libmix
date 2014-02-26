@@ -6,9 +6,9 @@ LOCAL_SRC_FILES :=  mix_decoder.cpp
 
 LOCAL_C_INCLUDES :=             \
     $(TARGET_OUT_HEADERS)/libva_videodecoder \
-    $(TOP)/vendor/intel/hardware/PRIVATE/libmix/videodecoder \
     $(TARGET_OUT_HEADERS)/libva \
     $(TARGET_OUT_HEADERS)/libmixvbp \
+    $(TARGET_OUT_HEADERS)/libmix_videodecoder
 
 LOCAL_SHARED_LIBRARIES :=       \
         libva_videodecoder liblog libva

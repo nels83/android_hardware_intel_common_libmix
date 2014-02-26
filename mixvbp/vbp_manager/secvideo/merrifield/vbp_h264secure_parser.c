@@ -1123,10 +1123,10 @@ static void vbp_set_codec_data_h264secure(
 }
 
 
-static uint32_t vbp_add_pic_data_h264secure(vbp_context *pcontext)
+static uint32_t vbp_update_pic_data_h264secure(vbp_context *pcontext)
 {
     viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
-    VTRACE("vbp_add_pic_data_h264secure +++");
+    VTRACE("vbp_update_pic_data_h264secure +++");
     vbp_data_h264 *query_data = (vbp_data_h264 *)pcontext->query_data;
     struct h264_viddec_parser* parser = NULL;
     vbp_picture_data_h264* pic_data = NULL;
@@ -1137,7 +1137,7 @@ static uint32_t vbp_add_pic_data_h264secure(vbp_context *pcontext)
     if (0 == parser->info.SliceHeader.first_mb_in_slice)
     {
         /* a new picture is parsed */
-        query_data->num_pictures++;
+        query_data->num_pictures = 1;
     }
 
     if (query_data->num_pictures == 0)
@@ -1272,11 +1272,281 @@ static uint32_t vbp_add_pic_data_h264secure(vbp_context *pcontext)
         /* actual num_ref_frames is set in vbp_set_reference_frames_h264 */
     }
 
-    VTRACE("vbp_add_pic_data_h264secure ---");
+    VTRACE("vbp_update_pic_data_h264secure ---");
     return VBP_OK;
 }
 
-static uint32_t vbp_add_slice_data_h264secure(vbp_context *pcontext, uint32 key)
+static uint32_t vbp_add_pic_data_h264secure(vbp_context *pcontext, int list_index)
+{
+    viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
+
+    vbp_data_h264 *query_data = (vbp_data_h264 *)pcontext->query_data;
+    struct h264_viddec_parser* parser = NULL;
+    vbp_picture_data_h264* pic_data = NULL;
+    VAPictureParameterBufferH264* pic_parms = NULL;
+
+    parser = (struct h264_viddec_parser *)cxt->codec_data;
+
+    if (0 == parser->info.SliceHeader.first_mb_in_slice)
+    {
+        /* a new picture is parsed */
+        query_data->num_pictures = 1;
+    }
+
+    if (query_data->num_pictures == 0)
+    {
+        /* partial frame */
+        query_data->num_pictures = 1;
+    }
+
+    if (query_data->num_pictures > MAX_NUM_PICTURES)
+    {
+        ETRACE("num of pictures exceeds the limit (%d).", MAX_NUM_PICTURES);
+        return VBP_DATA;
+    }
+
+    int pic_data_index = query_data->num_pictures - 1;
+    if (pic_data_index < 0)
+    {
+        WTRACE("MB address does not start from 0!");
+        return VBP_DATA;
+    }
+
+    pic_data = &(query_data->pic_data[pic_data_index]);
+    pic_parms = pic_data->pic_parms;
+
+    // relax this condition to support partial frame parsing
+
+    //if (parser->info.SliceHeader.first_mb_in_slice == 0)
+    {
+        /**
+        * picture parameter only needs to be set once,
+        * even multiple slices may be encoded
+        */
+
+        /* VAPictureParameterBufferH264 */
+        pic_parms->CurrPic.picture_id = VA_INVALID_SURFACE;
+        pic_parms->CurrPic.frame_idx = 0;
+        if (parser->info.img.field_pic_flag == 1)
+        {
+            if (parser->info.img.bottom_field_flag)
+            {
+                pic_parms->CurrPic.flags = VA_PICTURE_H264_BOTTOM_FIELD;
+            }
+            else
+            {
+                /* also OK set to 0 (from test suite) */
+                pic_parms->CurrPic.flags = VA_PICTURE_H264_TOP_FIELD;
+            }
+        }
+        else
+        {
+            pic_parms->CurrPic.flags = 0; /* frame picture */
+        }
+        pic_parms->CurrPic.TopFieldOrderCnt = parser->info.img.toppoc;
+        pic_parms->CurrPic.BottomFieldOrderCnt = parser->info.img.bottompoc;
+        pic_parms->CurrPic.frame_idx = parser->info.SliceHeader.frame_num;
+
+        /* don't care if current frame is used as long term reference */
+        if (parser->info.SliceHeader.nal_ref_idc != 0)
+        {
+            pic_parms->CurrPic.flags |= VA_PICTURE_H264_SHORT_TERM_REFERENCE;
+        }
+
+        pic_parms->picture_width_in_mbs_minus1 = parser->info.active_SPS.sps_disp.pic_width_in_mbs_minus1;
+
+        /* frame height in MBS */
+        pic_parms->picture_height_in_mbs_minus1 = (2 - parser->info.active_SPS.sps_disp.frame_mbs_only_flag) *
+                (parser->info.active_SPS.sps_disp.pic_height_in_map_units_minus1 + 1) - 1;
+
+        pic_parms->bit_depth_luma_minus8 = parser->info.active_SPS.bit_depth_luma_minus8;
+        pic_parms->bit_depth_chroma_minus8 = parser->info.active_SPS.bit_depth_chroma_minus8;
+
+
+        pic_parms->seq_fields.value = 0;
+        pic_parms->seq_fields.bits.chroma_format_idc = parser->info.active_SPS.sps_disp.chroma_format_idc;
+        pic_parms->seq_fields.bits.residual_colour_transform_flag = parser->info.active_SPS.residual_colour_transform_flag;
+        pic_parms->seq_fields.bits.frame_mbs_only_flag = parser->info.active_SPS.sps_disp.frame_mbs_only_flag;
+        pic_parms->seq_fields.bits.mb_adaptive_frame_field_flag = parser->info.active_SPS.sps_disp.mb_adaptive_frame_field_flag;
+        pic_parms->seq_fields.bits.direct_8x8_inference_flag = parser->info.active_SPS.sps_disp.direct_8x8_inference_flag;
+
+        /* new fields in libva 0.31 */
+        pic_parms->seq_fields.bits.gaps_in_frame_num_value_allowed_flag = parser->info.active_SPS.gaps_in_frame_num_value_allowed_flag;
+        pic_parms->seq_fields.bits.log2_max_frame_num_minus4 = parser->info.active_SPS.log2_max_frame_num_minus4;
+        pic_parms->seq_fields.bits.pic_order_cnt_type = parser->info.active_SPS.pic_order_cnt_type;
+        pic_parms->seq_fields.bits.log2_max_pic_order_cnt_lsb_minus4 = parser->info.active_SPS.log2_max_pic_order_cnt_lsb_minus4;
+        pic_parms->seq_fields.bits.delta_pic_order_always_zero_flag =parser->info.active_SPS.delta_pic_order_always_zero_flag;
+
+
+        /* referened from UMG_Moorstown_TestSuites */
+        pic_parms->seq_fields.bits.MinLumaBiPredSize8x8 = (parser->info.active_SPS.level_idc > 30) ? 1 : 0;
+
+        pic_parms->num_slice_groups_minus1 = parser->info.active_PPS.num_slice_groups_minus1;
+        pic_parms->slice_group_map_type = parser->info.active_PPS.slice_group_map_type;
+        pic_parms->slice_group_change_rate_minus1 = 0;
+        pic_parms->pic_init_qp_minus26 = parser->info.active_PPS.pic_init_qp_minus26;
+        pic_parms->pic_init_qs_minus26 = 0;
+        pic_parms->chroma_qp_index_offset = parser->info.active_PPS.chroma_qp_index_offset;
+        pic_parms->second_chroma_qp_index_offset = parser->info.active_PPS.second_chroma_qp_index_offset;
+
+        pic_parms->pic_fields.value = 0;
+        pic_parms->pic_fields.bits.entropy_coding_mode_flag = parser->info.active_PPS.entropy_coding_mode_flag;
+        pic_parms->pic_fields.bits.weighted_pred_flag = parser->info.active_PPS.weighted_pred_flag;
+        pic_parms->pic_fields.bits.weighted_bipred_idc = parser->info.active_PPS.weighted_bipred_idc;
+        pic_parms->pic_fields.bits.transform_8x8_mode_flag = parser->info.active_PPS.transform_8x8_mode_flag;
+
+        /* new LibVA fields in v0.31*/
+        pic_parms->pic_fields.bits.pic_order_present_flag = parser->info.active_PPS.pic_order_present_flag;
+        pic_parms->pic_fields.bits.deblocking_filter_control_present_flag = parser->info.active_PPS.deblocking_filter_control_present_flag;
+        pic_parms->pic_fields.bits.redundant_pic_cnt_present_flag = parser->info.active_PPS.redundant_pic_cnt_present_flag;
+        pic_parms->pic_fields.bits.reference_pic_flag = parser->info.SliceHeader.nal_ref_idc != 0;
+
+        /* all slices in the pciture have the same field_pic_flag */
+        pic_parms->pic_fields.bits.field_pic_flag = parser->info.SliceHeader.field_pic_flag;
+        pic_parms->pic_fields.bits.constrained_intra_pred_flag = parser->info.active_PPS.constrained_intra_pred_flag;
+
+        pic_parms->frame_num = parser->info.SliceHeader.frame_num;
+    }
+
+
+    /* set reference frames, and num_ref_frames */
+    vbp_set_reference_frames_h264secure(parser, pic_parms);
+    if (parser->info.nal_unit_type == h264_NAL_UNIT_TYPE_IDR)
+    {
+        int frame_idx;
+        for (frame_idx = 0; frame_idx < 16; frame_idx++)
+        {
+            pic_parms->ReferenceFrames[frame_idx].picture_id = VA_INVALID_SURFACE;
+            pic_parms->ReferenceFrames[frame_idx].frame_idx = 0;
+            pic_parms->ReferenceFrames[frame_idx].flags = VA_PICTURE_H264_INVALID;
+            pic_parms->ReferenceFrames[frame_idx].TopFieldOrderCnt = 0;
+            pic_parms->ReferenceFrames[frame_idx].BottomFieldOrderCnt = 0;
+        }
+        /* num of reference frame is 0 if current picture is IDR */
+        pic_parms->num_ref_frames = 0;
+    }
+    else
+    {
+        /* actual num_ref_frames is set in vbp_set_reference_frames_h264 */
+    }
+
+    return VBP_OK;
+}
+
+static uint32_t vbp_add_slice_data_h264secure(vbp_context *pcontext, int index)
+{
+    viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
+    uint32 bit, byte;
+    uint8 is_emul;
+
+    vbp_data_h264 *query_data = (vbp_data_h264 *)pcontext->query_data;
+    VASliceParameterBufferH264 *slc_parms = NULL;
+    vbp_slice_data_h264 *slc_data = NULL;
+    struct h264_viddec_parser* h264_parser = NULL;
+    h264_Slice_Header_t* slice_header = NULL;
+    vbp_picture_data_h264* pic_data = NULL;
+
+    h264_parser = (struct h264_viddec_parser *)cxt->codec_data;
+    int pic_data_index = query_data->num_pictures - 1;
+    if (pic_data_index < 0)
+    {
+        ETRACE("invalid picture data index.");
+        return VBP_DATA;
+    }
+
+    pic_data = &(query_data->pic_data[pic_data_index]);
+
+    slc_data = &(pic_data->slc_data[pic_data->num_slices]);
+    slc_data->buffer_addr = cxt->parse_cubby.buf;
+    slc_parms = &(slc_data->slc_parms);
+
+    /* byte: how many bytes have been parsed */
+    /* bit: bits parsed within the current parsing position */
+    viddec_pm_get_au_pos(cxt, &bit, &byte, &is_emul);
+
+    slc_data->nal_unit_type = h264_parser->info.nal_unit_type;
+
+    slc_parms->slice_data_size = slc_data->slice_size =
+                                     pcontext->parser_cxt->list.data[index].edpos -
+                                     pcontext->parser_cxt->list.data[index].stpos;
+
+    /* the offset to the NAL start code for this slice */
+    slc_data->slice_offset = cxt->list.data[index].stpos;
+    slc_parms->slice_data_offset = 0;
+
+    /* whole slice is in this buffer */
+    slc_parms->slice_data_flag = VA_SLICE_DATA_FLAG_ALL;
+
+    slice_header = &(h264_parser->info.SliceHeader);
+    slc_parms->first_mb_in_slice = slice_header->first_mb_in_slice;
+    slc_parms->slice_type = slice_header->slice_type;
+
+    /* bit offset from NAL start code to the beginning of slice data */
+    slc_parms->slice_data_bit_offset = bit + byte * 8;
+
+    if (is_emul)
+    {
+        WTRACE("next byte is emulation prevention byte.");
+        /*slc_parms->slice_data_bit_offset += 8; */
+    }
+
+    if (cxt->getbits.emulation_byte_counter != 0)
+    {
+        slc_parms->slice_data_bit_offset -= cxt->getbits.emulation_byte_counter * 8;
+    }
+
+    slice_header = &(h264_parser->info.SliceHeader);
+    slc_parms->first_mb_in_slice = slice_header->first_mb_in_slice;
+
+    if (h264_parser->info.active_SPS.sps_disp.mb_adaptive_frame_field_flag &
+            (!(h264_parser->info.SliceHeader.field_pic_flag)))
+    {
+        slc_parms->first_mb_in_slice /= 2;
+    }
+
+    slc_parms->slice_type = slice_header->slice_type;
+
+    slc_parms->direct_spatial_mv_pred_flag = slice_header->direct_spatial_mv_pred_flag;
+
+    slc_parms->num_ref_idx_l0_active_minus1 = 0;
+    slc_parms->num_ref_idx_l1_active_minus1 = 0;
+
+    if (slice_header->slice_type == h264_PtypeP)
+    {
+        slc_parms->num_ref_idx_l0_active_minus1 = slice_header->num_ref_idx_l0_active - 1;
+    }
+    else if (slice_header->slice_type == h264_PtypeB)
+    {
+        slc_parms->num_ref_idx_l0_active_minus1 = slice_header->num_ref_idx_l0_active - 1;
+        slc_parms->num_ref_idx_l1_active_minus1 = slice_header->num_ref_idx_l1_active - 1;
+    }
+    else if (slice_header->slice_type != h264_PtypeI)
+    {
+        WTRACE("slice type %d is not supported.", slice_header->slice_type);
+    }
+
+    slc_parms->cabac_init_idc = slice_header->cabac_init_idc;
+    slc_parms->slice_qp_delta = slice_header->slice_qp_delta;
+    slc_parms->disable_deblocking_filter_idc = slice_header->disable_deblocking_filter_idc;
+    slc_parms->slice_alpha_c0_offset_div2 = slice_header->slice_alpha_c0_offset_div2;
+    slc_parms->slice_beta_offset_div2 = slice_header->slice_beta_offset_div2;
+
+    vbp_set_pre_weight_table_h264secure(h264_parser, slc_parms);
+    vbp_set_slice_ref_list_h264secure(h264_parser, slc_parms);
+
+    pic_data->num_slices++;
+
+    if (pic_data->num_slices > MAX_NUM_SLICES)
+    {
+        ETRACE("number of slices per picture exceeds the limit (%d).", MAX_NUM_SLICES);
+        return VBP_DATA;
+    }
+
+    return VBP_OK;
+}
+
+
+static uint32_t vbp_update_slice_data_h264secure(vbp_context *pcontext, uint32 key)
 {
     VTRACE("vbp_add_slice_data_h264secure +++");
     viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
@@ -1765,10 +2035,20 @@ uint32 vbp_process_parsing_result_h264secure( vbp_context *pcontext, int i)
     {
     case h264_NAL_UNIT_TYPE_SLICE:
         VTRACE("slice header is parsed.");
+        error = vbp_add_pic_data_h264secure(pcontext, i);
+        if (VBP_OK == error)
+        {
+            error = vbp_add_slice_data_h264secure(pcontext, i);
+        }
         break;
 
     case  h264_NAL_UNIT_TYPE_IDR:
         VTRACE("IDR header is parsed.");
+        error = vbp_add_pic_data_h264secure(pcontext, i);
+        if (VBP_OK == error)
+        {
+            error = vbp_add_slice_data_h264secure(pcontext, i);
+        }
         break;
     case h264_NAL_UNIT_TYPE_SEI:
         VTRACE("SEI header is parsed.");
@@ -1892,6 +2172,12 @@ uint32 vbp_update_data_h264secure(vbp_context *pcontext, void *newdata, uint32 s
         sliceheader_p->weight      = (int16_t *)((uint8_t *)sliceheader_p->reorder_cmd + reordercmdnum * sizeof(uint32));
 
         sliceheader_p->pic_marking = (uint32_t *)((uint8_t *)sliceheader_p->weight + weight_pos);
+
+        if (sliceheader_p->parsedSliceHeader.size <= 0) {
+            ETRACE("Invalid slice header size %d", sliceheader_p->parsedSliceHeader.size);
+            return VBP_DATA;
+        }
+
         offset += sliceheader_p->parsedSliceHeader.size;
         error = pcontext->parser_ops->update_data(pcontext->parser_cxt,
                                                 sliceheader_p, sizeof(vbp_h264_sliceheader));
@@ -1901,14 +2187,14 @@ uint32 vbp_update_data_h264secure(vbp_context *pcontext, void *newdata, uint32 s
             return error;
         }
 
-        error = vbp_add_pic_data_h264secure(pcontext);
+        error = vbp_update_pic_data_h264secure(pcontext);
         if (error != VBP_OK)
         {
             ETRACE("vbp_add_pic_data_h264secure error = 0x%x",error);
             return error;
         }
 
-        error = vbp_add_slice_data_h264secure(pcontext,key);
+        error = vbp_update_slice_data_h264secure(pcontext,key);
         if (error != VBP_OK)
         {
             ETRACE("vbp_add_slice_data_h264secure error = 0x%x",error);
@@ -1935,4 +2221,3 @@ uint32 vbp_update_data_h264secure(vbp_context *pcontext, void *newdata, uint32 s
 
     return error;
 }
-
