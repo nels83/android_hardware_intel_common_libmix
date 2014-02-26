@@ -315,6 +315,7 @@ enum VideoParamConfigType {
     VideoParamsTypeStoreMetaDataInBuffers,
     VideoParamsTypeProfileLevel,
     VideoParamsTypeVP8,
+    VideoParamsTypeTemporalLayerNumber,
 
     VideoConfigTypeFrameRate,
     VideoConfigTypeBitRate,
@@ -330,6 +331,7 @@ enum VideoParamConfigType {
     VideoConfigTypeVP8ReferenceFrame,
     VideoConfigTypeCIR,
     VideoConfigTypeVP8MaxFrameSizeRatio,
+    VideoConfigTypeVP8TemporalBitRateFrameRate,
 
     VideoParamsConfigExtension
 };
@@ -364,6 +366,7 @@ struct VideoParamsCommon : VideoParamConfigSet {
     bool syncEncMode;
     //CodedBuffer properties
     uint32_t codedBufNum;
+    uint32_t numberOfLayer;
 
     VideoParamsCommon() {
         type = VideoParamsTypeCommon;
@@ -388,6 +391,7 @@ struct VideoParamsCommon : VideoParamConfigSet {
         this->disableDeblocking = other.disableDeblocking;
         this->syncEncMode = other.syncEncMode;
         this->codedBufNum = other.codedBufNum;
+        this->numberOfLayer = other.numberOfLayer;
         return *this;
     }
 };
@@ -519,6 +523,17 @@ struct VideoParamsProfileLevel : VideoParamConfigSet {
     uint32_t level;
     bool isSupported;
 };
+
+struct VideoParamsTemporalLayerNumber : VideoParamConfigSet {
+
+    VideoParamsTemporalLayerNumber() {
+        type = VideoParamsTypeTemporalLayerNumber;
+        size = sizeof(VideoParamsTemporalLayerNumber);
+    }
+
+    int32_t numberOfLayer;
+};
+
 
 struct VideoConfigFrameRate : VideoParamConfigSet {
 
@@ -683,6 +698,19 @@ struct VideoConfigVP8MaxFrameSizeRatio : VideoParamConfigSet {
 
     uint32_t max_frame_size_ratio;
 };
+
+struct VideoConfigVP8TemporalBitRateFrameRate : VideoParamConfigSet {
+
+    VideoConfigVP8TemporalBitRateFrameRate() {
+        type = VideoConfigTypeVP8TemporalBitRateFrameRate;
+        size = sizeof(VideoConfigVP8TemporalBitRateFrameRate);
+    }
+
+    uint32_t layerID;
+    uint32_t bitRate;
+    uint32_t frameRate;
+};
+
 
 
 

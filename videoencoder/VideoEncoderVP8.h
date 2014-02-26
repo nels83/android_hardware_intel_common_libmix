@@ -39,11 +39,13 @@ private:
 	Encode_Status renderHRDParams(void);
 	Encode_Status renderFrameRateParams(void);
 	Encode_Status renderMaxFrameSizeParams(void);
+        Encode_Status renderMultiTemporalBitRateFrameRate(void);
 
 
 	VideoConfigVP8 mVideoConfigVP8;
 	VideoParamsVP8 mVideoParamsVP8;
 	VideoConfigVP8ReferenceFrame mVideoConfigVP8ReferenceFrame;
+	VideoConfigVP8TemporalBitRateFrameRate mVideoConfigVP8TemporalBitRateFrameRate[3];
 };
 
 #endif /* __VIDEO_ENCODER_VP8_H__ */

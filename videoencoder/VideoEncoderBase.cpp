@@ -894,6 +894,7 @@ void VideoEncoderBase::setDefaultParams() {
     mComParams.disableDeblocking = 2;
     mComParams.syncEncMode = false;
     mComParams.codedBufNum = 2;
+    mComParams.numberOfLayer = 1;
 
     mHrdParam.bufferSize = 0;
     mHrdParam.initBufferFullness = 0;
@@ -906,7 +907,7 @@ Encode_Status VideoEncoderBase::setParameters(
 
     Encode_Status ret = ENCODE_SUCCESS;
     CHECK_NULL_RETURN_IFFAIL(videoEncParams);
-    LOG_I("Config type = %d\n", (int)videoEncParams->type);
+    LOG_I("Config type = %x\n", (int)videoEncParams->type);
 
     if (mStarted) {
         LOG_E("Encoder has been initialized, should use setConfig to change configurations\n");
@@ -972,6 +973,18 @@ Encode_Status VideoEncoderBase::setParameters(
 
             mStoreMetaDataInBuffers.isEnabled = metadata->isEnabled;
 
+            break;
+        }
+
+        case VideoParamsTypeTemporalLayerNumber:{
+            VideoParamsTemporalLayerNumber *numberoflayer =
+                    reinterpret_cast <VideoParamsTemporalLayerNumber *> (videoEncParams);
+
+            if (numberoflayer->size != sizeof(VideoParamsTemporalLayerNumber)) {
+                 return ENCODE_INVALID_PARAMS;
+            }
+
+            mComParams.numberOfLayer = numberoflayer->numberOfLayer;
             break;
         }
 
@@ -1084,6 +1097,19 @@ Encode_Status VideoEncoderBase::getParameters(
                     profilelevel->isSupported = false;
                 }
             }
+        }
+
+        case VideoParamsTypeTemporalLayerNumber:{
+            VideoParamsTemporalLayerNumber *numberoflayer =
+                reinterpret_cast <VideoParamsTemporalLayerNumber *> (videoEncParams);
+
+            if(numberoflayer->size != sizeof(VideoParamsTemporalLayerNumber)) {
+                return ENCODE_INVALID_PARAMS;
+            }
+
+            numberoflayer->numberOfLayer = mComParams.numberOfLayer;
+
+            break;
         }
 
         case VideoParamsTypeAVC:
@@ -1200,7 +1226,8 @@ Encode_Status VideoEncoderBase::setConfig(VideoParamConfigSet *videoEncConfig) {
         case VideoConfigTypeSliceNum:
         case VideoConfigTypeVP8:
         case VideoConfigTypeVP8ReferenceFrame:
-        case VideoConfigTypeVP8MaxFrameSizeRatio:{
+        case VideoConfigTypeVP8MaxFrameSizeRatio:
+        case VideoConfigTypeVP8TemporalBitRateFrameRate:{
             ret = derivedSetConfig(videoEncConfig);
             break;
         }
