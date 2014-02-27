@@ -1279,6 +1279,8 @@ void VideoDecoderBase::querySurfaceRenderStatus(VideoSurfaceBuffer* surface) {
         return;
     }
     surface->renderBuffer.driverRenderDone = true;
+
+#ifndef USE_GEN_HW
     if (surface->renderBuffer.surface != VA_INVALID_SURFACE &&
        (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER)) {
 
@@ -1288,6 +1290,7 @@ void VideoDecoderBase::querySurfaceRenderStatus(VideoSurfaceBuffer* surface) {
             surface->renderBuffer.driverRenderDone = false;
 
     }
+#endif
 
 }
 

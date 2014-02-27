@@ -229,7 +229,7 @@ h264_Status h264_Parse_Slice_Header_3(void *parent, h264_Info* pInfo, h264_Slice
         keepParsing = h264_is_new_picture_start(pInfo, *SliceHeader, pInfo->SliceHeader) && (SliceHeader->nal_ref_idc != 0);
         if (!keepParsing)
         {
-            ITRACE("short format parsing: no need to go on!");
+            VTRACE("short format parsing: no need to go on!");
             ret = H264_STATUS_OK;
             break;
         }
