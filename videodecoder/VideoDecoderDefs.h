@@ -110,6 +110,9 @@ typedef enum {
 
      // indicate the frame has resolution change
     IS_RESOLUTION_CHANGE = 0x40000,
+
+    // indicate whether video decoder buffer contains only one field
+    IS_SINGLE_FIELD = 0x80000,
 } VIDEO_BUFFER_FLAG;
 
 typedef enum
@@ -216,6 +219,7 @@ struct VideoFormatInfo {
     int32_t framerateNom;
     int32_t framerateDenom;
     int32_t actualBufferNeeded;
+    int32_t flags; // indicate whether current picture is field or frame
     VideoExtensionBuffer *ext;
 };
 

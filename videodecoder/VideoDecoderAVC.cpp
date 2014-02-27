@@ -135,10 +135,13 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
         return DECODE_NO_CONFIG;
     }
 
-    // Don't remove the following codes, it can be enabled for debugging DPB.
-#if 0
+    mVideoFormatInfo.flags = 0;
+    uint32_t fieldFlags = 0;
     for (unsigned int i = 0; i < data->num_pictures; i++) {
         VAPictureH264 &pic = data->pic_data[i].pic_parms->CurrPic;
+        fieldFlags |= pic.flags;
+        // Don't remove the following codes, it can be enabled for debugging DPB.
+#if 0
         VTRACE("%d: decoding frame %.2f, poc top = %d, poc bottom = %d, flags = %d,  reference = %d",
                 i,
                 buffer->timeStamp/1E6,
@@ -147,8 +150,14 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
                 pic.flags,
                 (pic.flags & VA_PICTURE_H264_SHORT_TERM_REFERENCE) ||
                 (pic.flags & VA_PICTURE_H264_LONG_TERM_REFERENCE));
-    }
 #endif
+    }
+    int32_t topField = fieldFlags & VA_PICTURE_H264_TOP_FIELD;
+    int32_t botField = fieldFlags & VA_PICTURE_H264_BOTTOM_FIELD;
+    if ((topField == 0 && botField != 0) || (topField != 0 && botField == 0)) {
+        mVideoFormatInfo.flags |= IS_SINGLE_FIELD;
+    }
+
     if (data->new_sps || data->new_pps) {
         status = handleNewSequence(data);
         CHECK_STATUS("handleNewSequence");
