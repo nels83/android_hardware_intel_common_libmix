@@ -454,10 +454,10 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
             mOutCodedBuffer = mCurOutputTask->coded_buffer;
 
             // Check frame skip
-            // Need map buffer before calling query surface below to get the right skip frame flag for current frame
+            // Need encoding to be completed before calling query surface below to
+            // get the right skip frame flag for current frame
             // It is a requirement of video driver
-            vaStatus = vaMapBuffer (mVADisplay, mOutCodedBuffer, (void **)&buf);
-            vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
+            vaSyncSurface(mVADisplay, mCurOutputTask->enc_surface);
 
             vaStatus = vaQuerySurfaceStatus(mVADisplay, mCurOutputTask->enc_surface,  &vaSurfaceStatus);
             CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
