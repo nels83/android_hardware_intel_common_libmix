@@ -25,6 +25,7 @@
 #include "VideoDecoderAVC.h"
 #include "VideoDecoderTrace.h"
 #include <string.h>
+#include <cutils/properties.h>
 
 // Macros for actual buffer needed calculation
 #define WIDI_CONSUMED   6
@@ -161,6 +162,12 @@ Decode_Status VideoDecoderAVC::decodeFrame(VideoDecodeBuffer *buffer, vbp_data_h
     if (data->new_sps || data->new_pps) {
         status = handleNewSequence(data);
         CHECK_STATUS("handleNewSequence");
+    }
+
+    if (isWiDiStatusChanged()) {
+        mSizeChanged = false;
+        flushSurfaceBuffers();
+        return DECODE_FORMAT_CHANGE;
     }
 
     // first pic_data always exists, check if any slice is parsed
@@ -778,7 +785,7 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
                                               + (diff > 0 ? diff : 1)
 #ifndef USE_GEN_HW
                                               + HDMI_CONSUMED /* Two extra buffers are needed for native window buffer cycling */
-                                              + WIDI_CONSUMED /* WiDi maximum needs */
+                                              + (mWiDiOn ? WIDI_CONSUMED : 0) /* WiDi maximum needs */
 #endif
                                               + 1;
     }
@@ -790,21 +797,49 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
     setRenderRect();
 }
 
+bool VideoDecoderAVC::isWiDiStatusChanged() {
+#ifndef USE_GEN_HW
+    if (mWiDiOn)
+        return false;
+
+    if (mConfigBuffer.flag & WANT_SURFACE_PROTECTION)
+        return false;
+
+    if (!(mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER))
+        return false;
+
+    char prop[PROPERTY_VALUE_MAX];
+    bool widi_on = (property_get("media.widi.enabled", prop, NULL) > 0) &&
+                    (!strcmp(prop, "1") || !strcasecmp(prop, "true"));
+    if (widi_on) {
+        mVideoFormatInfo.actualBufferNeeded += WIDI_CONSUMED;
+        mWiDiOn = true;
+        ITRACE("WiDi is enabled, actual buffer needed is %d", mVideoFormatInfo.actualBufferNeeded);
+        return true;
+    }
+    return false;
+#else
+    return false;
+#endif
+}
+
 Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
     updateFormatInfo(data);
-    bool noNeedFlush = false;
-    if (mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER) {
-        noNeedFlush = (mVideoFormatInfo.width <= mVideoFormatInfo.surfaceWidth)
-                && (mVideoFormatInfo.height <= mVideoFormatInfo.surfaceHeight);
+    bool needFlush = false;
+    bool rawDataMode = !(mConfigBuffer.flag & USE_NATIVE_GRAPHIC_BUFFER);
+
+    if (!rawDataMode) {
+        needFlush = (mVideoFormatInfo.width > mVideoFormatInfo.surfaceWidth)
+                || (mVideoFormatInfo.height > mVideoFormatInfo.surfaceHeight)
+                || isWiDiStatusChanged();
     }
 
-    if (mSizeChanged == false || noNeedFlush) {
-        return DECODE_SUCCESS;
-    } else {
+    if (needFlush || (rawDataMode && mSizeChanged)) {
         mSizeChanged = false;
         flushSurfaceBuffers();
         return DECODE_FORMAT_CHANGE;
-    }
+    } else
+        return DECODE_SUCCESS;
 }
 
 bool VideoDecoderAVC::isNewFrame(vbp_data_h264 *data, bool equalPTS) {

@@ -131,6 +131,7 @@ protected:
     int32_t mRotationDegrees;
 
     bool mErrReportEnabled;
+    bool mWiDiOn;
 
     enum {
         // TODO: move this to vbp_loader.h

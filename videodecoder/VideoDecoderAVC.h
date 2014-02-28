@@ -62,6 +62,7 @@ protected:
 #ifdef USE_AVC_SHORT_FORMAT
     virtual Decode_Status getCodecSpecificConfigs(VAProfile profile, VAConfigID*config);
 #endif
+    bool isWiDiStatusChanged();
 
 private:
     struct DecodedPictureBuffer {
