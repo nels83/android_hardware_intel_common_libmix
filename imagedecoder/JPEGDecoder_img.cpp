@@ -109,7 +109,7 @@ JpegDecodeStatus JpegDecoder::createSurfaceGralloc(int width, int height, uint32
     attrib_tpi.width = width;
     attrib_tpi.height = height;
     attrib_tpi.type = VAExternalMemoryAndroidGrallocBuffer;
-    attrib_tpi.buffers = (uint32_t*)&handle;
+    attrib_tpi.buffers = (unsigned long *)&handle;
 
     st = vaCreateSurfacesWithAttribute(
         mDisplay,
