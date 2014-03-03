@@ -733,9 +733,10 @@ VASurfaceID VASurfaceMap::CreateSurfaceFromExternalBuf(int32_t value, ValueInfo&
 
     vaStatus = vaCreateSurfaces(mVADisplay, VA_RT_FORMAT_YUV420, vinfo.width,
                                  vinfo.height, &surface, 1, attribs, 2);
-    if (vaStatus != VA_STATUS_SUCCESS)
+    if (vaStatus != VA_STATUS_SUCCESS){
         LOG_E("vaCreateSurfaces failed. vaStatus = %d\n", vaStatus);
-
+        surface = VA_INVALID_SURFACE;
+    }
     return surface;
 }
 
