@@ -237,6 +237,7 @@ Decode_Status VideoDecoderAVC::beginDecodingFrame(vbp_data_h264 *data) {
     mAcquiredBuffer->renderBuffer.flag = 0;
     mAcquiredBuffer->renderBuffer.timeStamp = mCurrentPTS;
     mAcquiredBuffer->pictureOrder = getPOC(picture);
+
     if (mSizeChanged) {
         mAcquiredBuffer->renderBuffer.flag |= IS_RESOLUTION_CHANGE;
         mSizeChanged = false;
@@ -677,7 +678,7 @@ Decode_Status VideoDecoderAVC::startVA(vbp_data_h264 *data) {
         }
     }
 
-    VideoDecoderBase::setOutputWindowSize(DPBSize);
+    VideoDecoderBase::setOutputWindowSize(mConfigBuffer.flag & WANT_ADAPTIVE_PLAYBACK ? OUTPUT_WINDOW_SIZE : DPBSize);
     updateFormatInfo(data);
 
    // for 1080p, limit the total surface to 19, according the hardware limitation
@@ -687,10 +688,15 @@ Decode_Status VideoDecoderAVC::startVA(vbp_data_h264 *data) {
         DPBSize = 19 - AVC_EXTRA_SURFACE_NUMBER;
     }
 
-    // for baseline profile, enable low delay mode automatically
-    if (data->codec_data->profile_idc == 66) {
-        enableLowDelayMode(true);
+    if (mConfigBuffer.flag & WANT_ADAPTIVE_PLAYBACK) {
+        // When Adaptive playback is enabled, turn off low delay mode.
+        // Otherwise there may be a 240ms stuttering if the output mode is changed from LowDelay to Delay.
+        enableLowDelayMode(false);
+    } else {
+        // for baseline profile, enable low delay mode automatically
+        enableLowDelayMode(data->codec_data->profile_idc == 66);
     }
+
     return VideoDecoderBase::setupVA(DPBSize + AVC_EXTRA_SURFACE_NUMBER, vaProfile);
 }
 
@@ -712,8 +718,6 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         mVideoFormatInfo.width = width;
         mVideoFormatInfo.height = height;
     }
-
-
 
     // video_range has default value of 0.
     mVideoFormatInfo.videoRange = data->codec_data->video_full_range_flag;

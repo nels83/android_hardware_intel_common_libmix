@@ -113,6 +113,9 @@ typedef enum {
 
     // indicate whether video decoder buffer contains only one field
     IS_SINGLE_FIELD = 0x80000,
+
+    // indicate adaptive playback mode
+    WANT_ADAPTIVE_PLAYBACK = 0x100000,
 } VIDEO_BUFFER_FLAG;
 
 typedef enum
