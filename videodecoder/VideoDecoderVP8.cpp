@@ -77,6 +77,8 @@ void VideoDecoderVP8::updateFormatInfo(vbp_data_vp8 *data) {
     ITRACE("Cropping: left = %d, top = %d, right = %d, bottom = %d", data->codec_data->crop_left, data->codec_data->crop_top, data->codec_data->crop_bottom);
 
     mVideoFormatInfo.valid = true;
+
+    setRenderRect();
 }
 
 Decode_Status VideoDecoderVP8::startVA(vbp_data_vp8 *data) {

@@ -121,6 +121,8 @@ Decode_Status VideoDecoderWMV::decode(VideoDecodeBuffer *buffer) {
                     && (mVideoFormatInfo.height <= mVideoFormatInfo.surfaceHeight);
         }
 
+        setRenderRect();
+
         if (noNeedFlush) {
             mSizeChanged = true;
         } else {
@@ -503,6 +505,8 @@ void VideoDecoderWMV::updateFormatInfo(vbp_data_vc1 *data) {
     mVideoFormatInfo.aspectY = data->se_data->ASPECT_VERT_SIZE;
     mVideoFormatInfo.bitrate = 0; //data->se_data->bitrate;
     mVideoFormatInfo.valid = true;
+
+    setRenderRect();
 }
 
 Decode_Status VideoDecoderWMV::allocateVABufferIDs(int32_t number) {

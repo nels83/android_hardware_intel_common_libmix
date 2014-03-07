@@ -122,6 +122,8 @@ Decode_Status VideoDecoderMPEG4::decode(VideoDecodeBuffer *buffer) {
         } else {
             mSizeChanged = true;
         }
+
+        setRenderRect();
     }
 
     status = decodeFrame(buffer, data);
@@ -628,6 +630,8 @@ void VideoDecoderMPEG4::updateFormatInfo(vbp_data_mp42 *data) {
     mVideoFormatInfo.aspectY = data->codec_data.par_height;
     //mVideoFormatInfo.bitrate = data->codec_data.bit_rate;
     mVideoFormatInfo.valid = true;
+
+    setRenderRect();
 }
 
 Decode_Status VideoDecoderMPEG4::checkHardwareCapability(VAProfile profile) {

@@ -786,6 +786,8 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
     ITRACE("actualBufferNeeded =%d", mVideoFormatInfo.actualBufferNeeded);
 
     mVideoFormatInfo.valid = true;
+
+    setRenderRect();
 }
 
 Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {

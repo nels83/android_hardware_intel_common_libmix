@@ -174,6 +174,7 @@ protected:
     void querySurfaceRenderStatus(VideoSurfaceBuffer* surface);
     void enableLowDelayMode(bool enable) {mLowDelay = enable;}
     void setRotationDegrees(int32_t rotationDegrees);
+    void setRenderRect(void);
 };
 
 

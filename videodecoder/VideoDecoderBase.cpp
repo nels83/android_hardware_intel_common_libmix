@@ -830,6 +830,8 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
         return DECODE_MEMORY_FAIL;
     }
 
+    setRenderRect();
+
     int32_t format = VA_RT_FORMAT_YUV420;
     if (mConfigBuffer.flag & WANT_SURFACE_PROTECTION) {
 #ifndef USE_AVC_SHORT_FORMAT
@@ -1432,3 +1434,24 @@ void VideoDecoderBase::setRotationDegrees(int32_t rotationDegrees) {
     mRotationDegrees = rotationDegrees;
 }
 
+void VideoDecoderBase::setRenderRect() {
+
+    if (!mVADisplay)
+        return;
+
+    VAStatus ret;
+    VARectangle rect;
+    rect.x = mVideoFormatInfo.cropLeft;
+    rect.y = mVideoFormatInfo.cropTop;
+    rect.width = mVideoFormatInfo.width - (mVideoFormatInfo.cropLeft + mVideoFormatInfo.cropRight);
+    rect.height = mVideoFormatInfo.height - (mVideoFormatInfo.cropBottom + mVideoFormatInfo.cropTop);
+
+    VADisplayAttribute render_rect;
+    render_rect.type = VADisplayAttribRenderRect;
+    render_rect.value = (long)&rect;
+
+    ret = vaSetDisplayAttributes(mVADisplay, &render_rect, 1);
+    if (ret) {
+        ETRACE("Failed to set rotation degree.");
+    }
+}
