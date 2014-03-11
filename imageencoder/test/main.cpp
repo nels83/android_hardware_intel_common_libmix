@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 	/* Parameter variables */
 	char *source_name = NULL;
 	char *output_name = (char *)"./output.jpg";
-	int surface_type = 0;
+	int surface_type = 1;
 	int quality = DEFAULT_QUALITY;
 	int burst = DEFAULT_BURST;
 	int width = 0, height = 0;
@@ -283,7 +283,7 @@ int main(int argc, char** argv)
 					((unsigned int)source_buffer)%4096 + 4096);
 	} else { /* gralloc */
 		gralloc_buffer = new GraphicBuffer(width, height, VA_FOURCC_NV12,
-						GraphicBuffer::USAGE_SW_WRITE_RARELY);
+						GraphicBuffer::USAGE_HW_RENDER);
 		if (NULL == gralloc_buffer) {
 			fprintf(stderr, "Allocating GraphicBuffer failed!\n");
 			close(source_fd);
