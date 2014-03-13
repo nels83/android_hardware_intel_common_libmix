@@ -41,7 +41,7 @@ VideoEncoderBase::VideoEncoderBase()
     ,mSliceSizeOverflow(false)
     ,mCurOutputTask(NULL)
     ,mOutCodedBuffer(0)
-    ,mCodedBufferMapped(false)
+    ,mOutCodedBufferPtr(NULL)
     ,mCurSegment(NULL)
     ,mOffsetInSeg(0)
     ,mTotalSize(0)
@@ -478,15 +478,10 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
 
     //sync/query/wait task if not completed
     if (mCurOutputTask->completed == false) {
-        uint8_t *buf = NULL;
         VASurfaceStatus vaSurfaceStatus;
 
         if (timeout == FUNC_BLOCK) {
             //block mode, direct sync surface to output data
-
-            LOG_I ("block mode, vaSyncSurface ID = 0x%08x\n", mCurOutputTask->enc_surface);
-            vaStatus = vaSyncSurface(mVADisplay, mCurOutputTask->enc_surface);
-            CHECK_VA_STATUS_GOTO_CLEANUP("vaSyncSurface");
 
             mOutCodedBuffer = mCurOutputTask->coded_buffer;
 
@@ -494,7 +489,14 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
             // Need encoding to be completed before calling query surface below to
             // get the right skip frame flag for current frame
             // It is a requirement of video driver
-            vaSyncSurface(mVADisplay, mCurOutputTask->enc_surface);
+            // vaSyncSurface syncs the wrong frame when rendering the same surface multiple times,
+            // so use vaMapbuffer instead
+            LOG_I ("block mode, vaMapBuffer ID = 0x%08x\n", mOutCodedBuffer);
+            if (mOutCodedBufferPtr == NULL) {
+                vaStatus = vaMapBuffer (mVADisplay, mOutCodedBuffer, (void **)&mOutCodedBufferPtr);
+                CHECK_VA_STATUS_GOTO_CLEANUP("vaMapBuffer");
+                CHECK_NULL_RETURN_IFFAIL(mOutCodedBufferPtr);
+            }
 
             vaStatus = vaQuerySurfaceStatus(mVADisplay, mCurOutputTask->enc_surface,  &vaSurfaceStatus);
             CHECK_VA_STATUS_RETURN("vaQuerySurfaceStatus");
@@ -557,9 +559,9 @@ CLEAN_UP:
         useLocalBuffer = false;
     }
 
-    if (mCodedBufferMapped) {
+    if (mOutCodedBufferPtr != NULL) {
         vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
-        mCodedBufferMapped = false;
+        mOutCodedBufferPtr = NULL;
         mCurSegment = NULL;
     }
 
@@ -643,7 +645,6 @@ CLEAN_UP:
     mSliceSizeOverflow = false;
     mCurOutputTask= NULL;
     mOutCodedBuffer = 0;
-    mCodedBufferMapped = false;
     mCurSegment = NULL;
     mOffsetInSeg =0;
     mTotalSize = 0;
@@ -661,23 +662,24 @@ Encode_Status VideoEncoderBase::prepareForOutput(
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VACodedBufferSegment *vaCodedSeg = NULL;
     uint32_t status = 0;
-    uint8_t *buf = NULL;
 
     LOG_V( "begin\n");
     // Won't check parameters here as the caller already checked them
     // mCurSegment is NULL means it is first time to be here after finishing encoding a frame
-    if (mCurSegment == NULL && !mCodedBufferMapped) {
-        LOG_I ("Coded Buffer ID been mapped = 0x%08x\n", mOutCodedBuffer);
-        vaStatus = vaMapBuffer (mVADisplay, mOutCodedBuffer, (void **)&buf);
-        CHECK_VA_STATUS_RETURN("vaMapBuffer");
-        CHECK_NULL_RETURN_IFFAIL(buf);
+    if (mCurSegment == NULL) {
+        if (mOutCodedBufferPtr == NULL) {
+            vaStatus = vaMapBuffer (mVADisplay, mOutCodedBuffer, (void **)&mOutCodedBufferPtr);
+            CHECK_VA_STATUS_RETURN("vaMapBuffer");
+            CHECK_NULL_RETURN_IFFAIL(mOutCodedBufferPtr);
+        }
 
-        mCodedBufferMapped = true;
+        LOG_I ("Coded Buffer ID been mapped = 0x%08x\n", mOutCodedBuffer);
+
         mTotalSize = 0;
         mOffsetInSeg = 0;
         mTotalSizeCopied = 0;
-        vaCodedSeg = (VACodedBufferSegment *)buf;
-        mCurSegment = (VACodedBufferSegment *)buf;
+        vaCodedSeg = (VACodedBufferSegment *)mOutCodedBufferPtr;
+        mCurSegment = (VACodedBufferSegment *)mOutCodedBufferPtr;
 
         while (1) {
 
@@ -759,10 +761,10 @@ Encode_Status VideoEncoderBase::cleanupForOutput() {
     VAStatus vaStatus = VA_STATUS_SUCCESS;
 
     //mCurSegment is NULL means all data has been copied out
-    if (mCurSegment == NULL && mCodedBufferMapped) {
+    if (mCurSegment == NULL && mOutCodedBufferPtr) {
         vaStatus = vaUnmapBuffer(mVADisplay, mOutCodedBuffer);
         CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
-        mCodedBufferMapped = false;
+        mOutCodedBufferPtr = NULL;
         mTotalSize = 0;
         mOffsetInSeg = 0;
         mTotalSizeCopied = 0;

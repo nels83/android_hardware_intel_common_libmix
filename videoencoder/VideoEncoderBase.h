@@ -151,6 +151,7 @@ protected:
     //Current outputting CodedBuffer status
     VABufferID mOutCodedBuffer;
     bool mCodedBufferMapped;
+    uint8_t *mOutCodedBufferPtr;
     VACodedBufferSegment *mCurSegment;
     uint32_t mOffsetInSeg;
     uint32_t mTotalSize;
