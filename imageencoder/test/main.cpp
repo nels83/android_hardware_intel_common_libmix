@@ -282,7 +282,10 @@ int main(int argc, char** argv)
 		aligned_source_buffer = (void *)((unsigned int)source_buffer -
 					((unsigned int)source_buffer)%4096 + 4096);
 	} else { /* gralloc */
-		gralloc_buffer = new GraphicBuffer(width, height, VA_FOURCC_NV12,
+		/* TopazHP requires stride must be an integral multiple of 64. */
+		stride = (width+0x3f) & (~0x3f);
+
+		gralloc_buffer = new GraphicBuffer(stride, height, VA_FOURCC_NV12,
 						GraphicBuffer::USAGE_HW_RENDER);
 		if (NULL == gralloc_buffer) {
 			fprintf(stderr, "Allocating GraphicBuffer failed!\n");
