@@ -61,7 +61,7 @@ typedef enum {
 
 typedef struct {
         MemMode mode; 			//memory type, vasurface/malloc/gfx/ion/v4l2/ci etc
-        uint32_t handle;		//handle
+        intptr_t handle;		//handle
         uint32_t size;      		//memory size
         uint32_t width;			//picture width
         uint32_t height;		//picture height
@@ -87,7 +87,7 @@ typedef enum {
 class IntelMetadataBuffer {
 public:
     IntelMetadataBuffer();                                          //for generator
-    IntelMetadataBuffer(IntelMetadataBufferType type, int32_t value);    //for quick generator
+    IntelMetadataBuffer(IntelMetadataBufferType type, intptr_t value);    //for quick generator
     ~IntelMetadataBuffer();
 
     IntelMetadataBuffer(const IntelMetadataBuffer& imb);
@@ -95,12 +95,12 @@ public:
 
     IMB_Result GetType(IntelMetadataBufferType &type);
     IMB_Result SetType(IntelMetadataBufferType type);
-    IMB_Result GetValue(int32_t &value);
-    IMB_Result SetValue(int32_t value);
+    IMB_Result GetValue(intptr_t &value);
+    IMB_Result SetValue(intptr_t value);
     IMB_Result GetValueInfo(ValueInfo* &info);
     IMB_Result SetValueInfo(ValueInfo *info);
-    IMB_Result GetExtraValues(int32_t* &values, uint32_t &num);
-    IMB_Result SetExtraValues(int32_t *values, uint32_t num);
+    IMB_Result GetExtraValues(intptr_t* &values, uint32_t &num);
+    IMB_Result SetExtraValues(intptr_t *values, uint32_t num);
 
     //New API for bytes input/ouput, UnSerialize=SetBytes, Serialize=GetBytes
     IMB_Result UnSerialize(uint8_t* data, uint32_t size);
@@ -111,10 +111,10 @@ public:
 
 private:
     IntelMetadataBufferType mType;
-    int32_t mValue;
+    intptr_t mValue;
     ValueInfo* mInfo;
 
-    int32_t* mExtraValues;
+    intptr_t* mExtraValues;
     uint32_t mExtraValues_Count;
 
     uint8_t* mBytes;

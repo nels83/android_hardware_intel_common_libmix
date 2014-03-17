@@ -386,7 +386,7 @@ Encode_Status VideoEncoderAVC::getOneNALUnit(
     dataRemaining = bufSize - pos + 1;
 
     while ((dataRemaining > 0) && (zeroByteCount < 3)) {
-        if (((((uint32_t)dataPtr) & 0xF ) == 0) && (0 == zeroByteCount)
+        if (((((intptr_t)dataPtr) & 0xF ) == 0) && (0 == zeroByteCount)
                && (dataRemaining > 0xF)) {
 
             __asm__  (

@@ -20,11 +20,11 @@ public:
 
     Encode_Status doMapping();
     VASurfaceID getVASurface() {return mVASurface;}
-    int32_t getValue() {return mValue;}
+    intptr_t getValue() {return mValue;}
     ValueInfo* getValueInfo() {return &mVinfo;}
 
     void setVASurface(VASurfaceID surface) {mVASurface = surface;}
-    void setValue(int32_t value) {mValue = value;}
+    void setValue(intptr_t value) {mValue = value;}
     void setValueInfo(ValueInfo& vinfo) {memcpy(&mVinfo, &vinfo, sizeof(ValueInfo));}
     void setTracked() {mTracked = true;}
     void setAction(int32_t action) {mAction = action;}
@@ -33,15 +33,15 @@ private:
     Encode_Status doActionCopy();
     Encode_Status doActionColConv();
     Encode_Status MappingToVASurface();
-    Encode_Status MappingSurfaceID(int32_t value);
-    Encode_Status MappingGfxHandle(int32_t value);
-    Encode_Status MappingKbufHandle(int32_t value);
-    Encode_Status MappingMallocPTR(int32_t value);
-    VASurfaceID CreateSurfaceFromExternalBuf(int32_t value, ValueInfo& vinfo);
+    Encode_Status MappingSurfaceID(intptr_t value);
+    Encode_Status MappingGfxHandle(intptr_t value);
+    Encode_Status MappingKbufHandle(intptr_t value);
+    Encode_Status MappingMallocPTR(intptr_t value);
+    VASurfaceID CreateSurfaceFromExternalBuf(intptr_t value, ValueInfo& vinfo);
 
     VADisplay mVADisplay;
 
-    int32_t mValue;
+    intptr_t mValue;
 
     VASurfaceID mVASurface;
     int32_t mVASurfaceWidth;

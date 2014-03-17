@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
                 return 1;
             }
 #else
-            mb1->SetValue((int32_t)Buffer1->pointer());
+            mb1->SetValue((intptr_t)Buffer1->pointer());
 #endif
             ret = mb1->SetValueInfo(&vi);
             ret = mb1->Serialize(bytes, size);
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
                 return 1;
             }
 #else
-            mb1->SetValue((int32_t)graphicBuffer->handle);
+            mb1->SetValue((intptr_t)graphicBuffer->handle);
 #endif
             ret = mb1->SetValueInfo(&vi);
             ret = mb1->Serialize(bytes, size);
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
         }
 
         IntelMetadataBuffer mb1;
-	    int32_t value;
+	intptr_t value;
         IMB_Result res;
         res = mb1.UnSerialize(bytes,size);
 	

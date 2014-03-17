@@ -15,11 +15,11 @@ int main(int argc, char* argv[])
 
     IntelMetadataBufferType t1 = IntelMetadataBufferTypeCameraSource;
     IntelMetadataBufferType t2;
-    int32_t v1 = 0x00000010;
-    int32_t v2 = 0;
+    intptr_t v1 = 0x00000010;
+    intptr_t v2 = 0;
     ValueInfo vi1, *vi2 = NULL;
-    int32_t ev1[10];
-    int32_t *ev2 = NULL;
+    intptr_t ev1[10];
+    intptr_t *ev2 = NULL;
     unsigned int count;
 
     if (argc > 1)

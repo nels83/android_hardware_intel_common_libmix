@@ -42,8 +42,8 @@
 
 struct ShareMemMap {
     uint32_t sessionflag;
-    int32_t value;
-    int32_t value_backup;
+    intptr_t value;
+    intptr_t value_backup;
     uint32_t type;
     sp<MemoryBase> membase;
     sp<GraphicBuffer> gbuffer;
@@ -67,7 +67,7 @@ enum {
 #define REMOTE_PROVIDER 0x80000000
 #define REMOTE_CONSUMER 0x40000000
 
-static ShareMemMap* ReadMemObjFromBinder(const Parcel& data, uint32_t sessionflag, uint32_t value) {
+static ShareMemMap* ReadMemObjFromBinder(const Parcel& data, uint32_t sessionflag, intptr_t value) {
 
     uint32_t type = data.readInt32();
     if (type >= ST_MAX)
@@ -96,12 +96,12 @@ static ShareMemMap* ReadMemObjFromBinder(const Parcel& data, uint32_t sessionfla
             return NULL;
         }
 
-        map->value = (int32_t) ((int) ( mem->pointer() + 0x0FFF) & ~0x0FFF);
+        map->value = (intptr_t)( mem->pointer() + 0x0FFF) & ~0x0FFF;
         map->membase = mem;
 
 #ifdef TEST
         ALOGI("membase heapID:%d, pointer:%x data:%x, aligned value:%x", \
-           heap->getHeapID(), mem->pointer(), *((int *)(mem->pointer())), map->value);
+           heap->getHeapID(), mem->pointer(), *((intptr_t *)(mem->pointer())), map->value);
 #endif
 
     }
@@ -115,14 +115,14 @@ static ShareMemMap* ReadMemObjFromBinder(const Parcel& data, uint32_t sessionfla
         }
         data.read(*buffer);
 
-        map->value = (uint32_t)buffer->handle;
+        map->value = (intptr_t)buffer->handle;
         map->gbuffer = buffer;
 
 #ifdef TEST
         void* usrptr[3];
         buffer->lock(GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_SW_READ_OFTEN, &usrptr[0]);
         buffer->unlock();
-        ALOGI("gfx handle:%x data:%x", (int32_t)buffer->handle, *((int *)usrptr[0]));
+        ALOGI("gfx handle:%p data:%x", (intptr_t)buffer->handle, *((intptr_t *)usrptr[0]));
 #endif
     }
 
@@ -182,7 +182,7 @@ static void ClearLocalMem(uint32_t sessionflag)
     gShareMemMapListLock.unlock();
 }
 
-static ShareMemMap* FindShareMem(uint32_t sessionflag, int32_t value, bool isBackup)
+static ShareMemMap* FindShareMem(uint32_t sessionflag, intptr_t value, bool isBackup)
 {
     List<ShareMemMap *>::iterator node;
 
@@ -208,7 +208,7 @@ static ShareMemMap* FindShareMem(uint32_t sessionflag, int32_t value, bool isBac
     return NULL;
 }
 
-static ShareMemMap* PopShareMem(uint32_t sessionflag, int32_t value)
+static ShareMemMap* PopShareMem(uint32_t sessionflag, intptr_t value)
 {
     List<ShareMemMap *>::iterator node;
 
@@ -261,6 +261,7 @@ status_t IntelBufferSharingService::instantiate(){
 
 status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags) {
 
+    //TODO: if pid is int32?
     pid_t pid = data.readInt32();
     uint32_t sessionflag = data.readInt32();
 
@@ -275,7 +276,7 @@ status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data
                 return UNKNOWN_ERROR;
             }
 
-            int32_t value = data.readInt32();
+            intptr_t value = data.readIntPtr();
 
 //            LOGI("onTransact SHARE_MEM value=%x", value);
 
@@ -284,7 +285,7 @@ status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data
             if (map == NULL)
                 return UNKNOWN_ERROR;
 
-            reply->writeInt32(map->value);
+            reply->writeIntPtr(map->value);
 
             return NO_ERROR;
         }
@@ -311,7 +312,7 @@ status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data
                 return UNKNOWN_ERROR;
             }
 
-            int32_t value = data.readInt32();
+            intptr_t value = data.readIntPtr();
 
 //            LOGI("onTransact GET_MEM value=%x", value);
 
@@ -345,7 +346,7 @@ IntelMetadataBuffer::IntelMetadataBuffer()
 #endif
 }
 
-IntelMetadataBuffer::IntelMetadataBuffer(IntelMetadataBufferType type, int32_t value)
+IntelMetadataBuffer::IntelMetadataBuffer(IntelMetadataBufferType type, intptr_t value)
 {
     mType = type;
     mValue = value;
@@ -384,8 +385,8 @@ IntelMetadataBuffer::IntelMetadataBuffer(const IntelMetadataBuffer& imb)
 
     if (imb.mExtraValues)
     {
-        mExtraValues = new int32_t[mExtraValues_Count];
-        memcpy(mExtraValues, imb.mExtraValues, 4 * mExtraValues_Count);
+        mExtraValues = new intptr_t[mExtraValues_Count];
+        memcpy(mExtraValues, imb.mExtraValues, sizeof(mValue) * mExtraValues_Count);
     }
 
     if (imb.mBytes)
@@ -413,8 +414,8 @@ const IntelMetadataBuffer& IntelMetadataBuffer::operator=(const IntelMetadataBuf
 
     if (imb.mExtraValues)
     {
-        mExtraValues = new int32_t[mExtraValues_Count];
-        memcpy(mExtraValues, imb.mExtraValues, 4 * mExtraValues_Count);
+        mExtraValues = new intptr_t[mExtraValues_Count];
+        memcpy(mExtraValues, imb.mExtraValues, sizeof(mValue) * mExtraValues_Count);
     }
 
     if (imb.mBytes)
@@ -443,7 +444,7 @@ IMB_Result IntelMetadataBuffer::SetType(IntelMetadataBufferType type)
     return IMB_SUCCESS;
 }
 
-IMB_Result IntelMetadataBuffer::GetValue(int32_t& value)
+IMB_Result IntelMetadataBuffer::GetValue(intptr_t& value)
 {
     value = mValue;
 
@@ -471,9 +472,10 @@ IMB_Result IntelMetadataBuffer::GetValue(int32_t& value)
 
     //send pid, sessionflag, and memtype
     pid_t pid = getpid();
+    //TODO: if pid is int32?
     data.writeInt32(pid);
     data.writeInt32(mSessionFlag);
-    data.writeInt32(mValue);
+    data.writeIntPtr(mValue);
 
     //do transcation
     if (binder->transact(GET_MEM, data, &reply) != NO_ERROR)
@@ -490,7 +492,7 @@ IMB_Result IntelMetadataBuffer::GetValue(int32_t& value)
 #endif
 }
 
-IMB_Result IntelMetadataBuffer::SetValue(int32_t value)
+IMB_Result IntelMetadataBuffer::SetValue(intptr_t value)
 {
     mValue = value;
 
@@ -519,7 +521,7 @@ IMB_Result IntelMetadataBuffer::SetValueInfo(ValueInfo* info)
     return IMB_SUCCESS;
 }
 
-IMB_Result IntelMetadataBuffer::GetExtraValues(int32_t* &values, uint32_t& num)
+IMB_Result IntelMetadataBuffer::GetExtraValues(intptr_t* &values, uint32_t& num)
 {
     values = mExtraValues;
     num = mExtraValues_Count;
@@ -527,7 +529,7 @@ IMB_Result IntelMetadataBuffer::GetExtraValues(int32_t* &values, uint32_t& num)
     return IMB_SUCCESS;
 }
 
-IMB_Result IntelMetadataBuffer::SetExtraValues(int32_t* values, uint32_t num)
+IMB_Result IntelMetadataBuffer::SetExtraValues(intptr_t* values, uint32_t num)
 {
     if (values && num > 0)
     {
@@ -538,9 +540,9 @@ IMB_Result IntelMetadataBuffer::SetExtraValues(int32_t* values, uint32_t num)
         }
 
         if (mExtraValues == NULL)
-            mExtraValues = new int32_t[num];
+            mExtraValues = new intptr_t[num];
 
-        memcpy(mExtraValues, values, sizeof(int32_t) * num);
+        memcpy(mExtraValues, values, sizeof(intptr_t) * num);
         mExtraValues_Count = num;
     }
     else
@@ -555,16 +557,16 @@ IMB_Result IntelMetadataBuffer::UnSerialize(uint8_t* data, uint32_t size)
         return IMB_INVAL_PARAM;
 
     IntelMetadataBufferType type;
-    int32_t value;
-    uint32_t extrasize = size - 8;
+    intptr_t value;
+    uint32_t extrasize = size - sizeof(type) - sizeof(value);
     ValueInfo* info = NULL;
-    int32_t* ExtraValues = NULL;
+    intptr_t* ExtraValues = NULL;
     uint32_t ExtraValues_Count = 0;
 
-    memcpy(&type, data, 4);
-    data += 4;
-    memcpy(&value, data, 4);
-    data += 4;
+    memcpy(&type, data, sizeof(type));
+    data += sizeof(type);
+    memcpy(&value, data, sizeof(value));
+    data += sizeof(value);
 
     switch (type)
     {
@@ -577,9 +579,9 @@ IMB_Result IntelMetadataBuffer::UnSerialize(uint8_t* data, uint32_t size)
 
             if (extrasize > sizeof(ValueInfo)) //has extravalues
             {
-                if ( (extrasize - sizeof(ValueInfo)) % 4 != 0 )
+                if ( (extrasize - sizeof(ValueInfo)) % sizeof(mValue) != 0 )
                     return IMB_INVAL_BUFFER;
-                ExtraValues_Count = (extrasize - sizeof(ValueInfo)) / 4;
+                ExtraValues_Count = (extrasize - sizeof(ValueInfo)) / sizeof(mValue);
             }
 
             if (extrasize > 0)
@@ -591,8 +593,8 @@ IMB_Result IntelMetadataBuffer::UnSerialize(uint8_t* data, uint32_t size)
 
             if (ExtraValues_Count > 0)
             {
-                ExtraValues = new int32_t[ExtraValues_Count];
-                memcpy(ExtraValues, data, ExtraValues_Count * 4);
+                ExtraValues = new intptr_t[ExtraValues_Count];
+                memcpy(ExtraValues, data, ExtraValues_Count * sizeof(mValue));
             }
 
             break;
@@ -631,20 +633,20 @@ IMB_Result IntelMetadataBuffer::Serialize(uint8_t* &data, uint32_t& size)
             return IMB_INVAL_PARAM;
 
         //assemble bytes according members
-        mSize = 8;
+        mSize = sizeof(mType) + sizeof(mValue);
         if (mInfo)
         {
             mSize += sizeof(ValueInfo);
             if (mExtraValues)
-                mSize += 4 * mExtraValues_Count;
+                mSize += sizeof(mValue) * mExtraValues_Count;
         }
 
         mBytes = new uint8_t[mSize];
         uint8_t *ptr = mBytes;
-        memcpy(ptr, &mType, 4);
-        ptr += 4;
-        memcpy(ptr, &mValue, 4);
-        ptr += 4;
+        memcpy(ptr, &mType, sizeof(mType));
+        ptr += sizeof(mType);
+        memcpy(ptr, &mValue, sizeof(mValue));
+        ptr += sizeof(mValue);
 
         if (mInfo)
         {
@@ -655,7 +657,7 @@ IMB_Result IntelMetadataBuffer::Serialize(uint8_t* &data, uint32_t& size)
             ptr += sizeof(ValueInfo);
 
             if (mExtraValues)
-                memcpy(ptr, mExtraValues, mExtraValues_Count * 4);
+                memcpy(ptr, mExtraValues, mExtraValues_Count * sizeof(mValue));
         }
     }
 
@@ -687,7 +689,7 @@ IMB_Result IntelMetadataBuffer::SetSessionFlag(uint32_t sessionflag)
 
 IMB_Result IntelMetadataBuffer::ShareValue(sp<MemoryBase> mem)
 {
-    mValue = (int32_t)((int) ( mem->pointer() + 0x0FFF) & ~0x0FFF);
+    mValue = (intptr_t)((intptr_t) ( mem->pointer() + 0x0FFF) & ~0x0FFF);
 
     if (mSessionFlag == 0) //no sharing
         return IMB_SUCCESS;
@@ -703,9 +705,10 @@ IMB_Result IntelMetadataBuffer::ShareValue(sp<MemoryBase> mem)
 
         //send pid, sessionflag, and value
         pid_t pid = getpid();
+        //TODO: if pid is int32?
         data.writeInt32(pid);
         data.writeInt32(mSessionFlag);
-        data.writeInt32(mValue);
+        data.writeIntPtr(mValue);
 
         //send type/obj (offset/size/MemHeap)
         ShareMemMap smem;
@@ -719,7 +722,7 @@ IMB_Result IntelMetadataBuffer::ShareValue(sp<MemoryBase> mem)
             return IMB_SERVICE_FAIL;
 
         //set new value gotten from peer
-        mValue = reply.readInt32();
+        mValue = reply.readIntPtr();
 //        LOGI("ShareValue(membase) Get reply from sevice, new value:%x\n", mValue);
     }
     else  //is local provider , direct access list
@@ -739,7 +742,7 @@ IMB_Result IntelMetadataBuffer::ShareValue(sp<MemoryBase> mem)
 
 IMB_Result IntelMetadataBuffer::ShareValue(sp<GraphicBuffer> gbuffer)
 {
-    mValue = (int32_t)gbuffer->handle;
+    mValue = (intptr_t)gbuffer->handle;
 
     if (mSessionFlag == 0) //no sharing
         return IMB_SUCCESS;
@@ -754,9 +757,10 @@ IMB_Result IntelMetadataBuffer::ShareValue(sp<GraphicBuffer> gbuffer)
 
         //send pid, sessionflag, and memtype
         pid_t pid = getpid();
+        //TODO: if pid is int32 ?
         data.writeInt32(pid);
         data.writeInt32(mSessionFlag);
-        data.writeInt32(mValue);
+        data.writeIntPtr(mValue);
 
         //send value/graphicbuffer obj
         ShareMemMap smem;
@@ -770,7 +774,7 @@ IMB_Result IntelMetadataBuffer::ShareValue(sp<GraphicBuffer> gbuffer)
             return IMB_SERVICE_FAIL;
 
         //set new value gotten from peer
-        mValue = reply.readInt32();
+        mValue = reply.readIntPtr();
 //        LOGI("ShareValue(gfx) Get reply from sevice, new value:%x\n", mValue);
     }
     else //is local provider, direct access list
@@ -810,6 +814,7 @@ IMB_Result IntelMetadataBuffer::ClearContext(uint32_t sessionflag, bool isProvid
 
         //send pid and sessionflag
         pid_t pid = getpid();
+        //TODO: if pid is int32?
         data.writeInt32(pid);
         data.writeInt32(sessionflag);
 

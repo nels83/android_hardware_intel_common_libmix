@@ -1532,7 +1532,7 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
 
     map->setVASurface(surface);  //special case, vasuface is set, so nothing do in doMapping
 //    map->setType(MetadataBufferTypeEncoder);
-    map->setValue((int32_t)*usrptr);
+    map->setValue((intptr_t)*usrptr);
     ValueInfo vinfo;
     memset(&vinfo, 0, sizeof(ValueInfo));
     vinfo.mode = (MemMode)MEM_MODE_USRPTR;
@@ -1576,7 +1576,7 @@ Encode_Status VideoEncoderBase::setUpstreamBuffer(VideoParamsUpstreamBuffer *upS
         ValueInfo vinfo;
         memset(&vinfo, 0, sizeof(ValueInfo));
         vinfo.mode = (MemMode)upStreamBuffer->bufferMode;
-        vinfo.handle = (uint32_t)upStreamBuffer->display;
+        vinfo.handle = (intptr_t)upStreamBuffer->display;
         vinfo.size = 0;
         if (upStreamBuffer->bufAttrib) {
             vinfo.width = upStreamBuffer->bufAttrib->realWidth;
@@ -1602,10 +1602,10 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
 
     Encode_Status ret = ENCODE_SUCCESS;
     IntelMetadataBufferType type;
-    int32_t value;
+    intptr_t value;
     ValueInfo vinfo;
     ValueInfo *pvinfo = &vinfo;
-    int32_t *extravalues = NULL;
+    intptr_t *extravalues = NULL;
     unsigned int extravalues_count = 0;
 
     IntelMetadataBuffer imb;
@@ -1630,7 +1630,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
         }
 
         type = IntelMetadataBufferTypeUser;
-        value = (int32_t)inBuffer->data;
+        value = (intptr_t)inBuffer->data;
     }
 
 #ifdef INTEL_VIDEO_XPROC_SHARING

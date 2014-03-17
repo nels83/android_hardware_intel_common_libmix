@@ -159,7 +159,7 @@ static int gfx_Blit(buffer_handle_t src, buffer_handle_t dest,
     return err;
 }
 
-Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
+Encode_Status GetGfxBufferInfo(intptr_t handle, ValueInfo& vinfo){
 
     /* only support OMX_INTEL_COLOR_FormatYUV420PackedSemiPlanar
                                 HAL_PIXEL_FORMAT_NV12
@@ -204,7 +204,7 @@ Encode_Status GetGfxBufferInfo(int32_t handle, ValueInfo& vinfo){
 }
 
 #ifdef GFX_DUMP
-void DumpGfx(int32_t handle, char* filename) {
+void DumpGfx(intptr_t handle, char* filename) {
     ValueInfo vinfo;
     void* vaddr[3];
     FILE* fp;
@@ -306,8 +306,8 @@ Encode_Status VASurfaceMap::doMapping() {
                 if (gfx_alloc(width, height, HAL_PIXEL_FORMAT_NV12, usage, &mGfxHandle, &stride) != 0)
                     return ENCODE_DRIVER_FAIL;
 
-                LOG_I("Create an new gfx buffer handle 0x%08x for color convert, width=%d, height=%d, stride=%d\n",
-                           (unsigned int)mGfxHandle, width, height, stride);
+                LOG_I("Create an new gfx buffer handle 0x%p for color convert, width=%d, height=%d, stride=%d\n",
+                           mGfxHandle, width, height, stride);
             }
 
         #else
@@ -333,7 +333,7 @@ Encode_Status VASurfaceMap::doMapping() {
         #ifdef IMG_GFX
             if (mGfxHandle != NULL) {
                 //map new gfx handle to vasurface
-                ret = MappingGfxHandle((int32_t)mGfxHandle);
+                ret = MappingGfxHandle((intptr_t)mGfxHandle);
                 CHECK_ENCODE_STATUS_RETURN("MappingGfxHandle");
                 LOGI("map new allocated gfx handle to vaSurface\n");
             } else
@@ -368,7 +368,7 @@ Encode_Status VASurfaceMap::MappingToVASurface() {
         LOG_I("VASurface is already set before, nothing to do here\n");
         return ENCODE_SUCCESS;
     }
-    LOG_I("MappingToVASurface mode=%d, value=%x\n", mVinfo.mode, mValue);
+    LOG_I("MappingToVASurface mode=%d, value=%p\n", mVinfo.mode, (void*)mValue);
 
     const char *mode = NULL;
     switch (mVinfo.mode) {
@@ -399,12 +399,12 @@ Encode_Status VASurfaceMap::MappingToVASurface() {
     }
 
     LOG_I("%s: Format=%x, lumaStride=%d, width=%d, height=%d\n", mode, mVinfo.format, mVinfo.lumaStride, mVinfo.width, mVinfo.height);
-    LOG_I("vaSurface 0x%08x is created for value = 0x%08x", mVASurface, mValue);
+    LOG_I("vaSurface 0x%08x is created for value = 0x%p\n", mVASurface, (void*)mValue);
 
     return ret;
 }
 
-Encode_Status VASurfaceMap::MappingSurfaceID(int32_t value) {
+Encode_Status VASurfaceMap::MappingSurfaceID(intptr_t value) {
 
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VASurfaceID surface;
@@ -425,7 +425,7 @@ Encode_Status VASurfaceMap::MappingSurfaceID(int32_t value) {
             &lumaOffset, &chromaUOffset, &chromaVOffset, &kBufHandle, NULL);
 
     CHECK_VA_STATUS_RETURN("vaLockSurface");
-    LOG_I("Surface incoming = 0x%08x\n", value);
+    LOG_I("Surface incoming = 0x%p\n", (void*)value);
     LOG_I("lumaStride = %d, chromaUStride = %d, chromaVStride=%d\n", lumaStride, chromaUStride, chromaVStride);
     LOG_I("lumaOffset = %d, chromaUOffset = %d, chromaVOffset = %d\n", lumaOffset, chromaUOffset, chromaVOffset);
     LOG_I("kBufHandle = 0x%08x, fourCC = %d\n", kBufHandle, fourCC);
@@ -446,9 +446,9 @@ Encode_Status VASurfaceMap::MappingSurfaceID(int32_t value) {
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VASurfaceMap::MappingGfxHandle(int32_t value) {
+Encode_Status VASurfaceMap::MappingGfxHandle(intptr_t value) {
 
-    LOG_I("MappingGfxHandle %x......\n", value);
+    LOG_I("MappingGfxHandle %p......\n", (void*)value);
     LOG_I("format = 0x%08x, lumaStride = %d in ValueInfo\n", mVinfo.format, mVinfo.lumaStride);
 
     //default value for all HW platforms, maybe not accurate
@@ -482,9 +482,9 @@ Encode_Status VASurfaceMap::MappingGfxHandle(int32_t value) {
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VASurfaceMap::MappingKbufHandle(int32_t value) {
+Encode_Status VASurfaceMap::MappingKbufHandle(intptr_t value) {
 
-    LOG_I("MappingKbufHandle value=%d\n", value);
+    LOG_I("MappingKbufHandle value=%p\n", (void*)value);
 
     mVinfo.size = mVinfo.lumaStride * mVinfo.height * 1.5;
     mVASurface = CreateSurfaceFromExternalBuf(value, mVinfo);
@@ -498,7 +498,7 @@ Encode_Status VASurfaceMap::MappingKbufHandle(int32_t value) {
     return ENCODE_SUCCESS;
 }
 
-Encode_Status VASurfaceMap::MappingMallocPTR(int32_t value) {
+Encode_Status VASurfaceMap::MappingMallocPTR(intptr_t value) {
 
     mVASurface = CreateSurfaceFromExternalBuf(value, mVinfo);
     if (mVASurface == VA_INVALID_SURFACE)
@@ -518,7 +518,7 @@ Encode_Status VASurfaceMap::doActionCopy() {
 
     uint32_t width = 0, height = 0, stride = 0;
     uint8_t *pSrcBuffer, *pDestBuffer;
-    int32_t handle = 0;
+    intptr_t handle = 0;
 
     LOG_I("Copying Src Buffer data to VASurface\n");
 
@@ -553,7 +553,7 @@ Encode_Status VASurfaceMap::doActionCopy() {
         ValueInfo tmp;
 
         if (mGfxHandle)
-            handle = (int32_t) mGfxHandle;
+            handle = (intptr_t) mGfxHandle;
         else
             handle = mValue;
 
@@ -659,7 +659,7 @@ Encode_Status VASurfaceMap::doActionColConv() {
   #ifdef GFX_DUMP
     LOG_I("dumpping gfx data.....\n");
     DumpGfx(mValue, "/data/dump.rgb");
-    DumpGfx((int32_t)mGfxHandle, "/data/dump.yuv");
+    DumpGfx((intptr_t)mGfxHandle, "/data/dump.yuv");
   #endif
     return ENCODE_SUCCESS;
 
@@ -668,7 +668,7 @@ Encode_Status VASurfaceMap::doActionColConv() {
 #endif
 }
 
-VASurfaceID VASurfaceMap::CreateSurfaceFromExternalBuf(int32_t value, ValueInfo& vinfo) {
+VASurfaceID VASurfaceMap::CreateSurfaceFromExternalBuf(intptr_t value, ValueInfo& vinfo) {
 
     VAStatus vaStatus;
     VASurfaceAttribExternalBuffers extbuf;

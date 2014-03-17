@@ -294,7 +294,7 @@ public:
         if (mMetadata)
             memcpy ((*buffer)->data(), data, size);
         else {
-            offset = ((int)((*buffer)->data() + 0x0FFF) & ~0x0FFF) - (int)(*buffer)->data();
+            offset = ((intptr_t)((*buffer)->data() + 0x0FFF) & ~0x0FFF) - (intptr_t)(*buffer)->data();
             memcpy ((*buffer)->data() + offset, data, size);
         }
         (*buffer)->set_range(offset, size);
@@ -396,8 +396,8 @@ public:
             mMallocPtr[i] = (uint8_t*) malloc(size + 4095);
 
             //keep address 4K aligned
-            mUsrptr[i] = (uint8_t*)((((uint32_t )mMallocPtr[i] + 4095) / 4096 ) * 4096);
-            mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeCameraSource, (int32_t) mUsrptr[i]);
+            mUsrptr[i] = (uint8_t*)((((intptr_t)mMallocPtr[i] + 4095) / 4096 ) * 4096);
+            mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeCameraSource, (intptr_t) mUsrptr[i]);
             mIMB[i]->SetValueInfo(&vinfo);
 //            LOG("Malloc address=%x\n", mUsrptr[i]);
         }
@@ -447,7 +447,7 @@ public:
         {
             mBuffers[i] = new MemoryBase(mHeap, i * size, size);
 
-            mUsrptr[i] = (uint8_t*) ((int) (mBuffers[i]->pointer() + 0x0FFF) & ~0x0FFF);
+            mUsrptr[i] = (uint8_t*) ((intptr_t) (mBuffers[i]->pointer() + 0x0FFF) & ~0x0FFF);
 
             mIMB[i] = new IntelMetadataBuffer();
             mIMB[i]->SetType(IntelMetadataBufferTypeCameraSource);
@@ -455,10 +455,10 @@ public:
             mIMB[i]->SetSessionFlag(mSessionFlag);
             mIMB[i]->ShareValue(mBuffers[i]);
 #else
-            mIMB[i]->SetValue((int32_t)mUsrptr[i]);
+            mIMB[i]->SetValue((intptr_t)mUsrptr[i]);
 #endif
             mIMB[i]->SetValueInfo(&vinfo);
-            LOG("MemHeap local address=%x\n", mUsrptr[i]);
+            LOG("MemHeap local address=%p\n", mUsrptr[i]);
         }
 
         return OK;
@@ -575,7 +575,7 @@ public:
         ValueInfo vinfo;
         memset(&vinfo, 0, sizeof(ValueInfo));
         vinfo.mode = MEM_MODE_SURFACE;
-        vinfo.handle = (uint32_t) mVADisplay;
+        vinfo.handle = (intptr_t) mVADisplay;
         vinfo.size = 0;
         vinfo.width = mWidth;
         vinfo.height = mHeight;
@@ -679,7 +679,7 @@ public:
             mIMB[i]->SetSessionFlag(mSessionFlag);
             mIMB[i]->ShareValue(mGraphicBuffer[i]);
 #else
-            mIMB[i]->SetValue((int32_t)mGraphicBuffer[i]->handle);
+            mIMB[i]->SetValue((intptr_t)mGraphicBuffer[i]->handle);
 #endif
             mIMB[i]->SetValueInfo(&vinfo);
 
@@ -734,7 +734,7 @@ public:
             if (gfx_alloc(mWidth, mHeight, mColorFormat, usage, &mHandle[i], (int32_t*)&mStride) != 0)
                 return UNKNOWN_ERROR;
 
-            mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeGrallocSource, (int32_t)mHandle[i]);
+            mIMB[i] = new IntelMetadataBuffer(IntelMetadataBufferTypeGrallocSource, (intptr_t)mHandle[i]);
             IMG_native_handle_t* h = (IMG_native_handle_t*) mHandle[i];
 //            mWidth = h->iWidth;
             mHeight = h->iHeight;
