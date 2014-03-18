@@ -49,6 +49,7 @@ VideoEncoderBase::VideoEncoderBase()
     ,mFrameSkipped(false)
     ,mSupportedSurfaceMemType(0)
     ,mVASurfaceMappingAction(0)
+    ,mEncPackedHeaders(VA_ATTRIB_NOT_SUPPORTED)
 #ifdef INTEL_VIDEO_XPROC_SHARING
     ,mSessionFlag(0)
 #endif
@@ -120,23 +121,56 @@ Encode_Status VideoEncoderBase::start() {
 
     queryAutoReferenceConfig(mComParams.profile);
 
-    VAConfigAttrib vaAttrib[5];
-    vaAttrib[0].type = VAConfigAttribRTFormat;
-    vaAttrib[1].type = VAConfigAttribRateControl;
-    vaAttrib[2].type = VAConfigAttribEncAutoReference;
-    vaAttrib[3].type = VAConfigAttribEncPackedHeaders;
-    vaAttrib[4].type = VAConfigAttribEncMaxRefFrames;
+    VAConfigAttrib vaAttrib_tmp[6],vaAttrib[VAConfigAttribTypeMax];
+    int vaAttribNumber = 0;
+    vaAttrib_tmp[0].type = VAConfigAttribRTFormat;
+    vaAttrib_tmp[1].type = VAConfigAttribRateControl;
+    vaAttrib_tmp[2].type = VAConfigAttribEncAutoReference;
+    vaAttrib_tmp[3].type = VAConfigAttribEncPackedHeaders;
+    vaAttrib_tmp[4].type = VAConfigAttribEncMaxRefFrames;
+    vaAttrib_tmp[5].type = VAConfigAttribEncRateControlExt;
 
     vaStatus = vaGetConfigAttributes(mVADisplay, mComParams.profile,
-            VAEntrypointEncSlice, &vaAttrib[0], 5);
+            VAEntrypointEncSlice, &vaAttrib_tmp[0], 6);
     CHECK_VA_STATUS_RETURN("vaGetConfigAttributes");
 
-    mEncPackedHeaders = vaAttrib[3].value;
-    mEncMaxRefFrames = vaAttrib[4].value;
+    if((vaAttrib_tmp[0].value & VA_RT_FORMAT_YUV420) != 0)
+    {
+        vaAttrib[vaAttribNumber].type = VAConfigAttribRTFormat;
+        vaAttrib[vaAttribNumber].value = VA_RT_FORMAT_YUV420;
+        vaAttribNumber++;
+    }
 
-    vaAttrib[0].value = VA_RT_FORMAT_YUV420;
-    vaAttrib[1].value = mComParams.rcMode;
-    vaAttrib[2].value = mAutoReference ? 1 : VA_ATTRIB_NOT_SUPPORTED;
+    vaAttrib[vaAttribNumber].type = VAConfigAttribRateControl;
+    vaAttrib[vaAttribNumber].value = mComParams.rcMode;
+    vaAttribNumber++;
+
+    vaAttrib[vaAttribNumber].type = VAConfigAttribEncAutoReference;
+    vaAttrib[vaAttribNumber].value = mAutoReference ? 1 : VA_ATTRIB_NOT_SUPPORTED;
+    vaAttribNumber++;
+
+    if(vaAttrib_tmp[3].value != VA_ATTRIB_NOT_SUPPORTED)
+    {
+        vaAttrib[vaAttribNumber].type = VAConfigAttribEncPackedHeaders;
+        vaAttrib[vaAttribNumber].value = vaAttrib[3].value;
+        vaAttribNumber++;
+        mEncPackedHeaders = vaAttrib[3].value;
+    }
+
+    if(vaAttrib_tmp[4].value != VA_ATTRIB_NOT_SUPPORTED)
+    {
+        vaAttrib[vaAttribNumber].type = VAConfigAttribEncMaxRefFrames;
+        vaAttrib[vaAttribNumber].value = vaAttrib[4].value;
+        vaAttribNumber++;
+        mEncMaxRefFrames = vaAttrib[4].value;
+    }
+
+    if(vaAttrib_tmp[5].value != VA_ATTRIB_NOT_SUPPORTED)
+    {
+        vaAttrib[vaAttribNumber].type = VAConfigAttribEncRateControlExt;
+        vaAttrib[vaAttribNumber].value = mComParams.numberOfLayer;
+        vaAttribNumber++;
+    }
 
     LOG_V( "======VA Configuration======\n");
     LOG_I( "profile = %d\n", mComParams.profile);
@@ -147,12 +181,14 @@ Encode_Status VideoEncoderBase::start() {
     LOG_I( "vaAttrib[0].value (Format) = %d\n", vaAttrib[0].value);
     LOG_I( "vaAttrib[1].value (RC mode) = %d\n", vaAttrib[1].value);
     LOG_I( "vaAttrib[2].value (AutoReference) = %d\n", vaAttrib[2].value);
+    LOG_I( "vaAttribNumber is %d\n", vaAttribNumber);
+    LOG_I( "mComParams.numberOfLayer is %d\n", mComParams.numberOfLayer);
 
     LOG_V( "vaCreateConfig\n");
 
     vaStatus = vaCreateConfig(
             mVADisplay, mComParams.profile, mVAEntrypoint,
-            &vaAttrib[0], 2, &(mVAConfig));
+            &vaAttrib[0], vaAttribNumber, &(mVAConfig));
 //            &vaAttrib[0], 3, &(mVAConfig));  //uncomment this after psb_video supports
     CHECK_VA_STATUS_RETURN("vaCreateConfig");
 
