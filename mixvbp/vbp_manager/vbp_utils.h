@@ -31,9 +31,6 @@
 #include "viddec_pm.h"
 #include "vbp_trace.h"
 #include <stdlib.h>
-#include "vbp_loader.h"
-
-#include <sys/time.h>
 
 #define MAGIC_NUMBER 0x0DEADBEEF
 #define MAX_WORKLOAD_ITEMS 1000
@@ -71,13 +68,6 @@ typedef uint32 (*function_populate_query_data)(vbp_context* cxt);
 typedef uint32 (*function_update_data)(vbp_context* cxt, void *newdata, uint32 size);
 #endif
 
-typedef enum
-{
-    SCHEME_BUNDLE = 0,
-    SCHEME_SEQUENTIAL,
-} threading_parse_scheme_t;
-
-
 struct vbp_context_t
 {
     /* magic number */
@@ -103,13 +93,6 @@ struct vbp_context_t
 
     /* parser type specific data*/
     void *parser_private;
-
-    /* multithreading */
-    uint32 thread_count;
-    void *thread_opaque;
-    uint32 is_multithread_parsing_enabled;
-
-    threading_parse_scheme_t  threading_parse_scheme;
 
     function_init_parser_entries func_init_parser_entries;
     function_allocate_query_data func_allocate_query_data;

@@ -39,21 +39,6 @@
 #include "vbp_h264secure_parser.h"
 #endif
 
-#ifdef USE_MULTI_THREADING
-#include "vbp_thread.h"
-#endif
-
-#define LEAST_SLICES_MULTI_THREADING 10
-
-typedef long long int nsecs_t;
-
-static nsecs_t systemTime()
-{
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return 1000000 * t.tv_sec + t.tv_usec;
-}
-
 
 /* buffer counter */
 uint32 buffer_counter = 0;
@@ -318,36 +303,12 @@ cleanup:
 }
 
 
-static void vbp_setup_parser_for_item(viddec_pm_cxt_t *cxt, uint32 item)
-{
-    /* setup bitstream parser */
-    cxt->getbits.bstrm_buf.buf_index = cxt->list.data[item].stpos;
-    cxt->getbits.bstrm_buf.buf_st = cxt->list.data[item].stpos;
-    cxt->getbits.bstrm_buf.buf_end = cxt->list.data[item].edpos;
-
-    /* It is possible to end up with buf_offset not equal zero. */
-    cxt->getbits.bstrm_buf.buf_bitoff = 0;
-
-    cxt->getbits.au_pos = 0;
-    cxt->getbits.list_off = 0;
-    cxt->getbits.phase = 0;
-    cxt->getbits.emulation_byte_counter = 0;
-
-    cxt->list.start_offset = cxt->list.data[item].stpos;
-    cxt->list.end_offset = cxt->list.data[item].edpos;
-    cxt->list.total_bytes = cxt->list.data[item].edpos - cxt->list.data[item].stpos;
-
-}
-
 
 /**
  *
  * parse the elementary sample buffer or codec configuration data
  *
  */
-//static uint32 frame_num = 0;
-//static nsecs_t total_time_of_multislice = 0;
-//static uint32 frame_multislice_num = 0;
 static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_flag)
 {
     viddec_pm_cxt_t *cxt = pcontext->parser_cxt;
@@ -378,7 +339,6 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
     }
     */
 
-    uint32_t multi_parse_done = 0;
 
     /* populate the list.*/
     if (init_data_flag)
@@ -404,176 +364,48 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
 
     // TODO: check if cxt->getbits.is_emul_reqd is set properly
 
-    //frame_num ++;
+    for (i = 0; i < cxt->list.num_items; i++)
+    {
+        /* setup bitstream parser */
+        cxt->getbits.bstrm_buf.buf_index = cxt->list.data[i].stpos;
+        cxt->getbits.bstrm_buf.buf_st = cxt->list.data[i].stpos;
+        cxt->getbits.bstrm_buf.buf_end = cxt->list.data[i].edpos;
 
-    nsecs_t t0, t1, t2, tt0, tt1, tt2;
-    t0 = t1 = t2 = tt0 = tt1 = tt2 = 0;
-    //t0 = systemTime();
+        /* It is possible to end up with buf_offset not equal zero. */
+        cxt->getbits.bstrm_buf.buf_bitoff = 0;
 
-    if (0 == pcontext->is_multithread_parsing_enabled) {
-        for (i = 0; i < cxt->list.num_items; i++) {
-            vbp_setup_parser_for_item(cxt, i);
-            /* invoke parse entry point to parse the buffer */
-            //t1 = systemTime();
-            error = ops->parse_syntax((void *)cxt, (void *)&(cxt->codec_data[0]));
-            //t2 = systemTime();
-            //tt1 += t2 - t1;
+        cxt->getbits.au_pos = 0;
+        cxt->getbits.list_off = 0;
+        cxt->getbits.phase = 0;
+        cxt->getbits.emulation_byte_counter = 0;
 
-            /* can't return error for now. Neet further investigation */
-            if (0 != error) {
-                WTRACE("failed to parse the syntax: %d!", error);
-            }
+        cxt->list.start_offset = cxt->list.data[i].stpos;
+        cxt->list.end_offset = cxt->list.data[i].edpos;
+        cxt->list.total_bytes = cxt->list.data[i].edpos - cxt->list.data[i].stpos;
 
-            /* process parsing result */
-            //t2 = systemTime();
-            error = pcontext->func_process_parsing_result(pcontext, i);
-            //tt2 += systemTime() - t2;
+        /* invoke parse entry point to parse the buffer */
+        error = ops->parse_syntax((void *)cxt, (void *)&(cxt->codec_data[0]));
 
-            if (VBP_MULTI == error) {
-                ITRACE("Multiple frames are found in one bufffer.");
-                return VBP_OK;
-            }
-            else if (0 != error) {
-                ETRACE("Failed to process parsing result.");
-                return error;
-            }
-        }
-    }
-    // Multi-threading option is enabled
-    else if (1 == pcontext->is_multithread_parsing_enabled) {
-
-        int got_output = 0;
-        int is_payload_start = 0;
-        int single_parse_count = 0;
-        int use_thread_parsing = 0;
-
-        for (i = 0; i < cxt->list.num_items; i++) {
-
-            vbp_setup_parser_for_item(cxt, i);
-
-            // we assume no configuration data following slice data in a frame's buffer
-            is_payload_start = ops->is_payload_start((void *)cxt);
-
-            if (is_payload_start == 0) {
-                //t1 = systemTime();
-                error = ops->parse_syntax((void *)cxt, (void *)&(cxt->codec_data[0]));
-                //tt1 += systemTime() - t1;
-
-                //t2 = systemTime();
-                error = pcontext->func_process_parsing_result(pcontext, i);
-                single_parse_count ++;
-                //tt2 += systemTime() - t2;
-            } else if (((cxt->list.num_items - single_parse_count) < LEAST_SLICES_MULTI_THREADING)) {
-                //t1 = systemTime();
-                error = ops->parse_syntax((void *)cxt, (void *)&(cxt->codec_data[0]));
-                //tt1 += systemTime() - t1;
-
-                //t2 = systemTime();
-                error = pcontext->func_process_parsing_result(pcontext, i);
-                //tt2 += systemTime() - t2;
-            } else {
-                use_thread_parsing = 1;
-                break;
-            }
-
-            if (VBP_MULTI == error) {
-                ITRACE("Multiple frames are found in one bufffer.");
-                return VBP_OK;
-            }
-            else if (0 != error) {
-                ETRACE("Failed to process parsing result.");
-                return error;
-            }
+        /* can't return error for now. Neet further investigation */
+        if (0 != error)
+        {
+            VTRACE("failed to parse the syntax: %d!", error);
         }
 
-        if (use_thread_parsing) {
-            vbp_thread_set_active(pcontext, cxt->list.num_items - single_parse_count);
-            uint32_t thread_count = vbp_thread_get_active(pcontext);
+        /* process parsing result */
+        error = pcontext->func_process_parsing_result(pcontext, i);
 
-            //t1 = systemTime();
-            if (pcontext->threading_parse_scheme == SCHEME_BUNDLE) {
-            // Multithread parsing Scheme-Bundle-Input
-            // This interface push threads to parse all slice header without interrupt.
-                vbp_thread_parse_syntax_bundle((void *)cxt,
-                                               (void *)&(cxt->codec_data[0]),
-                                               pcontext,
-                                               i); //first slice's item num
-
-                uint32_t j;
-                for (j = i; j < cxt->list.num_items; j++) {
-                    error = ops->post_parse_threading((void *)cxt,
-                                                      (void *)&(cxt->codec_data[0]),
-                                                      j-single_parse_count); // slice index
-                    error = pcontext->func_process_parsing_result(pcontext, j); // item num
-                }
-                //tt1 += systemTime() - t1;
-
-            } else if (pcontext->threading_parse_scheme == SCHEME_SEQUENTIAL) {
-            // Multithread parsing Scheme-Sequential-Input.
-            // This interface push threads to parse one slice header one time.
-                uint32_t j;
-                for (j = i; j < cxt->list.num_items; j++) {
-                    vbp_setup_parser_for_item(cxt, j);
-
-                    //t1 = systemTime();
-                    got_output = vbp_thread_parse_syntax((void *)cxt,
-                                                         (void *)&(cxt->codec_data[0]),
-                                                         pcontext);
-                    //tt1 += systemTime() - t1;
-
-                    if (got_output == 1) {
-                        //t2 = systemTime();
-                        error = ops->post_parse_threading((void *)cxt,
-                                                          (void *)&(cxt->codec_data[0]),
-                                                          //slice count with thread delay
-                                                          (j-(thread_count-1)-single_parse_count) % thread_count);
-
-                        error = pcontext->func_process_parsing_result(pcontext,
-                                                                      // item count with thread delay
-                                                                      j-(thread_count-1));
-
-                        multi_parse_done ++;
-                        //tt2 += systemTime() - t2;
-                    }
-                }
-
-                int need_to_clearance = thread_count -1;
-                cxt->getbits.bstrm_buf.buf = NULL;
-                for (i = cxt->list.num_items - need_to_clearance; i < cxt->list.num_items; i++) {
-                    //t1 = systemTime();
-                    got_output = vbp_thread_parse_syntax((void *)cxt,
-                                                         (void *)&(cxt->codec_data[0]),
-                                                         pcontext);
-                                                         //&got_output);
-                    //tt1 += systemTime() - t1;
-
-                    if (got_output == 1) {
-                        //t2 = systemTime();
-                        error = ops->post_parse_threading((void *)cxt,
-                                                          (void *)&(cxt->codec_data[0]),
-                                                          (i-single_parse_count) % thread_count);
-
-                        error = pcontext->func_process_parsing_result(pcontext, i);
-                        multi_parse_done ++;
-                        //tt2 += systemTime() - t2;
-                    }
-                }
-            }
+        if (VBP_MULTI == error) {
+            ITRACE("Multiple frames are found in one bufffer.");
+            return VBP_OK;
+        }
+        else if (0 != error)
+        {
+            ETRACE("Failed to process parsing result.");
+            return error;
         }
     }
-#if 0
-    tt0 = systemTime() - t0;
-    if (cxt->list.num_items > 8) {
-        total_time_of_multislice += tt0;
-        frame_multislice_num ++;
-        ETRACE("### ================== TIME CALCULATION =======================");
-        ETRACE("### ------------item num: %d", cxt->list.num_items);
-        ETRACE("### ------------The frame[%d] cost time: %lld us", frame_num-1, tt0);
-        ETRACE("### ------------Accumulated multi-slice frames: %d", frame_multislice_num);
-        ETRACE("### ------------Accumulated average time that multislice frame cost: %lld us", total_time_of_multislice/frame_multislice_num);
-        ETRACE("### ================== TIME CALCULATION END ===================");
-    }
-#endif
+
     return VBP_OK;
 }
 
@@ -631,21 +463,6 @@ uint32 vbp_utils_create_context(uint32 parser_type, vbp_context **ppcontext)
     *ppcontext = pcontext;
     error = VBP_OK;
 
-
-    /* default is not enabled */
-    pcontext->is_multithread_parsing_enabled = 0;
-
-#ifndef USE_AVC_SHORT_FORMAT
-#ifdef USE_MULTI_THREADING
-    if (pcontext->parser_ops->query_thread_parsing_cap != NULL) {
-        if (pcontext->parser_ops->query_thread_parsing_cap() == 1) {
-            pcontext->is_multithread_parsing_enabled = 1;
-            ITRACE("Multi-thead parsing is enabled.");
-            vbp_thread_init(pcontext);
-        }
-    }
-#endif
-#endif
 cleanup:
 
     if (VBP_OK != error)
@@ -666,12 +483,6 @@ cleanup:
  */
 uint32 vbp_utils_destroy_context(vbp_context *pcontext)
 {
-#ifdef USE_MULTI_THREADING
-    if (1 == pcontext->is_multithread_parsing_enabled) {
-        vbp_thread_free(pcontext);
-    }
-#endif
-
     /* entry point, not need to validate input parameters. */
     vbp_utils_free_parser_memory(pcontext);
     vbp_utils_uninitialize_context(pcontext);

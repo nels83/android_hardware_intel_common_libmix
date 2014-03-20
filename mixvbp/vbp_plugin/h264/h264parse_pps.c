@@ -22,8 +22,6 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
         }
         PictureParameterSet->pic_parameter_set_id = (uint8_t)code;
 
-        VTRACE("parsing PPS: id = %d", PictureParameterSet->pic_parameter_set_id);
-
         code = h264_GetVLCElement(parent, pInfo, false);
         if (code > MAX_NUM_SPS - 1)
         {
@@ -31,8 +29,6 @@ h264_Status h264_Parse_PicParameterSet(void *parent,h264_Info * pInfo,h264_PicPa
             break;
         }
         PictureParameterSet->seq_parameter_set_id = (uint8_t)code;
-
-        VTRACE("parsing PPS: refering SPS id = %d", PictureParameterSet->seq_parameter_set_id);
 
         ///// entropy_coding_mode_flag
         viddec_pm_get_bits(parent, &code, 1);

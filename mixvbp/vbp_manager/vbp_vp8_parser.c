@@ -67,10 +67,6 @@ uint32 vbp_init_parser_entries_vp8(vbp_context *pcontext)
     pcontext->parser_ops->is_frame_start = NULL;
 
     pcontext->parser_ops->flush = NULL;
-    pcontext->parser_ops->is_payload_start = NULL;
-    pcontext->parser_ops->parse_syntax_threading = NULL;
-    pcontext->parser_ops->post_parse_threading = NULL;
-    pcontext->parser_ops->query_thread_parsing_cap = NULL;
 
     return VBP_OK;
 }

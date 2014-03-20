@@ -30,10 +30,6 @@ typedef    void (*fn_flush_parser) (void *parent, void *ctxt);
 typedef    uint32_t (*fn_update_data)(void *parent, void *data, uint32_t size);
 #endif
 
-typedef    uint32_t (*fn_is_payload_start)(void *parent);
-typedef    uint32_t (*fn_parse_syntax_threading) (void *parent, void *ctxt, uint32_t thread_index);
-typedef    uint32_t (*fn_post_parse_threading) (void *parent, void *ctxt, uint32_t slice_index);
-typedef    uint32_t (*fn_query_thread_parsing_cap) (void);
 
 typedef struct
 {
@@ -49,10 +45,6 @@ typedef struct
 #if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
     fn_update_data update_data;
 #endif
-    fn_is_payload_start is_payload_start;
-    fn_parse_syntax_threading parse_syntax_threading;
-    fn_post_parse_threading post_parse_threading;
-    fn_query_thread_parsing_cap query_thread_parsing_cap;
 } viddec_parser_ops_t;
 
 
