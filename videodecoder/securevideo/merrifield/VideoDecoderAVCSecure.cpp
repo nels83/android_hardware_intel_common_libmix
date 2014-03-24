@@ -73,10 +73,6 @@ VideoDecoderAVCSecure::VideoDecoderAVCSecure(const char *mimeType)
 Decode_Status VideoDecoderAVCSecure::start(VideoConfigBuffer *buffer) {
     VTRACE("VideoDecoderAVCSecure::start");
 
-    if (buffer->flag & IS_SUBSAMPLE_ENCRYPTION) {
-        mModularMode = 1;
-    }
-
     Decode_Status status = VideoDecoderAVC::start(buffer);
     if (status != DECODE_SUCCESS) {
         return status;
@@ -322,6 +318,9 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
         VTRACE("testdata[%d] = 0x%x", i, testdata[i]);
     }
 #endif
+    if (buffer->flag & IS_SUBSAMPLE_ENCRYPTION) {
+        mModularMode = 1;
+    }
 
     if (mModularMode) {
         status = processModularInputBuffer(buffer,&data);
