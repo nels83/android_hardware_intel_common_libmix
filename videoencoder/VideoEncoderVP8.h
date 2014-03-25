@@ -45,7 +45,6 @@ private:
 	VideoConfigVP8 mVideoConfigVP8;
 	VideoParamsVP8 mVideoParamsVP8;
 	VideoConfigVP8ReferenceFrame mVideoConfigVP8ReferenceFrame;
-	VideoConfigVP8TemporalBitRateFrameRate mVideoConfigVP8TemporalBitRateFrameRate[3];
 };
 
 #endif /* __VIDEO_ENCODER_VP8_H__ */

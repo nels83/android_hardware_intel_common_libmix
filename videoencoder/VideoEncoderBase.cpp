@@ -887,6 +887,8 @@ void VideoEncoderBase::setDefaultParams() {
     mComParams.rcParams.disableFrameSkip = 0;
     mComParams.rcParams.disableBitsStuffing = 1;
     mComParams.rcParams.enableIntraFrameQPControl = 0;
+    mComParams.rcParams.temporalFrameRate = 0;
+    mComParams.rcParams.temporalID = 0;
     mComParams.cyclicFrameInterval = 30;
     mComParams.refreshType = VIDEO_ENC_NONIR;
     mComParams.airParams.airMBs = 0;
@@ -1227,8 +1229,7 @@ Encode_Status VideoEncoderBase::setConfig(VideoParamConfigSet *videoEncConfig) {
         case VideoConfigTypeSliceNum:
         case VideoConfigTypeVP8:
         case VideoConfigTypeVP8ReferenceFrame:
-        case VideoConfigTypeVP8MaxFrameSizeRatio:
-        case VideoConfigTypeVP8TemporalBitRateFrameRate:{
+        case VideoConfigTypeVP8MaxFrameSizeRatio:{
             ret = derivedSetConfig(videoEncConfig);
             break;
         }

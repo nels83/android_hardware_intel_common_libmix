@@ -231,6 +231,8 @@ struct VideoRateControlParams {
     uint32_t disableFrameSkip;
     uint32_t disableBitsStuffing;
     uint32_t enableIntraFrameQPControl;
+    uint32_t temporalFrameRate;
+    uint32_t temporalID;
 
     VideoRateControlParams &operator=(const VideoRateControlParams &other) {
         if (this == &other) return *this;
@@ -246,6 +248,8 @@ struct VideoRateControlParams {
         this->disableFrameSkip = other.disableFrameSkip;
         this->disableBitsStuffing = other.disableBitsStuffing;
         this->enableIntraFrameQPControl = other.enableIntraFrameQPControl;
+        this->temporalFrameRate = other.temporalFrameRate;
+        this->temporalID = other.temporalID;
 
         return *this;
     }
@@ -331,7 +335,6 @@ enum VideoParamConfigType {
     VideoConfigTypeVP8ReferenceFrame,
     VideoConfigTypeCIR,
     VideoConfigTypeVP8MaxFrameSizeRatio,
-    VideoConfigTypeVP8TemporalBitRateFrameRate,
 
     VideoParamsConfigExtension
 };
@@ -698,20 +701,5 @@ struct VideoConfigVP8MaxFrameSizeRatio : VideoParamConfigSet {
 
     uint32_t max_frame_size_ratio;
 };
-
-struct VideoConfigVP8TemporalBitRateFrameRate : VideoParamConfigSet {
-
-    VideoConfigVP8TemporalBitRateFrameRate() {
-        type = VideoConfigTypeVP8TemporalBitRateFrameRate;
-        size = sizeof(VideoConfigVP8TemporalBitRateFrameRate);
-    }
-
-    uint32_t layerID;
-    uint32_t bitRate;
-    uint32_t frameRate;
-};
-
-
-
 
 #endif /*  __VIDEO_ENCODER_DEF_H__ */
