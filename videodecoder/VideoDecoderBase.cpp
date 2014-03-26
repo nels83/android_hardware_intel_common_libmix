@@ -27,6 +27,9 @@
 #include <string.h>
 #include <va/va_android.h>
 #include <va/va_tpi.h>
+#ifdef  __SSE4_1__
+#include "use_util_sse4.h"
+#endif
 
 #define INVALID_PTS ((uint64_t)-1)
 #define MAXIMUM_POC  0x7FFFFFFF
@@ -1165,21 +1168,33 @@ Decode_Status VideoDecoderBase::getRawDataFromSurface(VideoRenderBuffer *renderB
     }
 
     if (size == (int32_t)vaImage.data_size) {
+#ifdef  __SSE4_1__
+        stream_memcpy(pRawData, pBuf, size);
+#else
         memcpy(pRawData, pBuf, size);
+#endif
     } else {
         // copy Y data
         uint8_t *src = (uint8_t*)pBuf;
         uint8_t *dst = pRawData;
         int32_t row = 0;
         for (row = 0; row < cropHeight; row++) {
+#ifdef  __SSE4_1__
+            stream_memcpy(dst, src, cropWidth);
+#else
             memcpy(dst, src, cropWidth);
+#endif
             dst += cropWidth;
             src += vaImage.pitches[0];
         }
         // copy interleaved V and  U data
         src = (uint8_t*)pBuf + vaImage.offsets[1];
         for (row = 0; row < cropHeight / 2; row++) {
+#ifdef  __SSE4_1__
+            stream_memcpy(dst, src, cropWidth);
+#else
             memcpy(dst, src, cropWidth);
+#endif
             dst += cropWidth;
             src += vaImage.pitches[1];
         }
