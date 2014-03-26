@@ -204,10 +204,12 @@ void h264_parse_emit_current_pic( void *parent, h264_Info *pInfo )
 void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 {
 
-    uint32_t                   i=0,nitems=0;
+    uint32_t i=0,nitems=0;
 
     ///////////////////////// Frame attributes//////////////////////////
 
+// Remove workload related stuff
+# if 0
     //Push data into current workload if first frame or frame_boundary already detected by non slice nal
     if ( (pInfo->Is_first_frame_in_stream)||(pInfo->is_frame_boundary_detected_by_non_slice_nal))
     {
@@ -227,6 +229,7 @@ void h264_parse_emit_start_new_frame( void *parent, h264_Info *pInfo )
 
         pInfo->is_current_workload_done=1;
     }
+#endif
 
     ///////////////////// SPS/////////////////////
     // h264_parse_emit_sps(parent, pInfo);

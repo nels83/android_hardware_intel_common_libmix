@@ -26,6 +26,7 @@
 #include <dlfcn.h>
 
 #include "h264.h"
+#include "h264parse.h"
 #include "vbp_loader.h"
 #include "vbp_utils.h"
 #include "vbp_h264_parser.h"
@@ -180,6 +181,33 @@ uint32 vbp_init_parser_entries_h264(vbp_context *pcontext)
 
     pcontext->parser_ops->flush = dlsym(pcontext->fd_parser, "viddec_h264_flush");;
     if (NULL == pcontext->parser_ops->flush)
+    {
+        ETRACE ("Failed to set entry point." );
+        return VBP_LOAD;
+    }
+
+    pcontext->parser_ops->is_payload_start = dlsym(pcontext->fd_parser, "viddec_h264_payload_start");
+    if (NULL == pcontext->parser_ops->is_payload_start)
+    {
+        ETRACE ("Failed to set entry point." );
+    }
+
+    pcontext->parser_ops->parse_syntax_threading = dlsym(pcontext->fd_parser, "viddec_h264_threading_parse");
+    if (NULL == pcontext->parser_ops->parse_syntax_threading)
+    {
+        ETRACE ("Failed to set entry point." );
+        return VBP_LOAD;
+    }
+
+    pcontext->parser_ops->post_parse_threading = dlsym(pcontext->fd_parser, "viddec_h264_post_parse");
+    if (NULL == pcontext->parser_ops->post_parse_threading)
+    {
+        ETRACE ("Failed to set entry point." );
+        return VBP_LOAD;
+    }
+
+    pcontext->parser_ops->query_thread_parsing_cap = dlsym(pcontext->fd_parser, "viddec_h264_query_thread_parsing_cap");
+    if (NULL == pcontext->parser_ops->query_thread_parsing_cap)
     {
         ETRACE ("Failed to set entry point." );
         return VBP_LOAD;
@@ -1022,6 +1050,7 @@ static uint32_t vbp_add_pic_data_h264(vbp_context *pcontext, int list_index)
     {
         /* partial frame */
         query_data->num_pictures = 1;
+        WTRACE("partial frame found.");
     }
 
     if (query_data->num_pictures > MAX_NUM_PICTURES)
@@ -1041,7 +1070,7 @@ static uint32_t vbp_add_pic_data_h264(vbp_context *pcontext, int list_index)
     pic_parms = pic_data->pic_parms;
 
     // relax this condition to support partial frame parsing
-
+    // TODO: Is partial frame needed to support??
     //if (parser->info.SliceHeader.first_mb_in_slice == 0)
     {
         /**
@@ -1131,6 +1160,8 @@ static uint32_t vbp_add_pic_data_h264(vbp_context *pcontext, int list_index)
         pic_parms->pic_fields.bits.constrained_intra_pred_flag = parser->info.active_PPS.constrained_intra_pred_flag;
 
         pic_parms->frame_num = parser->info.SliceHeader.frame_num;
+
+
     }
 
 
@@ -1161,7 +1192,6 @@ static uint32_t vbp_add_pic_data_h264(vbp_context *pcontext, int list_index)
         pic_parms->num_ref_idx_l1_default_active_minus1 = parser->info.active_PPS.num_ref_idx_l1_active - 1;
     }
 #endif
-
     return VBP_OK;
 }
 
@@ -1682,11 +1712,11 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
         break;
 
     case h264_NAL_UNIT_TYPE_SPS:
-        ITRACE("SPS header is parsed.");
+        VTRACE("SPS header is parsed.");
         break;
 
     case h264_NAL_UNIT_TYPE_PPS:
-        ITRACE("PPS header is parsed.");
+        VTRACE("PPS header is parsed.");
         break;
 
     case h264_NAL_UNIT_TYPE_Acc_unit_delimiter:
@@ -1694,11 +1724,11 @@ uint32 vbp_process_parsing_result_h264( vbp_context *pcontext, int i)
         break;
 
     case h264_NAL_UNIT_TYPE_EOSeq:
-        ITRACE("EOSeq is parsed.");
+        VTRACE("EOSeq is parsed.");
         break;
 
     case h264_NAL_UNIT_TYPE_EOstream:
-        ITRACE("EOStream is parsed");
+        VTRACE("EOStream is parsed");
         break;
 
     default:

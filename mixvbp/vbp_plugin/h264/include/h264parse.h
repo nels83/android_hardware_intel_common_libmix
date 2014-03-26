@@ -89,7 +89,7 @@ extern "C" {
 ////////////////////////////////////////////////////////////////////
 
 //NAL
-    extern h264_Status h264_Parse_NAL_Unit(void *parent, h264_Info* pInfo, uint8_t *nal_ref_idc);
+    extern h264_Status h264_Parse_NAL_Unit(void *parent, uint8_t *nal_unit_type, uint8_t *nal_ref_idc);
 
 ////// Slice header
     extern h264_Status h264_Parse_Slice_Layer_Without_Partitioning_RBSP(void *parent, h264_Info* pInfo, h264_Slice_Header_t *SliceHeader);
@@ -97,6 +97,12 @@ extern "C" {
     extern h264_Status h264_Parse_Slice_Header_2(void *parent, h264_Info* pInfo, h264_Slice_Header_t *SliceHeader);
     extern h264_Status h264_Parse_Slice_Header_3(void *parent, h264_Info* pInfo, h264_Slice_Header_t *SliceHeader);
 
+// For multi-thread parsing optimized.
+    extern h264_Status h264_Parse_Slice_Layer_Without_Partitioning_RBSP_opt(void *parent, h264_Info* pInfo, h264_Slice_Header_t *SliceHeader);
+    extern h264_Status h264_Parse_Slice_Header_2_opt(void *parent, h264_Info* pInfo, h264_Slice_Header_t *SliceHeader);
+    extern h264_Status h264_Parse_Slice_Header_3_opt(void *parent, h264_Info* pInfo, h264_Slice_Header_t *SliceHeader);
+
+    extern h264_Status h264_Post_Parsing_Slice_Header(void *parent, h264_Info* pInfo, h264_Slice_Header_t *next_SliceHeader);
 
 ////// SPS
     extern h264_Status h264_Parse_SeqParameterSet(void *parent, h264_Info * pInfo,seq_param_set_used_ptr SPS, vui_seq_parameters_t_not_used_ptr pVUI_Seq_Not_Used, int32_t* pOffset_ref_frame);
@@ -112,6 +118,8 @@ extern "C" {
     extern h264_Status h264_Parse_Ref_Pic_List_Reordering(void *parent,h264_Info* pInfo,h264_Slice_Header_t *SliceHeader);
     extern h264_Status h264_Parse_Pred_Weight_Table(void *parent,h264_Info* pInfo,h264_Slice_Header_t *SliceHeader);
     extern h264_Status h264_Parse_Dec_Ref_Pic_Marking(void *parent,h264_Info* pInfo,h264_Slice_Header_t *SliceHeader);
+
+    extern h264_Status h264_Parse_Pred_Weight_Table_opt(void *parent,h264_Info* pInfo,h264_Slice_Header_t *SliceHeader);
 
 
 

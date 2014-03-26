@@ -2,19 +2,23 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-#MIXVBP_LOG_ENABLE := true
+ifeq (true,$(strip $(PRODUCT_PACKAGE_DEBUG)))
+MIXVBP_LOG_ENABLE := true
+endif
 
-LOCAL_SRC_FILES :=			\
-	vbp_h264_parser.c		\
-	vbp_vc1_parser.c		\
-	vbp_loader.c			\
-	vbp_mp42_parser.c		\
-	vbp_utils.c			\
-	viddec_parse_sc.c		\
-	viddec_pm_parser_ops.c		\
-	viddec_pm_utils_bstream.c       \
+LOCAL_SRC_FILES :=                  \
+    vbp_h264_parser.c               \
+    vbp_vc1_parser.c                \
+    vbp_loader.c                    \
+    vbp_mp42_parser.c               \
+    vbp_utils.c                     \
+    viddec_parse_sc.c               \
+    viddec_pm_parser_ops.c          \
+    viddec_pm_utils_bstream.c       \
+    vbp_thread.c
 
 LOCAL_CFLAGS := -DVBP -DHOST_ONLY
+LOCAL_CFLAGS += -DUSE_MULTI_THREADING
 
 LOCAL_C_INCLUDES +=			\
 	$(LOCAL_PATH)/include		\
