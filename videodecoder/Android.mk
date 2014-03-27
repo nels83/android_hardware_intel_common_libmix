@@ -72,7 +72,7 @@ LOCAL_COPY_HEADERS := \
     VideoDecoderDefs.h
 
 ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(PLATFORM_SUPPORT_SLICE_HEADER_PARSER)),)
-    LOCAL_COPY_HEADERS += securevideo/merrifield/VideoFrameInfo.h
+    LOCAL_COPY_HEADERS += securevideo/$(TARGET_BOARD_PLATFORM)/VideoFrameInfo.h
 endif
 
 LOCAL_MODULE_TAGS := optional
