@@ -21,7 +21,7 @@ VideoEncoderVP8::VideoEncoderVP8()
         mVideoParamsVP8.num_token_partitions = 4;
         mVideoParamsVP8.kf_auto = 1;
         mVideoParamsVP8.kf_min_dist = 0;
-        mVideoParamsVP8.kf_max_dist = 30;
+        mVideoParamsVP8.kf_max_dist = 32;
         mVideoParamsVP8.min_qp = 4;
         mVideoParamsVP8.max_qp = 63;
         mVideoParamsVP8.init_qp = 26;
