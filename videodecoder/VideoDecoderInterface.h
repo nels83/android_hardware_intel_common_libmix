@@ -36,6 +36,7 @@ public:
     virtual void stop(void) = 0;
     virtual void flush() = 0;
     virtual Decode_Status decode(VideoDecodeBuffer *buffer) = 0;
+    virtual void freeSurfaceBuffers(void) = 0;
     virtual const VideoRenderBuffer* getOutput(bool draining = false, VideoErrorBuffer *output_buf = NULL) = 0;
     virtual const VideoFormatInfo* getFormatInfo(void) = 0;
     virtual Decode_Status signalRenderDone(void * graphichandler) = 0;

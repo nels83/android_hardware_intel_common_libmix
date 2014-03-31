@@ -148,6 +148,7 @@ Decode_Status VideoDecoderBase::reset(VideoConfigBuffer *buffer) {
         mVideoFormatInfo.surfaceWidth = buffer->graphicBufferWidth;
         mVideoFormatInfo.surfaceHeight = buffer->graphicBufferHeight;
     }
+    mVideoFormatInfo.actualBufferNeeded = mConfigBuffer.surfaceNumber;
     mLowDelay = buffer->flag & WANT_LOW_DELAY;
     mRawOutput = buffer->flag & WANT_RAW_OUTPUT;
     if (mRawOutput) {
@@ -218,6 +219,22 @@ void VideoDecoderBase::flush(void) {
     // initialize surface buffer without resetting mapped/raw data
     initSurfaceBuffer(false);
 
+}
+
+void VideoDecoderBase::freeSurfaceBuffers(void) {
+    if (mVAStarted == false) {
+        // nothing to free surface buffers at this stage
+        return;
+    }
+
+    pthread_mutex_lock(&mLock);
+
+    endDecodingFrame(true);
+
+    // if VA is already started, terminate VA as graphic buffers are reallocated by omxcodec
+    terminateVA();
+
+    pthread_mutex_unlock(&mLock);
 }
 
 const VideoFormatInfo* VideoDecoderBase::getFormatInfo(void) {
@@ -961,6 +978,11 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
 }
 
 Decode_Status VideoDecoderBase::terminateVA(void) {
+    if (mVAStarted == false) {
+        // VA hasn't been started yet
+        return DECODE_SUCCESS;
+    }
+
     if (mSurfaceBuffers) {
         for (int32_t i = 0; i < mNumSurfaces; i++) {
             if (mSurfaceBuffers[i].renderBuffer.rawData) {

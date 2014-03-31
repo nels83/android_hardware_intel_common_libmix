@@ -833,7 +833,8 @@ Decode_Status VideoDecoderAVC::handleNewSequence(vbp_data_h264 *data) {
     if (!rawDataMode) {
         needFlush = (mVideoFormatInfo.width > mVideoFormatInfo.surfaceWidth)
                 || (mVideoFormatInfo.height > mVideoFormatInfo.surfaceHeight)
-                || isWiDiStatusChanged();
+                || isWiDiStatusChanged()
+                || (mVideoFormatInfo.actualBufferNeeded > mConfigBuffer.surfaceNumber);
     }
 
     if (needFlush || (rawDataMode && mSizeChanged)) {
