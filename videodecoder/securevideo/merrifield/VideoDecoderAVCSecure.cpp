@@ -164,13 +164,13 @@ Decode_Status VideoDecoderAVCSecure::processModularInputBuffer(VideoDecodeBuffer
                 mSliceInfo[sliceidx].sliceHeaderByte = nalu_type;
                 mSliceInfo[sliceidx].sliceStartOffset = (nalu_offset >> 4) << 4;
                 mSliceInfo[sliceidx].sliceByteOffset = nalu_offset - mSliceInfo[sliceidx].sliceStartOffset;
-                mSliceInfo[sliceidx].sliceLength = nalu_size;
+                mSliceInfo[sliceidx].sliceLength = mSliceInfo[sliceidx].sliceByteOffset + nalu_size;
                 mSliceInfo[sliceidx].sliceSize = (mSliceInfo[sliceidx].sliceByteOffset + nalu_size + 0xF) & ~0xF;
                 VTRACE("sliceHeaderByte = 0x%x", mSliceInfo[sliceidx].sliceHeaderByte);
                 VTRACE("sliceStartOffset = %d", mSliceInfo[sliceidx].sliceStartOffset);
                 VTRACE("sliceByteOffset = %d", mSliceInfo[sliceidx].sliceByteOffset);
                 VTRACE("sliceSize = %d", mSliceInfo[sliceidx].sliceSize);
-
+                VTRACE("sliceLength = %d", mSliceInfo[sliceidx].sliceLength);
 #if 0
                 uint32_t testsize;
                 uint8_t *testdata;
