@@ -772,7 +772,9 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         }
     }
 
-    int diff = data->codec_data->num_ref_frames + 1 - mOutputWindowSize;
+    int DPBSize = getDPBSize(data);
+    // considering there is a B frame to be output, which needs to be exclued in output queue
+    int diff = DPBSize - (mOutputWindowSize - 1);
 
     if (mConfigBuffer.flag & WANT_SURFACE_PROTECTION) {
         mVideoFormatInfo.actualBufferNeeded = mConfigBuffer.surfaceNumber;
@@ -780,7 +782,7 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         // The number of actual buffer needed is
         // outputQueue + nativewindow_owned + (diff > 0 ? diff : 1) + widi_need_max + 1(available buffer)
         // while outputQueue = DPB < 8? DPB :8
-        // and diff = Reference + 1 - ouputQueue
+        // and diff = DBPSize - (outputQ - 1)
         mVideoFormatInfo.actualBufferNeeded = mOutputWindowSize + NW_CONSUMED /* Owned by native window */
                                               + (diff > 0 ? diff : 1)
 #ifndef USE_GEN_HW
