@@ -162,6 +162,7 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
     }
 
     vbp_data_h264 *data = NULL;
+    int new_sequence_to_handle = 0;
 
     if (sizeAccumulated > 0) {
         status =  VideoDecoderBase::parseBuffer(
@@ -170,6 +171,14 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
                 false,
                 (void**)&data);
         CHECK_STATUS("VideoDecoderBase::parseBuffer");
+
+        // [FIX DRC zoom issue] if one buffer contains more than one nalu
+        // for example SPS+PPS+IDR, new_sps/new_pps flags set in parseBuffer
+        // will be flushed in the following updateBuffer.
+        // So that handleNewSequence will not be handled in decodeFrame()
+        if (data->new_sps || data->new_pps) {
+            new_sequence_to_handle = 1;
+        }
     }
 
     if (sliceHeaderSize > 0) {
@@ -180,6 +189,13 @@ Decode_Status VideoDecoderAVCSecure::decode(VideoDecodeBuffer *buffer) {
                 sliceHeaderSize,
                 (void**)&data);
         CHECK_STATUS("VideoDecoderBase::updateBuffer");
+
+        // in case the flags were flushed but indeed new sequence needed to be handled.
+        if ((1 == new_sequence_to_handle) &&
+            ((data->new_sps == 0) || (data->new_pps == 0))) {
+            data->new_sps = 1;
+            data->new_pps = 1;
+        }
     }
 
     if (data == NULL) {
