@@ -1049,11 +1049,12 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *task) {
     LOG_I( "initial_qp = %d\n", rcMiscParam->initial_qp);
     LOG_I( "min_qp = %d\n", rcMiscParam->min_qp);
     LOG_I( "basic_unit_size = %d\n", rcMiscParam->basic_unit_size);
+    LOG_I( "bDirect8x8Inference = %d\n",mVideoParamsAVC.bDirect8x8Inference);
 
     // Not sure whether these settings work for all drivers
     avcSeqParams.seq_fields.bits.frame_mbs_only_flag = 1;
     avcSeqParams.seq_fields.bits.pic_order_cnt_type = 0;
-    avcSeqParams.seq_fields.bits.direct_8x8_inference_flag = 0;
+    avcSeqParams.seq_fields.bits.direct_8x8_inference_flag = mVideoParamsAVC.bDirect8x8Inference;
 
     avcSeqParams.seq_fields.bits.log2_max_frame_num_minus4 = 0;
     avcSeqParams.seq_fields.bits.log2_max_pic_order_cnt_lsb_minus4 = 2;
