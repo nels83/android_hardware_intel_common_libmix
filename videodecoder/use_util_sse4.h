@@ -34,6 +34,7 @@ inline void stream_memcpy(void* dst_buff, const void* src_buff, size_t size)
     bool isAligned = (((size_t)(src_buff) | (size_t)(dst_buff)) & 0xF) == 0;
     if (!isAligned) {
         memcpy(dst_buff, src_buff, size);
+        return;
     }
 
     static const size_t regs_count = 8;
