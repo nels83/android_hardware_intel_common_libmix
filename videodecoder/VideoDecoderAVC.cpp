@@ -772,9 +772,8 @@ void VideoDecoderAVC::updateFormatInfo(vbp_data_h264 *data) {
         }
     }
 
-    int DPBSize = getDPBSize(data);
     // considering there is a B frame to be output, which needs to be exclued in output queue
-    int diff = DPBSize - (mOutputWindowSize - 1);
+    int diff = data->codec_data->num_ref_frames + 1 - (mOutputWindowSize - 1);
 
     if (mConfigBuffer.flag & WANT_SURFACE_PROTECTION) {
         mVideoFormatInfo.actualBufferNeeded = mConfigBuffer.surfaceNumber;
