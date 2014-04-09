@@ -145,7 +145,7 @@ static int gfx_Blit(buffer_handle_t src, buffer_handle_t dest,
     IMG_gralloc_module_public_t* GrallocMod = (IMG_gralloc_module_public_t*)gModule;
 
 #ifdef MRFLD_GFX
-    err = GrallocMod->Blit(GrallocMod, src, dest, w, h, 0, 0, 0);
+    err = GrallocMod->Blit(GrallocMod, src, dest, w, h, 0, 0, 0, 0);
 #else
     err = GrallocMod->Blit2(GrallocMod, src, dest, w, h, 0, 0);
 #endif
