@@ -47,8 +47,13 @@ uint32_t viddec_parse_sc(void *in, void *pcxt, void *sc_state)
             "sub $0x10, %%eax\n\t"                 //eax-16 --> eax
             "cmp $0x10, %%eax\n\t"                 //eax >= 16?
             "jge MATCH_8_ZERO\n\t"                 //search next 16 bytes
+            "jmp END\n\t"
 
             "DATA_RET:\n\t"
+            "test $0xd555, %%edx\n\t"
+            "jz PREPARE_NEXT_MATCH\n\t"
+
+            "END:\n\t"
             "movl %%ecx, %1\n\t"                   //ecx --> ptr
             "movl %%eax, %0\n\t"                   //eax --> data_left
             : "+m"(data_left), "+m"(ptr)           //data_left --> eax, ptr -> ecx
