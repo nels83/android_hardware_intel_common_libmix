@@ -442,7 +442,7 @@ Encode_Status VASurfaceMap::MappingSurfaceID(intptr_t value) {
 
     mVASurface = CreateSurfaceFromExternalBuf(kBufHandle, mVinfo);
     if (mVASurface == VA_INVALID_SURFACE)
-        return ENCODE_DRIVER_FAIL;
+        return ENCODE_INVALID_SURFACE;
 
     mVASurfaceWidth = mVinfo.width;
     mVASurfaceHeight = mVinfo.height;
@@ -481,7 +481,7 @@ Encode_Status VASurfaceMap::MappingGfxHandle(intptr_t value) {
     vinfo.lumaStride = mVASurfaceStride;
     mVASurface = CreateSurfaceFromExternalBuf(value, vinfo);
     if (mVASurface == VA_INVALID_SURFACE)
-        return ENCODE_DRIVER_FAIL;
+        return ENCODE_INVALID_SURFACE;
 
     return ENCODE_SUCCESS;
 }
@@ -493,7 +493,7 @@ Encode_Status VASurfaceMap::MappingKbufHandle(intptr_t value) {
     mVinfo.size = mVinfo.lumaStride * mVinfo.height * 1.5;
     mVASurface = CreateSurfaceFromExternalBuf(value, mVinfo);
     if (mVASurface == VA_INVALID_SURFACE)
-        return ENCODE_DRIVER_FAIL;
+        return ENCODE_INVALID_SURFACE;
 
     mVASurfaceWidth = mVinfo.width;
     mVASurfaceHeight = mVinfo.height;
@@ -506,7 +506,7 @@ Encode_Status VASurfaceMap::MappingMallocPTR(intptr_t value) {
 
     mVASurface = CreateSurfaceFromExternalBuf(value, mVinfo);
     if (mVASurface == VA_INVALID_SURFACE)
-        return ENCODE_DRIVER_FAIL;
+        return ENCODE_INVALID_SURFACE;
 
     mVASurfaceWidth = mVinfo.width;
     mVASurfaceHeight = mVinfo.height;

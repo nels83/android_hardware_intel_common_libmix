@@ -19,6 +19,7 @@ typedef int32_t Encode_Status;
 
 // Video encode error code
 enum {
+    ENCODE_INVALID_SURFACE = -11,
     ENCODE_NO_REQUEST_DATA = -10,
     ENCODE_WRONG_STATE = -9,
     ENCODE_NOTIMPL = -8,
