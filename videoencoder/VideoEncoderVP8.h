@@ -39,6 +39,7 @@ private:
 	Encode_Status renderHRDParams(void);
 	Encode_Status renderFrameRateParams(void);
 	Encode_Status renderMaxFrameSizeParams(void);
+	Encode_Status renderLayerStructureParam(void);
         Encode_Status renderMultiTemporalBitRateFrameRate(void);
 
 

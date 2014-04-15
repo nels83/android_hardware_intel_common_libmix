@@ -301,12 +301,59 @@ Encode_Status VideoEncoderVP8::renderMultiTemporalBitRateFrameRate(void)
     return 0;
 }
 
+Encode_Status VideoEncoderVP8::renderLayerStructureParam(void)
+{
+    VABufferID layer_struc_buf;
+    VAStatus vaStatus = VA_STATUS_SUCCESS;
+    VAEncMiscParameterBuffer *misc_param;
+    VAEncMiscParameterTemporalLayerStructure *misc_layer_struc;
+
+    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
+		               VAEncMiscParameterBufferType,
+			       sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterTemporalLayerStructure),
+			       1, NULL, &layer_struc_buf);
+
+    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
+    vaMapBuffer(mVADisplay, layer_struc_buf, (void **)&misc_param);
+    misc_param->type = VAEncMiscParameterTypeTemporalLayerStructure;
+    misc_layer_struc = (VAEncMiscParameterTemporalLayerStructure *)misc_param->data;
+    memset(misc_layer_struc, 0, sizeof(*misc_layer_struc));
+
+    misc_layer_struc->number_of_layers = mComParams.numberOfLayer;
+
+    LOGE("renderLayerStructureParam misc_layer_struc->number_of_layers is %d",misc_layer_struc->number_of_layers);
+
+    if (mComParams.numberOfLayer == 2) {
+        misc_layer_struc->periodicity = 2;
+        misc_layer_struc->layer_id[0] = 0;
+        misc_layer_struc->layer_id[1] = 1;
+    }
+    if (mComParams.numberOfLayer == 3) {
+        misc_layer_struc->periodicity = 4;
+        misc_layer_struc->layer_id[0] = 0;
+        misc_layer_struc->layer_id[1] = 2;
+        misc_layer_struc->layer_id[2] = 1;
+        misc_layer_struc->layer_id[3] = 2;
+    }
+
+    vaUnmapBuffer(mVADisplay, layer_struc_buf);
+
+    vaStatus = vaRenderPicture(mVADisplay, mVAContext, &layer_struc_buf, 1);
+    CHECK_VA_STATUS_RETURN("vaRenderPicture");;
+
+    return 0;
+}
+
+
 Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
 
     Encode_Status ret = ENCODE_SUCCESS;
     LOG_V( "Begin\n");
 
     if (mFrameNum == 0) {
+        if((mComParams.numberOfLayer==2)||(mComParams.numberOfLayer==3))
+              ret = renderLayerStructureParam();
+
         ret = renderFrameRateParams();
         ret = renderRCParams();
         ret = renderHRDParams();
