@@ -1642,14 +1642,14 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
 
     if (map) {
         //has mapped, get surfaceID directly and do all necessary actions
-        LOG_I("direct find surface %d from value %x\n", map->getVASurface(), value);
+        LOG_I("direct find surface %d from value %p\n", map->getVASurface(), value);
         *sid = map->getVASurface();
         map->doMapping();
         return ret;
     }
 
     //if no found from list, then try to map value with parameters
-    LOG_I("not find surface from cache with value %x, start mapping if enough information\n", value);
+    LOG_I("not find surface from cache with value %p, start mapping if enough information\n", value);
 
     if (mStoreMetaDataInBuffers.isEnabled) {
 
@@ -1696,7 +1696,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
 
         ret = map->doMapping();
         if (ret == ENCODE_SUCCESS) {
-            LOG_I("surface mapping success, map value %x into surface %d\n", value, map->getVASurface());
+            LOG_I("surface mapping success, map value %p into surface %d\n", value, map->getVASurface());
             mSrcSurfaceMapList.push_back(map);
         } else {
             delete map;
@@ -1721,12 +1721,12 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
 
             ret = map->doMapping();
             if (ret == ENCODE_SUCCESS) {
-                LOG_I("surface mapping extravalue success, map value %x into surface %d\n", extravalues[i], map->getVASurface());
+                LOG_I("surface mapping extravalue success, map value %p into surface %d\n", extravalues[i], map->getVASurface());
                 mSrcSurfaceMapList.push_back(map);
             } else {
                 delete map;
                 map = NULL;
-                LOG_E( "surface mapping extravalue failed, extravalue is %x\n", extravalues[i]);
+                LOG_E( "surface mapping extravalue failed, extravalue is %p\n", extravalues[i]);
             }
         }
     }
@@ -1868,7 +1868,7 @@ Encode_Status VideoEncoderBase::renderHrd() {
     return ENCODE_SUCCESS;
 }
 
-VASurfaceMap *VideoEncoderBase::findSurfaceMapByValue(int32_t value) {
+VASurfaceMap *VideoEncoderBase::findSurfaceMapByValue(intptr_t value) {
     android::List<VASurfaceMap *>::iterator node;
 
     for(node = mSrcSurfaceMapList.begin(); node !=  mSrcSurfaceMapList.end(); node++)

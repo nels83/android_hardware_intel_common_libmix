@@ -85,7 +85,7 @@ private:
     Encode_Status setUpstreamBuffer(VideoParamsUpstreamBuffer *upStreamBuffer);
     Encode_Status getNewUsrptrFromSurface(uint32_t width, uint32_t height, uint32_t format,
             uint32_t expectedSize, uint32_t *outsize, uint32_t *stride, uint8_t **usrptr);
-    VASurfaceMap* findSurfaceMapByValue(int32_t value);
+    VASurfaceMap* findSurfaceMapByValue(intptr_t value);
     Encode_Status manageSrcSurface(VideoEncRawBuffer *inBuffer, VASurfaceID *sid);
     void PrepareFrameInfo(EncodeTask* task);
 

@@ -470,7 +470,7 @@ struct VideoParamsUpstreamBuffer : VideoParamConfigSet {
     }
 
     VideoBufferSharingMode bufferMode;
-    uint32_t *bufList;
+    intptr_t *bufList;
     uint32_t bufCnt;
     ExternalBufferAttrib *bufAttrib;
     void *display;
