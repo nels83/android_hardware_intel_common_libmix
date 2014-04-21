@@ -307,6 +307,7 @@ Encode_Status VideoEncoderVP8::renderLayerStructureParam(void)
     VAStatus vaStatus = VA_STATUS_SUCCESS;
     VAEncMiscParameterBuffer *misc_param;
     VAEncMiscParameterTemporalLayerStructure *misc_layer_struc;
+    uint32_t i;
 
     vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
 		               VAEncMiscParameterBufferType,
@@ -320,20 +321,12 @@ Encode_Status VideoEncoderVP8::renderLayerStructureParam(void)
     memset(misc_layer_struc, 0, sizeof(*misc_layer_struc));
 
     misc_layer_struc->number_of_layers = mComParams.numberOfLayer;
-
+    misc_layer_struc->periodicity = mComParams.nPeriodicity;
     LOGE("renderLayerStructureParam misc_layer_struc->number_of_layers is %d",misc_layer_struc->number_of_layers);
 
-    if (mComParams.numberOfLayer == 2) {
-        misc_layer_struc->periodicity = 2;
-        misc_layer_struc->layer_id[0] = 0;
-        misc_layer_struc->layer_id[1] = 1;
-    }
-    if (mComParams.numberOfLayer == 3) {
-        misc_layer_struc->periodicity = 4;
-        misc_layer_struc->layer_id[0] = 0;
-        misc_layer_struc->layer_id[1] = 2;
-        misc_layer_struc->layer_id[2] = 1;
-        misc_layer_struc->layer_id[3] = 2;
+    for(i=0;i<mComParams.nPeriodicity;i++)
+    {
+        misc_layer_struc->layer_id[i] = mComParams.nLayerID[i];
     }
 
     vaUnmapBuffer(mVADisplay, layer_struc_buf);
@@ -348,12 +341,13 @@ Encode_Status VideoEncoderVP8::renderLayerStructureParam(void)
 Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
 
     Encode_Status ret = ENCODE_SUCCESS;
-    LOG_V( "Begin\n");
 
     if (mFrameNum == 0) {
-        if((mComParams.numberOfLayer==2)||(mComParams.numberOfLayer==3))
-              ret = renderLayerStructureParam();
-
+        if(mRenderMultiTemporal)
+        {
+            ret = renderLayerStructureParam();
+            mRenderMultiTemporal = false;
+        }
         ret = renderFrameRateParams();
         ret = renderRCParams();
         ret = renderHRDParams();
@@ -483,8 +477,6 @@ Encode_Status VideoEncoderVP8::derivedSetConfig(VideoParamConfigSet *videoEncCon
 
         int layer_id;
         CHECK_NULL_RETURN_IFFAIL(videoEncConfig);
-
-        //LOGE ("%s begin",__func__);
 
         switch (videoEncConfig->type)
         {

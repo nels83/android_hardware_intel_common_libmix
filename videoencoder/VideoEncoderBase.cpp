@@ -936,6 +936,8 @@ void VideoEncoderBase::setDefaultParams() {
     mComParams.syncEncMode = false;
     mComParams.codedBufNum = 2;
     mComParams.numberOfLayer = 1;
+    mComParams.nPeriodicity = 0;
+    memset(mComParams.nLayerID,0,32*sizeof(uint32_t));
 
     mHrdParam.bufferSize = 0;
     mHrdParam.initBufferFullness = 0;
@@ -1026,6 +1028,10 @@ Encode_Status VideoEncoderBase::setParameters(
             }
 
             mComParams.numberOfLayer = numberoflayer->numberOfLayer;
+            mComParams.nPeriodicity = numberoflayer->nPeriodicity;
+            for(int i=0;i<numberoflayer->nPeriodicity;i++)
+                mComParams.nLayerID[i] = numberoflayer->nLayerID[i];
+            mRenderMultiTemporal = true;
             break;
         }
 

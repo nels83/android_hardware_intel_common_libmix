@@ -371,6 +371,8 @@ struct VideoParamsCommon : VideoParamConfigSet {
     //CodedBuffer properties
     uint32_t codedBufNum;
     uint32_t numberOfLayer;
+    uint32_t nPeriodicity;
+    uint32_t nLayerID[32];
 
     VideoParamsCommon() {
         type = VideoParamsTypeCommon;
@@ -535,7 +537,9 @@ struct VideoParamsTemporalLayerNumber : VideoParamConfigSet {
         size = sizeof(VideoParamsTemporalLayerNumber);
     }
 
-    int32_t numberOfLayer;
+    uint32_t numberOfLayer;
+    uint32_t nPeriodicity;
+    uint32_t nLayerID[32];
 };
 
 
