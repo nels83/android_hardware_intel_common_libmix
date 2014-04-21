@@ -691,7 +691,7 @@ IMB_Result IntelMetadataBuffer::ShareValue(sp<MemoryBase> mem)
 {
     mValue = (intptr_t)((intptr_t) ( mem->pointer() + 0x0FFF) & ~0x0FFF);
 
-    if (mSessionFlag == 0) //no sharing
+    if ( !(mSessionFlag & REMOTE_PROVIDER) && !(mSessionFlag & REMOTE_CONSUMER)) //no sharing
         return IMB_SUCCESS;
 
     if (mSessionFlag & REMOTE_PROVIDER) //is remote provider
@@ -744,7 +744,7 @@ IMB_Result IntelMetadataBuffer::ShareValue(sp<GraphicBuffer> gbuffer)
 {
     mValue = (intptr_t)gbuffer->handle;
 
-    if (mSessionFlag == 0) //no sharing
+    if ( !(mSessionFlag & REMOTE_PROVIDER) && !(mSessionFlag & REMOTE_CONSUMER)) //no sharing
         return IMB_SUCCESS;
 
     if (mSessionFlag & REMOTE_PROVIDER == 0) //is remote provider
@@ -794,7 +794,7 @@ IMB_Result IntelMetadataBuffer::ShareValue(sp<GraphicBuffer> gbuffer)
 
 IMB_Result IntelMetadataBuffer::ClearContext(uint32_t sessionflag, bool isProvider)
 {
-    if (sessionflag == 0) //no sharing
+    if ( !(sessionflag & REMOTE_PROVIDER) && !(sessionflag & REMOTE_CONSUMER)) //no sharing
         return IMB_SUCCESS;
 
     //clear local firstly

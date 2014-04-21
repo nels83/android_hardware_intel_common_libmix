@@ -1634,7 +1634,19 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
     }
 
 #ifdef INTEL_VIDEO_XPROC_SHARING
+    uint32_t sflag = mSessionFlag;
     imb.GetSessionFlag(mSessionFlag);
+    if (mSessionFlag != sflag) {
+        //new sharing session, flush buffer sharing cache
+        IntelMetadataBuffer::ClearContext(sflag, false);
+        //flush surfacemap cache
+        LOG_V( "Flush Src Surface Map\n");
+        while(! mSrcSurfaceMapList.empty())
+        {
+            delete (*mSrcSurfaceMapList.begin());
+            mSrcSurfaceMapList.erase(mSrcSurfaceMapList.begin());
+        }
+    }
 #endif
 
     //find if mapped
