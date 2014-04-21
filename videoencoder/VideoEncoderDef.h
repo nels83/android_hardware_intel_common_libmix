@@ -336,6 +336,7 @@ enum VideoParamConfigType {
     VideoConfigTypeVP8ReferenceFrame,
     VideoConfigTypeCIR,
     VideoConfigTypeVP8MaxFrameSizeRatio,
+    VideoConfigTypeTemperalLayerBitrateFramerate,
 
     VideoParamsConfigExtension
 };
@@ -705,6 +706,18 @@ struct VideoConfigVP8MaxFrameSizeRatio : VideoParamConfigSet {
     }
 
     uint32_t max_frame_size_ratio;
+};
+
+struct VideoConfigTemperalLayerBitrateFramerate : VideoParamConfigSet {
+
+       VideoConfigTemperalLayerBitrateFramerate() {
+                type = VideoConfigTypeTemperalLayerBitrateFramerate;
+                size = sizeof(VideoConfigTemperalLayerBitrateFramerate);
+        }
+
+        uint32_t nLayerID;
+        uint32_t bitRate;
+        uint32_t frameRate;
 };
 
 #endif /*  __VIDEO_ENCODER_DEF_H__ */

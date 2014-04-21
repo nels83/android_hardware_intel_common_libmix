@@ -167,6 +167,9 @@ protected:
     //VASurface mapping extra action
     int mVASurfaceMappingAction;
 
+    // For Temporal Layer Bitrate FrameRate settings
+    VideoConfigTemperalLayerBitrateFramerate mTemporalLayerBitrateFramerate[3];
+
 #ifdef INTEL_VIDEO_XPROC_SHARING
     uint32_t mSessionFlag;
 #endif

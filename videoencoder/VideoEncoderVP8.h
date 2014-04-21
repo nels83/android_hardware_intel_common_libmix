@@ -33,19 +33,17 @@ protected:
 
     // Local Methods
 private:
-	Encode_Status renderSequenceParams();
-	Encode_Status renderPictureParams(EncodeTask *task);
-	Encode_Status renderRCParams(void);
-	Encode_Status renderHRDParams(void);
-	Encode_Status renderFrameRateParams(void);
-	Encode_Status renderMaxFrameSizeParams(void);
-	Encode_Status renderLayerStructureParam(void);
-        Encode_Status renderMultiTemporalBitRateFrameRate(void);
+        Encode_Status renderSequenceParams();
+        Encode_Status renderPictureParams(EncodeTask *task);
+        Encode_Status renderRCParams(uint32_t layer_id, bool total_bitrate);
+        Encode_Status renderHRDParams(void);
+        Encode_Status renderFrameRateParams(uint32_t layer_id, bool total_framerate);
+        Encode_Status renderMaxFrameSizeParams(void);
+        Encode_Status renderLayerStructureParam(void);
 
-
-	VideoConfigVP8 mVideoConfigVP8;
-	VideoParamsVP8 mVideoParamsVP8;
-	VideoConfigVP8ReferenceFrame mVideoConfigVP8ReferenceFrame;
+        VideoConfigVP8 mVideoConfigVP8;
+        VideoParamsVP8 mVideoParamsVP8;
+        VideoConfigVP8ReferenceFrame mVideoConfigVP8ReferenceFrame;
 };
 
 #endif /* __VIDEO_ENCODER_VP8_H__ */

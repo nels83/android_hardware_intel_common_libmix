@@ -119,7 +119,7 @@ Encode_Status VideoEncoderVP8::renderPictureParams(EncodeTask *task) {
     return ret;
 }
 
-Encode_Status VideoEncoderVP8::renderRCParams(void)
+Encode_Status VideoEncoderVP8::renderRCParams(uint32_t layer_id, bool total_bitrate)
 {
     VABufferID rc_param_buf;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
@@ -137,7 +137,16 @@ Encode_Status VideoEncoderVP8::renderRCParams(void)
     misc_param->type = VAEncMiscParameterTypeRateControl;
     misc_rate_ctrl = (VAEncMiscParameterRateControl *)misc_param->data;
     memset(misc_rate_ctrl, 0, sizeof(*misc_rate_ctrl));
-    misc_rate_ctrl->bits_per_second = mComParams.rcParams.bitRate;
+
+    if(total_bitrate)
+        misc_rate_ctrl->bits_per_second = mComParams.rcParams.bitRate;
+    else
+    {
+        misc_rate_ctrl->rc_flags.bits.temporal_id = layer_id;
+        if(mTemporalLayerBitrateFramerate[layer_id].bitRate != 0)
+             misc_rate_ctrl->bits_per_second = mTemporalLayerBitrateFramerate[layer_id].bitRate;
+    }
+
     misc_rate_ctrl->target_percentage = 100;
     misc_rate_ctrl->window_size = 1000;
     misc_rate_ctrl->initial_qp = mVideoParamsVP8.init_qp;
@@ -152,7 +161,7 @@ Encode_Status VideoEncoderVP8::renderRCParams(void)
     return 0;
 }
 
-Encode_Status VideoEncoderVP8::renderFrameRateParams(void)
+Encode_Status VideoEncoderVP8::renderFrameRateParams(uint32_t layer_id, bool total_framerate)
 {
     VABufferID framerate_param_buf;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
@@ -171,7 +180,15 @@ Encode_Status VideoEncoderVP8::renderFrameRateParams(void)
     misc_param->type = VAEncMiscParameterTypeFrameRate;
     misc_framerate = (VAEncMiscParameterFrameRate *)misc_param->data;
     memset(misc_framerate, 0, sizeof(*misc_framerate));
-    misc_framerate->framerate = (unsigned int) (frameRateNum + frameRateDenom /2) / frameRateDenom;
+
+    if(total_framerate)
+        misc_framerate->framerate = (unsigned int) (frameRateNum + frameRateDenom /2) / frameRateDenom;
+    else
+    {
+        misc_framerate->framerate_flags.bits.temporal_id = layer_id;
+        if(mTemporalLayerBitrateFramerate[layer_id].frameRate != 0)
+            misc_framerate->framerate = mTemporalLayerBitrateFramerate[layer_id].frameRate;
+    }
 
     vaUnmapBuffer(mVADisplay, framerate_param_buf);
 
@@ -238,69 +255,6 @@ Encode_Status VideoEncoderVP8::renderMaxFrameSizeParams(void)
     return 0;
 }
 
-Encode_Status VideoEncoderVP8::renderMultiTemporalBitRateFrameRate(void)
-{
-    VABufferID rc_param_buf;
-    VABufferID framerate_param_buf;
-    VAStatus vaStatus = VA_STATUS_SUCCESS;
-    VAEncMiscParameterBuffer *misc_param;
-    VAEncMiscParameterRateControl *misc_rate_ctrl;
-    VAEncMiscParameterFrameRate *misc_framerate;
-
-    int i;
-
-    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
-			      VAEncMiscParameterBufferType,
-                              sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterRateControl),
-                              1,NULL,&rc_param_buf);
-
-    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
-
-    for(i=0;i<mComParams.numberOfLayer;i++)
-    {
-        vaMapBuffer(mVADisplay, rc_param_buf,(void **)&misc_param);
-
-	misc_param->type = VAEncMiscParameterTypeRateControl;
-        misc_rate_ctrl = (VAEncMiscParameterRateControl *)misc_param->data;
-        memset(misc_rate_ctrl, 0, sizeof(*misc_rate_ctrl));
-//        misc_rate_ctrl->bits_per_second = mVideoConfigVP8TemporalBitRateFrameRate[i].bitRate;
-        misc_rate_ctrl->rc_flags.bits.temporal_id = 0;
-        misc_rate_ctrl->target_percentage = 100;
-        misc_rate_ctrl->window_size = 1000;
-        misc_rate_ctrl->initial_qp = mVideoParamsVP8.init_qp;
-        misc_rate_ctrl->min_qp = mVideoParamsVP8.min_qp;
-        misc_rate_ctrl->basic_unit_size = 0;
-        misc_rate_ctrl->max_qp = mVideoParamsVP8.max_qp;
-        vaUnmapBuffer(mVADisplay, rc_param_buf);
-
-        vaStatus = vaRenderPicture(mVADisplay,mVAContext, &rc_param_buf, 1);
-    }
-
-    vaStatus = vaCreateBuffer(mVADisplay, mVAContext,
-                              VAEncMiscParameterBufferType,
-                              sizeof(VAEncMiscParameterBuffer) + sizeof(VAEncMiscParameterFrameRate),
-                              1,NULL,&framerate_param_buf);
-    CHECK_VA_STATUS_RETURN("vaCreateBuffer");
-
-    for(i=0;i<mComParams.numberOfLayer;i++)
-    {
-	vaMapBuffer(mVADisplay, framerate_param_buf,(void **)&misc_param);
-	misc_param->type = VAEncMiscParameterTypeFrameRate;
-	misc_framerate = (VAEncMiscParameterFrameRate *)misc_param->data;
-	memset(misc_framerate, 0, sizeof(*misc_framerate));
-	misc_framerate->framerate_flags.bits.temporal_id = i;
-//	misc_framerate->framerate = mVideoConfigVP8TemporalBitRateFrameRate[i].frameRate;
-
-        vaUnmapBuffer(mVADisplay, framerate_param_buf);
-
-	vaStatus = vaRenderPicture(mVADisplay,mVAContext, &framerate_param_buf, 1);
-    }
-
-    CHECK_VA_STATUS_RETURN("vaRenderPicture");;
-
-    return 0;
-}
-
 Encode_Status VideoEncoderVP8::renderLayerStructureParam(void)
 {
     VABufferID layer_struc_buf;
@@ -341,30 +295,40 @@ Encode_Status VideoEncoderVP8::renderLayerStructureParam(void)
 Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
 
     Encode_Status ret = ENCODE_SUCCESS;
+    uint32_t i;
 
     if (mFrameNum == 0) {
+        ret = renderSequenceParams();
+        ret = renderFrameRateParams(0,true);
+        ret = renderRCParams(0,true);
+        ret = renderHRDParams();
+        ret = renderMaxFrameSizeParams();
         if(mRenderMultiTemporal)
         {
             ret = renderLayerStructureParam();
             mRenderMultiTemporal = false;
+
         }
-        ret = renderFrameRateParams();
-        ret = renderRCParams();
-        ret = renderHRDParams();
-        ret = renderSequenceParams();
-        ret = renderMaxFrameSizeParams();
+
+        if(mComParams.numberOfLayer > 1)
+            for(i=0;i<mComParams.numberOfLayer;i++)
+            {
+                ret = renderFrameRateParams(i, false);
+                ret = renderRCParams(i, false);
+            }
+
         CHECK_ENCODE_STATUS_RETURN("renderSequenceParams");
     }
 
     if (mRenderBitRate){
-        ret = renderRCParams();
+        ret = renderRCParams(0,true);
         CHECK_ENCODE_STATUS_RETURN("renderRCParams");
 
         mRenderBitRate = false;
     }
 
     if (mRenderFrameRate) {
-        ret = renderFrameRateParams();
+        ret = renderFrameRateParams(0,true);
         CHECK_ENCODE_STATUS_RETURN("renderFrameRateParams");
 
         mRenderFrameRate = false;
@@ -375,13 +339,6 @@ Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
         CHECK_ENCODE_STATUS_RETURN("renderMaxFrameSizeParams");
 
         mRenderMaxFrameSize = false;
-    }
-
-    if (mRenderMultiTemporal) {
-        ret = renderMultiTemporalBitRateFrameRate();
-        CHECK_ENCODE_STATUS_RETURN("renderMultiTemporalBitRateFrameRate");
-
-        mRenderMultiTemporal = false;
     }
 
     ret = renderPictureParams(task);

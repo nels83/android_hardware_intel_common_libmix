@@ -1211,10 +1211,21 @@ Encode_Status VideoEncoderBase::setConfig(VideoParamConfigSet *videoEncConfig) {
             if (configBitRate->size != sizeof (VideoConfigBitRate)) {
                 return ENCODE_INVALID_PARAMS;
             }
-            mComParams.rcParams = configBitRate->rcParams;
-            mRenderBitRate = true;
+
+            if(mComParams.numberOfLayer == 1)
+            {
+                mComParams.rcParams = configBitRate->rcParams;
+                mRenderBitRate = true;
+            }
+            else
+            {
+                mTemporalLayerBitrateFramerate[configBitRate->rcParams.temporalID].nLayerID = configBitRate->rcParams.temporalID;
+                mTemporalLayerBitrateFramerate[configBitRate->rcParams.temporalID].bitRate = configBitRate->rcParams.bitRate;
+                mTemporalLayerBitrateFramerate[configBitRate->rcParams.temporalID].frameRate = configBitRate->rcParams.temporalFrameRate;
+            }
             break;
         }
+
         case VideoConfigTypeResolution: {
 
             // Not Implemented
