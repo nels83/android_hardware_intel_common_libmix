@@ -55,7 +55,30 @@ uint32_t h264_get_codeNum(void *parent, h264_Info* pInfo)
     uint32_t i = 0;
     VTRACE("bstream->buf_bitoff = %d", bstream->buf_bitoff);
     VTRACE("bstream->buf_index = %d", bstream->buf_index);
-
+#ifdef PARSER_OPT
+    viddec_pm_cxt_t *pm_cxt = (viddec_pm_cxt_t *)parent;
+    int32_t cached_word = pm_cxt->cached_word;
+    int32_t left_bnt = pm_cxt->left_bnt;
+    if (left_bnt != 0) {
+        if (cached_word == 0) {
+            leadingZeroBits += left_bnt;
+            left_bnt = 0;
+        } else {
+            match = 1;
+            count = 1;
+            left_bnt --;
+            while (((cached_word & 0x80000000) != 0x80000000) && (left_bnt > 0)) {
+                cached_word <<= 1;
+                count ++;
+                left_bnt --;
+            }
+            cached_word <<= 1;
+            leadingZeroBits += count;
+        }
+        pm_cxt->cached_word = cached_word;
+        pm_cxt->left_bnt = left_bnt;
+    }
+#endif
     while (!match)
     {
         curr_byte = *curr_addr++;
@@ -187,8 +210,12 @@ uint8_t h264_More_RBSP_Data(void *parent, h264_Info * pInfo)
 
     shift_bits = 7-bits_offset;
 
+#ifndef PARSER_OPT
     // read one byte
     viddec_pm_get_cur_byte(parent, &cur_byte);
+#else
+    viddec_pm_peek_bits(parent, &cur_byte, 8-bits_offset);
+#endif
 
     ctr_bit = ((cur_byte)>> (shift_bits--)) & 0x01;
 

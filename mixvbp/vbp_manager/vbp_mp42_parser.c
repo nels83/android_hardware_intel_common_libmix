@@ -1110,7 +1110,14 @@ uint32 vbp_process_slices_mp42(vbp_context *pcontext, int list_index)
         }
 #else
 
+#ifdef PARSER_OPT
         // read 3 bytes since resync_marker_length is between 17 bits and 23 bits
+        int bit_index = parent->getbits.bstrm_buf.buf_index * 8 + parent->getbits.bstrm_buf.buf_bitoff - parent->left_bnt;
+        parent->getbits.bstrm_buf.buf_index = bit_index >> 3;
+        parent->getbits.bstrm_buf.buf_bitoff = bit_index & 0x7;
+        parent->cached_word = 0;
+        parent->left_bnt = 0;
+#endif
         if (parent->getbits.bstrm_buf.buf_index + 3 > parent->getbits.bstrm_buf.buf_end)
         {
             break;

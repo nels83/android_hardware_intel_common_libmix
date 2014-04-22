@@ -333,6 +333,11 @@ static void vbp_setup_parser_for_item(viddec_pm_cxt_t *cxt, uint32 item)
     cxt->getbits.phase = 0;
     cxt->getbits.emulation_byte_counter = 0;
 
+#ifdef PARSER_OPT
+    cxt->cached_word = 0;
+    cxt->left_bnt = 0;
+#endif
+
     cxt->list.start_offset = cxt->list.data[item].stpos;
     cxt->list.end_offset = cxt->list.data[item].edpos;
     cxt->list.total_bytes = cxt->list.data[item].edpos - cxt->list.data[item].stpos;

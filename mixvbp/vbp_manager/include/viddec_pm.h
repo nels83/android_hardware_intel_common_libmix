@@ -28,7 +28,10 @@ typedef struct
     uint8_t late_frame_detect;
     uint8_t frame_start_found;
     uint32_t next_workload_error_eos;
-
+#ifdef PARSER_OPT
+    uint32_t cached_word;
+    uint32_t left_bnt;
+#endif
     uint32_t codec_data[MAX_CODEC_CXT_SIZE<<3];
 } viddec_pm_cxt_t;
 
