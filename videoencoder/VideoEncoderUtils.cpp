@@ -321,10 +321,6 @@ Encode_Status VASurfaceMap::doMapping() {
             mAction |= MAP_ACTION_COPY;
         }
 
-        if(mAction & MAP_ACTION_ALIGN64 && width <= 320 && height <= 240) {
-            mAction |= MAP_ACTION_COPY;
-        }
-
         if (mAction & MAP_ACTION_COPY) { //must allocate new vasurface(EXternalMemoryNULL, uncached)
             //allocate new vasurface
             mVASurface = CreateNewVASurface(mVADisplay, stride, height);
