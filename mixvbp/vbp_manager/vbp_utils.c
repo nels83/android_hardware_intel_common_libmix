@@ -427,6 +427,15 @@ static uint32 vbp_utils_parse_es_buffer(vbp_context *pcontext, uint8 init_data_f
             /* can't return error for now. Neet further investigation */
             if (0 != error) {
                 WTRACE("failed to parse the syntax: %d!", error);
+                if (pcontext->parser_type == VBP_H264
+#if (defined USE_AVC_SHORT_FORMAT || defined USE_SLICE_HEADER_PARSING)
+                    || pcontext->parser_type == VBP_H264SECURE
+#endif
+) {
+                    if (error == H264_SPS_INVALID_PROFILE) {
+                        return VBP_ERROR;
+                    }
+                }
             }
 
             /* process parsing result */

@@ -93,6 +93,9 @@ TraceVideoDecoder(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 #define CHECK_VBP_STATUS(FUNC)\
     if (vbpStatus != VBP_OK) {\
         ETRACE(FUNC" failed. vbpStatus = %d", (int)vbpStatus);\
+        if (vbpStatus == VBP_ERROR) {\
+            return DECODE_FAIL;\
+        }\
         return DECODE_PARSER_FAIL;\
     }
 
