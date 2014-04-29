@@ -7,7 +7,7 @@
 #define SCRATCH_SIZE 20
 #define MIN_DATA     8
 
-#define PARSER_OPT /* parser optimization*/
+//#define PARSER_OPT /* parser optimization*/
 
 typedef struct
 {
