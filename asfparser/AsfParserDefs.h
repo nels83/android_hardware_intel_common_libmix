@@ -108,6 +108,7 @@ struct AsfPayloadDataInfo {
     uint8_t  replicatedDataLength;
     uint8_t  *replicatedData;
     uint8_t  *sampleID; // Sample Id is always 8 bytes to be used by playready
+    uint32_t sampleIDLen;
     uint32_t presentationTime; // in milliseconds
     uint32_t offsetIntoMediaObject;
     uint32_t mediaObjectLength;

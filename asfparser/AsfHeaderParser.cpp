@@ -39,6 +39,8 @@ AsfHeaderParser::AsfHeaderParser(void)
       mFileInfo(NULL),
       mNumObjectParsed(0),
       mIsProtected(false),
+      mPlayreadyHeader(NULL),
+      mPlayreadyHeaderLen(0),
       mNumberofHeaderObjects(0) {
     mFileInfo = new AsfFileMediaInfo;
     memset(mFileInfo, 0, sizeof(AsfFileMediaInfo));

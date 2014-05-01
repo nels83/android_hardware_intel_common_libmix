@@ -242,18 +242,19 @@ int AsfSinglePayloadUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPaylo
     } else {
         ALOGD("Extension System count = %d", extSystems->size());
         // find IV in replicated data
-        int rep_data_offset = 0;
+        int replicatedDataOffset = 0;
 
         for (int i = 0; i < extSystems->size(); i++) {
             // ptr to ext system's data in replicated data buffer.
             if ((extSystems->at(i)->extensionSystemId) == ASF_Payload_Extension_System_Encryption_Sample_ID) {
-                obj->sampleID = obj->replicatedData + 8 + rep_data_offset;
+                obj->sampleID = obj->replicatedData + 8 + replicatedDataOffset;
+                obj->sampleIDLen = extSystems->at(i)->extensionDataSize;
             }
             if (extSystems->at(i)->extensionDataSize == 0xFFFF) {
-                uint16_t nSize = *((uint16_t*) (obj->replicatedData + 8 + rep_data_offset));
-                rep_data_offset += (sizeof(uint16_t) + nSize);
+                uint16_t nSize = *((uint16_t*) (obj->replicatedData + 8 + replicatedDataOffset));
+                replicatedDataOffset += (sizeof(uint16_t) + nSize);
             } else {
-                rep_data_offset += extSystems->at(i)->extensionDataSize;
+                replicatedDataOffset += extSystems->at(i)->extensionDataSize;
             }
         }
     }
@@ -429,13 +430,19 @@ int AsfMultiplePayloadsUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPa
         ALOGD("Error while parsing Payload Extension Systems");
     } else {
         // find IV in replicated data
-        int rep_data_offset = 0;
+        int replicatedDataOffset = 0;
         for (int i = 0; i < extSystems->size(); i++) {
             // ptr to ext system's data in replicated data buffer.
             if ((extSystems->at(i)->extensionSystemId) == ASF_Payload_Extension_System_Encryption_Sample_ID) {
-                obj->sampleID = obj->replicatedData + 8 + rep_data_offset;
+                obj->sampleID = obj->replicatedData + 8 + replicatedDataOffset;
+                obj->sampleIDLen = extSystems->at(i)->extensionDataSize;
             }
-            rep_data_offset = rep_data_offset + extSystems->at(i)->extensionDataSize;
+            if (extSystems->at(i)->extensionDataSize == 0xFFFF) {
+                uint16_t nSize = *((uint16_t*) (obj->replicatedData + 8 + replicatedDataOffset));
+                replicatedDataOffset += (sizeof(uint16_t) + nSize);
+            } else {
+                replicatedDataOffset += extSystems->at(i)->extensionDataSize;
+            }
         }
     }
 

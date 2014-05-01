@@ -223,7 +223,7 @@ struct AsfMultiplePayloadsCompressed {
 
 class AsfDataParser {
 public:
-    AsfDataParser(class AsfHeaderParser *mhdrparser);
+    AsfDataParser(class AsfHeaderParser *hdrparser);
     ~AsfDataParser(void);
 
 public:
