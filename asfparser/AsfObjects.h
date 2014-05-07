@@ -318,7 +318,7 @@ struct AsfBitmapInfoHeader {
     int32_t verticalPixelsPerMeter;
     uint32_t colorsUsedCount;
     uint32_t importantColorsCount;
-    uint32_t actualCompressionID;
+    //uint8_t codecSpecificData[];
 };
 
 #pragma pack(pop)

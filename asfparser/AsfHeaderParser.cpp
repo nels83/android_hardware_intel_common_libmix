@@ -319,12 +319,11 @@ int AsfHeaderParser::onVideoSpecificData(AsfStreamPropertiesObject *obj, uint8_t
     if (bmp->compressionID == FOURCC('Y', 'D', 'R', 'P')) {
         // That means PYV content
         uint32_t* ptrActCompId = (uint32_t*)((data + sizeof(AsfVideoInfoHeader) + bmp->formatDataSize - sizeof(uint32_t)));
-        bmp->actualCompressionID = *ptrActCompId;
-        videoInfo->fourCC = bmp->actualCompressionID;
-        LOGV("onVideoSpecificData() with bmp->actualCompressionID = %x", bmp->actualCompressionID);
+        videoInfo->fourCC = (*ptrActCompId);
     } else {
         videoInfo->fourCC = bmp->compressionID;
     }
+    LOGV("onVideoSpecificData() with videoInfo->fourCC = %x", videoInfo->fourCC);
 
     // TODO: get aspect ratio from video meta data
     videoInfo->aspectX = 1;
@@ -376,15 +375,14 @@ int AsfHeaderParser::onAudioSpecificData(AsfStreamPropertiesObject *obj, uint8_t
     audioInfo->streamNumber = obj->flags.bits.streamNumber;
     audioInfo->encryptedContentFlag = obj->flags.bits.encryptedContentFlag;
     audioInfo->timeOffset = obj->timeOffset;
-    LOGV("onAudioSpecificData => format->codecIDFormatTag = %x",format->codecIDFormatTag);
 
     if (format->codecIDFormatTag == 0x5052) {
         uint32_t* ptrActCodecId = (uint32_t*)((data + sizeof(AsfWaveFormatEx) + format->codecSpecificDataSize - sizeof(format->codecIDFormatTag)));
-        format->codecIDFormatTag = *ptrActCodecId;
-        audioInfo->codecID = format->codecIDFormatTag;
+        audioInfo->codecID = (*ptrActCodecId);
     } else {
         audioInfo->codecID = format->codecIDFormatTag;
     }
+    LOGV("onAudioSpecificData => format->codecIDFormatTag = %x",format->codecIDFormatTag);
 
     audioInfo->numChannels = format->numberOfChannels;
     audioInfo->sampleRate= format->samplesPerSecond;
