@@ -978,6 +978,11 @@ Decode_Status VideoDecoderBase::setupVA(int32_t numSurface, VAProfile profile, i
 }
 
 Decode_Status VideoDecoderBase::terminateVA(void) {
+    mSignalBufferSize = 0;
+    for (int i = 0; i < MAX_GRAPHIC_BUFFER_NUM; i++) {
+         mSignalBufferPre[i] = NULL;
+    }
+
     if (mVAStarted == false) {
         // VA hasn't been started yet
         return DECODE_SUCCESS;
@@ -1044,10 +1049,6 @@ Decode_Status VideoDecoderBase::terminateVA(void) {
     mVAStarted = false;
     mInitialized = false;
     mErrReportEnabled = false;
-    mSignalBufferSize = 0;
-    for (int i = 0; i < MAX_GRAPHIC_BUFFER_NUM; i++) {
-         mSignalBufferPre[i] = NULL;
-    }
     return DECODE_SUCCESS;
 }
 
