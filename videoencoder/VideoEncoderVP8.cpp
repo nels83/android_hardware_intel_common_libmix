@@ -50,6 +50,23 @@ VideoEncoderVP8::VideoEncoderVP8()
 VideoEncoderVP8::~VideoEncoderVP8() {
 }
 
+Encode_Status VideoEncoderVP8::start() {
+
+    Encode_Status ret = ENCODE_SUCCESS;
+    LOG_V( "Begin\n");
+
+    ret = VideoEncoderBase::start ();
+    CHECK_ENCODE_STATUS_RETURN("VideoEncoderBase::start");
+
+    if (mComParams.rcMode == VA_RC_VCM) {
+        mRenderBitRate = false;
+    }
+
+    LOG_V( "end\n");
+    return ret;
+}
+
+
 Encode_Status VideoEncoderVP8::renderSequenceParams() {
     Encode_Status ret = ENCODE_SUCCESS;
     VAStatus vaStatus = VA_STATUS_SUCCESS;
@@ -344,6 +361,11 @@ Encode_Status VideoEncoderVP8::sendEncodeCommand(EncodeTask *task) {
     ret = renderPictureParams(task);
     CHECK_ENCODE_STATUS_RETURN("renderPictureParams");
 
+    if(mForceKFrame) {
+        mVideoConfigVP8.force_kf = 0;//rest it as default value
+        mForceKFrame = false;
+    }
+
     LOG_V( "End\n");
     return ret;
 }
@@ -474,6 +496,15 @@ Encode_Status VideoEncoderVP8::derivedSetConfig(VideoParamConfigSet *videoEncCon
                         mRenderMaxFrameSize = true;
 		}
                 break;
+
+                case VideoConfigTypeIDRRequest:{
+                        VideoParamConfigSet *encConfigVP8KFrameRequest =
+                                reinterpret_cast<VideoParamConfigSet*> (videoEncConfig);
+
+                        mVideoConfigVP8.force_kf = 1;
+                        mForceKFrame = true;
+                 }
+                 break;
 
                 default: {
             LOG_E ("Invalid Config Type");

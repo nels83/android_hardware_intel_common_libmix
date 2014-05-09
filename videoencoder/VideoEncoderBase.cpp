@@ -29,6 +29,7 @@ VideoEncoderBase::VideoEncoderBase()
     ,mRenderBitRate(false)
     ,mRenderHrd(false)
     ,mRenderMultiTemporal(false)
+    ,mForceKFrame(false)
     ,mSeqParamBuf(0)
     ,mPicParamBuf(0)
     ,mSliceParamBuf(0)
@@ -1019,18 +1020,18 @@ Encode_Status VideoEncoderBase::setParameters(
             break;
         }
 
-        case VideoParamsTypeTemporalLayerNumber:{
-            VideoParamsTemporalLayerNumber *numberoflayer =
-                    reinterpret_cast <VideoParamsTemporalLayerNumber *> (videoEncParams);
+        case VideoParamsTypeTemporalLayer:{
+            VideoParamsTemporalLayer *temporallayer =
+                    reinterpret_cast <VideoParamsTemporalLayer *> (videoEncParams);
 
-            if (numberoflayer->size != sizeof(VideoParamsTemporalLayerNumber)) {
+            if (temporallayer->size != sizeof(VideoParamsTemporalLayer)) {
                  return ENCODE_INVALID_PARAMS;
             }
 
-            mComParams.numberOfLayer = numberoflayer->numberOfLayer;
-            mComParams.nPeriodicity = numberoflayer->nPeriodicity;
-            for(int i=0;i<numberoflayer->nPeriodicity;i++)
-                mComParams.nLayerID[i] = numberoflayer->nLayerID[i];
+            mComParams.numberOfLayer = temporallayer->numberOfLayer;
+            mComParams.nPeriodicity = temporallayer->nPeriodicity;
+            for(int i=0;i<temporallayer->nPeriodicity;i++)
+                mComParams.nLayerID[i] = temporallayer->nLayerID[i];
             mRenderMultiTemporal = true;
             break;
         }
@@ -1146,15 +1147,15 @@ Encode_Status VideoEncoderBase::getParameters(
             }
         }
 
-        case VideoParamsTypeTemporalLayerNumber:{
-            VideoParamsTemporalLayerNumber *numberoflayer =
-                reinterpret_cast <VideoParamsTemporalLayerNumber *> (videoEncParams);
+        case VideoParamsTypeTemporalLayer:{
+            VideoParamsTemporalLayer *temporallayer =
+                reinterpret_cast <VideoParamsTemporalLayer *> (videoEncParams);
 
-            if(numberoflayer->size != sizeof(VideoParamsTemporalLayerNumber)) {
+            if(temporallayer->size != sizeof(VideoParamsTemporalLayer)) {
                 return ENCODE_INVALID_PARAMS;
             }
 
-            numberoflayer->numberOfLayer = mComParams.numberOfLayer;
+            temporallayer->numberOfLayer = mComParams.numberOfLayer;
 
             break;
         }

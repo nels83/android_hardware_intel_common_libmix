@@ -18,6 +18,7 @@ class VideoEncoderVP8: public VideoEncoderBase {
 public:
     VideoEncoderVP8();
     virtual ~VideoEncoderVP8();
+    virtual Encode_Status start();
 
 
 

@@ -320,7 +320,7 @@ enum VideoParamConfigType {
     VideoParamsTypeStoreMetaDataInBuffers,
     VideoParamsTypeProfileLevel,
     VideoParamsTypeVP8,
-    VideoParamsTypeTemporalLayerNumber,
+    VideoParamsTypeTemporalLayer,
 
     VideoConfigTypeFrameRate,
     VideoConfigTypeBitRate,
@@ -531,11 +531,11 @@ struct VideoParamsProfileLevel : VideoParamConfigSet {
     bool isSupported;
 };
 
-struct VideoParamsTemporalLayerNumber : VideoParamConfigSet {
+struct VideoParamsTemporalLayer : VideoParamConfigSet {
 
-    VideoParamsTemporalLayerNumber() {
-        type = VideoParamsTypeTemporalLayerNumber;
-        size = sizeof(VideoParamsTemporalLayerNumber);
+    VideoParamsTemporalLayer() {
+        type = VideoParamsTypeTemporalLayer;
+        size = sizeof(VideoParamsTemporalLayer);
     }
 
     uint32_t numberOfLayer;

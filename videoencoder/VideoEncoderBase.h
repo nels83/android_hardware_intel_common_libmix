@@ -122,6 +122,7 @@ protected:
     bool mRenderHrd;
     bool mRenderMaxFrameSize;
     bool mRenderMultiTemporal;
+    bool mForceKFrame;
 
     VABufferID mSeqParamBuf;
     VABufferID mRcParamBuf;
