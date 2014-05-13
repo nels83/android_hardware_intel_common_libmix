@@ -59,9 +59,9 @@ public:
     bool hasVideo();
     bool hasAudio();
     bool isSeekable();
-    int getPlayreadyUuid(uint8_t* playreadyUuid);
-    int getPlayreadyHeaderXml(uint8_t* playreadyHeader, uint32_t* playreadyHeaderLen);
-    int getPayloadExtensionSystems(uint8_t streamNumber, vector<PayloadExtensionSystem *> **extSystems );
+    int getPlayreadyUuid(uint8_t playreadyUuid[], uint16_t len);
+    int getPlayreadyHeaderXml(uint8_t* header, uint32_t* len);
+    int parseSampleIDFromReplicatedData(AsfPayloadDataInfo *obj, uint8_t streamNumber);
 private:
     int onFilePropertiesObject(uint8_t *buffer, uint32_t size);
     int onStreamPropertiesObject(uint8_t *buffer, uint32_t size);
@@ -76,13 +76,12 @@ private:
     AsfVideoStreamInfo *mVideoInfo;
     AsfFileMediaInfo  *mFileInfo;
     uint32_t mNumObjectParsed;
-    uint32_t mNumberofHeaderObjects;
     uint8_t mPlayreadyUuid[UUIDSIZE];
     bool mIsProtected;
-
     uint8_t *mPlayreadyHeader;
-    uint32_t mPlayreadyHeaderLen;
-    vector<AsfExtendedStreamPropertiesObject *> mExtendedStreamPropertiesObj;
+    uint16_t mPlayreadyHeaderLen;
+    uint32_t mNumberofHeaderObjects;
+    vector<AsfExtendedStreamPropertiesExObject *> mExtendedStreamPropertiesObj;
 };
 
 #endif

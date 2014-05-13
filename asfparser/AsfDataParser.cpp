@@ -24,6 +24,8 @@
 
 
 
+//#define LOG_NDEBUG 0
+#define LOG_TAG "AsfDataParser"
 #include "AsfDataParser.h"
 #include "AsfGuids.h"
 #include "AsfObjects.h"
@@ -187,7 +189,6 @@ int AsfPayloadParsingInformation::parse(uint8_t *buffer, uint32_t size) {
 
 int AsfSinglePayloadUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPayloadDataInfo **out) {
     // initialize output
-    int retVal = 0;
     *out = NULL;
     streamNumber.value = *buffer;
     blockSize = 1;
@@ -221,8 +222,6 @@ int AsfSinglePayloadUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPaylo
         return ASF_PARSER_NO_MEMORY;
     }
 
-    ALOGD("replicatedDataLength = %d", replicatedDataLength);
-
     // point to replicated data into object's buffer. Yet to be interpreted.
     obj->replicatedDataLength = replicatedDataLength;
     obj->replicatedData = buffer + blockSize;
@@ -233,29 +232,16 @@ int AsfSinglePayloadUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPaylo
 
     blockSize += replicatedDataLength;
 
-    // defined for temporary use as arg for getPayloadExtensionSystems
-    uint8_t streamnumber = streamNumber.bits.streamNumber;
-    vector<PayloadExtensionSystem *> *extSystems;
-    retVal = AsfDataParser::mHeaderParser->getPayloadExtensionSystems(streamnumber, &extSystems);
-    if (retVal != ASF_PARSER_SUCCESS) {
-        ALOGD("Error while parsing Payload Extension Systems");
-    } else {
-        ALOGD("Extension System count = %d", extSystems->size());
-        // find IV in replicated data
-        int replicatedDataOffset = 0;
+    uint8_t streamNum = streamNumber.bits.streamNumber;
 
-        for (int i = 0; i < extSystems->size(); i++) {
-            // ptr to ext system's data in replicated data buffer.
-            if ((extSystems->at(i)->extensionSystemId) == ASF_Payload_Extension_System_Encryption_Sample_ID) {
-                obj->sampleID = obj->replicatedData + 8 + replicatedDataOffset;
-                obj->sampleIDLen = extSystems->at(i)->extensionDataSize;
-            }
-            if (extSystems->at(i)->extensionDataSize == 0xFFFF) {
-                uint16_t nSize = *((uint16_t*) (obj->replicatedData + 8 + replicatedDataOffset));
-                replicatedDataOffset += (sizeof(uint16_t) + nSize);
-            } else {
-                replicatedDataOffset += extSystems->at(i)->extensionDataSize;
-            }
+    // Extension Systems are required if replicatedDataLength is greater than 8.
+    if (replicatedDataLength > 8) {
+        // For protected content, get SampleID which is used as IV.
+        int returnStatus = AsfDataParser::mHeaderParser->parseSampleIDFromReplicatedData(obj,streamNum);
+        if (returnStatus == ASF_PARSER_UNEXPECTED_VALUE) {
+            ALOGD("Only Encryption_Sample_ID extension system is supported");
+        } else if (returnStatus != ASF_PARSER_SUCCESS) {
+            return ASF_PARSER_FAILED;
         }
     }
 
@@ -376,7 +362,6 @@ int AsfMultiplePayloadsHeader::parse(uint8_t *buffer, uint32_t size) {
 
 int AsfMultiplePayloadsUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPayloadDataInfo **out) {
     // initialize output
-    int retVal = 0;
     *out = NULL;
     streamNumber.value = *buffer;
     blockSize = 1;
@@ -410,8 +395,6 @@ int AsfMultiplePayloadsUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPa
         return ASF_PARSER_NO_MEMORY;
     }
 
-    ALOGD("replicatedDataLength = %d", replicatedDataLength);
-
     // point to replicated data into object's buffer. Yet to be interpreted.
     obj->replicatedDataLength = replicatedDataLength;
     obj->replicatedData = buffer + blockSize;
@@ -422,27 +405,17 @@ int AsfMultiplePayloadsUncompressed::parse(uint8_t *buffer, uint32_t size, AsfPa
 
     blockSize += replicatedDataLength;
 
-    // defined for temporary use as arg for getPayloadExtensionSystems
-    uint8_t streamnumber = streamNumber.bits.streamNumber;
-    vector<PayloadExtensionSystem *> *extSystems;
-    retVal = AsfDataParser::mHeaderParser->getPayloadExtensionSystems(streamnumber, &extSystems);
-    if (retVal != ASF_PARSER_SUCCESS) {
-        ALOGD("Error while parsing Payload Extension Systems");
-    } else {
-        // find IV in replicated data
-        int replicatedDataOffset = 0;
-        for (int i = 0; i < extSystems->size(); i++) {
-            // ptr to ext system's data in replicated data buffer.
-            if ((extSystems->at(i)->extensionSystemId) == ASF_Payload_Extension_System_Encryption_Sample_ID) {
-                obj->sampleID = obj->replicatedData + 8 + replicatedDataOffset;
-                obj->sampleIDLen = extSystems->at(i)->extensionDataSize;
-            }
-            if (extSystems->at(i)->extensionDataSize == 0xFFFF) {
-                uint16_t nSize = *((uint16_t*) (obj->replicatedData + 8 + replicatedDataOffset));
-                replicatedDataOffset += (sizeof(uint16_t) + nSize);
-            } else {
-                replicatedDataOffset += extSystems->at(i)->extensionDataSize;
-            }
+    uint8_t streamNum = streamNumber.bits.streamNumber;
+
+    // Extension Systems are required if replicatedDataLength is greater than 8.
+    if (replicatedDataLength > 8) {
+        // For protected content, get SampleID which is used as IV.
+        int returnStatus = AsfDataParser::mHeaderParser->parseSampleIDFromReplicatedData(obj,streamNum);
+
+        if (returnStatus == ASF_PARSER_UNEXPECTED_VALUE) {
+            ALOGD("Only Encryption_Sample_ID extension system is supported");
+        } else if (returnStatus != ASF_PARSER_SUCCESS) {
+            return ASF_PARSER_FAILED;
         }
     }
 

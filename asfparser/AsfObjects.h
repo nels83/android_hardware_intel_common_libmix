@@ -48,7 +48,7 @@ struct AsfHeaderObject : AsfObject {
     uint8_t reserved2;
 };
 
-struct PlayreadyHeaderObj : AsfObject {
+struct AsfProtectionSystemIdObj : AsfObject {
     uint8_t sysId[UUIDSIZE];
     uint32_t sysVer;
     uint32_t dataSize;
@@ -157,8 +157,16 @@ struct AsfPaddingObject : AsfObject {
     // TODO:
 };
 
+struct AsfStreamName {
+    uint16_t  languageIDIndex;
+    uint16_t  streamNameLength;
+    uint8_t  *pStreamName;
+};
+
+
+
 // objects in the ASF Header Extension object
-struct PayloadExtensionSystem {
+struct AsfPayloadExtensionSystem {
     GUID      extensionSystemId;
     uint16_t  extensionDataSize;
     uint32_t  extensionSystemInfoLength;
@@ -166,7 +174,8 @@ struct PayloadExtensionSystem {
 };
 
 // class AsfHeaderParser;
-struct AsfExtendedStreamPropertiesObject  : AsfObject {
+// Fixed Length fields of AsfExtendedStreamPropertiesObject
+struct AsfExtendedStreamPropertiesObject : AsfObject {
     uint64_t startTime;
     uint64_t endTime;
     uint32_t dataBitrate;
@@ -191,11 +200,19 @@ struct AsfExtendedStreamPropertiesObject  : AsfObject {
     uint64_t averageTimePerFrame;
     uint16_t streamNameCount;
     uint16_t payloadExtensionSystemCount;
-    vector<PayloadExtensionSystem *> extensionSystems;
     //Stream Names - variable length
     //Payload Extension Systems - variable length
     //Stream Properties Object - variable length
 };
+
+// AsfExtendedStreamPropertiesObjectFixed + variable length extension systems.
+struct AsfExtendedStreamPropertiesExObject {
+    struct AsfExtendedStreamPropertiesObject  propObj;
+    vector<AsfStreamName *> streamNames;
+    vector<AsfPayloadExtensionSystem *> extensionSystems;
+    //Stream Properties Object - variable length
+};
+
 
 
 struct AsfAdvancedMutualExclusionObject : AsfObject {

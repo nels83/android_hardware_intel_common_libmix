@@ -41,7 +41,6 @@ AsfStreamParser::AsfStreamParser(void)
     mHeaderParser = new AsfHeaderParser;
     mDataParser = new AsfDataParser(mHeaderParser);
     mSimpleIndexParser = NULL;
-    memset(mPlayreadyUuid, 0, UUIDSIZE);
 }
 
 AsfStreamParser::~AsfStreamParser(void) {
@@ -77,20 +76,12 @@ int AsfStreamParser::parseHeaderObject(uint8_t *buffer, uint64_t size) {
     return ASF_PARSER_SUCCESS;
 }
 
-int AsfStreamParser::getDrmUuid(uint8_t *playreadyUuid) {
-    int status = ASF_PARSER_SUCCESS;
-
-    status = mHeaderParser->getPlayreadyUuid(playreadyUuid);
-    LOGV("AsfStreamParser::getDrmUuid() returns %x", status);
-    return status;
+int AsfStreamParser::getDrmUuid(uint8_t playreadyUuid[], uint16_t len) {
+    return mHeaderParser->getPlayreadyUuid(playreadyUuid, len);
 }
 
 int AsfStreamParser::getDrmHeaderXml(uint8_t *playreadyHeader, uint32_t *playreadyHeaderLen) {
-    int status = ASF_PARSER_SUCCESS;
-
-    status = mHeaderParser->getPlayreadyHeaderXml(playreadyHeader, playreadyHeaderLen);
-    LOGV("AsfStreamParser::getDrmHeaderXml() returns %x", status);
-    return status;
+    return mHeaderParser->getPlayreadyHeaderXml(playreadyHeader, playreadyHeaderLen);
 }
 AsfAudioStreamInfo* AsfStreamParser::getAudioInfo() const {
     return mHeaderParser->getAudioInfo();

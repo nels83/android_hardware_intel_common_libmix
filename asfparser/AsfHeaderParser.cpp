@@ -24,7 +24,7 @@
 
 
 
-#define LOG_NDEBUG 0
+//#define LOG_NDEBUG 0
 #define LOG_TAG "AsfHeaderParser"
 #include <utils/Log.h>
 
@@ -33,6 +33,7 @@
 
 #include <media/stagefright/Utils.h>
 
+#define PRFORMATTAG 0x5052
 AsfHeaderParser::AsfHeaderParser(void)
     : mAudioInfo(NULL),
       mVideoInfo(NULL),
@@ -54,18 +55,24 @@ AsfHeaderParser::~AsfHeaderParser(void) {
     }
 
     // Deleting memory from mExtendedStreamPropertiesObj recursively
-    for (vector<AsfExtendedStreamPropertiesObject *>::iterator it = mExtendedStreamPropertiesObj.begin(); it != mExtendedStreamPropertiesObj.end(); ++it) {
+    for (vector<AsfExtendedStreamPropertiesExObject *>::iterator it = mExtendedStreamPropertiesObj.begin(); it != mExtendedStreamPropertiesObj.end(); ++it) {
+
+        for (int i = 0; i < (*it)->streamNames.size(); i++) {
+            if ((*it)->streamNames[i]->pStreamName != NULL) {
+                delete (*it)->streamNames[i]->pStreamName;
+            }
+            delete (*it)->streamNames[i];
+        }
+        (*it)->streamNames.clear();
+
         for (int i = 0; i < (*it)->extensionSystems.size(); i++) {
             if ((*it)->extensionSystems[i]->extensionSystemInfo != NULL) {
                 delete (*it)->extensionSystems[i]->extensionSystemInfo;
-                (*it)->extensionSystems[i]->extensionSystemInfo = NULL;
             }
             delete (*it)->extensionSystems[i];
-            (*it)->extensionSystems[i] = NULL;
         }
         (*it)->extensionSystems.clear();
         delete (*it);
-        (*it) = NULL;
     }
     mExtendedStreamPropertiesObj.clear();
 
@@ -177,30 +184,55 @@ int AsfHeaderParser::parse(uint8_t *buffer, uint64_t size) {
             } else if(obj->objectID == ASF_Protection_System_Identifier_Object) {
                 mIsProtected = true;
                 LOGV("ASF_Protection_System_Identifier_Object");
-                uint64_t playreadyObjSize = obj->objectSize;
-                PlayreadyHeaderObj *plrdyHdrObj = (PlayreadyHeaderObj*)buffer;
+                if (obj->objectSize < sizeof(AsfProtectionSystemIdObj)) {
+                    LOGE("Unsupported Protection System Object");
+                    return ASF_PARSER_BAD_DATA;
+                }
+                AsfProtectionSystemIdObj *protectionSysObj = (AsfProtectionSystemIdObj*)buffer;
 
                 uint8_t* playreadyObjBuf = NULL;
-                GUID *pldyUuid = (GUID*)plrdyHdrObj->sysId;
-                memcpy(mPlayreadyUuid, (uint8_t*)pldyUuid, UUIDSIZE);
+                memcpy(mPlayreadyUuid, protectionSysObj->sysId, UUIDSIZE);
 
                 // Rights Management Header - Record Type = 0x0001
                 // Traverse till field containing number of records
-                playreadyObjBuf = buffer + sizeof(PlayreadyHeaderObj);
-                for (int i = 0; i < plrdyHdrObj->countRecords; i++) {
-                    uint16_t* recordType = (uint16_t*)playreadyObjBuf;
-                    if (*recordType == 0x01)  {// Rights management Header
-                        playreadyObjBuf += sizeof(uint16_t);
-                        uint16_t* recordLen = (uint16_t*)playreadyObjBuf;
-                        mPlayreadyHeaderLen = *recordLen;
+                playreadyObjBuf = buffer + sizeof(AsfProtectionSystemIdObj);
+                uint32_t sizeLeft = obj->objectSize - sizeof(AsfProtectionSystemIdObj); // For Maintaining and checking the left memory in the object
 
-                        mPlayreadyHeader = new uint8_t [mPlayreadyHeaderLen];
-                        if (mPlayreadyHeader == NULL) {
-                            return ASF_PARSER_NO_MEMORY;
-                        }
+                for (int i = 0; i < protectionSysObj->countRecords; i++) {
+                    if (sizeLeft > 4) {
+                        uint16_t recordType = *((uint16_t*)playreadyObjBuf);
                         playreadyObjBuf += sizeof(uint16_t);
-                        memcpy(mPlayreadyHeader, playreadyObjBuf, mPlayreadyHeaderLen);
-                        break;
+                        sizeLeft -= sizeof (recordType);
+
+                        uint16_t recordLen = *((uint16_t*)playreadyObjBuf);
+                        playreadyObjBuf += sizeof(uint16_t);
+                        sizeLeft -= sizeof (recordLen);
+                        if (sizeLeft < recordLen) {
+                            LOGE("Invalid Rec Protection Identifier Object");
+                            status = ASF_PARSER_BAD_DATA;
+                            break;
+                        }
+
+                        if (recordType == 0x01)  {// Rights management Header
+                            mPlayreadyHeaderLen = recordLen;
+
+                            if (mPlayreadyHeaderLen == 0) {
+                                LOGE("Invalid Protection System Record Length Value");
+                                return ASF_PARSER_BAD_DATA;
+                            }
+                            mPlayreadyHeader = new uint8_t [mPlayreadyHeaderLen];
+                            if (mPlayreadyHeader == NULL) {
+                                return ASF_PARSER_NO_MEMORY;
+                            }
+
+                            memcpy(mPlayreadyHeader, playreadyObjBuf, mPlayreadyHeaderLen);
+                            break;
+                        }
+                        playreadyObjBuf += recordLen;
+                        sizeLeft -= recordLen;
+                    } else {
+                        LOGE("Invalid sizeLeft");
+                        return ASF_PARSER_BAD_DATA;
                     }
                 }
             }
@@ -220,22 +252,26 @@ int AsfHeaderParser::parse(uint8_t *buffer, uint64_t size) {
     return status;
 }
 
-int AsfHeaderParser::getPlayreadyUuid(uint8_t *playreadyUuid) {
-
+int AsfHeaderParser::getPlayreadyUuid(uint8_t playreadyUuid[], uint16_t len) {
     if (playreadyUuid == NULL || (!mIsProtected))
         return ASF_PARSER_FAILED;
+    if (len < UUIDSIZE) {
+        LOGE("Invalid length ");
+        return ASF_PARSER_FAILED;
+    }
+
     memcpy(playreadyUuid, mPlayreadyUuid, UUIDSIZE);
     return ASF_PARSER_SUCCESS;
 }
 
-int AsfHeaderParser::getPlayreadyHeaderXml(uint8_t *playreadyHeader, uint32_t *playreadyHeaderLen) {
+int AsfHeaderParser::getPlayreadyHeaderXml(uint8_t *header, uint32_t *len) {
 
-    if (playreadyHeader == NULL) {
-        *playreadyHeaderLen = mPlayreadyHeaderLen;
+    if (header == NULL) {
+        *len = mPlayreadyHeaderLen;
         return ASF_PARSER_NULL_POINTER;
     }
-    memcpy(playreadyHeader, mPlayreadyHeader, mPlayreadyHeaderLen);
-    *playreadyHeaderLen = mPlayreadyHeaderLen;
+    memcpy(header, mPlayreadyHeader, mPlayreadyHeaderLen);
+    *len = mPlayreadyHeaderLen;
 
     return ASF_PARSER_SUCCESS;
 }
@@ -316,8 +352,10 @@ int AsfHeaderParser::onVideoSpecificData(AsfStreamPropertiesObject *obj, uint8_t
     videoInfo->width = info->encodedImageWidth;
     videoInfo->height = info->encodedImageHeight;
 
+    // Following condition taken from Section 2.4.2.2 - Video Media Type, of Playready documentation
     if (bmp->compressionID == FOURCC('Y', 'D', 'R', 'P')) {
-        // That means PYV content
+        // That means PYV content, for which Compression Id is
+        // the last 4 bytes of the codec specific data following the Video format data
         uint32_t* ptrActCompId = (uint32_t*)((data + sizeof(AsfVideoInfoHeader) + bmp->formatDataSize - sizeof(uint32_t)));
         videoInfo->fourCC = (*ptrActCompId);
     } else {
@@ -376,7 +414,11 @@ int AsfHeaderParser::onAudioSpecificData(AsfStreamPropertiesObject *obj, uint8_t
     audioInfo->encryptedContentFlag = obj->flags.bits.encryptedContentFlag;
     audioInfo->timeOffset = obj->timeOffset;
 
-    if (format->codecIDFormatTag == 0x5052) {
+    // Codec Id is 0x5052 i.e. ASCII value of 'P', 'R' for Playready -
+    // [Refer Section 2.4.2.1 - Audio Media Type, of Playready documentation]
+    if (format->codecIDFormatTag == PRFORMATTAG) {
+    // That means protected content, for which Codec Id is
+    // the last 2 bytes of the codec specific data following the Audio format data
         uint32_t* ptrActCodecId = (uint32_t*)((data + sizeof(AsfWaveFormatEx) + format->codecSpecificDataSize - sizeof(format->codecIDFormatTag)));
         audioInfo->codecID = (*ptrActCodecId);
     } else {
@@ -426,46 +468,65 @@ int AsfHeaderParser::onExtendedStreamPropertiesObject(uint8_t *buffer, uint32_t 
         return ASF_PARSER_BAD_DATA;
     }
 
-    AsfExtendedStreamPropertiesObject *extStrObj = new AsfExtendedStreamPropertiesObject;
+    AsfExtendedStreamPropertiesObject *fixedLenExtStrPropsObj = (AsfExtendedStreamPropertiesObject *)buffer;
+    if (fixedLenExtStrPropsObj->objectSize > size) {
+        ALOGE("Invalid ASF Extended Stream Prop Object size");
+        return ASF_PARSER_BAD_VALUE;
+    }
+
+    AsfExtendedStreamPropertiesExObject *extStrObj = new AsfExtendedStreamPropertiesExObject;
     if (extStrObj == NULL) {
         return ASF_PARSER_NO_MEMORY;
     }
 
-    AsfExtendedStreamPropertiesObject *obj = (AsfExtendedStreamPropertiesObject *)buffer;
-    if (obj->objectSize > size) {
-        ALOGE("Invalid ASF Extended Stream Prop Object size");
-        delete extStrObj;
-        return ASF_PARSER_BAD_VALUE;
+    //copy all fixed length fields first.
+    memcpy(&(extStrObj->propObj), fixedLenExtStrPropsObj, sizeof(AsfExtendedStreamPropertiesObject));
+
+    ALOGD("Stream number = 0x%08X", fixedLenExtStrPropsObj->streamNumber);
+    ALOGD("PayloadExtensionSystemCount = 0x%08X", fixedLenExtStrPropsObj->payloadExtensionSystemCount);
+
+    // Get pointer to buffer where variable length fields might start
+    buffer += sizeof(AsfExtendedStreamPropertiesObject);
+
+    uint32_t streamNameOffset =  sizeof(uint16_t) * 2; // languageIDIndex + streamNameLength
+    //StramNames might start here. depends on streamNameCount.
+    for (int i = 0; i < fixedLenExtStrPropsObj->streamNameCount; i++) {
+         AsfStreamName *streamNameObj = new AsfStreamName;
+         AsfStreamName *StreamNameObjBuffer = (AsfStreamName *)buffer;
+
+         // populate the StreamName object from the buffer
+         streamNameObj->languageIDIndex = StreamNameObjBuffer->languageIDIndex;
+         streamNameObj->streamNameLength = StreamNameObjBuffer->streamNameLength;
+
+         // Allocate space to store StreamName(3rd field) for the StreamName structure
+        if (streamNameObj->streamNameLength > 0) {
+            streamNameObj->pStreamName = new uint8_t [StreamNameObjBuffer->streamNameLength];
+            if (streamNameObj->pStreamName == NULL) {
+               delete streamNameObj;
+               delete extStrObj;
+               return ASF_PARSER_NO_MEMORY;
+            }
+
+            memcpy(streamNameObj->pStreamName, buffer + streamNameOffset, StreamNameObjBuffer->streamNameLength);
+        } else {
+            // no streamName
+            streamNameObj->pStreamName = NULL;
+        }
+
+        // calculate the length of current StreamName entry.
+        // if there are multiple StreamNames  then increment
+        // buffer by  4 + streamNameLength  to point to next StreamName entry
+        buffer += streamNameOffset + StreamNameObjBuffer->streamNameLength;
+
+        extStrObj->streamNames.push_back(streamNameObj);
     }
 
-    extStrObj->objectID = obj->objectID;
-    extStrObj->objectSize = obj->objectSize;
-    extStrObj->startTime = obj->startTime;
-    extStrObj->endTime = obj->endTime;
-    extStrObj->dataBitrate = obj->dataBitrate;
-    extStrObj->bufferSize = obj->bufferSize;
-    extStrObj->initialBufferFullness = obj->initialBufferFullness;
-    extStrObj->alternateDataBitrate = obj->alternateDataBitrate;
-    extStrObj->alternateBufferSize = obj->alternateBufferSize;
-    extStrObj->alternateInitialBufferFullness = obj->alternateInitialBufferFullness;
-    extStrObj->maximumObjectSize = obj->maximumObjectSize;
-    extStrObj->flags = obj->flags;
-    extStrObj->streamNumber = obj->streamNumber;
-    extStrObj->streamLanguageIDIndex = obj->streamLanguageIDIndex;
-    extStrObj->averageTimePerFrame = obj->averageTimePerFrame;
-    extStrObj->streamNameCount = obj->streamNameCount;
-    extStrObj->payloadExtensionSystemCount = obj->payloadExtensionSystemCount;
+    uint32_t systemInfoOffset = sizeof(GUID) + sizeof(uint16_t) + sizeof(uint32_t);
+    //buffer points to extension systems here depending on payloadExtensionSystemCount in previous Fixed field.
+    for (int i = 0; i < fixedLenExtStrPropsObj->payloadExtensionSystemCount; i++) {
+        AsfPayloadExtensionSystem *extensionObj = new  AsfPayloadExtensionSystem;
+        AsfPayloadExtensionSystem *extObjData = (AsfPayloadExtensionSystem *)buffer;
 
-    ALOGD("stream number = 0x%08X", obj->streamNumber);
-    ALOGD("payloadExtensionSystemCount = 0x%08X", obj->payloadExtensionSystemCount);
-
-    // Get pointer to buffer where first extension system object starts
-    buffer = (uint8_t *)&(obj->extensionSystems);
-    int extSysSize = 0;
-    for (int i = 0; i < obj->payloadExtensionSystemCount; i++ ) {
-        extSysSize = 0;
-        PayloadExtensionSystem *extensionObj = new  PayloadExtensionSystem;
-        PayloadExtensionSystem *extObjData = (PayloadExtensionSystem *)buffer;
         // populate the extension object from the buffer
         extensionObj->extensionSystemId = extObjData->extensionSystemId;
         extensionObj->extensionDataSize = extObjData->extensionDataSize;
@@ -473,24 +534,23 @@ int AsfHeaderParser::onExtendedStreamPropertiesObject(uint8_t *buffer, uint32_t 
 
         // Allocate space to store extensionSystemInfo
         if (extensionObj->extensionSystemInfoLength > 0) {
-            // TODO: make sure this memory is freed when not reuired.
             extensionObj->extensionSystemInfo = new uint8_t [extObjData->extensionSystemInfoLength];
             if (extensionObj->extensionSystemInfo == NULL) {
                delete extensionObj;
                delete extStrObj;
                return ASF_PARSER_NO_MEMORY;
             }
-            memcpy(extensionObj->extensionSystemInfo, extObjData->extensionSystemInfo, extObjData->extensionSystemInfoLength);
+            memcpy(extensionObj->extensionSystemInfo, buffer + systemInfoOffset, extObjData->extensionSystemInfoLength);
         } else {
             // no extension system info
             extensionObj->extensionSystemInfo = NULL;
         }
 
         // calculate the length of current extension system.
-        // if there are multiple extension systems then increment buffer by  extSysSize
-        // to point to next extension object
-        extSysSize += sizeof(GUID) + sizeof(uint16_t) + sizeof(uint32_t) + extensionObj->extensionSystemInfoLength;
-        buffer += extSysSize;
+        // if there are multiple extension systems then increment
+        // buffer by  22 + extensionSystemInfoLength  to point to
+        // next extension object
+        buffer += systemInfoOffset + extensionObj->extensionSystemInfoLength;
 
         // add the extension object to the extended stream object
         extStrObj->extensionSystems.push_back(extensionObj);
@@ -547,14 +607,47 @@ int AsfHeaderParser::parseHeaderExtensionObject(uint8_t* buffer, uint32_t size) 
     return status;
 }
 
-int AsfHeaderParser::getPayloadExtensionSystems(uint8_t streamNumber, vector<PayloadExtensionSystem *> **extSystems ) {
+
+int AsfHeaderParser::parseSampleIDFromReplicatedData(AsfPayloadDataInfo *obj, uint8_t streamNumber) {
+
+    vector<AsfPayloadExtensionSystem *> *extSystems = NULL;
+
+    // Get handle to extension systems in that stream's Extension Stream Properties object.
     for (unsigned int i = 0; i < mExtendedStreamPropertiesObj.size(); i++) {
-        if (streamNumber == mExtendedStreamPropertiesObj[i]->streamNumber) {
-            *extSystems = &(mExtendedStreamPropertiesObj[i]->extensionSystems);
-            return ASF_PARSER_SUCCESS;
+        if (streamNumber == mExtendedStreamPropertiesObj[i]->propObj.streamNumber) {
+            extSystems = &(mExtendedStreamPropertiesObj[i]->extensionSystems);
+            break;
         }
     }
-    return ASF_PARSER_FAILED;
+
+    if (extSystems == NULL) {
+        return ASF_PARSER_FAILED;
+    }
+
+    int replicatedDataOffset = 0;
+    // Find data correspodning to ASF_Payload_Extension_System_Encryption_Sample_ID which is SampleID
+    for (int i = 0; i < extSystems->size(); i++) {
+        // Point to ext system's data in replicated data buffer.
+        if ((extSystems->at(i)->extensionSystemId) == ASF_Payload_Extension_System_Encryption_Sample_ID) {
+            if (extSystems->at(i)->extensionDataSize == 0xFFFF) {
+                uint16_t extensionDataSize = *((uint16_t*) (obj->replicatedData + 8 + replicatedDataOffset));
+                obj->sampleIDLen = extensionDataSize;
+                obj->sampleID = obj->replicatedData + 8 + replicatedDataOffset + sizeof(uint16_t);  // 2 bytes denote size of this extSystem
+            } else {
+                obj->sampleID = obj->replicatedData + 8 + replicatedDataOffset;
+                obj->sampleIDLen = extSystems->at(i)->extensionDataSize;
+            }
+            return ASF_PARSER_SUCCESS;
+        }
+        // Some other extension system. Modify the replicatedData offset accordingly to point to next extension system.
+        if (extSystems->at(i)->extensionDataSize == 0xFFFF) {
+            uint16_t nSize = *((uint16_t*) (obj->replicatedData + 8 + replicatedDataOffset));
+            replicatedDataOffset += (sizeof(uint16_t) + nSize);
+        } else {
+            replicatedDataOffset += extSystems->at(i)->extensionDataSize;
+        }
+    }
+    return ASF_PARSER_UNEXPECTED_VALUE; // Other extension systems.
 }
 
 void AsfHeaderParser::resetStreamInfo() {
