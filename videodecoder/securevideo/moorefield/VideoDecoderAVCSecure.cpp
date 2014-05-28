@@ -476,6 +476,8 @@ Decode_Status VideoDecoderAVCSecure::continueDecodingFrame(vbp_data_h264 *data) 
             }
         }
     }
+    mDecodingFrame = true;
+
     return DECODE_SUCCESS;
 }
 

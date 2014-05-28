@@ -2208,7 +2208,9 @@ uint32 vbp_update_data_h264secure(vbp_context *pcontext, void *newdata, uint32 s
     } else {
         if (slice_num < 1) {
             ETRACE("Don't find a valid slice header!");
-            return VBP_DATA;
+            // workaround to fix GTS issue due to Google defect. [repeal later].
+            return VBP_OK;
+            //return VBP_DATA;
         }
     }
     error = vbp_populate_query_data_h264secure(pcontext);
