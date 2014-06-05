@@ -120,6 +120,11 @@ Encode_Status VideoEncoderBase::start() {
         return ENCODE_NOT_SUPPORTED;
 #endif
 
+    if (mComParams.resolution.width > 1920  || mComParams.resolution.height > 1088){
+        LOGE("Unsupported resolution width %d, height %d\n",
+            mComParams.resolution.width, mComParams.resolution.height);
+        return ENCODE_NOT_SUPPORTED;
+    }
     queryAutoReferenceConfig(mComParams.profile);
 
     VAConfigAttrib vaAttrib_tmp[6],vaAttrib[VAConfigAttribTypeMax];
