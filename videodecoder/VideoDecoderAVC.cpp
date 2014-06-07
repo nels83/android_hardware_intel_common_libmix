@@ -31,6 +31,7 @@
 #define WIDI_CONSUMED   6
 #define HDMI_CONSUMED   2
 #define NW_CONSUMED     2
+#define POC_DEFAULT     0x7FFFFFFF
 
 VideoDecoderAVC::VideoDecoderAVC(const char *mimeType)
     : VideoDecoderBase(mimeType, VBP_H264),
@@ -571,6 +572,10 @@ Decode_Status VideoDecoderAVC::updateReferenceFrames(vbp_picture_data_h264 *picD
                         }
                     }
                     dpb->flags = refList->flags;
+                    // if it's bottom field in dpb, there must have top field in DPB,
+                    // so clear the bottom flag, or will confuse VED to address top field
+                    if (dpb->flags & VA_PICTURE_H264_BOTTOM_FIELD)
+                        dpb->flags &= (~VA_PICTURE_H264_BOTTOM_FIELD);
                     dpb->frame_idx = refList->frame_idx;
                     dpb->TopFieldOrderCnt = refList->TopFieldOrderCnt;
                     dpb->BottomFieldOrderCnt = refList->BottomFieldOrderCnt;
@@ -588,10 +593,10 @@ void VideoDecoderAVC::removeReferenceFromDPB(VAPictureParameterBufferH264 *picPa
     if ((picParam->CurrPic.flags & VA_PICTURE_H264_SHORT_TERM_REFERENCE) ||
         (picParam->CurrPic.flags & VA_PICTURE_H264_LONG_TERM_REFERENCE)) {
         DecodedPictureBuffer *dpb = mDPBs[mToggleDPB];
-        uint32_t poc = getPOC(&(picParam->CurrPic));
+        int32_t poc = getPOC(&(picParam->CurrPic));
         for (int32_t i = 0; i < DPB_SIZE; i++, dpb++) {
             if (poc == dpb->poc) {
-                dpb->poc = (uint32_t)-1;
+                dpb->poc = (int32_t)POC_DEFAULT;
                 if (dpb->surfaceBuffer) {
                     dpb->surfaceBuffer->asReferernce = false;
                 }
@@ -602,7 +607,7 @@ void VideoDecoderAVC::removeReferenceFromDPB(VAPictureParameterBufferH264 *picPa
     }
 }
 
-uint32_t VideoDecoderAVC::getPOC(VAPictureH264 *pic) {
+int32_t VideoDecoderAVC::getPOC(VAPictureH264 *pic) {
     if (pic->flags & VA_PICTURE_H264_BOTTOM_FIELD) {
         return pic->BottomFieldOrderCnt;
     }
@@ -655,7 +660,7 @@ VideoSurfaceBuffer* VideoDecoderAVC::findRefSurfaceBuffer(VAPictureH264 *pic) {
 void VideoDecoderAVC::invalidateDPB(int toggle) {
     DecodedPictureBuffer* p = mDPBs[toggle];
     for (int i = 0; i < DPB_SIZE; i++) {
-        p->poc = (uint32_t) -1;
+        p->poc = (int32_t) POC_DEFAULT;
         p->surfaceBuffer = NULL;
         p++;
     }

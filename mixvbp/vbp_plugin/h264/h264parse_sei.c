@@ -406,8 +406,12 @@ h264_Status h264_sei_recovery_point(void *parent, h264_Info* pInfo)
         pInfo->img.recovery_point_found |= 2;
 
         //// Enable the RP recovery if no IDR ---Cisco
+#if 0
+        // don't set this flag, in some corner case
+        // dpb is wrongly updated when recover point is received.
         if ((pInfo->img.recovery_point_found & 1)==0)
             pInfo->sei_rp_received = 1;
+#endif
     }
 
     return H264_STATUS_OK;

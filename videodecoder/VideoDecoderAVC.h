@@ -47,7 +47,7 @@ protected:
     Decode_Status updateDPB(VAPictureParameterBufferH264 *picParam);
     Decode_Status updateReferenceFrames(vbp_picture_data_h264 *picData);
     void removeReferenceFromDPB(VAPictureParameterBufferH264 *picParam);
-    uint32_t getPOC(VAPictureH264 *pic); // Picture Order Count
+    int32_t getPOC(VAPictureH264 *pic); // Picture Order Count
     inline VASurfaceID findSurface(VAPictureH264 *pic);
     inline VideoSurfaceBuffer* findSurfaceBuffer(VAPictureH264 *pic);
     inline VideoSurfaceBuffer* findRefSurfaceBuffer(VAPictureH264 *pic);
@@ -67,7 +67,7 @@ protected:
 private:
     struct DecodedPictureBuffer {
         VideoSurfaceBuffer *surfaceBuffer;
-        uint32_t poc; // Picture Order Count
+        int32_t poc; // Picture Order Count
     };
 
     enum {
