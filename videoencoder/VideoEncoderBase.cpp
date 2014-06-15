@@ -120,7 +120,7 @@ Encode_Status VideoEncoderBase::start() {
         return ENCODE_NOT_SUPPORTED;
 #endif
 
-    if (mComParams.resolution.width > 1920  || mComParams.resolution.height > 1088){
+    if (mComParams.resolution.width > 2048 || mComParams.resolution.height > 2048){
         LOGE("Unsupported resolution width %d, height %d\n",
             mComParams.resolution.width, mComParams.resolution.height);
         return ENCODE_NOT_SUPPORTED;
