@@ -41,7 +41,7 @@ vbp_trace_util(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 
 #define LOG_TAG "MixVBP"
 
-#include <utils/Log.h>
+#include <wrs_omxil_core/log.h>
 #define ETRACE(...) LOGE(__VA_ARGS__)
 #define WTRACE(...) LOGW(__VA_ARGS__)
 #define ITRACE(...) LOGI(__VA_ARGS__)

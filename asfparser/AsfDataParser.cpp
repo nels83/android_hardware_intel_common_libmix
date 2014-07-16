@@ -30,7 +30,7 @@
 #include "AsfGuids.h"
 #include "AsfObjects.h"
 #include <string.h>
-#include <utils/Log.h>
+#include <wrs_omxil_core/log.h>
 #include "AsfHeaderParser.h"
 
 AsfHeaderParser *AsfDataParser::mHeaderParser = NULL;

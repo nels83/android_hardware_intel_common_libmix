@@ -34,7 +34,7 @@
  *
  */
 
-#include <utils/Log.h>
+#include <wrs_omxil_core/log.h>
 #include "JPEGDecoder_libjpeg_wrapper.h"
 #include <hardware/gralloc.h>
 #include <utils/threads.h>

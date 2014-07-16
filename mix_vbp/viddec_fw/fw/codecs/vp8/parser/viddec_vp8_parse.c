@@ -29,7 +29,7 @@
 #include "viddec_fw_workload.h"
 #include "viddec_pm.h"
 
-#include <utils/Log.h>
+#include <wrs_omxil_core/log.h>
 #include "vp8.h"
 #include "vp8parse.h"
 #include "viddec_vp8_parse.h"

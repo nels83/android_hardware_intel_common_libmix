@@ -56,7 +56,7 @@ TraceImageDecoder(cat, __FUNCTION__, __LINE__, format,  ##__VA_ARGS__)
 #define LOG_NDEBUG 0
 
 
-#include <utils/Log.h>
+#include <wrs_omxil_core/log.h>
 #define ETRACE(...) ALOGE(__VA_ARGS__)
 #define WTRACE(...) ALOGW(__VA_ARGS__)
 #define ITRACE(...) ALOGI(__VA_ARGS__)

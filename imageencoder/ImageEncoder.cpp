@@ -1,7 +1,7 @@
 /*#define LOG_NDEBUG 0*/
 #define LOG_TAG "IntelImageEncoder"
 
-#include <cutils/log.h>
+#include <wrs_omxil_core/log.h>
 #include "ImageEncoder.h"
 
 IntelImageEncoder::IntelImageEncoder(void)

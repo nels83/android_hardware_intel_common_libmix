@@ -1,7 +1,7 @@
 #define LOG_NDEBUG 0
 #define LOG_TAG "mix_decoder"
 #include <VideoDecoderHost.h>
-#include <utils/Log.h>
+#include <wrs_omxil_core/log.h>
 #include <vbp_loader.h>
 #include <va/va.h>
 #include <stdlib.h>

@@ -24,7 +24,7 @@
 
 //#define LOG_NDEBUG 0
 #define LOG_TAG "IntelMetadataBuffer"
-#include <utils/Log.h>
+#include <wrs_omxil_core/log.h>
 
 #include "IntelMetadataBuffer.h"
 #include <string.h>
@@ -240,7 +240,7 @@ static sp<IBinder> GetIntelBufferSharingService() {
     sp<IBinder> binder = sm->checkService(String16("media.IntelBufferSharing"));
 
     if (binder == 0)
-        LOGE("media.IntelBufferSharing service is not published");
+        ALOGE("media.IntelBufferSharing service is not published");
 
     return binder;
 }
@@ -272,7 +272,7 @@ status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data
 
             if (pid == getpid()) //in same process, should not use binder
             {
-                LOGE("onTransact in same process, wrong sessionflag?");
+                ALOGE("onTransact in same process, wrong sessionflag?");
                 return UNKNOWN_ERROR;
             }
 
@@ -296,7 +296,7 @@ status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data
             if (pid == getpid()) //in same process, should not use binder
             {
                 //same process, return same pointer in data
-                LOGE("onTransact CLEAR_MEM in same process, wrong sessionflag?");
+                ALOGE("onTransact CLEAR_MEM in same process, wrong sessionflag?");
                 return UNKNOWN_ERROR;
             }
 
@@ -308,7 +308,7 @@ status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data
 
             if (pid == getpid()) //in same process, should not use binder
             {
-                LOGE("onTransact GET_MEM in same process, wrong sessionflag?");
+                ALOGE("onTransact GET_MEM in same process, wrong sessionflag?");
                 return UNKNOWN_ERROR;
             }
 
@@ -320,7 +320,7 @@ status_t IntelBufferSharingService::onTransact(uint32_t code, const Parcel& data
             if (smem && (NO_ERROR == WriteMemObjToBinder(*reply, smem)))
                 return NO_ERROR;
             else
-                LOGE("onTransact GET_MEM: Not find mem");
+                ALOGE("onTransact GET_MEM: Not find mem");
 
             return UNKNOWN_ERROR;
         }

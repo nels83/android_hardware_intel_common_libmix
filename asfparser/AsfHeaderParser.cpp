@@ -26,7 +26,7 @@
 
 //#define LOG_NDEBUG 0
 #define LOG_TAG "AsfHeaderParser"
-#include <utils/Log.h>
+#include <wrs_omxil_core/log.h>
 
 #include "AsfHeaderParser.h"
 #include <string.h>

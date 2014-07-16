@@ -11,20 +11,13 @@
 
 #define LOG_TAG "VideoEncoder"
 
-// Components
-#include <cutils/log.h>
+#include <wrs_omxil_core/log.h>
 
-#if 1
-#define LOG_V(...) LOGV_IF(gLogLevel, __VA_ARGS__)
-#define LOG_I(...) LOGI_IF(gLogLevel, __VA_ARGS__)
-#define LOG_W(...) LOGW_IF(gLogLevel, __VA_ARGS__)
-#define LOG_E(...) LOGE_IF(gLogLevel, __VA_ARGS__)
-#else
-#define LOG_V printf
-#define LOG_I printf
-#define LOG_W printf
-#define LOG_E printf
-#endif
+#define LOG_V ALOGV
+#define LOG_D ALOGD
+#define LOG_I ALOGI
+#define LOG_W ALOGW
+#define LOG_E ALOGE
 
 extern int32_t gLogLevel;
 #define CHECK_VA_STATUS_RETURN(FUNC)\
