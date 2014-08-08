@@ -70,6 +70,7 @@ endif
 LOCAL_CFLAGS += -Werror
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libva_videodecoder
+LOCAL_REQUIRED_MODULES :=libmixvbp
 
 ifeq ($(USE_HW_VP8),true)
 LOCAL_SRC_FILES += VideoDecoderVP8.cpp
