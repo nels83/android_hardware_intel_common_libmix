@@ -121,7 +121,7 @@ Encode_Status VideoEncoderAVC:: derivedGetParams(VideoParamConfigSet *videoEncPa
 Encode_Status VideoEncoderAVC::derivedSetConfig(VideoParamConfigSet *videoEncConfig) {
 
     CHECK_NULL_RETURN_IFFAIL(videoEncConfig);
-    LOG_I("Config type = %d\n", (int)videoEncConfig->type);
+    LOG_V("Config type = %d\n", (int)videoEncConfig->type);
 
     switch (videoEncConfig->type) {
         case VideoConfigTypeAVCIntraPeriod: {
@@ -188,7 +188,7 @@ Encode_Status VideoEncoderAVC:: derivedGetConfig(
         VideoParamConfigSet *videoEncConfig) {
 
     CHECK_NULL_RETURN_IFFAIL(videoEncConfig);
-    LOG_I("Config type = %d\n", (int)videoEncConfig->type);
+    LOG_V("Config type = %d\n", (int)videoEncConfig->type);
 
     switch (videoEncConfig->type) {
 
@@ -347,7 +347,7 @@ Encode_Status VideoEncoderAVC::getExtFormatOutput(VideoEncOutputBuffer *outBuffe
             break;
     }
 
-    LOG_I("out size is = %d\n", outBuffer->dataSize);
+    LOG_V("out size is = %d\n", outBuffer->dataSize);
 
 
 CLEAN_UP:
@@ -380,7 +380,7 @@ Encode_Status VideoEncoderAVC::getOneNALUnit(
     }
 
     *nalType = (*(inBuffer + pos)) & 0x1F;
-    LOG_I ("NAL type = 0x%x\n", *nalType);
+    LOG_V ("NAL type = 0x%x\n", *nalType);
 
     zeroByteCount = 0;
     *nalOffset = pos;
@@ -477,7 +477,7 @@ Encode_Status VideoEncoderAVC::getHeader(
         ret = getOneNALUnit(buf, bufSize, &nalSize, &nalType, &nalOffset, status);
         CHECK_ENCODE_STATUS_RETURN("getOneNALUnit");
 
-        LOG_I("NAL type = %d, NAL size = %d, offset = %d\n", nalType, nalSize, nalOffset);
+        LOG_V("NAL type = %d, NAL size = %d, offset = %d\n", nalType, nalSize, nalOffset);
         size = nalSize + nalOffset;
 
         // Codec_data should be SPS or PPS
@@ -853,7 +853,7 @@ Encode_Status VideoEncoderAVC::renderMaxSliceSize() {
 
 Encode_Status VideoEncoderAVC::renderCIR(){
     VAStatus vaStatus = VA_STATUS_SUCCESS;
-    LOG_I( "%s Begin\n", __FUNCTION__);
+    LOG_V( "%s Begin\n", __FUNCTION__);
 
     VABufferID miscParamBufferCIRid;
     VAEncMiscParameterBuffer *misc_param;
@@ -1043,21 +1043,21 @@ Encode_Status VideoEncoderAVC::renderSequenceParams(EncodeTask *) {
     avcSeqParams.max_num_ref_frames = 1;
 
     if(avcSeqParams.ip_period > 1)
-        avcSeqParams.max_num_ref_frames = 2; 
+        avcSeqParams.max_num_ref_frames = 2;
 
     LOG_V("===h264 sequence params===\n");
-    LOG_I( "seq_parameter_set_id = %d\n", (uint32_t)avcSeqParams.seq_parameter_set_id);
-    LOG_I( "level_idc = %d\n", (uint32_t)avcSeqParams.level_idc);
-    LOG_I( "intra_period = %d\n", avcSeqParams.intra_period);
-    LOG_I( "idr_interval = %d\n", avcSeqParams.intra_idr_period);
-    LOG_I( "picture_width_in_mbs = %d\n", avcSeqParams.picture_width_in_mbs);
-    LOG_I( "picture_height_in_mbs = %d\n", avcSeqParams.picture_height_in_mbs);
-    LOG_I( "bitrate = %d\n", rcMiscParam->bits_per_second);
-    LOG_I( "frame_rate = %d\n", framerateParam->framerate);
-    LOG_I( "initial_qp = %d\n", rcMiscParam->initial_qp);
-    LOG_I( "min_qp = %d\n", rcMiscParam->min_qp);
-    LOG_I( "basic_unit_size = %d\n", rcMiscParam->basic_unit_size);
-    LOG_I( "bDirect8x8Inference = %d\n",mVideoParamsAVC.bDirect8x8Inference);
+    LOG_V( "seq_parameter_set_id = %d\n", (uint32_t)avcSeqParams.seq_parameter_set_id);
+    LOG_V( "level_idc = %d\n", (uint32_t)avcSeqParams.level_idc);
+    LOG_V( "intra_period = %d\n", avcSeqParams.intra_period);
+    LOG_V( "idr_interval = %d\n", avcSeqParams.intra_idr_period);
+    LOG_V( "picture_width_in_mbs = %d\n", avcSeqParams.picture_width_in_mbs);
+    LOG_V( "picture_height_in_mbs = %d\n", avcSeqParams.picture_height_in_mbs);
+    LOG_V( "bitrate = %d\n", rcMiscParam->bits_per_second);
+    LOG_V( "frame_rate = %d\n", framerateParam->framerate);
+    LOG_V( "initial_qp = %d\n", rcMiscParam->initial_qp);
+    LOG_V( "min_qp = %d\n", rcMiscParam->min_qp);
+    LOG_V( "basic_unit_size = %d\n", rcMiscParam->basic_unit_size);
+    LOG_V( "bDirect8x8Inference = %d\n",mVideoParamsAVC.bDirect8x8Inference);
 
     // Not sure whether these settings work for all drivers
     avcSeqParams.seq_fields.bits.frame_mbs_only_flag = 1;
@@ -1188,9 +1188,9 @@ Encode_Status VideoEncoderAVC::renderPictureParams(EncodeTask *task) {
     avcPicParams.last_picture = 0;
 
     LOG_V("======h264 picture params======\n");
-    LOG_I( "reference_picture = 0x%08x\n", avcPicParams.ReferenceFrames[0].picture_id);
-    LOG_I( "reconstructed_picture = 0x%08x\n", avcPicParams.CurrPic.picture_id);
-    LOG_I( "coded_buf = 0x%08x\n", avcPicParams.coded_buf);
+    LOG_V( "reference_picture = 0x%08x\n", avcPicParams.ReferenceFrames[0].picture_id);
+    LOG_V( "reconstructed_picture = 0x%08x\n", avcPicParams.CurrPic.picture_id);
+    LOG_V( "coded_buf = 0x%08x\n", avcPicParams.coded_buf);
     //LOG_I( "picture_width = %d\n", avcPicParams.picture_width);
     //LOG_I( "picture_height = %d\n\n", avcPicParams.picture_height);
 
@@ -1338,11 +1338,11 @@ Encode_Status VideoEncoderAVC::renderSliceParams(EncodeTask *task) {
         //currentSlice->slice_flags.bits.is_long_term_ref = 0;
 
         LOG_V("======AVC slice params======\n");
-        LOG_I( "slice_index = %d\n", (int) sliceIndex);
-        LOG_I( "macroblock_address = %d\n", (int) currentSlice->macroblock_address);
-        LOG_I( "slice_height_in_mb = %d\n", (int) currentSlice->num_macroblocks);
-        LOG_I( "slice.type = %d\n", (int) currentSlice->slice_type);
-        LOG_I("disable_deblocking_filter_idc = %d\n\n", (int) currentSlice->disable_deblocking_filter_idc);
+        LOG_V( "slice_index = %d\n", (int) sliceIndex);
+        LOG_V( "macroblock_address = %d\n", (int) currentSlice->macroblock_address);
+        LOG_V( "slice_height_in_mb = %d\n", (int) currentSlice->num_macroblocks);
+        LOG_V( "slice.type = %d\n", (int) currentSlice->slice_type);
+        LOG_V("disable_deblocking_filter_idc = %d\n\n", (int) currentSlice->disable_deblocking_filter_idc);
 
         // Not sure whether these settings work for all drivers
         currentSlice->pic_parameter_set_id = 0;

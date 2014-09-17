@@ -189,7 +189,7 @@ Encode_Status GetGfxBufferInfo(intptr_t handle, ValueInfo& vinfo){
     vinfo.height = h->iHeight;
     vinfo.lumaStride = h->iWidth;
 
-    LOG_I("GetGfxBufferInfo: gfx iWidth=%d, iHeight=%d, iFormat=%x in handle structure\n", h->iWidth, h->iHeight, h->iFormat);
+    LOG_V("GetGfxBufferInfo: gfx iWidth=%d, iHeight=%d, iFormat=%x in handle structure\n", h->iWidth, h->iHeight, h->iFormat);
 
     if (h->iFormat == HAL_PIXEL_FORMAT_NV12) {
     #ifdef MRFLD_GFX
@@ -215,7 +215,7 @@ Encode_Status GetGfxBufferInfo(intptr_t handle, ValueInfo& vinfo){
 
     vinfo.format = h->iFormat;
 
-    LOG_I("			Actual Width=%d, Height=%d, Stride=%d\n\n", vinfo.width, vinfo.height, vinfo.lumaStride);
+    LOG_V("Actual Width=%d, Height=%d, Stride=%d\n\n", vinfo.width, vinfo.height, vinfo.lumaStride);
     return ENCODE_SUCCESS;
 }
 
@@ -322,7 +322,7 @@ Encode_Status VASurfaceMap::doMapping() {
                 if (gfx_alloc(width, height, HAL_PIXEL_FORMAT_NV12, usage, &mGfxHandle, &stride) != 0)
                     return ENCODE_DRIVER_FAIL;
 
-                LOG_I("Create an new gfx buffer handle 0x%p for color convert, width=%d, height=%d, stride=%d\n",
+                LOG_V("Create an new gfx buffer handle 0x%p for color convert, width=%d, height=%d, stride=%d\n",
                            mGfxHandle, width, height, stride);
             }
 
@@ -355,7 +355,7 @@ Encode_Status VASurfaceMap::doMapping() {
                 //map new gfx handle to vasurface
                 ret = MappingGfxHandle((intptr_t)mGfxHandle);
                 CHECK_ENCODE_STATUS_RETURN("MappingGfxHandle");
-                LOGI("map new allocated gfx handle to vaSurface\n");
+                LOGV("map new allocated gfx handle to vaSurface\n");
             } else
         #endif
             {
@@ -388,7 +388,7 @@ Encode_Status VASurfaceMap::MappingToVASurface() {
         LOG_I("VASurface is already set before, nothing to do here\n");
         return ENCODE_SUCCESS;
     }
-    LOG_I("MappingToVASurface mode=%d, value=%p\n", mVinfo.mode, (void*)mValue);
+    LOG_V("MappingToVASurface mode=%d, value=%p\n", mVinfo.mode, (void*)mValue);
 
     const char *mode = NULL;
     switch (mVinfo.mode) {
@@ -418,8 +418,8 @@ Encode_Status VASurfaceMap::MappingToVASurface() {
             return ENCODE_NOT_SUPPORTED;
     }
 
-    LOG_I("%s: Format=%x, lumaStride=%d, width=%d, height=%d\n", mode, mVinfo.format, mVinfo.lumaStride, mVinfo.width, mVinfo.height);
-    LOG_I("vaSurface 0x%08x is created for value = 0x%p\n", mVASurface, (void*)mValue);
+    LOG_V("%s: Format=%x, lumaStride=%d, width=%d, height=%d\n", mode, mVinfo.format, mVinfo.lumaStride, mVinfo.width, mVinfo.height);
+    LOG_V("vaSurface 0x%08x is created for value = 0x%p\n", mVASurface, (void*)mValue);
 
     return ret;
 }
@@ -445,10 +445,10 @@ Encode_Status VASurfaceMap::MappingSurfaceID(intptr_t value) {
             &lumaOffset, &chromaUOffset, &chromaVOffset, &kBufHandle, NULL);
 
     CHECK_VA_STATUS_RETURN("vaLockSurface");
-    LOG_I("Surface incoming = 0x%p\n", (void*)value);
-    LOG_I("lumaStride = %d, chromaUStride = %d, chromaVStride=%d\n", lumaStride, chromaUStride, chromaVStride);
-    LOG_I("lumaOffset = %d, chromaUOffset = %d, chromaVOffset = %d\n", lumaOffset, chromaUOffset, chromaVOffset);
-    LOG_I("kBufHandle = 0x%08x, fourCC = %d\n", kBufHandle, fourCC);
+    LOG_V("Surface incoming = 0x%p\n", (void*)value);
+    LOG_V("lumaStride = %d, chromaUStride = %d, chromaVStride=%d\n", lumaStride, chromaUStride, chromaVStride);
+    LOG_V("lumaOffset = %d, chromaUOffset = %d, chromaVOffset = %d\n", lumaOffset, chromaUOffset, chromaVOffset);
+    LOG_V("kBufHandle = 0x%08x, fourCC = %d\n", kBufHandle, fourCC);
 
     vaStatus = vaUnlockSurface((VADisplay)mVinfo.handle, (VASurfaceID)value);
     CHECK_VA_STATUS_RETURN("vaUnlockSurface");
@@ -468,8 +468,8 @@ Encode_Status VASurfaceMap::MappingSurfaceID(intptr_t value) {
 
 Encode_Status VASurfaceMap::MappingGfxHandle(intptr_t value) {
 
-    LOG_I("MappingGfxHandle %p......\n", (void*)value);
-    LOG_I("format = 0x%08x, lumaStride = %d in ValueInfo\n", mVinfo.format, mVinfo.lumaStride);
+    LOG_V("MappingGfxHandle %p......\n", (void*)value);
+    LOG_V("format = 0x%08x, lumaStride = %d in ValueInfo\n", mVinfo.format, mVinfo.lumaStride);
 
     //default value for all HW platforms, maybe not accurate
     mVASurfaceWidth = mVinfo.width;
@@ -487,7 +487,7 @@ Encode_Status VASurfaceMap::MappingGfxHandle(intptr_t value) {
     mVASurfaceStride = tmp.lumaStride;
 #endif
 
-    LOG_I("Mapping vasurface Width=%d, Height=%d, Stride=%d\n", mVASurfaceWidth, mVASurfaceHeight, mVASurfaceStride);
+    LOG_V("Mapping vasurface Width=%d, Height=%d, Stride=%d\n", mVASurfaceWidth, mVASurfaceHeight, mVASurfaceStride);
 
     ValueInfo vinfo;
     memset(&vinfo, 0, sizeof(ValueInfo));
@@ -504,7 +504,7 @@ Encode_Status VASurfaceMap::MappingGfxHandle(intptr_t value) {
 
 Encode_Status VASurfaceMap::MappingKbufHandle(intptr_t value) {
 
-    LOG_I("MappingKbufHandle value=%p\n", (void*)value);
+    LOG_V("MappingKbufHandle value=%p\n", (void*)value);
 
     mVinfo.size = mVinfo.lumaStride * mVinfo.height * 1.5;
     mVASurface = CreateSurfaceFromExternalBuf(value, mVinfo);
@@ -540,15 +540,15 @@ Encode_Status VASurfaceMap::doActionCopy() {
     uint8_t *pSrcBuffer, *pDestBuffer;
     intptr_t handle = 0;
 
-    LOG_I("Copying Src Buffer data to VASurface\n");
+    LOG_V("Copying Src Buffer data to VASurface\n");
 
     if (mVinfo.mode != MEM_MODE_MALLOC && mVinfo.mode != MEM_MODE_GFXHANDLE) {
         LOG_E("Not support copy in mode %d", mVinfo.mode);
         return ENCODE_NOT_SUPPORTED;
     }
 
-    LOG_I("Src Buffer information\n");
-    LOG_I("Mode = %d, width = %d, stride = %d, height = %d\n",
+    LOG_V("Src Buffer information\n");
+    LOG_V("Mode = %d, width = %d, stride = %d, height = %d\n",
            mVinfo.mode, mVinfo.width, mVinfo.lumaStride, mVinfo.height);
 
     uint32_t srcY_offset, srcUV_offset;
@@ -612,14 +612,14 @@ Encode_Status VASurfaceMap::doActionCopy() {
     vaStatus = vaMapBuffer(mVADisplay, destImage.buf, (void **)&pDestBuffer);
     CHECK_VA_STATUS_RETURN("vaMapBuffer");
 
-    LOG_I("\nDest VASurface information\n");
-    LOG_I("pitches[0] = %d\n", destImage.pitches[0]);
-    LOG_I("pitches[1] = %d\n", destImage.pitches[1]);
-    LOG_I("offsets[0] = %d\n", destImage.offsets[0]);
-    LOG_I("offsets[1] = %d\n", destImage.offsets[1]);
-    LOG_I("num_planes = %d\n", destImage.num_planes);
-    LOG_I("width = %d\n", destImage.width);
-    LOG_I("height = %d\n", destImage.height);
+    LOG_V("\nDest VASurface information\n");
+    LOG_V("pitches[0] = %d\n", destImage.pitches[0]);
+    LOG_V("pitches[1] = %d\n", destImage.pitches[1]);
+    LOG_V("offsets[0] = %d\n", destImage.offsets[0]);
+    LOG_V("offsets[1] = %d\n", destImage.offsets[1]);
+    LOG_V("num_planes = %d\n", destImage.num_planes);
+    LOG_V("width = %d\n", destImage.width);
+    LOG_V("height = %d\n", destImage.height);
 
     if (width > destImage.width || height > destImage.height) {
         LOG_E("src buffer is bigger than destination buffer\n");
@@ -658,7 +658,7 @@ Encode_Status VASurfaceMap::doActionCopy() {
         gfx_unlock((buffer_handle_t) handle);
     }
 #endif
-    LOG_I("Copying Src Buffer data to VASurface Complete\n");
+    LOG_V("Copying Src Buffer data to VASurface Complete\n");
 
     return ENCODE_SUCCESS;
 }
@@ -671,7 +671,7 @@ Encode_Status VASurfaceMap::doActionColConv() {
         return ENCODE_FAIL;
     }
 
-    LOG_I("doActionColConv gfx_Blit width=%d, height=%d\n", mVinfo.width, mVinfo.height);
+    LOG_V("doActionColConv gfx_Blit width=%d, height=%d\n", mVinfo.width, mVinfo.height);
     if (gfx_Blit((buffer_handle_t)mValue, mGfxHandle,
             mVinfo.width, mVinfo.height, 0, 0) != 0)
         return ENCODE_DRIVER_FAIL;

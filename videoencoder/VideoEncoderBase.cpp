@@ -188,16 +188,16 @@ Encode_Status VideoEncoderBase::start() {
     }
 
     LOG_V( "======VA Configuration======\n");
-    LOG_I( "profile = %d\n", mComParams.profile);
-    LOG_I( "mVAEntrypoint = %d\n", mVAEntrypoint);
-    LOG_I( "vaAttrib[0].type = %d\n", vaAttrib[0].type);
-    LOG_I( "vaAttrib[1].type = %d\n", vaAttrib[1].type);
-    LOG_I( "vaAttrib[2].type = %d\n", vaAttrib[2].type);
-    LOG_I( "vaAttrib[0].value (Format) = %d\n", vaAttrib[0].value);
-    LOG_I( "vaAttrib[1].value (RC mode) = %d\n", vaAttrib[1].value);
-    LOG_I( "vaAttrib[2].value (AutoReference) = %d\n", vaAttrib[2].value);
-    LOG_I( "vaAttribNumber is %d\n", vaAttribNumber);
-    LOG_I( "mComParams.numberOfLayer is %d\n", mComParams.numberOfLayer);
+    LOG_V( "profile = %d\n", mComParams.profile);
+    LOG_V( "mVAEntrypoint = %d\n", mVAEntrypoint);
+    LOG_V( "vaAttrib[0].type = %d\n", vaAttrib[0].type);
+    LOG_V( "vaAttrib[1].type = %d\n", vaAttrib[1].type);
+    LOG_V( "vaAttrib[2].type = %d\n", vaAttrib[2].type);
+    LOG_V( "vaAttrib[0].value (Format) = %d\n", vaAttrib[0].value);
+    LOG_V( "vaAttrib[1].value (RC mode) = %d\n", vaAttrib[1].value);
+    LOG_V( "vaAttrib[2].value (AutoReference) = %d\n", vaAttrib[2].value);
+    LOG_V( "vaAttribNumber is %d\n", vaAttribNumber);
+    LOG_V( "mComParams.numberOfLayer is %d\n", mComParams.numberOfLayer);
 
     LOG_V( "vaCreateConfig\n");
 
@@ -507,7 +507,7 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
             // It is a requirement of video driver
             // vaSyncSurface syncs the wrong frame when rendering the same surface multiple times,
             // so use vaMapbuffer instead
-            LOG_I ("block mode, vaMapBuffer ID = 0x%08x\n", mOutCodedBuffer);
+            LOG_V ("block mode, vaMapBuffer ID = 0x%08x\n", mOutCodedBuffer);
             if (mOutCodedBufferPtr == NULL) {
                 vaStatus = vaMapBuffer (mVADisplay, mOutCodedBuffer, (void **)&mOutCodedBufferPtr);
                 CHECK_VA_STATUS_GOTO_CLEANUP("vaMapBuffer");
@@ -522,7 +522,7 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
 
         } else {
             //For both block with timeout and non-block mode, query surface, if ready, output data
-            LOG_I ("non-block mode, vaQuerySurfaceStatus ID = 0x%08x\n", mCurOutputTask->enc_surface);
+            LOG_V ("non-block mode, vaQuerySurfaceStatus ID = 0x%08x\n", mCurOutputTask->enc_surface);
 
             vaStatus = vaQuerySurfaceStatus(mVADisplay, mCurOutputTask->enc_surface,  &vaSurfaceStatus);
             if (vaSurfaceStatus & VASurfaceReady) {
@@ -558,7 +558,7 @@ Encode_Status VideoEncoderBase::getOutput(VideoEncOutputBuffer *outBuffer, uint3
         CHECK_ENCODE_STATUS_CLEANUP("getExtFormatOutput");
     }
 
-    LOG_I("out size for this getOutput call = %d\n", outBuffer->dataSize);
+    LOG_V("out size for this getOutput call = %d\n", outBuffer->dataSize);
 
     ret = cleanupForOutput();
     CHECK_ENCODE_STATUS_CLEANUP("cleanupForOutput");
@@ -689,7 +689,7 @@ Encode_Status VideoEncoderBase::prepareForOutput(
             CHECK_NULL_RETURN_IFFAIL(mOutCodedBufferPtr);
         }
 
-        LOG_I ("Coded Buffer ID been mapped = 0x%08x\n", mOutCodedBuffer);
+        LOG_V("Coded Buffer ID been mapped = 0x%08x\n", mOutCodedBuffer);
 
         mTotalSize = 0;
         mOffsetInSeg = 0;
@@ -877,8 +877,8 @@ Encode_Status VideoEncoderBase::outputAllData(VideoEncOutputBuffer *outBuffer) {
 
     while (1) {
 
-        LOG_I("mCurSegment->size = %d, mOffsetInSeg = %d\n", mCurSegment->size, mOffsetInSeg);
-        LOG_I("outBuffer->bufferSize = %d, sizeCopiedHere = %d, mTotalSizeCopied = %d\n",
+        LOG_V("mCurSegment->size = %d, mOffsetInSeg = %d\n", mCurSegment->size, mOffsetInSeg);
+        LOG_V("outBuffer->bufferSize = %d, sizeCopiedHere = %d, mTotalSizeCopied = %d\n",
               outBuffer->bufferSize, sizeCopiedHere, mTotalSizeCopied);
 
         if (mCurSegment->size < mOffsetInSeg || outBuffer->bufferSize < sizeCopiedHere) {
@@ -966,7 +966,7 @@ Encode_Status VideoEncoderBase::setParameters(
 
     Encode_Status ret = ENCODE_SUCCESS;
     CHECK_NULL_RETURN_IFFAIL(videoEncParams);
-    LOG_I("Config type = %x\n", (int)videoEncParams->type);
+    LOG_V("Config type = %x\n", (int)videoEncParams->type);
 
     if (mStarted) {
         LOG_E("Encoder has been initialized, should use setConfig to change configurations\n");
@@ -1073,7 +1073,7 @@ Encode_Status VideoEncoderBase::getParameters(
 
     Encode_Status ret = ENCODE_SUCCESS;
     CHECK_NULL_RETURN_IFFAIL(videoEncParams);
-    LOG_I("Config type = %d\n", (int)videoEncParams->type);
+    LOG_V("Config type = %d\n", (int)videoEncParams->type);
 
     switch (videoEncParams->type) {
         case VideoParamsTypeCommon: {
@@ -1197,7 +1197,7 @@ Encode_Status VideoEncoderBase::setConfig(VideoParamConfigSet *videoEncConfig) {
 
     Encode_Status ret = ENCODE_SUCCESS;
     CHECK_NULL_RETURN_IFFAIL(videoEncConfig);
-    LOG_I("Config type = %d\n", (int)videoEncConfig->type);
+    LOG_V("Config type = %d\n", (int)videoEncConfig->type);
 
    // workaround
 #if 0
@@ -1316,7 +1316,7 @@ Encode_Status VideoEncoderBase::getConfig(VideoParamConfigSet *videoEncConfig) {
 
     Encode_Status ret = ENCODE_SUCCESS;
     CHECK_NULL_RETURN_IFFAIL(videoEncConfig);
-    LOG_I("Config type = %d\n", (int)videoEncConfig->type);
+    LOG_V("Config type = %d\n", (int)videoEncConfig->type);
 
     switch (videoEncConfig->type) {
         case VideoConfigTypeFrameRate: {
@@ -1411,7 +1411,7 @@ Encode_Status VideoEncoderBase::getConfig(VideoParamConfigSet *videoEncConfig) {
 
 void VideoEncoderBase:: PrepareFrameInfo (EncodeTask* task) {
     if (mNewHeader) mFrameNum = 0;
-    LOG_I( "mFrameNum = %d   ", mFrameNum);
+    LOG_V( "mFrameNum = %d   ", mFrameNum);
 
     updateFrameInfo(task) ;
 }
@@ -1533,16 +1533,16 @@ Encode_Status VideoEncoderBase::getNewUsrptrFromSurface(
     *outsize = image.data_size;
     *stride = image.pitches[0];
 
-    LOG_I( "surface = 0x%08x\n",(uint32_t)surface);
-    LOG_I("image->pitches[0] = %d\n", image.pitches[0]);
-    LOG_I("image->pitches[1] = %d\n", image.pitches[1]);
-    LOG_I("image->offsets[0] = %d\n", image.offsets[0]);
-    LOG_I("image->offsets[1] = %d\n", image.offsets[1]);
-    LOG_I("image->num_planes = %d\n", image.num_planes);
-    LOG_I("image->width = %d\n", image.width);
-    LOG_I("image->height = %d\n", image.height);
-    LOG_I ("data_size = %d\n", image.data_size);
-    LOG_I ("usrptr = 0x%p\n", *usrptr);
+    LOG_V( "surface = 0x%08x\n",(uint32_t)surface);
+    LOG_V("image->pitches[0] = %d\n", image.pitches[0]);
+    LOG_V("image->pitches[1] = %d\n", image.pitches[1]);
+    LOG_V("image->offsets[0] = %d\n", image.offsets[0]);
+    LOG_V("image->offsets[1] = %d\n", image.offsets[1]);
+    LOG_V("image->num_planes = %d\n", image.num_planes);
+    LOG_V("image->width = %d\n", image.width);
+    LOG_V("image->height = %d\n", image.height);
+    LOG_V("data_size = %d\n", image.data_size);
+    LOG_V("usrptr = 0x%p\n", *usrptr);
 
     vaStatus = vaUnmapBuffer(mVADisplay, image.buf);
     CHECK_VA_STATUS_RETURN("vaUnmapBuffer");
@@ -1647,7 +1647,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
     memset(&vinfo, 0, sizeof(ValueInfo));
     if (mStoreMetaDataInBuffers.isEnabled) {
         //metadatabuffer mode
-        LOG_I("in metadata mode, data=%p, size=%d\n", inBuffer->data, inBuffer->size);
+        LOG_V("in metadata mode, data=%p, size=%d\n", inBuffer->data, inBuffer->size);
         if (imb.UnSerialize(inBuffer->data, inBuffer->size) != IMB_SUCCESS) {
             //fail to parse buffer
             return ENCODE_NO_REQUEST_DATA;
@@ -1687,14 +1687,14 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
 
     if (map) {
         //has mapped, get surfaceID directly and do all necessary actions
-        LOG_I("direct find surface %d from value %i\n", map->getVASurface(), value);
+        LOG_V("direct find surface %d from value %i\n", map->getVASurface(), value);
         *sid = map->getVASurface();
         map->doMapping();
         return ret;
     }
 
     //if no found from list, then try to map value with parameters
-    LOG_I("not find surface from cache with value %i, start mapping if enough information\n", value);
+    LOG_V("not find surface from cache with value %i, start mapping if enough information\n", value);
 
     if (mStoreMetaDataInBuffers.isEnabled) {
 
@@ -1741,7 +1741,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
 
         ret = map->doMapping();
         if (ret == ENCODE_SUCCESS) {
-            LOG_I("surface mapping success, map value %i into surface %d\n", value, map->getVASurface());
+            LOG_V("surface mapping success, map value %i into surface %d\n", value, map->getVASurface());
             mSrcSurfaceMapList.push_back(map);
         } else {
             delete map;
@@ -1766,7 +1766,7 @@ Encode_Status VideoEncoderBase::manageSrcSurface(VideoEncRawBuffer *inBuffer, VA
 
             ret = map->doMapping();
             if (ret == ENCODE_SUCCESS) {
-                LOG_I("surface mapping extravalue success, map value %i into surface %d\n", extravalues[i], map->getVASurface());
+                LOG_V("surface mapping extravalue success, map value %i into surface %d\n", extravalues[i], map->getVASurface());
                 mSrcSurfaceMapList.push_back(map);
             } else {
                 delete map;

@@ -108,13 +108,13 @@ Encode_Status VideoEncoderH263::renderPictureParams(EncodeTask *task) {
     h263PictureParams.picture_type = (task->type == FTYPE_I) ? VAEncPictureTypeIntra : VAEncPictureTypePredictive;
 
     LOG_V("======h263 picture params======\n");
-    LOG_I( "reference_picture = 0x%08x\n", h263PictureParams.reference_picture);
-    LOG_I( "reconstructed_picture = 0x%08x\n", h263PictureParams.reconstructed_picture);
-    LOG_I( "coded_buf = 0x%08x\n", h263PictureParams.coded_buf);
+    LOG_V( "reference_picture = 0x%08x\n", h263PictureParams.reference_picture);
+    LOG_V( "reconstructed_picture = 0x%08x\n", h263PictureParams.reconstructed_picture);
+    LOG_V( "coded_buf = 0x%08x\n", h263PictureParams.coded_buf);
 //    LOG_I( "coded_buf_index = %d\n", mCodedBufIndex);
-    LOG_I( "picture_width = %d\n", h263PictureParams.picture_width);
-    LOG_I( "picture_height = %d\n",h263PictureParams.picture_height);
-    LOG_I( "picture_type = %d\n\n",h263PictureParams.picture_type);
+    LOG_V( "picture_width = %d\n", h263PictureParams.picture_width);
+    LOG_V( "picture_height = %d\n",h263PictureParams.picture_height);
+    LOG_V( "picture_type = %d\n\n",h263PictureParams.picture_type);
 
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,
@@ -163,9 +163,9 @@ Encode_Status VideoEncoderH263::renderSliceParams(EncodeTask *task) {
     sliceParams->slice_flags.bits.disable_deblocking_filter_idc = 0;
 
     LOG_V("======h263 slice params======\n");
-    LOG_I("start_row_number = %d\n", (int) sliceParams->start_row_number);
-    LOG_I("slice_height_in_mb = %d\n", (int) sliceParams->slice_height);
-    LOG_I("slice.is_intra = %d\n", (int) sliceParams->slice_flags.bits.is_intra);
+    LOG_V("start_row_number = %d\n", (int) sliceParams->start_row_number);
+    LOG_V("slice_height_in_mb = %d\n", (int) sliceParams->slice_height);
+    LOG_V("slice.is_intra = %d\n", (int) sliceParams->slice_flags.bits.is_intra);
 
     vaStatus = vaUnmapBuffer(mVADisplay, mSliceParamBuf);
     CHECK_VA_STATUS_RETURN("vaUnmapBuffer");

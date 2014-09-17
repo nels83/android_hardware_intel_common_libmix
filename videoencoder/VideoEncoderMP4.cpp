@@ -197,14 +197,14 @@ Encode_Status VideoEncoderMP4::renderPictureParams(EncodeTask *task) {
     mpeg4_pic_param.picture_type = (task->type == FTYPE_I) ? VAEncPictureTypeIntra : VAEncPictureTypePredictive;
 
     LOG_V("======mpeg4 picture params======\n");
-    LOG_I("reference_picture = 0x%08x\n", mpeg4_pic_param.reference_picture);
-    LOG_I("reconstructed_picture = 0x%08x\n", mpeg4_pic_param.reconstructed_picture);
-    LOG_I("coded_buf = 0x%08x\n", mpeg4_pic_param.coded_buf);
+    LOG_V("reference_picture = 0x%08x\n", mpeg4_pic_param.reference_picture);
+    LOG_V("reconstructed_picture = 0x%08x\n", mpeg4_pic_param.reconstructed_picture);
+    LOG_V("coded_buf = 0x%08x\n", mpeg4_pic_param.coded_buf);
 //    LOG_I("coded_buf_index = %d\n", mCodedBufIndex);
-    LOG_I("picture_width = %d\n", mpeg4_pic_param.picture_width);
-    LOG_I("picture_height = %d\n", mpeg4_pic_param.picture_height);
-    LOG_I("vop_time_increment = %d\n", mpeg4_pic_param.vop_time_increment);
-    LOG_I("picture_type = %d\n\n", mpeg4_pic_param.picture_type);
+    LOG_V("picture_width = %d\n", mpeg4_pic_param.picture_width);
+    LOG_V("picture_height = %d\n", mpeg4_pic_param.picture_height);
+    LOG_V("vop_time_increment = %d\n", mpeg4_pic_param.vop_time_increment);
+    LOG_V("picture_type = %d\n\n", mpeg4_pic_param.picture_type);
 
     vaStatus = vaCreateBuffer(
             mVADisplay, mVAContext,
