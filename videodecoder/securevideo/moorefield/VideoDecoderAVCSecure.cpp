@@ -381,14 +381,18 @@ Decode_Status VideoDecoderAVCSecure::decodeFrame(VideoDecodeBuffer *buffer, vbp_
     CHECK_STATUS("acquireSurfaceBuffer");
 
     if (mModularMode) {
-        parseModularSliceHeader(data);
+        status = parseModularSliceHeader(data);
     }
     else {
-        parseClassicSliceHeader(data);
+        status = parseClassicSliceHeader(data);
     }
 
     if (status != DECODE_SUCCESS) {
         endDecodingFrame(true);
+        if (status == DECODE_PARSER_FAIL) {
+            ETRACE("parse frame failed with DECODE_PARSER_FAIL");
+            status = DECODE_INVALID_DATA;
+        }
         return status;
     }
 
