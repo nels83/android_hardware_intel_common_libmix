@@ -462,6 +462,10 @@ Decode_Status VideoDecoderAVCSecure::continueDecodingFrame(vbp_data_h264 *data) 
             return DECODE_FAIL;
         }
         VTRACE("picData->num_slices = %d", picData->num_slices);
+        if ((picData->num_slices > 1) && mModularMode) {
+            ETRACE("MDRM multi-slice not supported yet!");
+            return DECODE_PARSER_FAIL;
+	}
         for (uint32_t sliceIndex = 0; sliceIndex < picData->num_slices; sliceIndex++) {
             status = decodeSlice(data, picIndex, sliceIndex);
             if (status != DECODE_SUCCESS) {
