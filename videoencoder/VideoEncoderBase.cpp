@@ -203,7 +203,7 @@ Encode_Status VideoEncoderBase::start() {
 
     vaStatus = vaCreateConfig(
             mVADisplay, mComParams.profile, mVAEntrypoint,
-            &vaAttrib[0], vaAttribNumber, &(mVAConfig));
+            &vaAttrib[0], 2, &(mVAConfig));
 //            &vaAttrib[0], 3, &(mVAConfig));  //uncomment this after psb_video supports
     CHECK_VA_STATUS_RETURN("vaCreateConfig");
 
